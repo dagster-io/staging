@@ -70,6 +70,7 @@ def ge_validation_solid_factory(datasource_name, suite_name):
             "action_list_operator", assets_to_validate=[batch], run_id=run_id
         )
         res = convert_to_json_serializable(results.list_validation_results())[0]
+        #TODO: replace with well built markdown
         nmeta = EventMetadataEntry.json(
             {'overall': res['statistics'], 'individual': res['results']}, 'constraint-metadata',
         )
