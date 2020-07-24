@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { RepositorySelector, PipelineRunStatus } from "./../../types/globalTypes";
+import { RepositorySelector, PipelineRunStatus, StepEventStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: PartitionLongitudinalQuery
@@ -46,6 +46,7 @@ export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_par
   stepKey: string;
   startTime: number | null;
   endTime: number | null;
+  status: StepEventStatus;
   materializations: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats_materializations[];
   expectationResults: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats_expectationResults[];
 }
@@ -56,8 +57,8 @@ export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_par
   pipelineName: string;
   tags: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_tags[];
   stats: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats;
-  stepStats: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats[];
   status: PipelineRunStatus;
+  stepStats: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats[];
 }
 
 export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results {

@@ -15,6 +15,7 @@ import { IconNames } from "@blueprintjs/icons";
 import Loading from "../Loading";
 import { PartitionTable } from "./PartitionTable";
 import { PartitionGraph, PIPELINE_LABEL } from "./PartitionGraph";
+import { PartitionRunMatrix } from "./PartitionRunMatrix";
 import { colorHash } from "../Util";
 import { Colors } from "@blueprintjs/core";
 import { RunsFilter } from "../runs/RunsFilter";
@@ -100,11 +101,13 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
                   popCursor={popCursor}
                   setCursor={setCursor}
                 />
-                <PartitionContent
+                <PartitionRunMatrix partitions={partitions} />
+                {/*TODO BG */}
+                {/* <PartitionContent
                   partitions={partitions}
                   showLoading={showLoading}
                   allStepKeys={Object.keys(allStepKeys)}
-                />
+                /> */}
               </div>
             );
           }}
@@ -558,11 +561,13 @@ const PARTITION_SET_QUERY = gql`
                     materializations
                   }
                 }
+                status
                 stepStats {
                   __typename
                   stepKey
                   startTime
                   endTime
+                  status
                   materializations {
                     __typename
                   }
@@ -570,7 +575,6 @@ const PARTITION_SET_QUERY = gql`
                     success
                   }
                 }
-                status
               }
             }
           }
