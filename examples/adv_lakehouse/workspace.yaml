@@ -1,0 +1,2 @@
+load_from:
+  - python_file: adv_lakehouse/repo.py
