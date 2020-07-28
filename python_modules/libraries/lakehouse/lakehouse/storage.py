@@ -26,7 +26,7 @@ class AssetStorageDefinition(ResourceDefinition):
         config_schema=None,
         description=None,
         config=None,
-        process_config_fn=None,
+        _configured_config_mapping_fn=None,
         type_policies=None,
     ):
         super(AssetStorageDefinition, self).__init__(
@@ -34,7 +34,7 @@ class AssetStorageDefinition(ResourceDefinition):
             config_schema=config_schema,
             description=description,
             config=config,
-            process_config_fn=process_config_fn,
+            _configured_config_mapping_fn=_configured_config_mapping_fn,
         )
         self._type_policies = type_policies
 
