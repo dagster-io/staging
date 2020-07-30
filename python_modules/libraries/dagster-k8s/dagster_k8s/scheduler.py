@@ -44,7 +44,7 @@ class K8sScheduler(Scheduler, ConfigurableClass):
         self.grace_period_seconds = 5  # This should be passed in via config
 
         self.job_config = DagsterK8sJobConfig(
-            job_image=check.str_param(job_image, 'job_image'),
+            job_image=check.opt_str_param(job_image, 'job_image'),
             dagster_home=check.str_param(dagster_home, 'dagster_home'),
             image_pull_policy=check.str_param(image_pull_policy, 'image_pull_policy'),
             image_pull_secrets=check.opt_list_param(
