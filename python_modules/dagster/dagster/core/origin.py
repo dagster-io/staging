@@ -61,6 +61,15 @@ class RepositoryGrpcServerOrigin(
                 host=self.host, socket=self.socket, repository_name=self.repository_name,
             )
 
+    @property
+    def executable_path(self):
+        return sys.executable
+
+    def describe(self):
+        return '{repository_name} loaded from GRPC server at host={host}, port={port}, socket={socket}'.format(
+            repository_name=self.repository_name, host=self.host, port=self.port, socket=self.socket
+        )
+
 
 @whitelist_for_serdes
 class RepositoryPythonOrigin(
