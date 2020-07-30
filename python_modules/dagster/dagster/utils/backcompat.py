@@ -81,6 +81,15 @@ def rename_warning(new_name, old_name, breaking_version, additional_warn_txt=Non
     )
 
 
+def experimental_warning(name, stacklevel=3):
+    warnings.warn(
+        '"{name}" is an experimental API. It may break in future versions, even between dot releases.'.format(
+            name=name
+        ),
+        stacklevel=stacklevel,
+    )
+
+
 def canonicalize_run_config(run_config, environment_dict, stacklevel=3):
     check.opt_dict_param(run_config, 'run_config')
     check.opt_dict_param(environment_dict, 'environment_dict')
