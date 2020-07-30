@@ -69,7 +69,30 @@ dagit:
     failureThreshold: 12
 
 ####################################################################################################
-# Pipeline Run: Configuration for user code containers
+# User Code Deployments: Configuration for user code containers to be used with GRPC
+#
+# All user code will be invoked within the image specified here.
+####################################################################################################
+userDeployments:
+  - name: "container-1"
+    image:
+      repository: "dagster/k8s-example-1"
+      tag: latest
+      pullPolicy: Always
+    port: 3030
+    env_config_maps:
+      - ""
+  - name: "container-2"
+    image:
+      repository: "dagster/k8s-example-2"
+      tag: "latest"
+      pullPolicy: Always
+    port: 3030
+    env_config_maps:
+      - ""
+
+####################################################################################################
+# (Deprecated) Pipeline Run: Configuration for user code containers
 #
 # All user code will be invoked within the image specified here.
 ####################################################################################################
