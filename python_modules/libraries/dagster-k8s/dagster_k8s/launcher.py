@@ -2,12 +2,21 @@ import weakref
 
 import kubernetes
 
-from dagster import EventMetadataEntry, Field, Noneable, StringSource, check
+from dagster import (
+    DagsterInvariantViolationError,
+    EventMetadataEntry,
+    Field,
+    Noneable,
+    StringSource,
+    check,
+)
 from dagster.cli.api import ExecuteRunArgs
 from dagster.core.events import EngineEventData
 from dagster.core.host_representation import ExternalPipeline
+from dagster.core.host_representation.handle import GrpcServerRepositoryLocationHandle
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
+from dagster.core.origin import PipelineGrpcServerOrigin, PipelinePythonOrigin
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
 from dagster.utils import frozentags, merge_dicts
@@ -177,11 +186,36 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
 
         resources = get_k8s_resource_requirements(frozentags(external_pipeline.tags))
 
+        job_image = None
+        pipeline_origin = None
+        if isinstance(external_pipeline.get_origin(), PipelineGrpcServerOrigin):
+            if self.job_config.job_image:
+                raise DagsterInvariantViolationError(
+                    'Cannot specify job_image in run launcher config when loading pipline '
+                    'from GRPC server.'
+                )
+
+            repository_location_handle = (
+                external_pipeline.repository_handle.repository_location_handle
+            )
+            check.inst(repository_location_handle, GrpcServerRepositoryLocationHandle)
+
+            job_image = repository_location_handle.get_current_image()
+            self.job_config.job_image = job_image
+
+            repository_name = external_pipeline.repository_handle.repository_name
+            pipeline_origin = PipelinePythonOrigin(
+                pipeline_name=external_pipeline.name,
+                repository_origin=repository_location_handle.get_repository_python_origin(
+                    repository_name
+                ),
+            )
+        else:
+            pipeline_origin = external_pipeline.get_origin()
+
         input_json = serialize_dagster_namedtuple(
             ExecuteRunArgs(
-                pipeline_origin=external_pipeline.get_origin(),
-                pipeline_run_id=run.run_id,
-                instance_ref=None,
+                pipeline_origin=pipeline_origin, pipeline_run_id=run.run_id, instance_ref=None,
             )
         )
 
