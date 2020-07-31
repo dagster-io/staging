@@ -1,4 +1,5 @@
 import typing
+import warnings
 
 import pytest
 
@@ -14,6 +15,7 @@ from dagster import (
     usable_as_dagster_type,
 )
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.test_utils import assert_no_warnings
 from dagster.utils.temp_file import _unlink_swallow_errors
 from dagster.utils.test import check_dagster_type, execute_solids_within_pipeline
 
@@ -138,3 +140,14 @@ def test_check_dagster_type():
 
     res = check_dagster_type(Baz, Baz())
     assert res.success
+
+
+def test_assert_no_warnings():
+    with assert_no_warnings():
+        pass
+
+
+@pytest.mark.xfail
+def test_assert_no_warnings_asserts():
+    with assert_no_warnings():
+        warnings.warn('a warning', UserWarning)
