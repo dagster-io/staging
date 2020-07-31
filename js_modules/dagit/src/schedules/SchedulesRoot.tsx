@@ -26,31 +26,11 @@ import { ScheduleRow, ScheduleFragment, ScheduleStateRow } from "./ScheduleRow";
 
 import { useRepositorySelector } from "../DagsterRepositoryContext";
 import { ReconcileButton } from "./ReconcileButton";
+import { SchedulerNotConfigured } from "./ScheduleNotConfigured";
 
 const getSchedulerSection = (scheduler: SchedulesRootQuery_scheduler) => {
   if (scheduler.__typename === "SchedulerNotDefinedError") {
-    return (
-      <Callout
-        icon="calendar"
-        intent={Intent.WARNING}
-        title="The current dagster instance does not have a scheduler configured."
-        style={{ marginBottom: 40 }}
-      >
-        <p>
-          A scheduler must be configured on the instance to run schedules. Therefore, the schedules
-          below are not currently running. You can configure a scheduler on the instance through the{" "}
-          <Code>dagster.yaml</Code> file in <Code>$DAGSTER_HOME</Code>
-        </p>
-
-        <p>
-          See the{" "}
-          <a href="https://docs.dagster.io/overview/instances/dagster-instance#instance-configuration-yaml">
-            instance configuration documentation
-          </a>{" "}
-          for more information.
-        </p>
-      </Callout>
-    );
+    return <SchedulerNotConfigured />;
   } else if (scheduler.__typename === "PythonError") {
     return <PythonErrorInfo error={scheduler} />;
   }

@@ -27,6 +27,12 @@ const INSTANCE_TABS = [
     tab: `assets`,
     icon: <Icon icon="panel-table" iconSize={18} />,
     label: "Assets"
+  },
+  {
+    to: `/scheduler`,
+    tab: `scheduler`,
+    icon: <Icon icon="time" iconSize={18} />,
+    label: "Scheduler"
   }
 ];
 

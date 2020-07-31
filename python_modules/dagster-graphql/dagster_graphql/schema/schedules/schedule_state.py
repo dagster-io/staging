@@ -35,10 +35,14 @@ class DauphinScheduleState(dauphin.ObjectType):
     class Meta(object):
         name = 'ScheduleState'
 
+    id = dauphin.NonNull(dauphin.ID)
+
     schedule_origin_id = dauphin.NonNull(dauphin.String)
     schedule_name = dauphin.NonNull(dauphin.String)
     cron_schedule = dauphin.NonNull(dauphin.String)
     status = dauphin.NonNull('ScheduleStatus')
+    repository_origin = dauphin.NonNull('RepositoryOrigin')
+    repository_origin_id = dauphin.NonNull(dauphin.String)
 
     runs = dauphin.Field(dauphin.non_null_list('PipelineRun'), limit=dauphin.Int())
     runs_count = dauphin.NonNull(dauphin.Int)
@@ -47,7 +51,6 @@ class DauphinScheduleState(dauphin.ObjectType):
     stats = dauphin.NonNull('ScheduleTickStatsSnapshot')
     logs_path = dauphin.NonNull(dauphin.String)
     running_schedule_count = dauphin.NonNull(dauphin.Int)
-    id = dauphin.NonNull(dauphin.ID)
 
     def __init__(self, _graphene_info, schedule_state):
         self._schedule_state = check.inst_param(schedule_state, 'schedule', ScheduleState)
@@ -113,3 +116,11 @@ class DauphinScheduleState(dauphin.ObjectType):
         return graphene_info.context.instance.get_runs_count(
             filters=PipelineRunsFilter.for_schedule(self._schedule_state)
         )
+
+    def resolve_repository_origin(self, graphene_info):
+        return graphene_info.schema.type_named('RepositoryOrigin')(
+            self._schedule_state.origin.repository_origin
+        )
+
+    def resolve_repository_origin_id(self, _graphene_info):
+        return self._schedule_state.repository_origin_id

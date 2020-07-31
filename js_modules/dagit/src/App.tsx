@@ -15,6 +15,7 @@ import { RunsRoot } from "./runs/RunsRoot";
 import { SolidsRoot } from "./solids/SolidsRoot";
 import SchedulesRoot from "./schedules/SchedulesRoot";
 import { ScheduleRoot } from "./schedules/ScheduleRoot";
+import { SchedulerRoot } from "./schedules/SchedulerRoot";
 import { AssetsRoot } from "./assets/AssetsRoot";
 import { LeftNav } from "./nav/LeftNav";
 import { PipelineNav } from "./nav/PipelineNav";
@@ -37,6 +38,7 @@ const AppRoutes = () => (
     <Route path="/solids/:name?" component={SolidsRoot} />
     <Route path="/schedules/:scheduleName" component={ScheduleRoot} />
     <Route path="/schedules" component={SchedulesRoot} />
+    <Route path="/scheduler" component={SchedulerRoot} exact={true} />
     <Route path="/assets" component={AssetsRoot} exact={true} />
     <Route path="/assets/(/?.*)" component={AssetsRoot} />
     <Route path="/instance" component={InstanceDetailsRoot} />

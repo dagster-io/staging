@@ -970,7 +970,7 @@ type Query {
   scheduler: SchedulerOrError!
   scheduleDefinitionOrError(scheduleSelector: ScheduleSelector!): ScheduleDefinitionOrError!
   scheduleDefinitionsOrError(repositorySelector: RepositorySelector!): ScheduleDefinitionsOrError!
-  scheduleStatesOrError(repositorySelector: RepositorySelector!, withNoScheduleDefinition: Boolean): ScheduleStatesOrError!
+  scheduleStatesOrError(repositorySelector: RepositorySelector, withNoScheduleDefinition: Boolean): ScheduleStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
@@ -1190,10 +1190,13 @@ input ScheduleSelector {
 }
 
 type ScheduleState {
+  id: ID!
   scheduleOriginId: String!
   scheduleName: String!
   cronSchedule: String!
   status: ScheduleStatus!
+  repositoryOrigin: RepositoryOrigin!
+  repositoryOriginId: String!
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
   ticks(limit: Int): [ScheduleTick!]!
@@ -1201,7 +1204,6 @@ type ScheduleState {
   stats: ScheduleTickStatsSnapshot!
   logsPath: String!
   runningScheduleCount: Int!
-  id: ID!
 }
 
 type ScheduleStateNotFoundError implements Error {
