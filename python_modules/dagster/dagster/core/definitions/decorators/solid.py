@@ -91,7 +91,6 @@ def solid(
     config_schema=None,
     required_resource_keys=None,
     tags=None,
-    config=None,
 ):
     '''Create a solid with the specified parameters from the decorated function.
 
@@ -185,7 +184,6 @@ def solid(
         check.invariant(input_defs is None)
         check.invariant(output_defs is None)
         check.invariant(description is None)
-        check.invariant(config is None)
         check.invariant(config_schema is None)
         check.invariant(required_resource_keys is None)
         check.invariant(tags is None)
@@ -196,9 +194,7 @@ def solid(
         name=name,
         input_defs=input_defs,
         output_defs=output_defs,
-        config_schema=canonicalize_backcompat_args(
-            config_schema, 'config_schema', config, 'config', '0.9.0'
-        ),
+        config_schema=config_schema,
         description=description,
         required_resource_keys=required_resource_keys,
         tags=tags,
