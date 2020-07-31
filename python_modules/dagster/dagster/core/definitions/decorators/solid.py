@@ -4,7 +4,6 @@ from functools import update_wrapper, wraps
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.core.types.dagster_type import DagsterTypeKind
-from dagster.utils.backcompat import canonicalize_backcompat_args
 
 from ...decorator_utils import (
     InvalidDecoratedFunctionInfo,
