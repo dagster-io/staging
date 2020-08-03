@@ -2,7 +2,7 @@ import pandas as pd
 from pandas import DataFrame as PandasDF
 from lakehouse import Column, computed_table
 from pyarrow import float64, date32
-from .sfo_q2_weather_sample import sfo_q2_weather_sample_table
+from dagster_examples.simple_lakehouse.sfo_q2_weather_sample import sfo_q2_weather_sample_table
 
 
 @computed_table(
