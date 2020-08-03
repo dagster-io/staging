@@ -1,10 +1,13 @@
 import sys
 
+import pytest
+
 from dagster.api.list_repositories import (
     sync_list_repositories,
     sync_list_repositories_ephemeral_grpc,
 )
 from dagster.core.code_pointer import FileCodePointer, ModuleCodePointer
+from dagster.core.errors import DagsterSubprocessError, DagsterUserCodeProcessError
 from dagster.grpc.types import LoadableRepositorySymbol
 from dagster.utils import file_relative_path
 
@@ -272,3 +275,33 @@ def test_sync_list_python_module_attribute_grpc():
     assert (
         repository_code_pointer_dict['hello_world_repository'].fn_name == 'hello_world_repository'
     )
+
+
+def test_sync_list_python_file_with_error():
+    python_file = file_relative_path(__file__, 'error_on_load_repo.py')
+    with pytest.raises(DagsterSubprocessError) as e:
+        sync_list_repositories(
+            sys.executable,
+            python_file=python_file,
+            module_name=None,
+            working_directory=None,
+            attribute=None,
+        )
+
+    assert e.value.args[0].startswith('(ValueError) - ValueError: User did something bad')
+    assert e.value.args[0].endswith("raise ValueError('User did something bad')\n")
+
+
+def test_sync_list_python_file_grpc_with_error():
+    python_file = file_relative_path(__file__, 'error_on_load_repo.py')
+    with pytest.raises(DagsterUserCodeProcessError) as e:
+        sync_list_repositories_ephemeral_grpc(
+            sys.executable,
+            python_file=python_file,
+            module_name=None,
+            working_directory=None,
+            attribute=None,
+        )
+
+    assert e.value.args[0].startswith('(ValueError) - ValueError: User did something bad')
+    assert e.value.args[0].endswith("raise ValueError('User did something bad')\n")
