@@ -15,6 +15,7 @@ from .dependency import (
     SolidHandle,
     SolidInvocation,
 )
+from .hook import HookDefinition
 from .mode import ModeDefinition
 from .preset import PresetDefinition
 from .solid import ISolidDefinition
@@ -458,6 +459,38 @@ class PipelineDefinition(IContainSolids):
     @property
     def solids_to_execute(self):
         return None
+
+    def with_hooks(self, hook_defs):
+        '''Apply a set of hooks to all solid instances within the pipeline.'''
+
+        hook_defs = check.set_param(hook_defs, 'hook_defs', of_type=HookDefinition)
+
+        # make a copy of the pipeline definition with the hook added to every solid instance
+        deps = {}
+        for solid, input_dep_dict in self.dependencies.items():
+            # we allow deps of the form dependencies={'foo': DependencyDefinition('bar')}
+            # so we replace 'foo' with SolidInvocation('foo')
+            if not isinstance(solid, SolidInvocation):
+                solid = SolidInvocation(solid)
+            # to add hooks, we make copies of solid invocations
+            solid_copy = SolidInvocation(
+                name=solid.name,
+                alias=solid.alias,
+                tags=solid.tags,
+                hook_defs=solid.hook_defs.union(hook_defs),
+            )
+            deps[solid_copy] = input_dep_dict
+
+        return PipelineDefinition(
+            solid_defs=self.all_solid_defs,
+            name=self.name,
+            description=self.description,
+            dependencies=deps,
+            mode_defs=self.mode_definitions,
+            preset_defs=self.preset_defs,
+            tags=self.tags,
+            _parent_pipeline_def=self._parent_pipeline_def,
+        )
 
 
 class PipelineSubsetDefinition(PipelineDefinition):
