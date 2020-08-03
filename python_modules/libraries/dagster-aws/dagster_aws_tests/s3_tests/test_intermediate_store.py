@@ -3,7 +3,12 @@ import os
 from collections import OrderedDict
 
 import pytest
-from dagster_aws.s3 import S3IntermediateStore, s3_plus_default_storage_defs, s3_resource
+from dagster_aws.s3 import (
+    S3IntermediateStorage,
+    S3IntermediateStore,
+    s3_plus_default_storage_defs,
+    s3_resource,
+)
 
 from dagster import (
     Bool,
@@ -25,7 +30,6 @@ from dagster.core.events import DagsterEventType
 from dagster.core.execution.api import create_execution_plan, execute_plan, scoped_pipeline_context
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.intermediates_manager import IntermediateStoreIntermediatesManager
 from dagster.core.storage.type_storage import TypeStoragePlugin, TypeStoragePluginRegistry
 from dagster.core.types.dagster_type import Bool as RuntimeBool
 from dagster.core.types.dagster_type import String as RuntimeString
@@ -128,12 +132,11 @@ def test_using_s3_for_subplan(s3_bucket):
         instance,
     ) as context:
 
-        store = S3IntermediateStore(
+        intermediates_manager = S3IntermediateStorage(
             s3_bucket,
             run_id,
             s3_session=context.scoped_resources_builder.build(required_resource_keys={'s3'},).s3,
         )
-        intermediates_manager = IntermediateStoreIntermediatesManager(store)
         step_output_handle = StepOutputHandle('return_one.compute')
         assert intermediates_manager.has_intermediate(context, step_output_handle)
         assert intermediates_manager.get_intermediate(context, Int, step_output_handle).obj == 1
@@ -280,14 +283,13 @@ def test_s3_pipeline_with_custom_prefix(s3_bucket):
 
     execution_plan = create_execution_plan(pipe, run_config)
     with scoped_pipeline_context(execution_plan, run_config, pipeline_run, instance,) as context:
-        store = S3IntermediateStore(
+        intermediates_manager = S3IntermediateStorage(
             run_id=result.run_id,
             s3_bucket=s3_bucket,
             s3_prefix=s3_prefix,
             s3_session=context.scoped_resources_builder.build(required_resource_keys={'s3'}).s3,
         )
-        intermediates_manager = IntermediateStoreIntermediatesManager(store)
-        assert store.root == '/'.join(['custom_prefix', 'storage', result.run_id])
+        assert intermediates_manager.root == '/'.join(['custom_prefix', 'storage', result.run_id])
         assert (
             intermediates_manager.get_intermediate(
                 context, Int, StepOutputHandle('return_one.compute')

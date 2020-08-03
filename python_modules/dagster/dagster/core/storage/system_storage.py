@@ -6,9 +6,9 @@ from dagster.core.storage.type_storage import TypeStoragePluginRegistry
 
 from .file_manager import LocalFileManager
 from .init import InitIntermediateStorageContext
-from .intermediate_store import IntermediateStore, build_fs_intermediate_store
 from .intermediates_manager import (
-    IntermediateStoreIntermediatesManager,
+    ObjectStoreIntermediateStorage,
+    build_fs_intermediate_storage,
     build_in_mem_intermediates_storage,
 )
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
@@ -41,7 +41,7 @@ def build_intermediate_storage_from_object_store(
     root_for_run_id = check.callable_param(root_for_run_id, 'root_for_run_id')
     init_context = check.inst_param(init_context, 'init_context', InitIntermediateStorageContext)
 
-    intermediate_store = IntermediateStore(
+    return ObjectStoreIntermediateStorage(
         object_store=object_store,
         run_id=init_context.pipeline_run.run_id,
         root_for_run_id=root_for_run_id,
@@ -49,7 +49,6 @@ def build_intermediate_storage_from_object_store(
         if init_context.type_storage_plugin_registry
         else TypeStoragePluginRegistry(types_to_register=[]),
     )
-    return IntermediateStoreIntermediatesManager(intermediate_store)
 
 
 @system_storage(name='in_memory', is_persistent=False, required_resource_keys=set())
@@ -101,7 +100,7 @@ def fs_system_storage(init_context):
     override_dir = init_context.system_storage_config.get('base_dir')
     if override_dir:
         file_manager = LocalFileManager(override_dir)
-        intermediate_store = build_fs_intermediate_store(
+        intermediates_manager = build_fs_intermediate_storage(
             root_for_run_id=lambda _: override_dir,
             run_id=init_context.pipeline_run.run_id,
             type_storage_plugin_registry=init_context.type_storage_plugin_registry,
@@ -110,15 +109,14 @@ def fs_system_storage(init_context):
         file_manager = LocalFileManager.for_instance(
             init_context.instance, init_context.pipeline_run.run_id
         )
-        intermediate_store = build_fs_intermediate_store(
+        intermediates_manager = build_fs_intermediate_storage(
             init_context.instance.intermediates_directory,
             run_id=init_context.pipeline_run.run_id,
             type_storage_plugin_registry=init_context.type_storage_plugin_registry,
         )
 
     return SystemStorageData(
-        file_manager=file_manager,
-        intermediates_manager=IntermediateStoreIntermediatesManager(intermediate_store),
+        file_manager=file_manager, intermediates_manager=intermediates_manager,
     )
 
 

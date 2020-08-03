@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 import pytest
 from dagster_azure.adls2 import (
+    ADLS2IntermediateStorage,
     ADLS2IntermediateStore,
     adls2_plus_default_storage_defs,
     adls2_resource,
@@ -31,7 +32,6 @@ from dagster.core.events import DagsterEventType
 from dagster.core.execution.api import create_execution_plan, execute_plan, scoped_pipeline_context
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.intermediates_manager import IntermediateStoreIntermediatesManager
 from dagster.core.storage.type_storage import TypeStoragePlugin, TypeStoragePluginRegistry
 from dagster.core.types.dagster_type import Bool as RuntimeBool
 from dagster.core.types.dagster_type import String as RuntimeString
@@ -156,13 +156,12 @@ def test_using_adls2_for_subplan(storage_account, file_system):
     ) as context:
 
         resource = context.scoped_resources_builder.build(required_resource_keys={'adls2'}).adls2
-        store = ADLS2IntermediateStore(
+        intermediates_manager = ADLS2IntermediateStorage(
             file_system=file_system,
             run_id=run_id,
             adls2_client=resource.adls2_client,
             blob_client=resource.blob_client,
         )
-        intermediates_manager = IntermediateStoreIntermediatesManager(store)
         step_output_handle = StepOutputHandle('return_one.compute')
         assert intermediates_manager.has_intermediate(context, step_output_handle)
         assert intermediates_manager.get_intermediate(context, Int, step_output_handle).obj == 1
@@ -336,15 +335,14 @@ def test_adls2_pipeline_with_custom_prefix(storage_account, file_system):
     execution_plan = create_execution_plan(pipe, run_config)
     with scoped_pipeline_context(execution_plan, run_config, pipeline_run, instance,) as context:
         resource = context.scoped_resources_builder.build(required_resource_keys={'adls2'}).adls2
-        store = ADLS2IntermediateStore(
+        intermediates_manager = ADLS2IntermediateStorage(
             run_id=result.run_id,
             file_system=file_system,
             prefix=adls2_prefix,
             adls2_client=resource.adls2_client,
             blob_client=resource.blob_client,
         )
-        intermediates_manager = IntermediateStoreIntermediatesManager(store)
-        assert store.root == '/'.join(['custom_prefix', 'storage', result.run_id])
+        assert intermediates_manager.root == '/'.join(['custom_prefix', 'storage', result.run_id])
         assert (
             intermediates_manager.get_intermediate(
                 context, Int, StepOutputHandle('return_one.compute')
