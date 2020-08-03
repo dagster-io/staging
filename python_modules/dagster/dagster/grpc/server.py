@@ -17,6 +17,7 @@ from dagster.core.definitions.reconstructable import (
 from dagster.core.errors import PartitionExecutionError, user_code_error_boundary
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.host_representation.external_data import (
+    ExternalPartitionBackfillData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
@@ -40,6 +41,7 @@ from .impl import (
     execute_run_in_subprocess,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
+    launch_partition_backfill,
     start_run_in_subprocess,
 )
 from .types import (
@@ -54,6 +56,7 @@ from .types import (
     LoadableRepositorySymbol,
     LoadableTargetOrigin,
     PartitionArgs,
+    PartitionBackfillArgs,
     PartitionNamesArgs,
     PipelineSubsetSnapshotArgs,
     ShutdownServerResult,
@@ -229,6 +232,22 @@ class DagsterApiServer(DagsterApiServicer):
                     )
                 )
             )
+
+    def ExternalPartitionBackfill(self, request, _context):
+        partition_backfill_args = deserialize_json_to_dagster_namedtuple(
+            request.serialized_partition_backfill_args
+        )
+
+        check.inst_param(partition_backfill_args, 'partition_backfill_args', PartitionBackfillArgs)
+
+        result = launch_partition_backfill(partition_backfill_args)
+        check.inst(result, (ExternalPartitionBackfillData, ExternalPartitionExecutionErrorData))
+
+        return api_pb2.ExternalPartitionBackfillReply(
+            serialized_external_partition_backfill_data_or_external_partition_execution_error=serialize_dagster_namedtuple(
+                result
+            )
+        )
 
     def ExternalPartitionConfig(self, request, _context):
         partition_args = deserialize_json_to_dagster_namedtuple(request.serialized_partition_args)

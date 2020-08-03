@@ -3,6 +3,10 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import six
 
 from dagster import check
+from dagster.api.launch_partition_backfill import (
+    sync_launch_partition_backfill,
+    sync_launch_partition_backfill_grpc,
+)
 from dagster.api.snapshot_execution_plan import sync_get_external_execution_plan_grpc
 from dagster.api.snapshot_partition import (
     sync_get_external_partition_config,
@@ -45,10 +49,12 @@ from dagster.grpc.impl import (
     get_partition_config,
     get_partition_names,
     get_partition_tags,
+    launch_partition_backfill,
 )
 from dagster.grpc.types import (
     ExternalScheduleExecutionArgs,
     PartitionArgs,
+    PartitionBackfillArgs,
     PartitionNamesArgs,
     ScheduleExecutionDataMode,
 )
@@ -135,6 +141,12 @@ class RepositoryLocation(six.with_metaclass(ABCMeta)):
 
     @abstractmethod
     def get_external_partition_names(self, repository_handle, partition_set_name):
+        pass
+
+    @abstractmethod
+    def launch_external_partition_backfill(
+        self, instance, repository_handle, partition_set_name, partition_names
+    ):
         pass
 
     @abstractmethod
@@ -337,6 +349,22 @@ class InProcessRepositoryLocation(RepositoryLocation):
         )
         return get_external_schedule_execution(args)
 
+    def launch_external_partition_backfill(
+        self, instance, repository_handle, partition_set_name, partition_names
+    ):
+        check.inst_param(instance, 'instance', DagsterInstance)
+        check.inst_param(repository_handle, 'repository_handle', RepositoryHandle)
+        check.str_param(partition_set_name, 'partition_set_name')
+        check.list_param(partition_names, 'partition_names', of_type=str)
+
+        args = PartitionBackfillArgs(
+            instance_ref=instance.get_ref(),
+            repository_origin=repository_handle.get_origin(),
+            partition_set_name=partition_set_name,
+            partition_names=partition_names,
+        )
+        return launch_partition_backfill(args)
+
 
 class GrpcServerRepositoryLocation(RepositoryLocation):
     def __init__(self, repository_location_handle):
@@ -469,6 +497,18 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             repository_handle,
             schedule_name,
             schedule_execution_data_mode,
+        )
+
+    def launch_external_partition_backfill(
+        self, instance, repository_handle, partition_set_name, partition_names
+    ):
+        check.inst_param(instance, 'instance', DagsterInstance)
+        check.inst_param(repository_handle, 'repository_handle', RepositoryHandle)
+        check.str_param(partition_set_name, 'partition_set_name')
+        check.list_param(partition_names, 'partition_names', of_type=str)
+
+        return sync_launch_partition_backfill_grpc(
+            self._handle.client, instance, repository_handle, partition_set_name, partition_names
         )
 
 
@@ -633,4 +673,16 @@ class PythonEnvRepositoryLocation(RepositoryLocation):
 
         return sync_get_external_schedule_execution_data(
             instance, repository_handle, schedule_name, schedule_execution_data_mode
+        )
+
+    def launch_external_partition_backfill(
+        self, instance, repository_handle, partition_set_name, partition_names
+    ):
+        check.inst_param(instance, 'instance', DagsterInstance)
+        check.inst_param(repository_handle, 'repository_handle', RepositoryHandle)
+        check.str_param(partition_set_name, 'partition_set_name')
+        check.list_param(partition_names, 'partition_names', of_type=str)
+
+        return sync_launch_partition_backfill(
+            instance, repository_handle, partition_set_name, partition_names
         )

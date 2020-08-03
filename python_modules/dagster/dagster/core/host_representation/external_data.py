@@ -231,6 +231,14 @@ class ExternalPartitionTagsData(namedtuple('_ExternalPartitionTagsData', 'name t
 
 
 @whitelist_for_serdes
+class ExternalPartitionBackfillData(namedtuple('_ExternalPartitionNamesData', 'backfill_id')):
+    def __new__(cls, backfill_id):
+        return super(ExternalPartitionBackfillData, cls).__new__(
+            cls, backfill_id=check.str_param(backfill_id, 'backfill_id'),
+        )
+
+
+@whitelist_for_serdes
 class ExternalPartitionExecutionErrorData(
     namedtuple('_ExternalPartitionExecutionErrorData', 'error')
 ):

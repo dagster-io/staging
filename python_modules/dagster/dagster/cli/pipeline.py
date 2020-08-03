@@ -4,7 +4,6 @@ import os
 import re
 import sys
 import textwrap
-import time
 
 import click
 import yaml
@@ -19,13 +18,17 @@ from dagster.cli.workspace.cli_target import (
 from dagster.core.definitions.executable import ExecutablePipeline
 from dagster.core.definitions.partition import PartitionScheduleDefinition
 from dagster.core.host_representation import InProcessRepositoryLocation
+from dagster.core.host_representation.external_data import (
+    ExternalPartitionBackfillData,
+    ExternalPartitionExecutionErrorData,
+)
 from dagster.core.instance import DagsterInstance
 from dagster.core.snap import PipelineSnapshot, SolidInvocationSnap
-from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.telemetry import log_repo_stats, telemetry_wrapper
-from dagster.core.utils import make_new_backfill_id
+from dagster.grpc.impl import launch_partition_backfill
+from dagster.grpc.types import PartitionBackfillArgs
 from dagster.seven import IS_WINDOWS, JSONDecodeError, json
-from dagster.utils import DEFAULT_WORKSPACE_YAML_FILENAME, load_yaml_from_glob_list, merge_dicts
+from dagster.utils import DEFAULT_WORKSPACE_YAML_FILENAME, load_yaml_from_glob_list
 from dagster.utils.backcompat import canonicalize_backcompat_args
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import (
@@ -707,28 +710,20 @@ def execute_backfill_command(cli_args, print_fn, instance=None):
     ):
 
         print_fn('Launching runs... ')
-        backfill_id = make_new_backfill_id()
-
-        run_tags = merge_dicts(
-            PipelineRun.tags_for_backfill_id(backfill_id), get_tags_from_args(cli_args),
+        args = PartitionBackfillArgs(
+            instance_ref=instance.get_ref(),
+            repository_origin=external_repository.handle.get_origin(),
+            partition_set_name=partition_set_name,
+            partition_names=[partition.name for partition in partitions],
+            tags=get_tags_from_args(cli_args),
         )
+        result = launch_partition_backfill(args)
+        if isinstance(result, ExternalPartitionBackfillData):
+            print_fn('Launched backfill job `{}`'.format(result.backfill_id))
+        else:
+            assert isinstance(result, ExternalPartitionExecutionErrorData)
+            return print_fn('Backfill failed: {}'.format(result.error))
 
-        for partition in partitions:
-            run = instance.create_run_for_pipeline(
-                pipeline_def=pipeline_def,
-                mode=partition_set.mode,
-                solids_to_execute=frozenset(partition_set.solid_selection)
-                if partition_set and partition_set.solid_selection
-                else None,
-                run_config=partition_set.run_config_for_partition(partition),
-                tags=merge_dicts(partition_set.tags_for_partition(partition), run_tags),
-            )
-
-            instance.launch_run(run.run_id, external_pipeline)
-            # Remove once we can handle synchronous execution... currently limited by sqlite
-            time.sleep(0.1)
-
-        print_fn('Launched backfill job `{}`'.format(backfill_id))
     else:
         print_fn(' Aborted!')
 

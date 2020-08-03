@@ -17,6 +17,7 @@ from dagster.core.events import EngineEventData
 from dagster.core.execution.api import execute_run_iterator
 from dagster.core.host_representation import external_pipeline_data_from_def
 from dagster.core.host_representation.external_data import (
+    ExternalPartitionBackfillData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
@@ -27,6 +28,7 @@ from dagster.core.host_representation.external_data import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.utils import make_new_backfill_id
 from dagster.grpc.types import (
     ExternalScheduleExecutionArgs,
     PartitionArgs,
@@ -35,11 +37,11 @@ from dagster.grpc.types import (
 )
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from dagster.serdes.ipc import IPCErrorMessage
-from dagster.utils import start_termination_thread
+from dagster.utils import merge_dicts, start_termination_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_repository_from_origin
 
-from .types import ExecuteRunArgs, ExternalScheduleExecutionArgs
+from .types import ExecuteRunArgs, ExternalScheduleExecutionArgs, PartitionBackfillArgs
 
 
 class RunInSubprocessComplete:
@@ -295,3 +297,71 @@ def get_partition_tags(args):
         return ExternalPartitionExecutionErrorData(
             serializable_error_info_from_exc_info(sys.exc_info())
         )
+
+
+def launch_partition_backfill(args):
+    check.inst_param(args, 'args', PartitionBackfillArgs)
+    instance = DagsterInstance.from_ref(args.instance_ref)
+    recon_repo = recon_repository_from_origin(args.repository_origin)
+    repo_definition = recon_repo.get_definition()
+    partition_set_def = repo_definition.get_partition_set_def(args.partition_set_name)
+    pipeline_def = repo_definition.get_pipeline(partition_set_def.pipeline_name)
+
+    repo_location = _build_location_for_reconstructable_repo(recon_repo)
+
+    external_pipeline = repo_location.get_repository(
+        recon_repo.get_definition().name
+    ).get_full_external_pipeline(pipeline_def.name)
+    try:
+        with user_code_error_boundary(
+            PartitionExecutionError,
+            lambda: 'Error occurred during the partition generation for partition set '
+            '{partition_set_name}'.format(partition_set_name=partition_set_def.name),
+        ):
+            all_partitions = partition_set_def.get_partitions()
+        partitions = [
+            partition for partition in all_partitions if partition.name in args.partition_names
+        ]
+        backfill_id = make_new_backfill_id()
+        run_tags = merge_dicts(PipelineRun.tags_for_backfill_id(backfill_id), args.tags)
+        for partition in partitions:
+
+            def _error_message_fn(partition_set_name, partition_name):
+                return lambda: (
+                    'Error occurred during the partition config and tag generation for '
+                    'partition set {partition_set_name}::{partition_name}'.format(
+                        partition_set_name=partition_set_name, partition_name=partition_name
+                    )
+                )
+
+            with user_code_error_boundary(
+                PartitionExecutionError, _error_message_fn(partition_set_def.name, partition.name)
+            ):
+                run_config = partition_set_def.run_config_for_partition(partition)
+                tags = merge_dicts(partition_set_def.tags_for_partition(partition), run_tags)
+
+            run = instance.create_run_for_pipeline(
+                pipeline_def=pipeline_def,
+                mode=partition_set_def.mode,
+                solids_to_execute=frozenset(partition_set_def.solid_selection)
+                if partition_set_def.solid_selection
+                else None,
+                run_config=run_config,
+                tags=tags,
+            )
+
+            instance.launch_run(run.run_id, external_pipeline)
+        return ExternalPartitionBackfillData(backfill_id=backfill_id)
+
+    except PartitionExecutionError:
+        return ExternalPartitionExecutionErrorData(
+            serializable_error_info_from_exc_info(sys.exc_info())
+        )
+
+
+def _build_location_for_reconstructable_repo(recon_repo):
+    # construct in process repository location to execute the repo
+
+    from dagster.core.host_representation.repository_location import InProcessRepositoryLocation
+
+    return InProcessRepositoryLocation(recon_repo)

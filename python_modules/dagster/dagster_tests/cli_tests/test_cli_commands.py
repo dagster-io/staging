@@ -1301,28 +1301,14 @@ def backfill_cli_runner_args(execution_args):
 
 def run_test_backfill(execution_args, expected_count=None, error_message=None):
     runner = CliRunner()
-    run_launcher = InMemoryRunLauncher()
-    with seven.TemporaryDirectory() as temp_dir:
-        instance = DagsterInstance(
-            instance_type=InstanceType.EPHEMERAL,
-            local_artifact_storage=LocalArtifactStorage(temp_dir),
-            run_storage=InMemoryRunStorage(),
-            event_storage=InMemoryEventLogStorage(),
-            compute_log_manager=NoOpComputeLogManager(),
-            run_launcher=run_launcher,
-        )
-        with mock.patch('dagster.core.instance.DagsterInstance.get') as _instance:
-            _instance.return_value = instance
-
-            result = runner.invoke(
-                pipeline_backfill_command, backfill_cli_runner_args(execution_args)
-            )
-            if error_message:
-                assert result.exit_code == 2, result.stdout
-            else:
-                assert result.exit_code == 0, result.stdout
-                if expected_count:
-                    assert len(run_launcher.queue()) == expected_count
+    with backfill_instance() as instance:
+        result = runner.invoke(pipeline_backfill_command, backfill_cli_runner_args(execution_args))
+        if error_message:
+            assert result.exit_code == 2, result.stdout
+        else:
+            assert result.exit_code == 0, result.stdout
+            if expected_count:
+                assert instance.get_runs_count() == expected_count
 
 
 def test_backfill_no_pipeline():
@@ -1460,6 +1446,15 @@ def mocked_instance():
             yield instance
 
 
+@contextmanager
+def backfill_instance():
+    with seven.TemporaryDirectory() as temp_dir:
+        instance = DagsterInstance.local_temp(temp_dir)
+        with mock.patch('dagster.core.instance.DagsterInstance.get') as _instance:
+            _instance.return_value = instance
+            yield instance
+
+
 def test_tags_pipeline():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1508,7 +1503,7 @@ def test_tags_pipeline():
         assert len(run.tags) == 1
         assert run.tags.get('foo') == 'bar'
 
-    with mocked_instance() as instance:
+    with backfill_instance() as instance:
         with pytest.warns(
             UserWarning,
             match=re.escape(
@@ -1532,7 +1527,7 @@ def test_tags_pipeline():
                 ],
             )
         assert result.exit_code == 0, result.stdout
-        runs = instance.run_launcher.queue()
+        runs = instance.get_runs()
         assert len(runs) == 1
         run = runs[0]
         assert len(run.tags) >= 1
