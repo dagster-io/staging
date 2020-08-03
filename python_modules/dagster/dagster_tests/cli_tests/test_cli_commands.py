@@ -92,7 +92,15 @@ def define_bar_schedules():
     return {
         'foo_schedule': ScheduleDefinition(
             "foo_schedule", cron_schedule="* * * * *", pipeline_name="test_pipeline", run_config={},
-        )
+        ),
+        'baz_partition_set_schedule': PartitionSetDefinition(
+            name='baz_schedule_partitions',
+            pipeline_name='baz',
+            partition_fn=lambda: string.digits,
+            run_config_fn_for_partition=lambda partition: {
+                'solids': {'do_input': {'inputs': {'x': {'value': partition.value}}}}
+            },
+        ).create_schedule_definition('baz_partition_set_schedule', cron_schedule="* * * * *"),
     }
 
 
@@ -1369,7 +1377,7 @@ def run_test_backfill(execution_args, expected_count=None, error_message=None):
             _instance.return_value = instance
 
             result = runner.invoke(
-                pipeline_backfill_command, backfill_cli_runner_args(execution_args)
+                pipeline_backfill_command, backfill_cli_runner_args(execution_args),
             )
             if error_message:
                 assert result.exit_code == 2, result.stdout
@@ -1421,6 +1429,17 @@ def test_backfill_launch():
         ),
     ):
         run_test_backfill(args, expected_count=len(string.ascii_lowercase))
+
+
+def test_backfill_launch_schedule_partition_set():
+    args = ['--pipeline', 'baz', '--partition-set', 'baz_schedule_partitions']
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            'You are using the legacy repository yaml format. Please update your file '
+        ),
+    ):
+        run_test_backfill(args, expected_count=len(string.digits))
 
 
 def test_backfill_partition_range():
@@ -1554,6 +1573,9 @@ def test_tags_pipeline():
         assert len(run.tags) == 1
         assert run.tags.get('foo') == 'bar'
 
+
+def test_backfill_tags_pipeline():
+    runner = CliRunner()
     with mocked_instance() as instance:
         with pytest.warns(
             UserWarning,
@@ -1583,6 +1605,7 @@ def test_tags_pipeline():
         run = runs[0]
         assert len(run.tags) >= 1
         assert run.tags.get('foo') == 'bar'
+        instance.run_launcher.join()
 
 
 def test_execute_subset_pipeline_single_clause_solid_name():
