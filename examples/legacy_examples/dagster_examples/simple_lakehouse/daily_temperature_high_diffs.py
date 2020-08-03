@@ -4,7 +4,7 @@ from pyspark.sql import functions as f
 
 from lakehouse import Column, computed_table
 from pyarrow import float64, date32
-from .daily_temperature_highs import daily_temperature_highs_table
+from dagster_examples.simple_lakehouse.daily_temperature_highs import daily_temperature_highs_table
 
 
 @computed_table(

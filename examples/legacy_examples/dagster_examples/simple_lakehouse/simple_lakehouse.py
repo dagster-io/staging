@@ -185,8 +185,10 @@ def make_simple_lakehouse():
     )
 
 
-lakehouse = make_simple_lakehouse()
-from .daily_temperature_high_diffs import daily_temperature_high_diffs_table
+simple_lakehouse = make_simple_lakehouse()
+from dagster_examples.simple_lakehouse.daily_temperature_high_diffs import (
+    daily_temperature_high_diffs_table,
+)
 from lakehouse import get_ancestors
 
 assets = [daily_temperature_high_diffs_table] + get_ancestors(daily_temperature_high_diffs_table)
