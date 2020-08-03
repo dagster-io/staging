@@ -74,6 +74,10 @@ class IntermediateStore(six.with_metaclass(ABCMeta)):
         src = self.object_store.key_for_paths([self.root_for_run_id(run_id)] + paths)
         dst = self.object_store.key_for_paths([self.root] + paths)
 
+        import pdb
+
+        pdb.set_trace()
+
         return self.object_store.cp_object(src, dst)
 
     def set_value(self, obj, context, dagster_type, paths):

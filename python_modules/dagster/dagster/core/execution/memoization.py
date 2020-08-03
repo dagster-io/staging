@@ -30,10 +30,10 @@ def validate_reexecution_memoization(pipeline_context, execution_plan):
     if len(execution_plan.step_keys_to_execute) == len(execution_plan.steps):
         return
 
-    if not pipeline_context.intermediates_manager.is_persistent:
+    if not pipeline_context.intermediate_storage.is_persistent:
         raise DagsterInvariantViolationError(
             'Cannot perform reexecution with non persistent intermediates manager `{}`.'.format(
-                pipeline_context.intermediates_manager.__class__.__name__
+                pipeline_context.intermediate_storage.__class__.__name__
             )
         )
 
@@ -61,14 +61,14 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
     for handle in output_handles_to_copy:
         output_handles_to_copy_by_step[handle.step_key].append(handle)
 
-    intermediates_manager = pipeline_context.intermediates_manager
+    intermediate_storage = pipeline_context.intermediate_storage
     for step in execution_plan.topological_steps():
         step_context = pipeline_context.for_step(step)
         for handle in output_handles_to_copy_by_step.get(step.key, []):
-            if intermediates_manager.has_intermediate(pipeline_context, handle):
+            if intermediate_storage.has_intermediate(pipeline_context, handle):
                 continue
 
-            operation = intermediates_manager.copy_intermediate_from_run(
+            operation = intermediate_storage.copy_intermediate_from_run(
                 pipeline_context, parent_run_id, handle
             )
             yield DagsterEvent.object_store_operation(
