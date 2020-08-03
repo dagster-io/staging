@@ -2,7 +2,7 @@ import importlib
 import click
 
 from collections import namedtuple
-from dagster import execute_pipeline, DagsterInstance
+from dagster import execute_pipeline, DagsterInstance, check
 from dagster.cli.workspace.cli_target import (
     get_external_repository_from_kwargs,
     repository_target_argument,
@@ -95,12 +95,53 @@ def fill_cli(module):
     )
 
 
+def _sorted_quoted(strings):
+    return '[' + ', '.join(["'{}'".format(s) for s in sorted(list(strings))]) + ']'
+
+
+def get_internal_repository_from_kwargs(kwargs, instance):
+    check.inst_param(instance, 'instance', DagsterInstance)
+    repo_location = get_repository_location_from_kwargs(kwargs, instance)
+
+    repo_dict = repo_location.get_repositories()
+
+    provided_repo_name = kwargs.get('repository')
+
+    check.invariant(repo_dict, 'There should be at least one repo.')
+
+    # no name provided and there is only one repo. Automatically return
+    if provided_repo_name is None and len(repo_dict) == 1:
+        return next(iter(repo_dict.values()))
+
+    if provided_repo_name is None:
+        raise click.UsageError(
+            (
+                'Must provide --repository as there are more than one repositories '
+                'in {location}. Options are: {repos}.'
+            ).format(location=repo_location.name, repos=_sorted_quoted(repo_dict.keys()))
+        )
+
+    if not repo_location.has_repository(provided_repo_name):
+        raise click.UsageError(
+            (
+                'Repository "{provided_repo_name}" not found in location "{location_name}". '
+                'Found {found_names} instead.'
+            ).format(
+                provided_repo_name=provided_repo_name,
+                location_name=repo_location.name,
+                found_names=_sorted_quoted(repo_dict.keys()),
+            )
+        )
+
+    return repo_location.get_repository(provided_repo_name)
+
+
 @click.command()
 @repository_target_argument
 def update_cli(**kwargs):
     instance = DagsterInstance.get()
 
-    repo = get_external_repository_from_kwargs(kwargs, instance)
+    repo = get_internal_repository_from_kwargs(kwargs, instance)
     lakehouse_def = repo.get_lakehouse_def()
 
 
