@@ -168,7 +168,7 @@ def make_simple_lakehouse():
         name='dev',
         resource_defs={
             'pyspark': pyspark_resource,
-            'filesystem': local_file_system_storage.configured({'root': '.'}),
+            'filesystem': local_file_system_storage.configured({'root': os.path.dirname(__file__)}),
         },
     )
 
@@ -185,4 +185,8 @@ def make_simple_lakehouse():
     )
 
 
-simple_lakehouse = make_simple_lakehouse()
+lakehouse = make_simple_lakehouse()
+from .daily_temperature_high_diffs import daily_temperature_high_diffs_table
+from lakehouse import get_ancestors
+
+assets = [daily_temperature_high_diffs_table] + get_ancestors(daily_temperature_high_diffs_table)
