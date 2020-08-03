@@ -3,7 +3,7 @@ from collections import OrderedDict
 from io import BytesIO
 
 import pytest
-from dagster_gcp.gcs.intermediate_store import GCSIntermediateStore
+from dagster_gcp.gcs.intermediate_store import GCSIntermediateStorage, GCSIntermediateStore
 from dagster_gcp.gcs.resources import gcs_resource
 from dagster_gcp.gcs.system_storage import gcs_plus_default_storage_defs
 
@@ -26,7 +26,6 @@ from dagster.core.events import DagsterEventType
 from dagster.core.execution.api import create_execution_plan, execute_plan, scoped_pipeline_context
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.intermediates_manager import ObjectStoreIntermediateStorage
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.type_storage import TypeStoragePlugin, TypeStoragePluginRegistry
 from dagster.core.types.dagster_type import Bool as RuntimeBool
@@ -126,12 +125,11 @@ def test_using_gcs_for_subplan(gcs_bucket):
         pipeline_run,
         instance,
     ) as context:
-        store = GCSIntermediateStore(
+        intermediates_manager = GCSIntermediateStorage(
             gcs_bucket,
             run_id,
             client=context.scoped_resources_builder.build(required_resource_keys={'gcs'},).gcs,
         )
-        intermediates_manager = ObjectStoreIntermediateStorage(store)
         assert intermediates_manager.has_intermediate(
             context, StepOutputHandle('return_one.compute')
         )
@@ -304,14 +302,13 @@ def test_gcs_pipeline_with_custom_prefix(gcs_bucket):
 
     execution_plan = create_execution_plan(pipe, run_config)
     with scoped_pipeline_context(execution_plan, run_config, pipeline_run, instance,) as context:
-        store = GCSIntermediateStore(
+        intermediates_manager = GCSIntermediateStorage(
             run_id=result.run_id,
             gcs_bucket=gcs_bucket,
             gcs_prefix=gcs_prefix,
             client=context.scoped_resources_builder.build(required_resource_keys={'gcs'},).gcs,
         )
-        assert store.root == '/'.join(['custom_prefix', 'storage', result.run_id])
-        intermediates_manager = ObjectStoreIntermediateStorage(store)
+        assert intermediates_manager.root == '/'.join(['custom_prefix', 'storage', result.run_id])
         assert (
             intermediates_manager.get_intermediate(
                 context, Int, StepOutputHandle('return_one.compute')
