@@ -1554,6 +1554,9 @@ def test_tags_pipeline():
         assert len(run.tags) == 1
         assert run.tags.get('foo') == 'bar'
 
+
+def test_backfill_tags_pipeline():
+    runner = CliRunner()
     with mocked_instance() as instance:
         with pytest.warns(
             UserWarning,
@@ -1583,6 +1586,7 @@ def test_tags_pipeline():
         run = runs[0]
         assert len(run.tags) >= 1
         assert run.tags.get('foo') == 'bar'
+        instance.run_launcher.join()
 
 
 def test_execute_subset_pipeline_single_clause_solid_name():
