@@ -17,6 +17,7 @@ import boto3
 import pandas as pd
 from dagster_pyspark import pyspark_resource
 from lakehouse import AssetStorage, Lakehouse, asset_storage, multi_type_asset_storage
+from lakehouse.repository import LakehouseRepositoryDefinition
 from pandas import DataFrame as PandasDF
 from pyspark.sql import DataFrame as SparkDF
 
@@ -192,3 +193,5 @@ from dagster_examples.simple_lakehouse.daily_temperature_high_diffs import (
 from lakehouse import get_ancestors
 
 assets = [daily_temperature_high_diffs_table] + get_ancestors(daily_temperature_high_diffs_table)
+
+simple_lakehouse_repository = LakehouseRepositoryDefinition('simple_lakehouse_repository', assets)
