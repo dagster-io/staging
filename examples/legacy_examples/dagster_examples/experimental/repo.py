@@ -118,6 +118,14 @@ def test_pipeline():
     test_solid()
 
 
+def create_pipeline_i(i):
+    @pipeline(name="pipeline_{}".format(i))
+    def test_pipeline():
+        test_solid()
+
+    return test_pipeline
+
+
 @repository
 def experimental_repository():
     return [test_pipeline, metrics_pipeline, rollup_pipeline] + define_schedules()
