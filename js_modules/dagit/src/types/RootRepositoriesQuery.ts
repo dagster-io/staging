@@ -22,6 +22,7 @@ export interface RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_
 
 export interface RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes {
   __typename: "Repository";
+  id: string;
   name: string;
   pipelines: RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_pipelines[];
   location: RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_location;

@@ -7,6 +7,7 @@ export const SCHEDULE_STATE_FRAGMENT = gql`
     __typename
     id
     scheduleOriginId
+    repositoryOriginId
     scheduleName
     cronSchedule
     runningScheduleCount
