@@ -51,6 +51,7 @@ from dagster.core.snap.execution_plan_snapshot import (
     ExecutionPlanSnapshot,
     ExecutionPlanSnapshotErrorData,
 )
+from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.tags import check_tags
 from dagster.grpc import DagsterGrpcServer
 from dagster.grpc.impl import (
@@ -370,7 +371,7 @@ def execute_step_with_structured_logs_command(input_json):
     instance = (
         DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
     )
-    pipeline_run = instance.get_run_by_id(args.pipeline_run_id)
+    pipeline_run = check.inst(instance.get_run_by_id(args.pipeline_run_id), PipelineRun)
     recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
 
     execution_plan = create_execution_plan(
