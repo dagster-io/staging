@@ -307,32 +307,50 @@ def get_run_config_from_env_file_list(env_file_list):
 def execute_execute_command(env_file_list, cli_args, instance=None, mode=None, tags=None):
     check.opt_list_param(env_file_list, 'env_file_list', of_type=str)
     check.opt_inst_param(instance, 'instance', DagsterInstance)
-
     instance = instance if instance else DagsterInstance.get()
-    external_pipeline = get_external_pipeline_from_kwargs(cli_args, instance)
-    # We should move this to use external pipeline
-    # https://github.com/dagster-io/dagster/issues/2556
-    pipeline = recon_pipeline_from_origin(external_pipeline.handle.get_origin())
+
+    repo_location = get_repository_location_from_kwargs(cli_args, instance)
+    external_repo = get_external_repository_from_repo_location(
+        repo_location, cli_args.get('repository')
+    )
+
+    external_pipeline = get_external_pipeline_from_external_repo(
+        external_repo, cli_args.get('pipeline'),
+    )
+
+    run_config = get_run_config_from_env_file_list(env_file_list)
     solid_selection = get_solid_selection_from_args(cli_args)
-    return do_execute_command(pipeline, instance, env_file_list, mode, tags, solid_selection)
+
+    return execute_external_pipeline(
+        instance=instance,
+        repo_location=repo_location,
+        external_repo=external_repo,
+        external_pipeline=external_pipeline,
+        run_config=run_config,
+        mode=mode,
+        tags=tags,
+        solid_selection=solid_selection,
+    )
 
 
 def execute_execute_command_with_preset(preset, cli_args, instance, _mode):
-    instance = instance if instance else DagsterInstance.get()
-
-    external_pipeline = get_external_pipeline_from_kwargs(cli_args, instance)
-    # We should move this to use external pipeline
-    # https://github.com/dagster-io/dagster/issues/2556
-    pipeline = recon_pipeline_from_origin(external_pipeline.handle.get_origin())
+    repo_location = get_repository_location_from_kwargs(cli_args, instance)
+    external_repo = get_external_repository_from_repo_location(
+        repo_location, cli_args.get('repository')
+    )
+    external_pipeline = get_external_pipeline_from_external_repo(
+        external_repo, cli_args.get('pipeline'),
+    )
 
     tags = get_tags_from_args(cli_args)
     solid_selection = get_solid_selection_from_args(cli_args)
 
-    return execute_pipeline(
-        pipeline,
-        preset=preset,
+    return execute_external_pipeline(
         instance=instance,
-        raise_on_error=False,
+        repo_location=repo_location,
+        external_repo=external_repo,
+        external_pipeline=external_pipeline,
+        preset=preset,
         tags=tags,
         solid_selection=solid_selection,
     )
@@ -499,6 +517,51 @@ def _create_external_pipeline_run(
         execution_plan_snapshot=execution_plan_snapshot,
         parent_pipeline_snapshot=external_pipeline.parent_pipeline_snapshot,
     )
+
+
+@telemetry_wrapper
+def execute_external_pipeline(
+    instance,
+    repo_location,
+    external_repo,
+    external_pipeline,
+    run_config=None,
+    mode=None,
+    preset=None,
+    tags=None,
+    solid_selection=None,
+):
+    check.inst_param(instance, 'instance', DagsterInstance)
+    check.inst_param(repo_location, 'repo_location', RepositoryLocation)
+    check.inst_param(external_repo, 'external_repo', ExternalRepository)
+    check.inst_param(external_pipeline, 'external_pipeline', ExternalPipeline)
+    check.opt_dict_param(run_config, 'run_config')
+
+    check.opt_str_param(mode, 'mode')
+    check.opt_str_param(preset, 'preset')
+    check.opt_dict_param(tags, 'tags', key_type=str)
+    check.opt_list_param(solid_selection, 'solid_selection', of_type=str)
+
+    log_external_repo_stats(
+        instance=instance,
+        external_repo=external_repo,
+        external_pipeline=external_pipeline,
+        source='pipeline_execute_command',
+    )
+
+    pipeline_run = _create_external_pipeline_run(
+        instance=instance,
+        repo_location=repo_location,
+        external_repo=external_repo,
+        external_pipeline=external_pipeline,
+        run_config=run_config,
+        mode=mode,
+        preset=preset,
+        tags=tags,
+        solid_selection=solid_selection,
+    )
+
+    return repo_location.execute_pipeline(instance, external_pipeline, pipeline_run)
 
 
 def do_execute_command(
