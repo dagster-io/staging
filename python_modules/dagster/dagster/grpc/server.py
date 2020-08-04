@@ -842,9 +842,6 @@ class GrpcServerProcess(object):
         self._dispose()
 
     def _dispose(self):
-        if self.server_process:
-            cleanup_server_process(self.server_process)
-            self.server_process = None
         if self.socket:
             if os.path.exists(self.socket):
                 os.unlink(self.socket)

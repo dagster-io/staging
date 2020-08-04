@@ -49,19 +49,24 @@ class DagsterGrpcClient(object):
         else:
             self._server_address = 'unix:' + os.path.abspath(socket)
 
+        self._channel = grpc.insecure_channel(self._server_address)
+
+    def __del__(self):
+        if self._channel:
+            self._channel.close()
+            self._channel = None
+
     def _query(self, method, request_type, **kwargs):
-        with grpc.insecure_channel(self._server_address) as channel:
-            stub = DagsterApiStub(channel)
-            response = getattr(stub, method)(request_type(**kwargs))
+        stub = DagsterApiStub(self._channel)
+        response = getattr(stub, method)(request_type(**kwargs))
         # TODO need error handling here
         return response
 
     def _streaming_query(self, method, request_type, **kwargs):
-        with grpc.insecure_channel(self._server_address) as channel:
-            stub = DagsterApiStub(channel)
-            response_stream = getattr(stub, method)(request_type(**kwargs))
-            for response in response_stream:
-                yield response
+        stub = DagsterApiStub(self._channel)
+        response_stream = getattr(stub, method)(request_type(**kwargs))
+        for response in response_stream:
+            yield response
 
     def _terminate_server(self):
         self.shutdown_server()
