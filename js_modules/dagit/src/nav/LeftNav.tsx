@@ -12,6 +12,7 @@ import { RepositoryContentList } from "./RepositoryContentList";
 import navBarImage from "../images/nav-logo-icon.png";
 import navTitleImage from "../images/nav-title.png";
 import { DagsterRepoOption } from "../DagsterRepositoryContext";
+import { SchedulesList } from "./SchedulesList";
 
 const KEYCODE_FOR_1 = 49;
 
@@ -27,6 +28,12 @@ const INSTANCE_TABS = [
     tab: `assets`,
     icon: <Icon icon="panel-table" iconSize={18} />,
     label: "Assets"
+  },
+  {
+    to: `/scheduler`,
+    tab: `scheduler`,
+    icon: <Icon icon="time" iconSize={18} />,
+    label: "Scheduler"
   }
 ];
 
@@ -50,7 +57,7 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({ options, repo, 
   const match = useRouteMatch<
     | { selector: string; tab: string; rootTab: undefined }
     | { selector: undefined; tab: undefined; rootTab: string }
-  >(["/pipeline/:selector/:tab?", "/solid/:selector", "/:rootTab?"]);
+  >(["/pipeline/:selector/:tab?", "/solid/:selector", "/schedules/:selector", "/:rootTab?"]);
 
   return (
     <LeftNavContainer>
@@ -92,14 +99,21 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({ options, repo, 
         }}
       >
         <RepositoryPicker options={options} repo={repo} setRepo={setRepo} />
-        {repo &&
+        {/* {repo &&
           REPO_SCOPE_TABS.map(t => (
             <Tab to={t.to} key={t.tab} className={match?.params.tab === t.tab ? "selected" : ""}>
               {t.icon}
               <TabLabel>{t.label}</TabLabel>
             </Tab>
-          ))}
-        {repo && <RepositoryContentList {...match?.params} repo={repo} />}
+          ))} */}
+        {repo && (
+          <>
+            <ItemHeader>Pipelines & Solids:</ItemHeader>
+            <RepositoryContentList {...match?.params} repo={repo} />
+            <ItemHeader>Schedules:</ItemHeader>
+            <SchedulesList {...match?.params} repo={repo} />
+          </>
+        )}
         <div style={{ flex: 1 }} />
       </div>
     </LeftNavContainer>
@@ -110,6 +124,20 @@ const LogoWebsocketStatus = styled(WebsocketStatus)`
   position: absolute;
   top: 28px;
   left: 42px;
+`;
+
+const ItemHeader = styled.div`
+  font-size: 15px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 8px 12px;
+  padding-left: 8px;
+  margin-top: 10px;
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid transparent;
+  display: block;
+  font-weight: bold;
+  color: ${Colors.LIGHT_GRAY3} !important;
 `;
 
 const LeftNavContainer = styled.div`
