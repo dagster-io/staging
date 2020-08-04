@@ -22,17 +22,20 @@ import { RunsFilter } from "../runs/RunsFilter";
 import { TokenizingFieldValue } from "../TokenizingField";
 import { useRepositorySelector } from "../DagsterRepositoryContext";
 import PythonErrorInfo from "../PythonErrorInfo";
+import { RunTable } from "../runs/RunTable";
 
 type Partition = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results;
 type Run = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs;
 
 interface PartitionViewProps {
+  pipelineName: string;
   partitionSetName: string;
   cursor: string | undefined;
   setCursor: (cursor: string | undefined) => void;
 }
 
 export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
+  pipelineName,
   partitionSetName,
   cursor,
   setCursor
@@ -101,13 +104,19 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
                   popCursor={popCursor}
                   setCursor={setCursor}
                 />
-                <PartitionRunMatrix partitions={partitions} />
-                {/*TODO BG */}
-                {/* <PartitionContent
-                  partitions={partitions}
-                  showLoading={showLoading}
-                  allStepKeys={Object.keys(allStepKeys)}
-                /> */}
+                <div style={{ position: "relative" }}>
+                  <PartitionContent
+                    partitions={partitions}
+                    allStepKeys={Object.keys(allStepKeys)}
+                  />
+                  <PartitionRunMatrix pipelineName={pipelineName} partitions={partitions} />
+
+                  {showLoading && (
+                    <Overlay>
+                      <Spinner size={48} />
+                    </Overlay>
+                  )}
+                </div>
               </div>
             );
           }}
@@ -119,12 +128,10 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
 
 const PartitionContent = ({
   partitions,
-  allStepKeys,
-  showLoading
+  allStepKeys
 }: {
   partitions: Partition[];
   allStepKeys: string[];
-  showLoading: boolean;
 }) => {
   const initial: { [stepKey: string]: boolean } = { [PIPELINE_LABEL]: true };
   allStepKeys.forEach(stepKey => (initial[stepKey] = true));
@@ -201,11 +208,6 @@ const PartitionContent = ({
           ref={rateGraph}
         />
       </div>
-      {showLoading ? (
-        <Overlay>
-          <Spinner size={48} />
-        </Overlay>
-      ) : null}
       <div style={{ width: 450 }}>
         <NavContainer>
           <NavSectionHeader>Run filters</NavSectionHeader>
@@ -282,7 +284,7 @@ const StepSelector = ({
 };
 
 const NavSectionHeader = styled.div`
-  border-bottom: 1px solid #ececec;
+  border-bottom: 1px solid ${Colors.GRAY5};
   margin-bottom: 10px;
   padding-bottom: 5px;
 `;
@@ -294,7 +296,7 @@ const NavContainer = styled.div`
   margin: 20px 10px;
   padding: 10px;
   background-color: #fff;
-  border: 1px solid #ececec;
+  border: 1px solid ${Colors.GRAY5};
   overflow: auto;
 `;
 
@@ -327,6 +329,7 @@ const Overlay = styled.div`
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
 `;
 
 const getPipelineDurationForRun = (run: Run) => {
@@ -575,6 +578,7 @@ const PARTITION_SET_QUERY = gql`
                     success
                   }
                 }
+                ...RunTableRunFragment
               }
             }
           }
@@ -586,4 +590,5 @@ const PARTITION_SET_QUERY = gql`
     }
   }
   ${PythonErrorInfo.fragments.PythonErrorFragment}
+  ${RunTable.fragments.RunTableRunFragment}
 `;

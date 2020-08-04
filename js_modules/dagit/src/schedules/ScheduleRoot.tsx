@@ -47,6 +47,7 @@ export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
               <ScheduleRow schedule={scheduleDefinitionOrError} />
               {partitionSetName ? (
                 <PartitionView
+                  pipelineName={scheduleDefinitionOrError.pipelineName}
                   partitionSetName={partitionSetName}
                   cursor={cursor}
                   setCursor={setCursor}
