@@ -10,8 +10,10 @@ from dagster_graphql.client.util import construct_execute_plan_variables, parse_
 
 from dagster import __version__ as dagster_version
 from dagster import check, seven
+from dagster.cli.api import ExecuteStepArgs
 from dagster.core.events import EngineEventData
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
+from dagster.serdes import serialize_dagster_namedtuple
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 from .util import (
@@ -92,29 +94,34 @@ class DagsterKubernetesPodOperator(KubernetesPodOperator):
     def query(self, airflow_ts):
         check.opt_str_param(airflow_ts, 'airflow_ts')
 
-        variables = construct_execute_plan_variables(
-            self.recon_repo,
-            self.mode,
-            self.run_config,
-            self.pipeline_name,
-            self.run_id,
-            self.step_keys,
-        )
-        tags = airflow_tags_for_ts(airflow_ts)
-        variables['executionParams']['executionMetadata']['tags'] = tags
+        pipeline_origin = self.recon_repo.get_reconstructable_pipeline(
+            self.pipeline_name
+        ).get_origin()
 
-        self.log.info(
-            'Executing GraphQL query: {query}\n'.format(query=RAW_EXECUTE_PLAN_MUTATION)
-            + 'with variables:\n'
-            + seven.json.dumps(variables, indent=2)
+        args = ExecuteStepArgs(
+            pipeline_origin=pipeline_origin,
+            pipeline_run_id=self.run_id,
+            instance_ref=None,
+            mode=self.mode,
+            step_keys_to_execute=self.step_keys,
+            run_config=self.run_config,
+            retries_dict=None,
         )
+
+        # tags = airflow_tags_for_ts(airflow_ts)
+        # variables['executionParams']['executionMetadata']['tags'] = tags
+
+        # self.log.info(
+        #     'Executing GraphQL query: {query}\n'.format(query=RAW_EXECUTE_PLAN_MUTATION)
+        #     + 'with variables:\n'
+        #     + seven.json.dumps(variables, indent=2)
+        # )
 
         return [
-            'dagster-graphql',
-            '-v',
-            '{}'.format(seven.json.dumps(variables)),
-            '-t',
-            '{}'.format(RAW_EXECUTE_PLAN_MUTATION),
+            'dagster',
+            'api',
+            'execute_step_with_structured_logs',
+            '{}'.format(serialize_dagster_namedtuple(args)),
         ]
 
     def execute(self, context):
