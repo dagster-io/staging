@@ -18,6 +18,22 @@ export interface DagsterRepoOption {
   repository: Repository;
 }
 
+export interface RepositorySelector {
+  repositoryLocationName: string;
+  repositoryName: string;
+}
+
+export const repositorySelectorFromDagsterRepoOption = (
+  dagsterRepoOption: DagsterRepoOption
+): RepositorySelector => {
+  const { repository } = dagsterRepoOption;
+
+  return {
+    repositoryLocationName: repository.location.name,
+    repositoryName: repository.name
+  };
+};
+
 const LAST_REPO_KEY = "dagit.last-repo";
 
 export const DagsterRepositoryContext = React.createContext<DagsterRepoOption>(
@@ -30,6 +46,7 @@ export const ROOT_REPOSITORIES_QUERY = gql`
       __typename
       ... on RepositoryConnection {
         nodes {
+          id
           name
           pipelines {
             name
@@ -110,7 +127,7 @@ export const useCurrentRepositoryState = (options: DagsterRepoOption[]) => {
   return [repo, setRepo] as [typeof repo, typeof setRepo];
 };
 
-export const useRepositorySelector = () => {
+export const useRepositorySelector = (): RepositorySelector => {
   const repository = useRepository();
   return {
     repositoryLocationName: repository.location.name,
@@ -159,4 +176,14 @@ export const useDagitExecutablePath = () => {
   });
 
   return data?.instance.executablePath;
+};
+
+export const scheduleSelectorWithRepository = (
+  scheduleName: string,
+  repositorySelector?: RepositorySelector
+) => {
+  return {
+    ...repositorySelector,
+    scheduleName
+  };
 };

@@ -43,7 +43,7 @@ async function testApp() {
     );
     // wait for the graphql promises to settle. Usually one tick is enough for us,
     // except when a query resolves and triggers another query lower in the tree.
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
   });
 
   const tree = component!.toJSON();
