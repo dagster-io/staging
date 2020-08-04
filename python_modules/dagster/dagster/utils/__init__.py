@@ -489,3 +489,14 @@ def compose(*args):
     # reduce using functional composition over all the arguments, with the identity function as
     # initializer
     return functools.reduce(lambda f, g: lambda x: f(g(x)), args, lambda x: x)
+
+
+def check_python_version(expected_major, expected_minor=None, expected_micro=None):
+    check.int_param(expected_major, 'expected_major')
+    expected_minor = check.opt_int_param(expected_minor, 'expected_minor', sys.version_info.minor)
+    expected_micro = check.opt_int_param(expected_micro, 'expected_micro', sys.version_info.micro)
+
+    version_info = sys.version_info
+    expected = (expected_major, expected_minor, expected_micro)
+    actual = (version_info.major, version_info.minor, version_info.micro)
+    return expected == actual

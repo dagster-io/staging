@@ -1,4 +1,8 @@
+import sys
+import warnings
+
 from dagster import repository
+from dagster.utils import check_python_version
 
 
 def get_event_pipelines():
@@ -30,9 +34,13 @@ def get_bay_bikes_pipelines():
 
 @repository
 def legacy_examples():
-    return (
-        get_bay_bikes_pipelines()
-        + get_event_pipelines()
-        + get_pyspark_pipelines()
-        + get_lakehouse_pipelines()
-    )
+    pipelines = get_bay_bikes_pipelines() + get_event_pipelines()
+
+    # Don't load the following pipelines in py38
+    # https://github.com/dagster-io/dagster/issues/1960
+    if not check_python_version(3, 8):
+        pipelines += get_pyspark_pipelines() + get_lakehouse_pipelines()
+    else:
+        warnings.warn("Not loading pyspark pipelines because you are running py3.8")
+
+    return pipelines
