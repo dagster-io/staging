@@ -340,8 +340,10 @@ def get_repository_origin_from_kwargs(kwargs):
 def get_repository_location_from_kwargs(kwargs, instance):
     check.inst_param(instance, 'instance', DagsterInstance)
     workspace = get_workspace_from_kwargs(kwargs, instance)
-    provided_location_name = kwargs.get('location')
+    return get_repository_location_from_workspace(workspace, kwargs.get('location'))
 
+
+def get_repository_location_from_workspace(workspace, provided_location_name):
     if provided_location_name is None and len(workspace.repository_location_handles) == 1:
         return RepositoryLocation.from_handle(next(iter(workspace.repository_location_handles)))
 

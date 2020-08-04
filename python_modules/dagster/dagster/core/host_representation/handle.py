@@ -55,14 +55,16 @@ class UserProcessApi(Enum):
 
 class RepositoryLocationHandle:
     @staticmethod
-    def create_in_process_location(pointer):
+    def create_in_process_location(pointer, location_name=None):
         check.inst_param(pointer, 'pointer', CodePointer)
 
         # If we are here we know we are in a hosted_user_process so we can do this
         from dagster.core.definitions.reconstructable import repository_def_from_pointer
 
         repo_def = repository_def_from_pointer(pointer)
-        return InProcessRepositoryLocationHandle(IN_PROCESS_NAME, {repo_def.name: pointer})
+        return InProcessRepositoryLocationHandle(
+            location_name if location_name else IN_PROCESS_NAME, {repo_def.name: pointer}
+        )
 
     @staticmethod
     def create_out_of_process_location(

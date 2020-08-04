@@ -1299,8 +1299,9 @@ def test_multiproc():
 def test_multiproc_invalid():
     # force ephemeral instance by removing out DAGSTER_HOME
     runner = CliRunner(env={'DAGSTER_HOME': None})
-    add_result = runner_pipeline_execute(
-        runner,
+
+    add_result = runner.invoke(
+        pipeline_execute_command,
         [
             '-w',
             file_relative_path(__file__, '../workspace.yaml'),
@@ -1310,6 +1311,8 @@ def test_multiproc_invalid():
             'multi_mode_with_resources',  # pipeline name
         ],
     )
+
+    assert add_result.exit_code != 0
     # which is invalid for multiproc
     assert 'DagsterUnmetExecutorRequirementsError' in add_result.output
 

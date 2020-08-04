@@ -24,6 +24,7 @@ from dagster.core.host_representation.external_data import (
 )
 from dagster.core.host_representation.handle import (
     InProcessRepositoryLocationHandle,
+    ManagedGrpcPythonEnvRepositoryLocationHandle,
     PythonEnvRepositoryLocationHandle,
     RepositoryLocationHandle,
 )
@@ -68,7 +69,10 @@ def is_repository_location_in_same_python_env(repository_location_handle):
 
     # or it is out-of-process but using the same python executable
     return (
-        isinstance(repository_location_handle, PythonEnvRepositoryLocationHandle)
+        isinstance(
+            repository_location_handle,
+            (PythonEnvRepositoryLocationHandle, ManagedGrpcPythonEnvRepositoryLocationHandle),
+        )
         and repository_location_handle.executable_path == sys.executable
     )
 
