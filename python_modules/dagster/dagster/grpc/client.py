@@ -333,6 +333,20 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
         # Hard termination pending implementation of soft scheme
         self._server_process.terminate()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exception_type, _exception_value, _traceback):
+        self._dispose()
+
+    def __del__(self):
+        self._dispose()
+
+    def _dispose(self):
+        if self._server_process and self._server_process.poll() is None:
+            self.shutdown_server()
+            self._server_process = None
+
 
 @contextmanager
 def ephemeral_grpc_api_client(
@@ -348,9 +362,5 @@ def ephemeral_grpc_api_client(
         max_retries=max_retries,
         max_workers=max_workers,
     ) as server:
-        client = server.create_ephemeral_client()
-        try:
+        with server.create_ephemeral_client() as client:
             yield client
-        finally:
-            if server.server_process.poll() is None:
-                client.shutdown_server()
