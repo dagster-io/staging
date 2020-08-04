@@ -146,8 +146,8 @@ def poll_for_event(instance, run_id, event_type, message, timeout=10):
 
 @pytest.fixture(scope='module')
 def grpc_server_port_fixture():
-    with GrpcServerProcess(force_port=True) as server:
-        yield server.port
+    with GrpcServerProcess(force_port=True).create_ephemeral_client() as api_client:
+        yield api_client.port
 
 
 @contextmanager
@@ -155,10 +155,15 @@ def get_external_pipeline_from_grpc_server_repository(pipeline_name):
     repo_yaml = file_relative_path(__file__, 'repo.yaml')
     recon_repo = ReconstructableRepository.from_legacy_repository_yaml(repo_yaml)
     loadable_target_origin = LoadableTargetOrigin.from_python_origin(recon_repo.get_origin())
-    with GrpcServerProcess(loadable_target_origin=loadable_target_origin) as server:
+    with GrpcServerProcess(
+        loadable_target_origin=loadable_target_origin
+    ).create_ephemeral_client() as api_client:
         repository_location = GrpcServerRepositoryLocation(
             RepositoryLocationHandle.create_grpc_server_location(
-                location_name='test', port=server.port, socket=server.socket, host='localhost',
+                location_name='test',
+                port=api_client.port,
+                socket=api_client.socket,
+                host=api_client.host,
             )
         )
 
