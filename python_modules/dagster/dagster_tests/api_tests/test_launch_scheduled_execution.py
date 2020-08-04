@@ -1,4 +1,5 @@
 import datetime
+import os
 import sys
 from contextlib import contextmanager
 
@@ -200,7 +201,10 @@ def test_bad_load():
         with environ({'DAGSTER_HOME': temp_dir}):
             instance = DagsterInstance.get()
 
-            recon_repo = ReconstructableRepository.for_file(__file__, 'doesnt_exist')
+            working_directory = os.path.dirname(__file__)
+            recon_repo = ReconstructableRepository.for_file(
+                __file__, 'doesnt_exist', working_directory
+            )
             schedule = recon_repo.get_reconstructable_schedule('also_doesnt_exist')
 
             result = sync_launch_scheduled_execution(schedule.get_origin())
@@ -250,14 +254,16 @@ def test_origin_ids_stable(monkeypatch):
     # stable exe path for test
     monkeypatch.setattr(sys, 'executable', '/fake/python')
 
-    file_repo = ReconstructableRepository.for_file('/path/to/file', 'the_repo')
+    file_repo = ReconstructableRepository.for_file(
+        '/path/to/file', 'the_repo', '/path/to/working_dir'
+    )
 
     # ensure monkeypatch worked
     assert file_repo.get_origin().executable_path == '/fake/python'
 
-    assert file_repo.get_origin_id() == 'bba6e6df8cd234d2e120ae4b6cbbf77a62d886ca'
+    assert file_repo.get_origin_id() == '3766b1c554fd961b88b9301756250febff3d0ffa'
     schedule = file_repo.get_reconstructable_schedule('simple_schedule')
-    assert schedule.get_origin_id() == 'ebd640fcb7de0e35a08b815b21d42e72aad5eacf'
+    assert schedule.get_origin_id() == '7c60d01588673ffcaea16b6fd59d998dc63ed3c3'
 
     module_repo = ReconstructableRepository.for_module('dummy_module', 'the_repo')
     assert module_repo.get_origin_id() == '86503fc349d4ecf44bd22ca1de64c10f8ffcebbd'
