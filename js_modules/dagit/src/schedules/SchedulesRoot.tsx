@@ -22,7 +22,11 @@ import Loading from "../Loading";
 import gql from "graphql-tag";
 import PythonErrorInfo from "../PythonErrorInfo";
 
-import { ScheduleRow, SCHEDULE_DEFINITION_FRAGMENT, ScheduleStateRow } from "./ScheduleRow";
+import {
+  ScheduleRow,
+  // SCHEDULE_DEFINITION_FRAGMENT,
+  ScheduleStateRow
+} from "./ScheduleRow";
 
 import { useRepositorySelector } from "../DagsterRepositoryContext";
 import { ReconcileButton } from "./ReconcileButton";
@@ -279,7 +283,8 @@ export const SCHEDULES_ROOT_QUERY = gql`
     }
   }
 
-  ${SCHEDULE_DEFINITION_FRAGMENT}
+  # TODO: Add back SCHEDULE_DEFINITION_FRAGMENT. For some reason, this is
+  # causing a build time error.
   ${SCHEDULER_FRAGMENT}
   ${PythonErrorInfo.fragments.PythonErrorFragment}
 `;
