@@ -6,7 +6,6 @@ from dagster import check, seven
 from dagster.core.code_pointer import (
     CodePointer,
     FileCodePointer,
-    FileInDirectoryCodePointer,
     ModuleCodePointer,
     get_python_file_from_previous_stack_frame,
 )
@@ -45,9 +44,7 @@ class ReconstructableRepository(namedtuple('_ReconstructableRepository', 'pointe
 
     @classmethod
     def for_file(cls, file, fn_name, working_directory=None):
-        if working_directory:
-            return cls(FileInDirectoryCodePointer(file, fn_name, working_directory))
-        return cls(FileCodePointer(file, fn_name))
+        return cls(FileCodePointer(file, fn_name, working_directory))
 
     @classmethod
     def for_module(cls, module, fn_name):

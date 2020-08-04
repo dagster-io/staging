@@ -41,11 +41,9 @@ class CodePointer(six.with_metaclass(ABCMeta)):
         check.str_param(python_file, 'python_file')
         check.str_param(definition, 'definition')
         check.opt_str_param(working_directory, 'working_directory')
-        if working_directory:
-            return FileInDirectoryCodePointer(
-                python_file=python_file, fn_name=definition, working_directory=working_directory
-            )
-        return FileCodePointer(python_file=python_file, fn_name=definition)
+        return FileCodePointer(
+            python_file=python_file, fn_name=definition, working_directory=working_directory
+        )
 
     @staticmethod
     def from_legacy_repository_yaml(file_path):
@@ -56,11 +54,14 @@ class CodePointer(six.with_metaclass(ABCMeta)):
         file_name = check.opt_str_elem(repository_config, 'file')
         fn_name = check.str_elem(repository_config, 'fn')
 
+        working_directory = os.path.dirname(file_path)
         return (
             CodePointer.from_module(module_name, fn_name)
             if module_name
             # rebase file in config off of the path in the config file
-            else CodePointer.from_python_file(rebase_file(file_name, file_path), fn_name, None)
+            else CodePointer.from_python_file(
+                rebase_file(file_name, file_path), fn_name, working_directory
+            )
         )
 
 
@@ -175,54 +176,16 @@ def load_python_module(module_name, warn_only=False, remove_from_path_fn=None):
 
 
 @whitelist_for_serdes
-class FileCodePointer(namedtuple('_FileCodePointer', 'python_file fn_name'), CodePointer):
-    def __new__(cls, python_file, fn_name):
-        return super(FileCodePointer, cls).__new__(
-            cls, check.str_param(python_file, 'python_file'), check.str_param(fn_name, 'fn_name'),
-        )
-
-    def load_target(self):
-        module = load_python_file(self.python_file, None)
-        if not hasattr(module, self.fn_name):
-            raise DagsterInvariantViolationError(
-                '{name} not found at module scope in file {file}.'.format(
-                    name=self.fn_name, file=self.python_file
-                )
-            )
-
-        return getattr(module, self.fn_name)
-
-    def describe(self):
-        return '{self.python_file}::{self.fn_name}'.format(self=self)
-
-    def get_cli_args(self):
-        return '-f {python_file} -a {fn_name}'.format(
-            python_file=os.path.abspath(os.path.expanduser(self.python_file)), fn_name=self.fn_name
-        )
-
-
-@whitelist_for_serdes
-class FileInDirectoryCodePointer(
-    namedtuple('_FileInDirectoryCodePointer', 'python_file fn_name working_directory'), CodePointer
+class FileCodePointer(
+    namedtuple('_FileCodePointer', 'python_file fn_name working_directory'), CodePointer
 ):
-    '''
-    Same as FileCodePointer, but with an additional field `working_directory` to help resolve
-    modules that are resolved from the python invocation directory.  Required so other processes
-    that need to resolve modules (e.g. cron scheduler) can do so.  This could be merged with the
-    `FileCodePointer` with `working_directory` as a None-able field, but not without changing
-    the origin_id for schedules.  This would require purging schedule storage to resolve.
-
-    Should strongly consider merging when we need to do a storage migration.
-
-    https://github.com/dagster-io/dagster/issues/2673
-    '''
-
-    def __new__(cls, python_file, fn_name, working_directory):
-        return super(FileInDirectoryCodePointer, cls).__new__(
+    def __new__(cls, python_file, fn_name, working_directory=None):
+        check.opt_str_param(working_directory, 'working_directory')
+        return super(FileCodePointer, cls).__new__(
             cls,
             check.str_param(python_file, 'python_file'),
             check.str_param(fn_name, 'fn_name'),
-            check.str_param(working_directory, 'working_directory'),
+            working_directory,
         )
 
     def load_target(self):
