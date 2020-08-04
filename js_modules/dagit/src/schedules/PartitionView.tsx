@@ -22,17 +22,20 @@ import { RunsFilter } from "../runs/RunsFilter";
 import { TokenizingFieldValue } from "../TokenizingField";
 import { useRepositorySelector } from "../DagsterRepositoryContext";
 import PythonErrorInfo from "../PythonErrorInfo";
+import { RunTable } from "../runs/RunTable";
 
 type Partition = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results;
 type Run = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs;
 
 interface PartitionViewProps {
+  pipelineName: string;
   partitionSetName: string;
   cursor: string | undefined;
   setCursor: (cursor: string | undefined) => void;
 }
 
 export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
+  pipelineName,
   partitionSetName,
   cursor,
   setCursor
@@ -101,7 +104,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
                   popCursor={popCursor}
                   setCursor={setCursor}
                 />
-                <PartitionRunMatrix partitions={partitions} />
+                <PartitionRunMatrix pipelineName={pipelineName} partitions={partitions} />
                 {/*TODO BG */}
                 {/* <PartitionContent
                   partitions={partitions}
@@ -575,6 +578,7 @@ const PARTITION_SET_QUERY = gql`
                     success
                   }
                 }
+                ...RunTableRunFragment
               }
             }
           }
@@ -586,4 +590,5 @@ const PARTITION_SET_QUERY = gql`
     }
   }
   ${PythonErrorInfo.fragments.PythonErrorFragment}
+  ${RunTable.fragments.RunTableRunFragment}
 `;
