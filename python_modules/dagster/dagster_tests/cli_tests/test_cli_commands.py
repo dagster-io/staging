@@ -674,10 +674,10 @@ def test_execute_mode_command():
         assert double_adder_result
 
 
-def test_execute_preset_command():
+def test_execute_preset_command(capfd):
     with mocked_instance():
         runner = CliRunner()
-        add_result = runner_pipeline_execute(
+        runner_pipeline_execute(
             runner,
             [
                 '-w',
@@ -689,7 +689,8 @@ def test_execute_preset_command():
             ],
         )
 
-        assert 'PIPELINE_SUCCESS' in add_result.output
+        captured = capfd.readouterr()
+        assert 'PIPELINE_SUCCESS' in captured.err
 
         # Can't use --preset with --config
         bad_res = runner.invoke(
@@ -1277,7 +1278,7 @@ def test_schedules_logs(_patch_scheduler_instance):
 @pytest.mark.skipif(
     os.name == 'nt', reason="multiproc directory test disabled for windows because of fs contention"
 )
-def test_multiproc():
+def test_multiproc(capfd):
     with mocked_instance():
         runner = CliRunner()
         add_result = runner_pipeline_execute(
@@ -1293,25 +1294,8 @@ def test_multiproc():
         )
         assert add_result.exit_code == 0
 
-        assert 'PIPELINE_SUCCESS' in add_result.output
-
-
-def test_multiproc_invalid():
-    # force ephemeral instance by removing out DAGSTER_HOME
-    runner = CliRunner(env={'DAGSTER_HOME': None})
-    add_result = runner_pipeline_execute(
-        runner,
-        [
-            '-w',
-            file_relative_path(__file__, '../workspace.yaml'),
-            '--preset',
-            'multiproc',
-            '-p',
-            'multi_mode_with_resources',  # pipeline name
-        ],
-    )
-    # which is invalid for multiproc
-    assert 'DagsterUnmetExecutorRequirementsError' in add_result.output
+        captured = capfd.readouterr()
+        assert 'PIPELINE_SUCCESS' in captured.err
 
 
 class InMemoryRunLauncher(RunLauncher, ConfigurableClass):
