@@ -44,6 +44,8 @@ class ReconstructableRepository(namedtuple('_ReconstructableRepository', 'pointe
 
     @classmethod
     def for_file(cls, file, fn_name, working_directory=None):
+        if not working_directory:
+            working_directory = os.getcwd()
         return cls(FileCodePointer(file, fn_name, working_directory))
 
     @classmethod
@@ -153,7 +155,9 @@ class ReconstructablePipeline(
 
     @staticmethod
     def for_file(python_file, fn_name):
-        return bootstrap_standalone_recon_pipeline(FileCodePointer(python_file, fn_name))
+        return bootstrap_standalone_recon_pipeline(
+            FileCodePointer(python_file, fn_name, os.getcwd())
+        )
 
     @staticmethod
     def for_module(module, fn_name):
@@ -238,7 +242,9 @@ def reconstructable(target):
                 python_file
             )
         )
-    pointer = FileCodePointer(python_file=python_file, fn_name=target.__name__,)
+    pointer = FileCodePointer(
+        python_file=python_file, fn_name=target.__name__, working_directory=os.getcwd()
+    )
 
     return bootstrap_standalone_recon_pipeline(pointer)
 
