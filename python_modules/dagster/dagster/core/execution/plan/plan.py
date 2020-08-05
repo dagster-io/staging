@@ -12,6 +12,7 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
+from dagster.core.selector import parse_step_selection
 from dagster.core.system_config.objects import (
     EmptyIntermediateStoreBackcompatConfig,
     EnvironmentConfig,
@@ -34,14 +35,16 @@ class _PlanBuilder(object):
     execution.
     '''
 
-    def __init__(self, pipeline, environment_config, mode, step_keys_to_execute):
+    def __init__(self, pipeline, environment_config, mode, step_selection):
         self.pipeline = check.inst_param(pipeline, 'pipeline', ExecutablePipeline)
         self.environment_config = check.inst_param(
             environment_config, 'environment_config', EnvironmentConfig
         )
         check.opt_str_param(mode, 'mode')
-        check.opt_list_param(step_keys_to_execute, 'step_keys_to_execute', of_type=str)
-        self.step_keys_to_execute = step_keys_to_execute
+        self.step_selection = check.opt_list_param(step_selection, 'step_selection', of_type=str)
+        # https://github.com/dagster-io/dagster/issues/2605
+        # step_keys_to_execute should be a frozenset
+        self.step_keys_to_execute = []
         self.mode_definition = (
             pipeline.get_definition().get_mode_definition(mode)
             if mode is not None
@@ -102,12 +105,27 @@ class _PlanBuilder(object):
 
         step_dict = {step.key: step for step in self._steps.values()}
 
-        step_keys_to_execute = self.step_keys_to_execute or [
-            step.key for step in self._steps.values()
-        ]
+        # resolve step_selection (queries) to step_keys_to_execute (step_keys)
+        # https://github.com/dagster-io/dagster/issues/2605
+        # step_keys_to_execute should be a frozenset
+        # so prior to this, step_selection is a list of step queries supporting DSL syntax, and
+        # after this, step_keys_to_execute should be a frozenset of step keys.
+        frozen_step_keys_to_execute = (
+            parse_step_selection(deps, self.step_selection) if self.step_selection else set()
+        )
+        self.step_keys_to_execute = (
+            list(frozen_step_keys_to_execute)
+            if frozen_step_keys_to_execute
+            else [step.key for step in self._steps.values()]
+        )
 
         return ExecutionPlan(
-            self.pipeline, step_dict, deps, self.storage_is_persistent(), step_keys_to_execute,
+            self.pipeline,
+            step_dict,
+            deps,
+            self.storage_is_persistent(),
+            self.step_selection,
+            self.step_keys_to_execute,
         )
 
     def storage_is_persistent(self):
@@ -278,11 +296,18 @@ def get_step_input(
 
 class ExecutionPlan(
     namedtuple(
-        '_ExecutionPlan', 'pipeline step_dict deps steps artifacts_persisted step_keys_to_execute',
+        '_ExecutionPlan',
+        'pipeline step_dict deps steps artifacts_persisted step_selection step_keys_to_execute',
     )
 ):
     def __new__(
-        cls, pipeline, step_dict, deps, artifacts_persisted, step_keys_to_execute,
+        cls,
+        pipeline,
+        step_dict,
+        deps,
+        artifacts_persisted,
+        step_selection,
+        step_keys_to_execute=None,
     ):
         missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
         if missing_steps:
@@ -301,6 +326,11 @@ class ExecutionPlan(
             deps=check.dict_param(deps, 'deps', key_type=str, value_type=set),
             steps=list(step_dict.values()),
             artifacts_persisted=check.bool_param(artifacts_persisted, 'artifacts_persisted'),
+            # https://github.com/dagster-io/dagster/issues/2605
+            # this class should always take step_selection and step_keys_to_execute is optional
+            # step_keys_to_execute should be generated from step_selection after we build the plan
+            # and should be a frozenset
+            step_selection=check.list_param(step_selection, 'step_selection', of_type=str),
             step_keys_to_execute=check.list_param(
                 step_keys_to_execute, 'step_keys_to_execute', of_type=str
             ),
@@ -359,13 +389,20 @@ class ExecutionPlan(
         return deps
 
     def build_subset_plan(self, step_keys_to_execute):
+        # https://github.com/dagster-io/dagster/issues/2605
+        # step_keys_to_execute should be a frozenset
         check.list_param(step_keys_to_execute, 'step_keys_to_execute', of_type=str)
+        # this method is currently used internally only, so we are not going to support the DSL
+        # syntax for now. instead, we will convert the resolved frozenset back to step_selection.
+        step_selection = step_keys_to_execute
+
         return ExecutionPlan(
             self.pipeline,
             self.step_dict,
             self.deps,
             self.artifacts_persisted,
-            step_keys_to_execute,
+            step_selection=step_selection,
+            step_keys_to_execute=step_keys_to_execute,
         )
 
     def start(
@@ -381,7 +418,7 @@ class ExecutionPlan(
         # events (like resource initialization) that are associated with the execution of these
         # single step sub-plans.  Most likely will be removed with the refactor detailed in
         # https://github.com/dagster-io/dagster/issues/2239
-        return self.step_keys_to_execute[0] if len(self.step_keys_to_execute) == 1 else None
+        return list(self.step_keys_to_execute)[0] if len(self.step_keys_to_execute) == 1 else None
 
     @staticmethod
     def build(pipeline, environment_config, mode=None, step_keys_to_execute=None):
@@ -396,10 +433,14 @@ class ExecutionPlan(
         check.inst_param(pipeline, 'pipeline', ExecutablePipeline)
         check.inst_param(environment_config, 'environment_config', EnvironmentConfig)
         check.opt_str_param(mode, 'mode')
+
+        # https://github.com/dagster-io/dagster/issues/2605
+        # this method should take step_selection not step_keys_to_execute because we will resolve
+        # the queries here
         check.opt_list_param(step_keys_to_execute, 'step_keys_to_execute', of_type=str)
 
         plan_builder = _PlanBuilder(
-            pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute,
+            pipeline, environment_config, mode=mode, step_selection=step_keys_to_execute,
         )
 
         # Finally, we build and return the execution plan

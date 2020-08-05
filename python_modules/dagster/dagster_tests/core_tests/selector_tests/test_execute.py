@@ -2,9 +2,10 @@ import re
 
 import pytest
 
-from dagster import execute_pipeline, execute_pipeline_iterator
+from dagster import execute_pipeline, execute_pipeline_iterator, reexecute_pipeline
 from dagster.core.definitions.executable import InMemoryExecutablePipeline
 from dagster.core.errors import DagsterInvalidSubsetError
+from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import step_output_event_filter
 
 from .test_subset_selector import foo_pipeline
@@ -58,10 +59,11 @@ def test_execute_pipeline_with_solid_selection_multi_clauses():
     assert result_multi_overlap.result_for_solid('multiply_two').output_value() == 6
     assert len(result_multi_overlap.solid_result_list) == 4
 
-    result_multi_with_invalid = execute_pipeline(foo_pipeline, solid_selection=['a', '*add_nums'])
-    assert result_multi_with_invalid.success
-    assert result_multi_with_invalid.result_for_solid('add_nums').output_value() == 3
-    assert len(result_multi_with_invalid.solid_result_list) == 3
+    with pytest.raises(
+        DagsterInvalidSubsetError,
+        match=re.escape('No qualified solids to execute found for solid_selection'),
+    ):
+        execute_pipeline(foo_pipeline, solid_selection=['a', '*add_nums'])
 
 
 def test_execute_pipeline_with_solid_selection_invalid():
@@ -101,3 +103,74 @@ def test_execute_pipeline_iterator_with_solid_selection_query():
     )
     events_down = list(iterator_down)
     assert len(events_down) == 3
+
+
+def test_reexecute_pipeline_with_step_selection_single_clause():
+    instance = DagsterInstance.ephemeral()
+    run_config = {'storage': {'filesystem': {}}}
+    pipeline_result_full = execute_pipeline(foo_pipeline, run_config=run_config, instance=instance)
+    assert pipeline_result_full.success
+    assert pipeline_result_full.result_for_solid('add_one').output_value() == 7
+    assert len(pipeline_result_full.solid_result_list) == 5
+
+    reexecution_result_up = reexecute_pipeline(
+        foo_pipeline,
+        parent_run_id=pipeline_result_full.run_id,
+        run_config=run_config,
+        instance=instance,
+        step_selection=['*add_nums.compute'],
+    )
+
+    assert reexecution_result_up.success
+    assert reexecution_result_up.result_for_solid('add_nums').output_value() == 3
+
+    reexecution_result_down = reexecute_pipeline(
+        foo_pipeline,
+        parent_run_id=pipeline_result_full.run_id,
+        run_config=run_config,
+        instance=instance,
+        step_selection=['add_nums.compute++'],
+    )
+    assert reexecution_result_down.success
+    assert reexecution_result_down.result_for_solid('add_one').output_value() == 7
+
+
+def test_reexecute_pipeline_with_step_selection_multi_clauses():
+    instance = DagsterInstance.ephemeral()
+    run_config = {'storage': {'filesystem': {}}}
+    pipeline_result_full = execute_pipeline(foo_pipeline, run_config=run_config, instance=instance)
+    assert pipeline_result_full.success
+    assert pipeline_result_full.result_for_solid('add_one').output_value() == 7
+    assert len(pipeline_result_full.solid_result_list) == 5
+
+    result_multi_disjoint = reexecute_pipeline(
+        foo_pipeline,
+        parent_run_id=pipeline_result_full.run_id,
+        run_config=run_config,
+        instance=instance,
+        step_selection=['return_one.compute', 'return_two.compute', 'add_nums.compute+'],
+    )
+    assert result_multi_disjoint.success
+    assert result_multi_disjoint.result_for_solid('multiply_two').output_value() == 6
+
+    result_multi_overlap = reexecute_pipeline(
+        foo_pipeline,
+        parent_run_id=pipeline_result_full.run_id,
+        run_config=run_config,
+        instance=instance,
+        step_selection=['return_one.compute++', 'return_two.compute', 'add_nums.compute+'],
+    )
+    assert result_multi_overlap.success
+    assert result_multi_overlap.result_for_solid('multiply_two').output_value() == 6
+
+    with pytest.raises(
+        DagsterInvalidSubsetError,
+        match=re.escape('No qualified steps to execute found for step_selection'),
+    ):
+        reexecute_pipeline(
+            foo_pipeline,
+            parent_run_id=pipeline_result_full.run_id,
+            run_config=run_config,
+            instance=instance,
+            step_selection=['a', '*add_nums.compute'],
+        )

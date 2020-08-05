@@ -13,6 +13,7 @@ snapshots['test_create_noop_execution_plan 1'] = '''{
   "step_keys_to_execute": [
     "noop_solid.compute"
   ],
+  "step_selection": [],
   "steps": [
     {
       "__class__": "ExecutionStepSnap",
@@ -42,6 +43,7 @@ snapshots['test_create_execution_plan_with_dep 1'] = '''{
     "solid_one.compute",
     "solid_two.compute"
   ],
+  "step_selection": [],
   "steps": [
     {
       "__class__": "ExecutionStepSnap",
@@ -104,6 +106,7 @@ snapshots['test_create_with_composite 1'] = '''{
     "comp_2.add_one.compute",
     "add.compute"
   ],
+  "step_selection": [],
   "steps": [
     {
       "__class__": "ExecutionStepSnap",
@@ -251,6 +254,7 @@ snapshots['test_create_noop_execution_plan_with_tags 1'] = '''{
   "step_keys_to_execute": [
     "noop_solid.compute"
   ],
+  "step_selection": [],
   "steps": [
     {
       "__class__": "ExecutionStepSnap",

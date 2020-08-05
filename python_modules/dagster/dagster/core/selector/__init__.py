@@ -12,4 +12,5 @@ from .subset_selector import (
     generate_dep_graph,
     parse_clause,
     parse_solid_selection,
+    parse_step_selection,
 )

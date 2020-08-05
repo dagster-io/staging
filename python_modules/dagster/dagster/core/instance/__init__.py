@@ -635,7 +635,7 @@ class DagsterInstance:
         return pipeline_snapshot_id
 
     def _ensure_persisted_execution_plan_snapshot(
-        self, execution_plan_snapshot, pipeline_snapshot_id, step_keys_to_execute
+        self, execution_plan_snapshot, pipeline_snapshot_id, step_selection
     ):
         from dagster.core.snap.execution_plan_snapshot import (
             ExecutionPlanSnapshot,
@@ -644,7 +644,7 @@ class DagsterInstance:
 
         check.inst_param(execution_plan_snapshot, 'execution_plan_snapshot', ExecutionPlanSnapshot)
         check.str_param(pipeline_snapshot_id, 'pipeline_snapshot_id')
-        check.opt_list_param(step_keys_to_execute, 'step_keys_to_execute', of_type=str)
+        check.opt_list_param(step_selection, 'step_selection', of_type=str)
 
         check.invariant(
             execution_plan_snapshot.pipeline_snapshot_id == pipeline_snapshot_id,
@@ -659,14 +659,15 @@ class DagsterInstance:
         )
 
         check.invariant(
-            set(step_keys_to_execute) == set(execution_plan_snapshot.step_keys_to_execute)
-            if step_keys_to_execute
+            set(step_selection) == set(execution_plan_snapshot.step_selection)
+            if step_selection
             else set(execution_plan_snapshot.step_keys_to_execute)
             == set([step.key for step in execution_plan_snapshot.steps]),
             'We encode step_keys_to_execute twice in our stack, unfortunately. This check '
-            'ensures that they are consistent. We check that step_keys_to_execute in the plan '
-            'matches the step_keys_to_execute params if it is set. If it is not, this indicates '
-            'a full execution plan, and so we verify that.',
+            'ensures that they are consistent. We check that the pre-resolved step_selection '
+            'in the plan matches the step_selection params if it is set. If it is not, this '
+            'indicates a full execution plan, and so we verify the post-resolved '
+            'step_keys_to_execute.',
         )
 
         execution_plan_snapshot_id = create_execution_plan_snapshot_id(execution_plan_snapshot)
