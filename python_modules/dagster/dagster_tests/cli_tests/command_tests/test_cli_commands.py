@@ -759,7 +759,7 @@ def test_execute_preset_command():
 
 @pytest.mark.parametrize('execute_args', valid_execute_args())
 def test_execute_command_no_env(execute_args):
-    with mocked_instance():
+    with mocked_instance() as instance:
         cli_args, uses_legacy_repository_yaml_format = execute_args
         if uses_legacy_repository_yaml_format:
             with pytest.warns(
@@ -768,14 +768,14 @@ def test_execute_command_no_env(execute_args):
                     'You are using the legacy repository yaml format. Please update your file '
                 ),
             ):
-                execute_execute_command(env_file_list=None, cli_args=cli_args)
+                execute_execute_command(env_file_list=None, cli_args=cli_args, instance=instance)
         else:
-            execute_execute_command(env_file_list=None, cli_args=cli_args)
+            execute_execute_command(env_file_list=None, cli_args=cli_args, instance=instance)
 
 
 @pytest.mark.parametrize('execute_args', valid_execute_args())
 def test_execute_command_env(execute_args):
-    with mocked_instance():
+    with mocked_instance() as instance:
         cli_args, uses_legacy_repository_yaml_format = execute_args
         if uses_legacy_repository_yaml_format:
             with pytest.warns(
@@ -787,11 +787,13 @@ def test_execute_command_env(execute_args):
                 execute_execute_command(
                     env_file_list=[file_relative_path(__file__, 'default_log_error_env.yaml')],
                     cli_args=cli_args,
+                    instance=instance,
                 )
         else:
             execute_execute_command(
                 env_file_list=[file_relative_path(__file__, 'default_log_error_env.yaml')],
                 cli_args=cli_args,
+                instance=instance,
             )
 
 
@@ -869,39 +871,43 @@ def test_output_execute_log_stderr(capfd):
 
 
 def test_more_than_one_pipeline():
-    with pytest.raises(
-        UsageError,
-        match=re.escape(
-            "Must provide --pipeline as there is more than one pipeline in bar. "
-            "Options are: ['baz', 'foo']."
-        ),
-    ):
-        execute_execute_command(
-            env_file_list=None,
-            cli_args={
-                'repository_yaml': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': None,
-            },
-        )
+    with mocked_instance() as instance:
+        with pytest.raises(
+            UsageError,
+            match=re.escape(
+                "Must provide --pipeline as there is more than one pipeline in bar. "
+                "Options are: ['baz', 'foo']."
+            ),
+        ):
+            execute_execute_command(
+                env_file_list=None,
+                cli_args={
+                    'repository_yaml': None,
+                    'pipeline': None,
+                    'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+                    'module_name': None,
+                    'attribute': None,
+                },
+                instance=instance,
+            )
 
 
 def test_attribute_not_found():
-    with pytest.raises(
-        DagsterIPCProtocolError, match=re.escape('nope not found at module scope in file')
-    ):
-        execute_execute_command(
-            env_file_list=None,
-            cli_args={
-                'repository_yaml': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'nope',
-            },
-        )
+    with mocked_instance() as instance:
+        with pytest.raises(
+            DagsterIPCProtocolError, match=re.escape('nope not found at module scope in file')
+        ):
+            execute_execute_command(
+                env_file_list=None,
+                cli_args={
+                    'repository_yaml': None,
+                    'pipeline': None,
+                    'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+                    'module_name': None,
+                    'attribute': 'nope',
+                },
+                instance=instance,
+            )
 
 
 def not_a_repo_or_pipeline_fn():
@@ -912,42 +918,46 @@ not_a_repo_or_pipeline = 123
 
 
 def test_attribute_is_wrong_thing():
-    with pytest.raises(
-        DagsterIPCProtocolError,
-        match=re.escape(
-            'Loadable attributes must be either a PipelineDefinition or a '
-            'RepositoryDefinition. Got 123.'
-        ),
-    ):
-        execute_execute_command(
-            env_file_list=[],
-            cli_args={
-                'repository_yaml': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'not_a_repo_or_pipeline',
-            },
-        )
+    with mocked_instance() as instance:
+        with pytest.raises(
+            DagsterIPCProtocolError,
+            match=re.escape(
+                'Loadable attributes must be either a PipelineDefinition or a '
+                'RepositoryDefinition. Got 123.'
+            ),
+        ):
+            execute_execute_command(
+                env_file_list=[],
+                cli_args={
+                    'repository_yaml': None,
+                    'pipeline': None,
+                    'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+                    'module_name': None,
+                    'attribute': 'not_a_repo_or_pipeline',
+                },
+                instance=instance,
+            )
 
 
 def test_attribute_fn_returns_wrong_thing():
-    with pytest.raises(
-        DagsterIPCProtocolError,
-        match=re.escape(
-            "Loadable attributes must be either a PipelineDefinition or a RepositoryDefinition."
-        ),
-    ):
-        execute_execute_command(
-            env_file_list=[],
-            cli_args={
-                'repository_yaml': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'not_a_repo_or_pipeline_fn',
-            },
-        )
+    with mocked_instance() as instance:
+        with pytest.raises(
+            DagsterIPCProtocolError,
+            match=re.escape(
+                "Loadable attributes must be either a PipelineDefinition or a RepositoryDefinition."
+            ),
+        ):
+            execute_execute_command(
+                env_file_list=[],
+                cli_args={
+                    'repository_yaml': None,
+                    'pipeline': None,
+                    'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+                    'module_name': None,
+                    'attribute': 'not_a_repo_or_pipeline_fn',
+                },
+                instance=instance,
+            )
 
 
 def runner_pipeline_execute(runner, cli_args):
@@ -1016,61 +1026,70 @@ def test_scaffold_command_cli(execute_cli_args):
 
 
 def test_default_memory_run_storage():
-    cli_args = {
-        'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
-        'pipeline': 'foo',
-        'python_file': None,
-        'module_name': None,
-        'attribute': None,
-    }
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            'You are using the legacy repository yaml format. Please update your file '
-        ),
-    ):
-        result = execute_execute_command(env_file_list=None, cli_args=cli_args)
-    assert result.success
+    with mocked_instance() as instance:
+        cli_args = {
+            'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': None,
+            'attribute': None,
+        }
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                'You are using the legacy repository yaml format. Please update your file '
+            ),
+        ):
+            result = execute_execute_command(
+                env_file_list=None, cli_args=cli_args, instance=instance
+            )
+        assert result.success
 
 
 def test_override_with_in_memory_storage():
-    cli_args = {
-        'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
-        'pipeline': 'foo',
-        'python_file': None,
-        'module_name': None,
-        'attribute': None,
-    }
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            'You are using the legacy repository yaml format. Please update your file '
-        ),
-    ):
-        result = execute_execute_command(
-            env_file_list=[file_relative_path(__file__, 'in_memory_env.yaml')], cli_args=cli_args
-        )
-    assert result.success
+    with mocked_instance() as instance:
+        cli_args = {
+            'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': None,
+            'attribute': None,
+        }
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                'You are using the legacy repository yaml format. Please update your file '
+            ),
+        ):
+            result = execute_execute_command(
+                env_file_list=[file_relative_path(__file__, 'in_memory_env.yaml')],
+                cli_args=cli_args,
+                instance=instance,
+            )
+        assert result.success
 
 
 def test_override_with_filesystem_storage():
-    cli_args = {
-        'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
-        'pipeline': 'foo',
-        'python_file': None,
-        'module_name': None,
-        'attribute': None,
-    }
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            'You are using the legacy repository yaml format. Please update your file '
-        ),
-    ):
-        result = execute_execute_command(
-            env_file_list=[file_relative_path(__file__, 'filesystem_env.yaml')], cli_args=cli_args
-        )
-    assert result.success
+    with mocked_instance() as instance:
+        cli_args = {
+            'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': None,
+            'attribute': None,
+        }
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                'You are using the legacy repository yaml format. Please update your file '
+            ),
+        ):
+            result = execute_execute_command(
+                env_file_list=[file_relative_path(__file__, 'filesystem_env.yaml')],
+                cli_args=cli_args,
+                instance=instance,
+            )
+        assert result.success
 
 
 def test_run_list():
