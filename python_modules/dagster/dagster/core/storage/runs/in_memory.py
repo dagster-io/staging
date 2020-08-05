@@ -9,15 +9,29 @@ from dagster.core.snap import (
     create_execution_plan_snapshot_id,
     create_pipeline_snapshot_id,
 )
+from dagster.serdes import ConfigurableClass, ConfigurableClassData
 from dagster.utils import frozendict
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from .base import RunStorage
 
 
-class InMemoryRunStorage(RunStorage):
-    def __init__(self):
+class InMemoryRunStorage(RunStorage, ConfigurableClass):
+    def __init__(self, inst_data=None):
         self._init_storage()
+        self._inst_data = check.opt_inst_param(inst_data, 'inst_data', ConfigurableClassData)
+
+    @property
+    def inst_data(self):
+        return self._inst_data
+
+    @classmethod
+    def config_type(cls):
+        return {}
+
+    @staticmethod
+    def from_config_value(inst_data, _config_value):
+        return InMemoryRunStorage(inst_data=inst_data)
 
     # separate method so it can be reused in wipe
     def _init_storage(self):
