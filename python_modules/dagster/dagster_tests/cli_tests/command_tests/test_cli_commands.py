@@ -22,6 +22,7 @@ from dagster import (
 )
 from dagster.cli.pipeline import (
     execute_execute_command,
+    execute_launch_command,
     execute_list_command,
     execute_print_command,
     execute_scaffold_command,
@@ -175,7 +176,7 @@ def assert_correct_extra_repository_output(result):
     )
 
 
-def grpc_instance():
+def managed_grpc_instance():
     return DagsterInstance.local_temp(overrides={"opt_in": {"local_servers": True}})
 
 
@@ -206,60 +207,26 @@ def test_list_command_grpc_socket():
         assert_correct_bar_repository_output(result)
 
 
-def test_list_command():
+def test_list_command_cli():
     runner = CliRunner()
-
-    execute_list_command(
-        {
-            'repository_yaml': None,
-            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-            'module_name': None,
-            'fn_name': 'bar',
-        },
-        no_print,
-        DagsterInstance.local_temp(),
-    )
-
-    execute_list_command(
-        {
-            'repository_yaml': None,
-            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-            'module_name': None,
-            'fn_name': 'bar',
-            'working_directory': os.path.dirname(__file__),
-        },
-        no_print,
-        DagsterInstance.local_temp(),
-    )
-
-    execute_list_command(
-        {
-            'repository_yaml': None,
-            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-            'module_name': None,
-            'fn_name': 'bar',
-        },
-        no_print,
-        grpc_instance(),
-    )
-
-    execute_list_command(
-        {
-            'repository_yaml': None,
-            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-            'module_name': None,
-            'fn_name': 'bar',
-            'working_directory': os.path.dirname(__file__),
-        },
-        no_print,
-        grpc_instance(),
-    )
 
     result = runner.invoke(
         pipeline_list_command,
         ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'bar'],
     )
+    assert_correct_bar_repository_output(result)
 
+    result = runner.invoke(
+        pipeline_list_command,
+        [
+            '-f',
+            file_relative_path(__file__, 'test_cli_commands.py'),
+            '-a',
+            'bar',
+            '-d',
+            os.path.dirname(__file__),
+        ],
+    )
     assert_correct_bar_repository_output(result)
 
     with GrpcServerProcess(
@@ -268,9 +235,6 @@ def test_list_command():
         ),
         force_port=True,
     ).create_ephemeral_client() as api_client:
-        execute_list_command(
-            {'port': api_client.port}, no_print, DagsterInstance.local_temp(),
-        )
         result = runner.invoke(pipeline_list_command, ['--port', api_client.port])
         assert_correct_bar_repository_output(result)
 
@@ -279,66 +243,19 @@ def test_list_command():
         )
         assert_correct_bar_repository_output(result)
 
-        result = runner.invoke(pipeline_list_command, ['--port', api_client.port],)
+        result = runner.invoke(pipeline_list_command, ['--port', api_client.port])
         assert_correct_bar_repository_output(result)
-
-        # Can't supply both port and socket
-        with pytest.raises(UsageError):
-            execute_list_command(
-                {'port': api_client.port, 'socket': 'foonamedsocket'},
-                no_print,
-                DagsterInstance.local_temp(),
-            )
 
         result = runner.invoke(
             pipeline_list_command, ['--port', api_client.port, '--socket', 'foonamedsocket'],
         )
-
-    execute_list_command(
-        {
-            'repository_yaml': None,
-            'python_file': None,
-            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-            'fn_name': 'bar',
-        },
-        no_print,
-        DagsterInstance.local_temp(),
-    )
-
-    execute_list_command(
-        {
-            'repository_yaml': None,
-            'python_file': None,
-            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-            'fn_name': 'bar',
-        },
-        no_print,
-        grpc_instance(),
-    )
+        assert result.exit_code != 0
 
     result = runner.invoke(
         pipeline_list_command,
         ['-m', 'dagster_tests.cli_tests.command_tests.test_cli_commands', '-a', 'bar'],
     )
     assert_correct_bar_repository_output(result)
-
-    with pytest.warns(
-        UserWarning,
-        match=re.escape(
-            'You have used -y or --repository-yaml to load a workspace. This is deprecated and '
-            'will be eliminated in 0.9.0.'
-        ),
-    ):
-        execute_list_command(
-            {
-                'repository_yaml': file_relative_path(__file__, 'repository_module.yaml'),
-                'python_file': None,
-                'module_name': None,
-                'fn_name': None,
-            },
-            no_print,
-            DagsterInstance.local_temp(),
-        )
 
     with pytest.warns(
         UserWarning,
@@ -367,18 +284,6 @@ def test_list_command():
     )
     assert_correct_extra_repository_output(result)
 
-    with pytest.raises(UsageError):
-        execute_list_command(
-            {
-                'repository_yaml': None,
-                'python_file': 'foo.py',
-                'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                'fn_name': 'bar',
-            },
-            no_print,
-            DagsterInstance.local_temp(),
-        )
-
     result = runner.invoke(
         pipeline_list_command,
         [
@@ -403,179 +308,293 @@ def test_list_command():
     assert_correct_bar_repository_output(result)
 
 
+@pytest.mark.parametrize('instance', [DagsterInstance.local_temp(), managed_grpc_instance()])
+def test_list_command(instance):
+    execute_list_command(
+        {
+            'repository_yaml': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'fn_name': 'bar',
+        },
+        no_print,
+        instance,
+    )
+
+    execute_list_command(
+        {
+            'repository_yaml': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'fn_name': 'bar',
+            'working_directory': os.path.dirname(__file__),
+        },
+        no_print,
+        instance,
+    )
+
+    with GrpcServerProcess(
+        loadable_target_origin=LoadableTargetOrigin(
+            python_file=file_relative_path(__file__, 'test_cli_commands.py'), attribute='bar'
+        ),
+        force_port=True,
+    ).create_ephemeral_client() as api_client:
+        execute_list_command(
+            {'port': api_client.port}, no_print, instance,
+        )
+
+        # Can't supply both port and socket
+        with pytest.raises(UsageError):
+            execute_list_command(
+                {'port': api_client.port, 'socket': 'foonamedsocket'}, no_print, instance,
+            )
+
+    execute_list_command(
+        {
+            'repository_yaml': None,
+            'python_file': None,
+            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            'fn_name': 'bar',
+        },
+        no_print,
+        instance,
+    )
+
+    with pytest.warns(
+        UserWarning,
+        match=re.escape(
+            'You have used -y or --repository-yaml to load a workspace. This is deprecated and '
+            'will be eliminated in 0.9.0.'
+        ),
+    ):
+        execute_list_command(
+            {
+                'repository_yaml': file_relative_path(__file__, 'repository_module.yaml'),
+                'python_file': None,
+                'module_name': None,
+                'fn_name': None,
+            },
+            no_print,
+            instance,
+        )
+
+    with pytest.raises(UsageError):
+        execute_list_command(
+            {
+                'repository_yaml': None,
+                'python_file': 'foo.py',
+                'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
+                'fn_name': 'bar',
+            },
+            no_print,
+            instance,
+        )
+
+
+@pytest.yield_fixture(scope='module')
+def grpc_client():
+    with GrpcServerProcess(
+        loadable_target_origin=LoadableTargetOrigin(
+            python_file=file_relative_path(__file__, 'test_cli_commands.py'), attribute='bar'
+        ),
+    ).create_ephemeral_client() as client:
+        yield client
+
+
+# Fill in the values of the port/socket/host cli args based on the values in the client
+def transform_grpc_kwargs(api_client, cli_args):
+    ret_args = {}
+    for key, val in cli_args.items():
+        if key == 'port':
+            ret_args[key] = api_client.port
+        elif key == 'socket':
+            ret_args[key] = api_client.socket
+        elif key == 'host':
+            ret_args[key] = api_client.host
+        else:
+            ret_args[key] = val
+    return ret_args
+
+
+def valid_pipeline_args():
+    for execute_args in valid_execute_args():
+        cli_args, uses_legacy_repository_yaml_format = execute_args
+        yield (cli_args, uses_legacy_repository_yaml_format, DagsterInstance.local_temp())
+        yield (cli_args, uses_legacy_repository_yaml_format, managed_grpc_instance())
+
+    yield (
+        {'port': 'PORT', 'socket': 'SOCKET', 'pipeline': 'foo'},
+        False,
+        DagsterInstance.local_temp(),
+    )
+
+
 # [(cli_args, uses_legacy_repository_yaml_format)]
 def valid_execute_args():
-    return [
-        (
-            {
-                'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
-                'pipeline': 'foo',
-                'python_file': None,
-                'module_name': None,
-                'attribute': None,
-            },
-            True,
-        ),
-        (
-            {
-                'workspace': (file_relative_path(__file__, 'repository_module.yaml'),),
-                'pipeline': 'foo',
-                'python_file': None,
-                'module_name': None,
-                'attribute': None,
-            },
-            True,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': 'foo',
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'bar',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': 'foo',
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'bar',
-                'working_directory': os.path.dirname(__file__),
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': 'foo',
-                'python_file': None,
-                'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                'attribute': 'bar',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': None,
-                'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                'attribute': 'foo_pipeline',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'define_foo_pipeline',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'define_foo_pipeline',
-                'working_directory': os.path.dirname(__file__),
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'foo_pipeline',
-            },
-            False,
-        ),
-    ]
+    yield (
+        {
+            'workspace': (file_relative_path(__file__, 'repository_file.yaml'),),
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': None,
+            'attribute': None,
+        },
+        True,
+    )
+
+    yield (
+        {
+            'workspace': (file_relative_path(__file__, 'repository_module.yaml'),),
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': None,
+            'attribute': None,
+        },
+        True,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': 'foo',
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'bar',
+        },
+        False,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': 'foo',
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'bar',
+            'working_directory': os.path.dirname(__file__),
+        },
+        False,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            'attribute': 'bar',
+        },
+        False,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': None,
+            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            'attribute': 'foo_pipeline',
+        },
+        False,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'define_foo_pipeline',
+        },
+        False,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'define_foo_pipeline',
+            'working_directory': os.path.dirname(__file__),
+        },
+        False,
+    )
+    yield (
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'foo_pipeline',
+        },
+        False,
+    )
 
 
 # [(cli_args, uses_legacy_repository_yaml_format)]
-def valid_cli_args():
-    return [
-        (['-w', file_relative_path(__file__, 'repository_file.yaml'), '-p', 'foo'], True),
-        (['-w', file_relative_path(__file__, 'repository_module.yaml'), '-p', 'foo'], True),
-        (['-w', file_relative_path(__file__, 'workspace.yaml'), '-p', 'foo'], False),
-        (
-            [
-                '-w',
-                file_relative_path(__file__, 'override.yaml'),
-                '-w',
-                file_relative_path(__file__, 'workspace.yaml'),
-                '-p',
-                'foo',
-            ],
-            False,
-        ),
-        (
-            ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'bar', '-p', 'foo'],
-            False,
-        ),
-        (
-            [
-                '-f',
-                file_relative_path(__file__, 'test_cli_commands.py'),
-                '-d',
-                os.path.dirname(__file__),
-                '-a',
-                'bar',
-                '-p',
-                'foo',
-            ],
-            False,
-        ),
-        (
-            [
-                '-m',
-                'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                '-a',
-                'bar',
-                '-p',
-                'foo',
-            ],
-            False,
-        ),
-        (
-            ['-m', 'dagster_tests.cli_tests.command_tests.test_cli_commands', '-a', 'foo_pipeline'],
-            False,
-        ),
-        (
-            [
-                '-f',
-                file_relative_path(__file__, 'test_cli_commands.py'),
-                '-a',
-                'define_foo_pipeline',
-            ],
-            False,
-        ),
-        (
-            [
-                '-f',
-                file_relative_path(__file__, 'test_cli_commands.py'),
-                '-d',
-                os.path.dirname(__file__),
-                '-a',
-                'define_foo_pipeline',
-            ],
-            False,
-        ),
-    ]
+def valid_execute_cli_args():
+    yield (['-w', file_relative_path(__file__, 'repository_file.yaml'), '-p', 'foo'], True)
+    yield (['-w', file_relative_path(__file__, 'repository_module.yaml'), '-p', 'foo'], True)
+    yield (['-w', file_relative_path(__file__, 'workspace.yaml'), '-p', 'foo'], False)
+    yield (
+        [
+            '-w',
+            file_relative_path(__file__, 'override.yaml'),
+            '-w',
+            file_relative_path(__file__, 'workspace.yaml'),
+            '-p',
+            'foo',
+        ],
+        False,
+    )
+    yield (
+        ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'bar', '-p', 'foo'],
+        False,
+    )
+    yield (
+        [
+            '-f',
+            file_relative_path(__file__, 'test_cli_commands.py'),
+            '-d',
+            os.path.dirname(__file__),
+            '-a',
+            'bar',
+            '-p',
+            'foo',
+        ],
+        False,
+    )
+    yield (
+        [
+            '-m',
+            'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            '-a',
+            'bar',
+            '-p',
+            'foo',
+        ],
+        False,
+    )
+    yield (
+        ['-m', 'dagster_tests.cli_tests.command_tests.test_cli_commands', '-a', 'foo_pipeline'],
+        False,
+    )
+    yield (
+        ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'define_foo_pipeline',],
+        False,
+    )
+    yield (
+        [
+            '-f',
+            file_relative_path(__file__, 'test_cli_commands.py'),
+            '-d',
+            os.path.dirname(__file__),
+            '-a',
+            'define_foo_pipeline',
+        ],
+        False,
+    )
 
 
-@pytest.mark.parametrize('execute_args', valid_execute_args())
-def test_print_command_verbose(execute_args):
-    cli_args, uses_legacy_repository_yaml_format = execute_args
+@pytest.mark.parametrize('pipeline_args', valid_pipeline_args())
+def test_print_command_verbose(grpc_client, pipeline_args):  # pylint: disable=redefined-outer-name
+    cli_args, uses_legacy_repository_yaml_format, instance = pipeline_args
+    cli_args = transform_grpc_kwargs(grpc_client, cli_args)
     if uses_legacy_repository_yaml_format:
         with pytest.warns(
             UserWarning,
@@ -583,14 +602,17 @@ def test_print_command_verbose(execute_args):
                 'You are using the legacy repository yaml format. Please update your file '
             ),
         ):
-            execute_print_command(verbose=True, cli_args=cli_args, print_fn=no_print)
+            execute_print_command(
+                verbose=True, cli_args=cli_args, print_fn=no_print, instance=instance
+            )
     else:
-        execute_print_command(verbose=True, cli_args=cli_args, print_fn=no_print)
+        execute_print_command(verbose=True, cli_args=cli_args, print_fn=no_print, instance=instance)
 
 
-@pytest.mark.parametrize('execute_args', valid_execute_args())
-def test_print_command(execute_args):
-    cli_args, uses_legacy_repository_yaml_format = execute_args
+@pytest.mark.parametrize('pipeline_args', valid_pipeline_args())
+def test_print_command(grpc_client, pipeline_args):  # pylint: disable=redefined-outer-name
+    cli_args, uses_legacy_repository_yaml_format, instance = pipeline_args
+    cli_args = transform_grpc_kwargs(grpc_client, cli_args)
     if uses_legacy_repository_yaml_format:
         with pytest.warns(
             UserWarning,
@@ -598,15 +620,19 @@ def test_print_command(execute_args):
                 'You are using the legacy repository yaml format. Please update your file '
             ),
         ):
-            execute_print_command(verbose=False, cli_args=cli_args, print_fn=no_print)
+            execute_print_command(
+                verbose=False, cli_args=cli_args, print_fn=no_print, instance=instance
+            )
     else:
-        execute_print_command(verbose=False, cli_args=cli_args, print_fn=no_print)
+        execute_print_command(
+            verbose=False, cli_args=cli_args, print_fn=no_print, instance=instance
+        )
 
 
-@pytest.mark.parametrize('execute_cli_args', valid_cli_args())
-def test_print_command_cli(execute_cli_args):
+@pytest.mark.parametrize('pipeline_cli_args', valid_execute_cli_args())
+def test_print_command_cli(pipeline_cli_args):
     runner = CliRunner()
-    cli_args, uses_legacy_repository_yaml_format = execute_cli_args
+    cli_args, uses_legacy_repository_yaml_format = pipeline_cli_args
     if uses_legacy_repository_yaml_format:
         with pytest.warns(
             UserWarning,
@@ -777,7 +803,7 @@ def test_execute_command_env(execute_args):
             )
 
 
-@pytest.mark.parametrize('execute_cli_args', valid_cli_args())
+@pytest.mark.parametrize('execute_cli_args', valid_execute_cli_args())
 def test_execute_command_runner(execute_cli_args):
     cli_args, uses_legacy_repository_yaml_format = execute_cli_args
     runner = CliRunner()
@@ -971,7 +997,7 @@ def test_scaffold_command(execute_args):
         execute_scaffold_command(cli_args=cli_args, print_fn=no_print)
 
 
-@pytest.mark.parametrize('execute_cli_args', valid_cli_args())
+@pytest.mark.parametrize('execute_cli_args', valid_execute_cli_args())
 def test_scaffold_command_cli(execute_cli_args):
     cli_args, uses_legacy_repository_yaml_format = execute_cli_args
 
@@ -1503,7 +1529,26 @@ def test_backfill_partition_enum():
         run_test_backfill(args, expected_count=3)
 
 
-def run_launch(execution_args, expected_count=None):
+def run_launch(kwargs, expected_count=None):
+    with seven.TemporaryDirectory() as temp_dir:
+        instance = DagsterInstance(
+            instance_type=InstanceType.EPHEMERAL,
+            local_artifact_storage=LocalArtifactStorage(temp_dir),
+            run_storage=InMemoryRunStorage(),
+            event_storage=InMemoryEventLogStorage(),
+            compute_log_manager=NoOpComputeLogManager(),
+            run_launcher=InMemoryRunLauncher(),
+        )
+        run = execute_launch_command(instance, kwargs)
+
+        assert run
+
+        if expected_count:
+            assert instance.get_runs_count() == expected_count
+        instance.run_launcher.join()
+
+
+def run_launch_cli(execution_args, expected_count=None):
     runner = CliRunner()
     run_launcher = InMemoryRunLauncher()
     with seven.TemporaryDirectory() as temp_dir:
@@ -1524,9 +1569,10 @@ def run_launch(execution_args, expected_count=None):
                 assert len(run_launcher.queue()) == expected_count
 
 
-@pytest.mark.parametrize('execute_cli_args', valid_cli_args())
-def test_launch_pipeline(execute_cli_args):
-    cli_args, uses_legacy_repository_yaml_format = execute_cli_args
+@pytest.mark.parametrize('pipeline_args', valid_pipeline_args())
+def test_launch_pipeline(grpc_client, pipeline_args):  # pylint: disable=redefined-outer-name
+    cli_args, uses_legacy_repository_yaml_format, _instance = pipeline_args
+    cli_args = transform_grpc_kwargs(grpc_client, cli_args)
     if uses_legacy_repository_yaml_format:
         with pytest.warns(
             UserWarning,
@@ -1537,6 +1583,21 @@ def test_launch_pipeline(execute_cli_args):
             run_launch(cli_args, expected_count=1)
     else:
         run_launch(cli_args, expected_count=1)
+
+
+@pytest.mark.parametrize('pipeline_cli_args', valid_execute_cli_args())
+def test_launch_pipeline_cli(pipeline_cli_args):
+    cli_args, uses_legacy_repository_yaml_format = pipeline_cli_args
+    if uses_legacy_repository_yaml_format:
+        with pytest.warns(
+            UserWarning,
+            match=re.escape(
+                'You are using the legacy repository yaml format. Please update your file '
+            ),
+        ):
+            run_launch_cli(cli_args, expected_count=1)
+    else:
+        run_launch_cli(cli_args, expected_count=1)
 
 
 @contextmanager

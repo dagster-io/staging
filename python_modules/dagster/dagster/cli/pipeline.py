@@ -144,11 +144,11 @@ def get_partitioned_pipeline_instructions(command_name):
 @click.option('--verbose', is_flag=True)
 @pipeline_target_argument
 def pipeline_print_command(verbose, **cli_args):
-    return execute_print_command(verbose, cli_args, click.echo)
+    return execute_print_command(verbose, cli_args, click.echo, instance=DagsterInstance.get())
 
 
-def execute_print_command(verbose, cli_args, print_fn):
-    external_pipeline = get_external_pipeline_from_kwargs(cli_args, DagsterInstance.get())
+def execute_print_command(verbose, cli_args, print_fn, instance):
+    external_pipeline = get_external_pipeline_from_kwargs(cli_args, instance)
     pipeline_snapshot = external_pipeline.pipeline_snapshot
 
     if verbose:
@@ -586,12 +586,15 @@ def do_execute_command(
         '-e, --env is deprecated and will be removed in 0.9.0.'
     ),
 )
-def pipeline_launch_command(config, preset, mode, **kwargs):
-    return _logged_pipeline_launch_command(config, preset, mode, DagsterInstance.get(), kwargs)
+def pipeline_launch_command(**kwargs):
+    return execute_launch_command(DagsterInstance.get(), kwargs)
 
 
 @telemetry_wrapper
-def _logged_pipeline_launch_command(config, preset, mode, instance, kwargs):
+def execute_launch_command(instance, kwargs):
+    config = kwargs.get('config')
+    preset = kwargs.get('preset')
+    mode = kwargs.get('mode')
     check.inst_param(instance, 'instance', DagsterInstance)
     env = (
         canonicalize_backcompat_args(
