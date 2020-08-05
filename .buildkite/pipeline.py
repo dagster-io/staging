@@ -290,7 +290,9 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         tox_env_suffixes=[
             '-api_tests',
             '-cli_tests',
-            '-cli_command_tests',
+            '-cli_command_cli_api_tests',
+            '-cli_command_managed_grpc_tests',
+            '-cli_command_deployed_grpc_tests',
             '-core_tests',
             '-general_tests',
         ],
