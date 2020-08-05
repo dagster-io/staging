@@ -1026,7 +1026,7 @@ class DagsterInstance:
                     "status": schedule_state.status.value,
                     "cron_schedule": schedule_state.cron_schedule,
                     "python_path": schedule_state.pipeline_origin.executable_path,
-                    "repository_pointer": schedule_state.pipeline_origin.get_repo_pointer().describe(),
+                    "repository_pointer": schedule_state.pipeline_origin.get_repo_cli_args(),
                     "schedule_origin_id": schedule_state.schedule_origin_id,
                     "repository_origin_id": schedule_state.repository_origin_id,
                 }
