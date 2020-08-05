@@ -54,14 +54,11 @@ class CodePointer(six.with_metaclass(ABCMeta)):
         file_name = check.opt_str_elem(repository_config, 'file')
         fn_name = check.str_elem(repository_config, 'fn')
 
-        working_directory = os.path.dirname(file_path)
         return (
             CodePointer.from_module(module_name, fn_name)
             if module_name
             # rebase file in config off of the path in the config file
-            else CodePointer.from_python_file(
-                rebase_file(file_name, file_path), fn_name, working_directory
-            )
+            else CodePointer.from_python_file(rebase_file(file_name, file_path), fn_name, None)
         )
 
 
