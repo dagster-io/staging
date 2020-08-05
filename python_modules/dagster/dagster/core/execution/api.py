@@ -382,7 +382,16 @@ def reexecute_pipeline(
             instance.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
             as a dict.
-        step_keys_to_execute (Optional[List[str]]): Keys of the steps to execute.
+        step_keys_to_execute (Optional[List[str]]): A list of step selection queries (including single
+            step keys) to execute. For example:
+            - ['some_solid.compute']: select the execution step "some_solid.compute" itself.
+            - ['*some_solid.compute']: select the step "some_solid.compute" and all its ancestors
+                (upstream dependencies).
+            - ['*some_solid.compute+++']: select the step "some_solid.compute", all its ancestors,
+                and its descendants (downstream dependencies) within 3 levels down.
+            - ['*some_solid.compute', 'other_solid_a.compute', 'other_solid_b.compute+']: select
+                "some_solid.compute" and all its ancestors, "other_solid_a.compute" itself, and
+                "other_solid_b.compute" and its direct child execution steps.
         mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``
             and ``preset``.
         preset (Optional[str]): The name of the pipeline preset to use. You may not set both
@@ -458,7 +467,16 @@ def reexecute_pipeline_iterator(
             instance.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
             as a dict.
-        step_keys_to_execute (Optional[List[str]]): Keys of the steps to execute.
+        step_keys_to_execute (Optional[List[str]]): A list of step selection queries (including single
+            step keys) to execute. For example:
+            - ['some_solid.compute']: select the execution step "some_solid.compute" itself.
+            - ['*some_solid.compute']: select the step "some_solid.compute" and all its ancestors
+                (upstream dependencies).
+            - ['*some_solid.compute+++']: select the step "some_solid.compute", all its ancestors,
+                and its descendants (downstream dependencies) within 3 levels down.
+            - ['*some_solid.compute', 'other_solid_a.compute', 'other_solid_b.compute+']: select
+                "some_solid.compute" and all its ancestors, "other_solid_a.compute" itself, and
+                "other_solid_b.compute" and its direct child execution steps.
         mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``
             and ``preset``.
         preset (Optional[str]): The name of the pipeline preset to use. You may not set both

@@ -12,6 +12,7 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
+from dagster.core.selector import parse_step_selection
 from dagster.core.system_config.objects import (
     EmptyIntermediateStoreBackcompatConfig,
     EnvironmentConfig,
@@ -40,8 +41,9 @@ class _PlanBuilder(object):
             environment_config, 'environment_config', EnvironmentConfig
         )
         check.opt_str_param(mode, 'mode')
-        check.opt_list_param(step_keys_to_execute, 'step_keys_to_execute', of_type=str)
-        self.step_keys_to_execute = step_keys_to_execute
+        self.step_keys_to_execute = check.opt_list_param(
+            step_keys_to_execute, 'step_keys_to_execute', of_type=str
+        )
         self.mode_definition = (
             pipeline.get_definition().get_mode_definition(mode)
             if mode is not None
@@ -102,12 +104,16 @@ class _PlanBuilder(object):
 
         step_dict = {step.key: step for step in self._steps.values()}
 
-        step_keys_to_execute = self.step_keys_to_execute or [
-            step.key for step in self._steps.values()
-        ]
+        # resolve step_keys_to_execute
+        # TODO yuhan: make step_keys_to_execute a frozenset
+        if self.step_keys_to_execute:
+            frozen_step_keys_to_execute = parse_step_selection(deps, self.step_keys_to_execute)
+            self.step_keys_to_execute = list(frozen_step_keys_to_execute)
+        else:
+            self.step_keys_to_execute = [step.key for step in self._steps.values()]
 
         return ExecutionPlan(
-            self.pipeline, step_dict, deps, self.storage_is_persistent(), step_keys_to_execute,
+            self.pipeline, step_dict, deps, self.storage_is_persistent(), self.step_keys_to_execute,
         )
 
     def storage_is_persistent(self):
@@ -378,7 +384,7 @@ class ExecutionPlan(
         # events (like resource initialization) that are associated with the execution of these
         # single step sub-plans.  Most likely will be removed with the refactor detailed in
         # https://github.com/dagster-io/dagster/issues/2239
-        return self.step_keys_to_execute[0] if len(self.step_keys_to_execute) == 1 else None
+        return list(self.step_keys_to_execute)[0] if len(self.step_keys_to_execute) == 1 else None
 
     @staticmethod
     def build(pipeline, environment_config, mode=None, step_keys_to_execute=None):

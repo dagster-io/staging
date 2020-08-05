@@ -1,7 +1,9 @@
 import re
 import sys
+from collections import defaultdict
 
 from dagster.core.definitions.dependency import DependencyStructure
+from dagster.core.errors import DagsterInvalidSubsetError
 from dagster.utils import check
 
 MAX_NUM = sys.maxsize
@@ -20,13 +22,13 @@ def generate_dep_graph(pipeline_def):
                 'upstream': {
                     'solid_one_1': set(),
                     'solid_one_2': set(),
-                    'solid_two': set(['solid_one_1', 'solid_one_2']),
-                    'solid_three': set(['solid_two']),
+                    'solid_two': {'solid_one_1', 'solid_one_2'},
+                    'solid_three': {'solid_two'},
                 },
                 'downstream': {
-                    'solid_one_1': set(['solid_two']),
-                    'solid_one_2': set(['solid_two']),
-                    'solid_two': set(['solid_three']),
+                    'solid_one_1': {'solid_two'},
+                    'solid_one_2': {'solid_two'},
+                    'solid_two': {'solid_three'},
                     'solid_three': set(),
                 },
             }
@@ -147,7 +149,7 @@ def _clause_to_subset(traverser, graph, clause):
 
 def parse_solid_selection(pipeline_def, solid_selection):
     '''Take pipeline definition and a list of solid selection queries (inlcuding names of solid
-        invocations. See syntax examples below) and return a list of the qualified solid names.
+        invocations. See syntax examples below) and return a set of the qualified solid names.
 
     It currently only supports top-level solids.
 
@@ -180,6 +182,57 @@ def parse_solid_selection(pipeline_def, solid_selection):
 
     # loop over clauses
     for clause in solid_selection:
-        solids_set.update(_clause_to_subset(traverser, graph, clause))
+        subset = _clause_to_subset(traverser, graph, clause)
+        if len(subset) == 0:
+            raise DagsterInvalidSubsetError(
+                'No qualified solids to execute found for solid_selection={requested}'.format(
+                    requested=solid_selection
+                )
+            )
+        solids_set.update(subset)
 
     return frozenset(solids_set)
+
+
+def parse_step_selection(upstream_deps, step_selection):
+    '''Take the dependency dictionary generated while building execution plan and a list of step key
+     selection queries and return a set of the qualified step keys.
+
+    It currently only supports top-level solids.
+
+    Args:
+        upstream_deps (Dict[str, Set[str]]): a dictionary of execution step dependency where the key is a step
+            key and the value is a set of direct upstream dependency of the step.
+        step_selection (List[str]): a list of the step key selection queries (including single
+            step key) to execute.
+
+    Returns:
+        FrozenSet[str]: a frozenset of qualified deduplicated solid names, empty if no qualified
+            subset selected.
+    '''
+    check.list_param(step_selection, 'step_selection', of_type=str)
+
+    # reverse upstream_deps to get the downstream_deps
+    # make sure we have all items as keys, including the ones without downstream dependencies
+    downstream_deps = defaultdict(set, {k: set() for k in upstream_deps.keys()})
+    for downstream_key, upstream_keys in upstream_deps.items():
+        for step_key in upstream_keys:
+            downstream_deps[step_key].add(downstream_key)
+
+    # generate dep graph
+    graph = {'upstream': upstream_deps, 'downstream': downstream_deps}
+    traverser = Traverser(graph=graph)
+    steps_set = set()
+
+    # loop over clauses
+    for clause in step_selection:
+        subset = _clause_to_subset(traverser, graph, clause)
+        if len(subset) == 0:
+            raise DagsterInvalidSubsetError(
+                'No qualified steps to execute found for step_selection={requested}'.format(
+                    requested=step_selection
+                )
+            )
+        steps_set.update(subset)
+
+    return frozenset(steps_set)
