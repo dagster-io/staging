@@ -141,18 +141,24 @@ def wait_for_all_runs_to_finish(instance, timeout=5):
 
 @contextmanager
 def mocked_instance(overrides=None, enable_telemetry=False):
+    with seven.TemporaryDirectory() as temp_dir:
+        with mocked_instance_tempdir(temp_dir, overrides, enable_telemetry) as instance:
+            yield instance
+
+
+@contextmanager
+def mocked_instance_tempdir(temp_dir, overrides=None, enable_telemetry=False):
     overrides = merge_dicts(
         overrides if overrides else {}, {'telemetry': {'enabled': enable_telemetry}}
     )
-    with seven.TemporaryDirectory() as temp_dir:
-        with environ({'DAGSTER_HOME': temp_dir}):
-            with open(os.path.join(temp_dir, 'dagster.yaml'), 'w') as fd:
-                yaml.dump(overrides, fd, default_flow_style=False)
-            try:
-                instance = DagsterInstance.get()
-                yield instance
-            finally:
-                wait_for_all_runs_to_finish(instance)
+    with environ({'DAGSTER_HOME': temp_dir}):
+        with open(os.path.join(temp_dir, 'dagster.yaml'), 'w') as fd:
+            yaml.dump(overrides, fd, default_flow_style=False)
+        try:
+            instance = DagsterInstance.get()
+            yield instance
+        finally:
+            wait_for_all_runs_to_finish(instance)
 
 
 def create_run_for_test(
