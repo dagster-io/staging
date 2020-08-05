@@ -101,6 +101,8 @@ class EnvironmentConfig(
         config_value = config_evr.value
 
         config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
+        config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
+        config_mapped_execution_configs = config_map_execution(pipeline_def, config_value, mode)
 
         solid_config_dict = composite_descent(pipeline_def, config_value.get('solids', {}))
         # TODO:  replace this with a simple call to from_dict of the config.get when ready to fully deprecate
@@ -111,17 +113,19 @@ class EnvironmentConfig(
 
         return EnvironmentConfig(
             solids=solid_config_dict,
-            execution=ExecutionConfig.from_dict(config_value.get('execution')),
+            execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
             storage=StorageConfig.from_dict(config_value.get('storage')),
             intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
-            loggers=config_value.get('loggers'),
+            loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
         )
 
 
 def config_map_resources(pipeline_def, config_value, mode):
-    '''This function executes the config mappings for resource with respect to IConfigMappable.'''
+    '''This function executes the config mappings for resources with respect to IConfigMappable.
+       It iterates over resource_defs and looks up the corresponding config because resources
+       need to be mapped regardless of whether they receive config from run_config.'''
 
     mode_def = pipeline_def.get_mode_definition(mode)
     resource_configs = config_value.get('resources', {})
@@ -139,6 +143,66 @@ def config_map_resources(pipeline_def, config_value, mode):
             config_mapped_resource_configs[resource_key] = resource_config_evr.value
 
     return config_mapped_resource_configs
+
+
+def config_map_loggers(pipeline_def, config_value, mode):
+    '''This function executes the config mappings for loggers with respect to IConfigMappable.
+       It iterates over items in the config and looks up the corresponding def because loggers
+       should only be mapped if they are named in run_config.
+       See python_modules/dagster/dagster/core/execution/context_creation_pipeline.py:577
+    '''
+
+    mode_def = pipeline_def.get_mode_definition(mode)
+    logger_configs = config_value.get('loggers')
+    if not logger_configs:
+        return logger_configs  # return falsy value
+
+    config_mapped_logger_configs = {}
+
+    for logger_key, logger_config in logger_configs.items():
+        logger_def = mode_def.loggers.get(
+            logger_key
+        )  # top level process_config will ensure that this keys a valid logger, right?
+        logger_config_evr = logger_def.apply_config_mapping(logger_config)
+        if not logger_config_evr.success:
+            raise DagsterInvalidConfigError(
+                'Error in config for logger {}'.format(logger_key),
+                logger_config_evr.errors,
+                logger_config,
+            )
+        else:
+            config_mapped_logger_configs[logger_key] = logger_config_evr.value
+
+    return config_mapped_logger_configs
+
+
+def config_map_execution(pipeline_def, config_value, mode):
+    '''This function executes the config mappings for executors with respect to IConfigMappable.
+       It calls the ensure_single_item macro on the incoming config and then applies config
+       mapping to the result and the first executor_def with the same name on the mode_def.'''
+
+    config = config_value.get('execution')
+
+    check.opt_dict_param(config, 'config', key_type=str)
+    if not config:
+        return None
+
+    executor_name, executor_config = ensure_single_item(config)
+
+    mode_def = pipeline_def.get_mode_definition(mode)
+    executor_def = next(
+        (defi for defi in mode_def.executor_defs if defi.name == executor_name)
+    )  # TODO can we be sure this doesn't raise (because the config should be validated??) ?
+    # TODO alternatively a default iterator value + a check.invariant(executor_def) ?
+    executor_config_evr = executor_def.apply_config_mapping(executor_config)
+    if not executor_config_evr.success:
+        raise DagsterInvalidConfigError(
+            'Error in config for executor {}'.format(executor_name),
+            executor_config_evr.errors,
+            executor_config,
+        )
+
+    return {executor_name: executor_config_evr.value}
 
 
 class ExecutionConfig(
