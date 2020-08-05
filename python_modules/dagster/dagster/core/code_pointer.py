@@ -9,7 +9,7 @@ from collections import namedtuple
 import six
 
 from dagster import check
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvariantViolationError, DagsterImportError
 from dagster.serdes import whitelist_for_serdes
 from dagster.seven import import_module_from_path
 from dagster.utils import alter_sys_path, load_yaml_from_path
@@ -82,8 +82,27 @@ def load_python_file(python_file, working_directory):
     module_name = os.path.splitext(os.path.basename(python_file))[0]
     cwd = sys.path[0]
     if working_directory:
-        with alter_sys_path(to_add=[working_directory], to_remove=[cwd]):
-            return import_module_from_path(module_name, python_file)
+        try:
+            with alter_sys_path(to_add=[working_directory], to_remove=[cwd]):
+                return import_module_from_path(module_name, python_file)
+        except ImportError as ie:
+            six.raise_from(
+                DagsterImportError(
+                    (
+                        'Encountered ImportError while importing module {module} from file '
+                        '{python_file}. Uninstalled modules were resolved using the working '
+                        'directory `{working_directory}`. If another working directory should be '
+                        'used, please explicitly specify the appropriate path using the `-d` or '
+                        '`--working-directory` for CLI based targets or the `working_directory` '
+                        'configuration option for `python_file`-based workspace.yaml targets.'
+                    ).format(
+                        module=module_name,
+                        python_file=python_file,
+                        working_directory=working_directory,
+                    )
+                ),
+                ie,
+            )
 
     error = None
     sys_modules = {k: v for k, v in sys.modules.items()}
@@ -108,7 +127,7 @@ def load_python_file(python_file, working_directory):
     try:
         module = import_module_from_path(module_name, python_file)
         # if here, we were able to resolve the module with the working directory on the
-        # path, but should error because we may not always invoke from the same directory
+        # path, but should warn because we may not always invoke from the same directory
         # (e.g. from cron)
         warnings.warn(
             (
@@ -120,7 +139,23 @@ def load_python_file(python_file, working_directory):
             ).format(module=error.name if hasattr(error, 'name') else module_name)
         )
         return module
+    except RuntimeError:
+        # We might be here because numpy throws run time errors at import time when being imported
+        # multiple times... we should also use the original import error as the root
+        six.raise_from(
+            DagsterImportError(
+                (
+                    'Encountered ImportError while importing module {module} from file '
+                    '{python_file}. If relying on the working directory to resolve modules, please '
+                    'explicitly specify the appropriate path using the `-d` or '
+                    '`--working-directory` for CLI based targets or the `working_directory` '
+                    'configuration option for `python_file`-based workspace.yaml targets.'
+                ).format(module=module_name, python_file=python_file)
+            ),
+            error,
+        )
     except ImportError:
+        # raise the original import error
         raise error
 
 
@@ -166,6 +201,10 @@ def load_python_module(module_name, warn_only=False, remove_from_path_fn=None):
                     ),
                     error,
                 )
+        except RuntimeError:
+            # We might be here because numpy throws run time errors at import time when being
+            # imported multiple times, just raise the original import error
+            raise error
         except ImportError as ie:
             raise error
 
