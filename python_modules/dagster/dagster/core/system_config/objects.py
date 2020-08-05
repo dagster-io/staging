@@ -101,6 +101,8 @@ class EnvironmentConfig(
         config_value = config_evr.value
 
         config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
+        config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
+        config_mapped_execution_configs = config_map_execution(pipeline_def, config_value, mode)
 
         solid_config_dict = composite_descent(pipeline_def, config_value.get('solids', {}))
         # TODO:  replace this with a simple call to from_dict of the config.get when ready to fully deprecate
@@ -111,10 +113,10 @@ class EnvironmentConfig(
 
         return EnvironmentConfig(
             solids=solid_config_dict,
-            execution=ExecutionConfig.from_dict(config_value.get('execution')),
+            execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
             storage=StorageConfig.from_dict(config_value.get('storage')),
             intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
-            loggers=config_value.get('loggers'),
+            loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
         )
@@ -139,6 +141,63 @@ def config_map_resources(pipeline_def, config_value, mode):
             config_mapped_resource_configs[resource_key] = resource_config_evr.value
 
     return config_mapped_resource_configs
+
+
+def config_map_loggers(pipeline_def, config_value, mode):
+    '''This function executes the config mappings for loggers with respect to IConfigMappable.'''
+
+    mode_def = pipeline_def.get_mode_definition(mode)
+    logger_configs = config_value.get('loggers')
+    if not logger_configs:
+        return None
+
+    config_mapped_logger_configs = {}
+
+    # iterate through keys in the config rather than in modedef because items in mode_def.loggers that lack config values are ignored... feh (https://github.com/dagster-io/dagster/blob/e4e07c469a367a8de0df67cf639b1233ad1b8ba2/python_modules/dagster/dagster/core/execution/context_creation_pipeline.py#L577)
+    for logger_key, logger_config in logger_configs.items():
+        logger_def = mode_def.loggers.get(
+            logger_key
+        )  # top level process_config will ensure that this keys a valid logger, right?
+        logger_config_evr = logger_def.apply_config_mapping(logger_config)
+        if not logger_config_evr.success:
+            raise DagsterInvalidConfigError(
+                'Error in config for logger {}'.format(logger_key),
+                logger_config_evr.errors,
+                logger_config,
+            )
+        else:
+            config_mapped_logger_configs[logger_key] = logger_config_evr.value
+
+    return config_mapped_logger_configs
+
+
+def config_map_execution(pipeline_def, config_value, mode):
+    '''This function executes the config mappings for executors with respect to IConfigMappable.'''
+
+    mode_def = pipeline_def.get_mode_definition(mode)
+    execution_configs = config_value.get('execution')
+    if not execution_configs:
+        return None
+
+    config_mapped_execution_configs = {}
+
+    for executor_def in mode_def.executor_defs:
+        executor_key = executor_def.name
+        if not executor_key in execution_configs:  # if we don't have this configged
+            continue
+        executor_config = execution_configs.get(executor_key)
+
+        executor_config_evr = executor_def.apply_config_mapping(executor_config)
+        if not executor_config_evr.success:
+            raise DagsterInvalidConfigError(
+                'Error in config for logger {}'.format(executor_key),
+                executor_config_evr.errors,
+                executor_config,
+            )
+        else:
+            config_mapped_execution_configs[executor_key] = executor_config_evr.value
+
+    return config_mapped_execution_configs
 
 
 class ExecutionConfig(
