@@ -9,7 +9,7 @@ from collections import namedtuple
 import six
 
 from dagster import check
-from dagster.core.errors import DagsterInvariantViolationError, DagsterImportError
+from dagster.core.errors import DagsterImportError, DagsterInvariantViolationError
 from dagster.serdes import whitelist_for_serdes
 from dagster.seven import import_module_from_path
 from dagster.utils import alter_sys_path, load_yaml_from_path
@@ -97,8 +97,8 @@ def load_python_file(python_file, working_directory):
                         'configuration option for `python_file`-based workspace.yaml targets.'
                     ).format(
                         module=module_name,
-                        python_file=python_file,
-                        working_directory=working_directory,
+                        python_file=os.path.abspath(os.path.expanduser(python_file)),
+                        working_directory=os.path.abspath(os.path.expanduser(working_directory)),
                     )
                 ),
                 ie,
@@ -150,7 +150,9 @@ def load_python_file(python_file, working_directory):
                     'explicitly specify the appropriate path using the `-d` or '
                     '`--working-directory` for CLI based targets or the `working_directory` '
                     'configuration option for `python_file`-based workspace.yaml targets.'
-                ).format(module=module_name, python_file=python_file)
+                ).format(
+                    module=module_name, python_file=os.path.abspath(os.path.expanduser(python_file))
+                )
             ),
             error,
         )
@@ -248,7 +250,7 @@ class FileCodePointer(
             return '-f {python_file} -a {fn_name} -d {directory}'.format(
                 python_file=os.path.abspath(os.path.expanduser(self.python_file)),
                 fn_name=self.fn_name,
-                directory=self.working_directory,
+                directory=os.path.abspath(os.path.expanduser(self.working_directory)),
             )
         else:
             return '-f {python_file} -a {fn_name}'.format(

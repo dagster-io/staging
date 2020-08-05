@@ -262,6 +262,13 @@ def test_local_directory_module():
                 __file__, 'hello_world_file_in_directory/default_working_dir_workspace.yaml'
             ),
         ],
+        # load workspace with multiple working directory file targets
+        [
+            '-w',
+            file_relative_path(__file__, 'multi_file_target_workspace/workspace.yaml'),
+            '-l',
+            'one',
+        ],
     ),
 )
 def test_local_directory_file(cli_args):
