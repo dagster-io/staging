@@ -8,6 +8,9 @@
 `dagster.yaml` files before they can be used.
 - `-d` can no longer be used as a command-line argument to specify a mode. Use `--mode` instead.
 - Use `--preset` instead of `--preset-name` to specify a preset to the `pipeline launch` command.
+- Removed the `config` argument to the `ConfigMapping`, `@composite_solid`, `@solid`,
+  `SolidDefinition`, `@executor`, `ExecutorDefinition`, `@logger`, `LoggerDefinition`, `@resource`,
+  and `ResourceDefinition` APIs.  Use `config_schema` instead.
 
 **New**
 - `-d` or `--working-directory` can be used to specify a working directory in any command that
