@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from dagster import file_relative_path, pipeline, repository, seven, solid
+from dagster import Materialization, Output, file_relative_path, pipeline, repository, seven, solid
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation.handle import RepositoryLocationHandle
 from dagster.core.host_representation.repository_location import GrpcServerRepositoryLocation
@@ -27,7 +27,9 @@ def noop_pipeline():
 
 @solid
 def slow_solid(_):
-    time.sleep(4)
+    for i in range(100):
+        yield Materialization(label=str(i))
+    yield Output('done')
 
 
 @pipeline
@@ -228,7 +230,7 @@ def test_successful_run(
         assert pipeline_run.status == PipelineRunStatus.SUCCESS
 
 
-def test_run_always_finishes(temp_instance):  # pylint: disable=redefined-outer-name
+def test_launched_run_always_finishes(temp_instance):  # pylint: disable=redefined-outer-name
     instance = temp_instance
 
     pipeline_run = instance.create_run_for_pipeline(pipeline_def=slow_pipeline, run_config=None)
@@ -259,12 +261,13 @@ def test_run_always_finishes(temp_instance):  # pylint: disable=redefined-outer-
             instance=instance, run=pipeline_run, external_pipeline=external_pipeline
         )
 
-    # Server process now receives shutdown event, run has not finished yet
+    # Server process now receives shutdown event (from ephemeral client), run has not finished yet
     pipeline_run = instance.get_run_by_id(run_id)
     assert not pipeline_run.is_finished
     assert server_process.server_process.poll() is None
 
-    # Server should wait until run finishes, then shutdown
+    # Server should wait until *launched* run, i.e., nondaemonized subprocess,
+    # finishes, then shutdown
     pipeline_run = poll_for_run(instance, run_id)
     assert pipeline_run.status == PipelineRunStatus.SUCCESS
 
