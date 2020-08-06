@@ -63,16 +63,69 @@ from .utils import get_loadable_targets
 
 EVENT_QUEUE_POLL_INTERVAL = 0.1
 
+SHUTDOWN_POLL_INTERVAL = 0.1
+
+EXECUTION_GC_POLL_INTERVAL = 1
+
 
 class CouldNotBindGrpcServerToAddress(Exception):
     pass
 
 
-def heartbeat_thread(heartbeat_timeout, last_heartbeat_time, shutdown_event):
+class ServerShuttingDown(Exception):
+    pass
+
+
+def heartbeat_thread(heartbeat_timeout, last_heartbeat_time, shutdown_server_event):
     while True:
         time.sleep(heartbeat_timeout)
         if last_heartbeat_time < time.time() - heartbeat_timeout:
-            shutdown_event.set()
+            shutdown_server_event.set()
+            return
+
+
+def soft_shutdown_thread(
+    executions, execution_lock, soft_shutdown_server_event, shutdown_server_event
+):
+    while True:
+        time.sleep(SHUTDOWN_POLL_INTERVAL)
+        if soft_shutdown_server_event.is_set():
+            while True:
+                with execution_lock:
+                    if len(executions) == 0:
+                        shutdown_server_event.set()
+                        return
+
+
+def execution_gc_thread(executions, termination_events, execution_lock):
+    while True:
+        time.sleep(EXECUTION_GC_POLL_INTERVAL)
+        with execution_lock:
+            for (run_id, process) in executions.items():
+                if not process.is_alive():
+                    del executions[run_id]
+                    if run_id in termination_events:
+                        del termination_events[run_id]
+
+
+def gate_on_soft_shutdown(method):
+    def _gated(self, *args, **kwargs):
+        if self.is_shutting_down:
+            raise ServerShuttingDown()
+        return method(self, *args, **kwargs)
+
+    return _gated
+
+
+def streaming_gate_on_soft_shutdown(method):
+    def _gated(self, *args, **kwargs):
+        if self.is_shutting_down:
+            raise ServerShuttingDown()
+
+        for evt in method(self, *args, **kwargs):
+            yield evt
+
+    return _gated
 
 
 class DagsterApiServer(DagsterApiServicer):
@@ -95,6 +148,7 @@ class DagsterApiServer(DagsterApiServicer):
         self._shutdown_server_event = check.inst_param(
             shutdown_server_event, 'shutdown_server_event', seven.ThreadingEventType
         )
+        self._soft_shutdown_server_event = threading.Event()
         self._loadable_target_origin = check.opt_inst_param(
             loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin
         )
@@ -118,9 +172,6 @@ class DagsterApiServer(DagsterApiServicer):
         else:
             self._loadable_repository_symbols = []
 
-        self._shutdown_server_event = check.inst_param(
-            shutdown_server_event, 'shutdown_server_event', seven.ThreadingEventType
-        )
         # Dict[str, multiprocessing.Process] of run_id to execute_run process
         self._executions = {}
         # Dict[str, multiprocessing.Event]
@@ -155,6 +206,31 @@ class DagsterApiServer(DagsterApiServicer):
         else:
             self.__heartbeat_thread = None
 
+        with open('pi', 'w') as fd:
+            fd.write('here')
+        self._soft_shutdown_thread = threading.Thread(
+            target=soft_shutdown_thread,
+            args=(
+                self._executions,
+                self._execution_lock,
+                self._soft_shutdown_server_event,
+                self._shutdown_server_event,
+            ),
+        )
+        self._soft_shutdown_thread.daemon = True
+        self._soft_shutdown_thread.start()
+
+        self._execution_gc_thread = threading.Thread(
+            target=execution_gc_thread,
+            args=(self._executions, self._termination_events, self._execution_lock),
+        )
+        self._execution_gc_thread.daemon = True
+        self._execution_gc_thread.start()
+
+    @property
+    def is_shutting_down(self):
+        return self._soft_shutdown_server_event.is_set() or self._shutdown_server_event.is_set()
+
     def _recon_repository_from_origin(self, repository_origin):
         check.inst_param(
             repository_origin, 'repository_origin', RepositoryOrigin,
@@ -171,10 +247,12 @@ class DagsterApiServer(DagsterApiServicer):
         recon_repo = self._recon_repository_from_origin(pipeline_origin.repository_origin)
         return recon_repo.get_reconstructable_pipeline(pipeline_origin.pipeline_name)
 
+    @gate_on_soft_shutdown
     def Ping(self, request, _context):
         echo = request.echo
         return api_pb2.PingReply(echo=echo)
 
+    @gate_on_soft_shutdown
     def StreamingPing(self, request, _context):
         sequence_length = request.sequence_length
         echo = request.echo
@@ -186,6 +264,7 @@ class DagsterApiServer(DagsterApiServicer):
         echo = request.echo
         return api_pb2.PingReply(echo=echo)
 
+    @gate_on_soft_shutdown
     def ExecutionPlanSnapshot(self, request, _context):
         execution_plan_args = deserialize_json_to_dagster_namedtuple(
             request.serialized_execution_plan_snapshot_args
@@ -202,6 +281,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    @gate_on_soft_shutdown
     def ListRepositories(self, request, _context):
         return api_pb2.ListRepositoriesReply(
             serialized_list_repositories_response=serialize_dagster_namedtuple(
@@ -215,6 +295,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    @gate_on_soft_shutdown
     def ExternalPartitionNames(self, request, _context):
         partition_names_args = deserialize_json_to_dagster_namedtuple(
             request.serialized_partition_names_args
@@ -251,6 +332,7 @@ class DagsterApiServer(DagsterApiServicer):
                 )
             )
 
+    @gate_on_soft_shutdown
     def ExternalPartitionConfig(self, request, _context):
         partition_args = deserialize_json_to_dagster_namedtuple(request.serialized_partition_args)
 
@@ -283,6 +365,7 @@ class DagsterApiServer(DagsterApiServicer):
                 )
             )
 
+    @gate_on_soft_shutdown
     def ExternalPartitionTags(self, request, _context):
         partition_args = deserialize_json_to_dagster_namedtuple(request.serialized_partition_args)
 
@@ -315,6 +398,7 @@ class DagsterApiServer(DagsterApiServicer):
                 )
             )
 
+    @gate_on_soft_shutdown
     def ExternalPipelineSubsetSnapshot(self, request, _context):
         pipeline_subset_snapshot_args = deserialize_json_to_dagster_namedtuple(
             request.serialized_pipeline_subset_snapshot_args
@@ -335,6 +419,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    @gate_on_soft_shutdown
     def ExternalRepository(self, request, _context):
         repository_origin = deserialize_json_to_dagster_namedtuple(
             request.serialized_repository_python_origin
@@ -349,6 +434,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    @gate_on_soft_shutdown
     def ExternalScheduleExecution(self, request, _context):
         external_schedule_execution_args = deserialize_json_to_dagster_namedtuple(
             request.serialized_external_schedule_execution_args
@@ -370,6 +456,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    @streaming_gate_on_soft_shutdown
     def ExecuteRun(self, request, _context):
         try:
             execute_run_args = deserialize_json_to_dagster_namedtuple(
@@ -405,7 +492,10 @@ class DagsterApiServer(DagsterApiServicer):
                 termination_event,
             ],
         )
+        execution_process.daemon = True
         with self._execution_lock:
+            if self.is_shutting_down:
+                raise ServerShuttingDown()
             execution_process.start()
             self._executions[run_id] = execution_process
             self._termination_events[run_id] = termination_event
@@ -455,7 +545,12 @@ class DagsterApiServer(DagsterApiServicer):
 
     def ShutdownServer(self, request, _context):
         try:
-            self._shutdown_server_event.set()
+            if request.hard:
+                self._shutdown_server_event.set()
+            else:
+                with self._execution_lock:
+                    self._soft_shutdown_server_event.set()
+
             return api_pb2.ShutdownServerReply(
                 serialized_shutdown_server_result=serialize_dagster_namedtuple(
                     ShutdownServerResult(success=True, serializable_error_info=None)
@@ -514,6 +609,7 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    @gate_on_soft_shutdown
     def StartRun(self, request, _context):
         execute_run_args = check.inst(
             deserialize_json_to_dagster_namedtuple(request.serialized_execute_run_args),
@@ -634,10 +730,15 @@ SERVER_FAILED_TO_BIND_TOKEN_BYTES = b'dagster_grpc_server_failed_to_bind'
 
 
 def server_termination_target(termination_event, server):
-    while not termination_event.is_set():
-        time.sleep(0.1)
-    # We could make this grace period configurable if we set it in the ShutdownServer handler
-    server.stop(grace=None)
+    with open('evidence_server', 'w') as fd:
+        while not termination_event.is_set():
+            fd.write('looping\n')
+            fd.flush()
+            time.sleep(0.1)
+        fd.write('stopping\n')
+        fd.flush()
+        # We could make this grace period configurable if we set it in the ShutdownServer handler
+        server.stop(grace=None)
 
 
 class DagsterGrpcServer(object):
@@ -828,6 +929,7 @@ def open_server_process(
 def open_server_process_on_dynamic_port(max_retries=10, loadable_target_origin=None, max_workers=1):
     server_process = None
     retries = 0
+    port = None
     while server_process is None and retries < max_retries:
         port = find_free_port()
         try:
@@ -903,9 +1005,13 @@ class GrpcServerProcess(object):
         if self.server_process is None:
             raise CouldNotStartServerProcess(port=self.port, socket=self.socket)
 
-    def create_ephemeral_client(self):
+    def create_ephemeral_client(self, hard_shutdown=True):
         from dagster.grpc.client import EphemeralDagsterGrpcClient
 
         return EphemeralDagsterGrpcClient(
-            port=self.port, socket=self.socket, server_process=self.server_process
+            port=self.port,
+            socket=self.socket,
+            server_process=self.server_process,
+            hard_shutdown=hard_shutdown,
         )
+
