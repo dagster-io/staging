@@ -98,6 +98,7 @@ def grpc_host():
 
 @pytest.fixture(scope='session')
 def grpc_port():
+
     yield HARDCODED_PORT
 
 
