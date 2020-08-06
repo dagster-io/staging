@@ -6,7 +6,7 @@ import stat
 import six
 from crontab import CronTab
 
-from dagster import DagsterInstance, check, utils
+from dagster import DagsterInstance, Field, check, utils
 from dagster.core.host_representation import ExternalSchedule
 from dagster.core.scheduler import DagsterSchedulerError, Scheduler
 from dagster.serdes import ConfigurableClass
@@ -20,8 +20,9 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
     '''
 
     def __init__(
-        self, inst_data=None,
+        self, pre_command=None, inst_data=None,
     ):
+        self._pre_command = check.opt_str_param(pre_command, 'pre_command', "")
         self._inst_data = inst_data
 
     @property
@@ -30,11 +31,11 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
 
     @classmethod
     def config_type(cls):
-        return {}
+        return {'pre_command': Field(str, is_required=False, default_value="")}
 
     @staticmethod
     def from_config_value(inst_data, config_value):
-        return SystemCronScheduler(inst_data=inst_data)
+        return SystemCronScheduler(pre_command=config_value['pre_command'], inst_data=inst_data)
 
     def get_cron_tab(self):
         return CronTab(user=True)
@@ -207,17 +208,25 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
             #!/bin/bash
             export DAGSTER_HOME={dagster_home}
             export LANG=en_US.UTF-8
+            export RUN_DATE=$(date "+%Y%m%dT%H%M%S")
+
+            # Environment variables from schedule definition:
+            # Note: The `environment_variables` argument will be deprecated in 0.9.0
+            # Use the `pre_command` to source environment variables instead.
             {env_vars}
 
-            export RUN_DATE=$(date "+%Y%m%dT%H%M%S")
+            # pre_command:
+            {pre_command}
 
             {python_exe} -m dagster api launch_scheduled_execution --schedule_name {schedule_name} {repo_cli_args} "{result_file}"
         '''.format(
+            pre_command=self._pre_command,
             python_exe=local_target.executable_path,
             schedule_name=external_schedule.name,
             repo_cli_args=local_target.get_repo_cli_args(),
             result_file=schedule_log_file_path,
             dagster_home=dagster_home,
+            # Will be deprecated in 0.9.0
             env_vars="\n".join(
                 [
                     "export {key}={value}".format(key=key, value=value)

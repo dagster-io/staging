@@ -1,31 +1,26 @@
+import contextlib
 import os
 import re
 import subprocess
 
 import pytest
 import yaml
-from dagster_cron import SystemCronScheduler
 
-from dagster import ScheduleDefinition
+from dagster import ScheduleDefinition, StringSource, check, solid
 from dagster.core.code_pointer import FileCodePointer
 from dagster.core.definitions import lambda_solid, pipeline, repository
 from dagster.core.host_representation import PythonEnvRepositoryLocation, RepositoryLocationHandle
-from dagster.core.instance import DagsterInstance, InstanceType
-from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
+from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler import ScheduleStatus
 from dagster.core.scheduler.scheduler import (
     DagsterScheduleDoesNotExist,
     DagsterScheduleReconciliationError,
     DagsterSchedulerError,
 )
-from dagster.core.storage.event_log import InMemoryEventLogStorage
-from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
 from dagster.core.storage.pipeline_run import PipelineRunStatus
-from dagster.core.storage.root import LocalArtifactStorage
-from dagster.core.storage.runs import InMemoryRunStorage
-from dagster.core.storage.schedules import SqliteScheduleStorage
 from dagster.core.test_utils import environ
 from dagster.seven import TemporaryDirectory
+from dagster.utils import file_relative_path
 
 
 @pytest.fixture(scope='function')
@@ -72,6 +67,16 @@ def no_config_pipeline():
     return return_hello()
 
 
+@pipeline
+def config_pipeline():
+    @solid(config_schema={"key": StringSource})
+    def return_goodbye(context):
+        assert context.solid_config['key'] == "hello"
+        return "Goodbye"
+
+    return return_goodbye()
+
+
 schedules_dict = {
     'no_config_pipeline_daily_schedule': ScheduleDefinition(
         name="no_config_pipeline_daily_schedule",
@@ -90,6 +95,14 @@ schedules_dict = {
         cron_schedule="* * * * *",
         pipeline_name="no_config_pipeline",
     ),
+    'schedule_with_env_vars': ScheduleDefinition(
+        name="schedule_with_env_vars",
+        cron_schedule="* * * * *",
+        pipeline_name="config_pipeline",
+        run_config_fn=lambda _ctx: {
+            "solids": {"return_goodbye": {"config": {"key": {"env": "TEST_VAR"}}}}
+        },
+    ),
 }
 
 
@@ -107,7 +120,7 @@ def test_repository():
             )
         )
 
-    return [no_config_pipeline] + define_schedules()
+    return [no_config_pipeline, config_pipeline] + define_schedules()
 
 
 def get_test_external_repo():
@@ -132,15 +145,15 @@ def get_cron_jobs():
 
 
 def define_scheduler_instance(tempdir):
-    return DagsterInstance(
-        instance_type=InstanceType.EPHEMERAL,
-        local_artifact_storage=LocalArtifactStorage(tempdir),
-        run_storage=InMemoryRunStorage(),
-        event_storage=InMemoryEventLogStorage(),
-        compute_log_manager=NoOpComputeLogManager(),
-        schedule_storage=SqliteScheduleStorage.from_local(os.path.join(tempdir, 'schedules')),
-        scheduler=SystemCronScheduler(),
-        run_launcher=SyncInMemoryRunLauncher(),
+    return DagsterInstance.local_temp(
+        tempdir,
+        overrides={
+            'scheduler': {'module': 'dagster_cron.cron_scheduler', 'class': 'SystemCronScheduler'},
+            'run_launcher': {
+                'module': 'dagster.core.launcher.sync_in_memory_run_launcher',
+                'class': 'SyncInMemoryRunLauncher',
+            },
+        },
     )
 
 
@@ -281,11 +294,11 @@ def test_remove_schedule_def(
         # Initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_schedule_state()) == 4
 
         instance.reconcile_scheduler_state(get_smaller_external_repo())
 
-        assert len(instance.all_stored_schedule_state()) == 2
+        assert len(instance.all_stored_schedule_state()) == 3
 
 
 def test_add_schedule_def(restore_cron_tab):  # pylint:disable=unused-argument,redefined-outer-name
@@ -304,14 +317,14 @@ def test_add_schedule_def(restore_cron_tab):  # pylint:disable=unused-argument,r
             external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
         )
 
-        assert len(instance.all_stored_schedule_state()) == 2
+        assert len(instance.all_stored_schedule_state()) == 3
         assert len(get_cron_jobs()) == 2
         assert len(instance.scheduler_debug_info().errors) == 0
 
         # Reconcile with an additional schedule added
         instance.reconcile_scheduler_state(get_test_external_repo())
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_schedule_state()) == 4
         assert len(get_cron_jobs()) == 2
         assert len(instance.scheduler_debug_info().errors) == 0
 
@@ -321,7 +334,7 @@ def test_add_schedule_def(restore_cron_tab):  # pylint:disable=unused-argument,r
             external_repo.get_external_schedule("default_config_pipeline_every_min_schedule")
         )
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_schedule_state()) == 4
         assert len(get_cron_jobs()) == 3
         assert len(instance.scheduler_debug_info().errors) == 0
 
@@ -418,13 +431,19 @@ def test_start_and_stop_schedule_cron_tab(
         assert len(cron_jobs) == 0
 
 
-def test_script_execution(
-    restore_cron_tab, unset_dagster_home
-):  # pylint:disable=unused-argument,redefined-outer-name
+@contextlib.contextmanager
+def execute_script_for_schedule(schedule_name, scheduler_config=None):
+    check.str_param(schedule_name, 'schedule_name')
+    scheduler_config = check.opt_dict_param(scheduler_config, 'scheduler_config', {})
+
     with TemporaryDirectory() as tempdir:
         os.environ["DAGSTER_HOME"] = tempdir
         config = {
-            'scheduler': {'module': 'dagster_cron', 'class': 'SystemCronScheduler', 'config': {}},
+            'scheduler': {
+                'module': 'dagster_cron',
+                'class': 'SystemCronScheduler',
+                'config': scheduler_config,
+            },
             # This needs to synchronously execute to completion when
             # the generated bash script is invoked
             'run_launcher': {
@@ -438,22 +457,46 @@ def test_script_execution(
 
         instance = DagsterInstance.get()
         external_repo = get_test_external_repo()
-        # Initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
 
-        instance.start_schedule_and_update_storage_state(
-            external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
-        )
+        external_schedule = external_repo.get_external_schedule(schedule_name)
+        instance.start_schedule_and_update_storage_state(external_schedule)
 
-        schedule_origin_id = external_repo.get_external_schedule(
-            "no_config_pipeline_every_min_schedule"
-        ).get_origin_id()
         script = instance.scheduler._get_bash_script_file_path(  # pylint: disable=protected-access
-            instance, schedule_origin_id
+            instance, external_schedule.get_origin_id()
         )
-
         subprocess.check_output([script], shell=True, env={"DAGSTER_HOME": tempdir})
 
+        yield instance
+
+
+def test_script_execution_with_env_vars(
+    restore_cron_tab, unset_dagster_home
+):  # pylint:disable=unused-argument,redefined-outer-name
+
+    # Test execution with env var set
+    with execute_script_for_schedule(
+        "schedule_with_env_vars",
+        scheduler_config={
+            'pre_command': "source {}".format(file_relative_path(__file__, 'test.profile'))
+        },
+    ) as instance:
+        runs = instance.get_runs()
+        assert len(runs) == 1
+        assert runs[0].status == PipelineRunStatus.SUCCESS
+
+    # Test execution with env var not set
+    with execute_script_for_schedule("schedule_with_env_vars",) as instance:
+        runs = instance.get_runs()
+        assert len(runs) == 1
+        assert runs[0].status == PipelineRunStatus.FAILURE
+
+
+def test_script_execution(
+    restore_cron_tab, unset_dagster_home
+):  # pylint:disable=unused-argument,redefined-outer-name
+
+    with execute_script_for_schedule("no_config_pipeline_every_min_schedule") as instance:
         runs = instance.get_runs()
         assert len(runs) == 1
         assert runs[0].status == PipelineRunStatus.SUCCESS
@@ -759,7 +802,7 @@ def test_reconcile_failure_when_deleting_schedule_def(
         # Initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_schedule_state()) == 4
 
         def failed_end_job(*_):
             raise DagsterSchedulerError("Failed to stop")
