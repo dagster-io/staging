@@ -6,6 +6,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.tags import check_tags
 from dagster.utils import merge_dicts
+from dagster.utils.backcompat import deprecation_warning
 
 from .mode import DEFAULT_MODE_NAME
 
@@ -57,7 +58,7 @@ class ScheduleDefinition(object):
             at schedule execution time to determine whether a schedule should execute or skip. Takes
             a :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the
             schedule should execute). Defaults to a function that always returns ``True``.
-        environment_vars (Optional[dict[str, str]]): The environment variables to set for the
+        environment_vars (Optional[dict[str, str]]): [Deprecated] The environment variables to set for the
             schedule
     """
 
@@ -103,6 +104,11 @@ class ScheduleDefinition(object):
         )
         self._mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
         check.opt_callable_param(should_execute, "should_execute")
+
+        # Defining environment variables on schedule definitions will be deprecated in 0.10.0
+        environment_vars = deprecation_warning(
+            environment_vars, "environment_vars", "0.10.0", additional_warn_txt="..."
+        )
         self._environment_vars = check.opt_dict_param(
             environment_vars, "environment_vars", key_type=str, value_type=str
         )

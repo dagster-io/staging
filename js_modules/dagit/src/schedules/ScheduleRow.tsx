@@ -62,7 +62,11 @@ const getNaturalLanguageCronString = (cronSchedule: string) => {
   }
 };
 
-const errorDisplay = (status: ScheduleStatus, runningScheduleCount: number) => {
+const errorDisplay = (
+  status: ScheduleStatus,
+  runningScheduleCount: number,
+  hasStateSchedulerId: boolean
+) => {
   if (status === ScheduleStatus.STOPPED && runningScheduleCount === 0) {
     return null;
   } else if (status === ScheduleStatus.RUNNING && runningScheduleCount === 1) {
@@ -70,6 +74,11 @@ const errorDisplay = (status: ScheduleStatus, runningScheduleCount: number) => {
   }
 
   const errors = [];
+
+  if (hasStateSchedulerId) {
+    errors.push("Stale scheduler id");
+  }
+
   if (status === ScheduleStatus.RUNNING && runningScheduleCount === 0) {
     errors.push(
       "Schedule is set to be running, but either the scheduler is not configured or the scheduler is not running the schedule"

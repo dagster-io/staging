@@ -126,6 +126,7 @@ export const SchedulesRoot: React.FunctionComponent = () => {
           } else {
             scheduleDefinitionsSection = (
               <ScheduleTable
+                scheduler={scheduler}
                 schedules={scheduleDefinitionsWithState}
                 repository={repositoryOrError}
               />
@@ -157,6 +158,7 @@ export const SchedulesRoot: React.FunctionComponent = () => {
 };
 
 const ScheduleTable: React.FunctionComponent<{
+  scheduler: SchedulesRootQuery_scheduler;
   schedules: SchedulesRootQuery_scheduleDefinitionsOrError_ScheduleDefinitions_results[];
   repository: SchedulesRootQuery_repositoryOrError_Repository;
 }> = props => {
@@ -201,7 +203,7 @@ const ScheduleTable: React.FunctionComponent<{
         </Legend>
       )}
       {props.schedules.map(schedule => (
-        <ScheduleRow schedule={schedule} key={schedule.name} />
+        <ScheduleRow scheduler={scheduler} schedule={schedule} key={schedule.name} />
       ))}
     </div>
   );

@@ -979,6 +979,9 @@ class DagsterInstance:
 
     # Scheduler
 
+    def get_scheduler_id(self):
+        return self._scheduler.get_id()
+
     def reconcile_scheduler_state(self, external_repository):
         return self._scheduler.reconcile_scheduler_state(self, external_repository)
 
@@ -1003,6 +1006,13 @@ class DagsterInstance:
 
         schedules = []
         for schedule_state in self.all_stored_schedule_state():
+            # Check if schedule config has been changed:
+            if schedule_state.scheduler_id != self.get_scheduler_id():
+                errors.append(
+                    "The Scheduler config has changed since Schedule {schedule_name} was "
+                    "originally reconciled.".format(schedule_name=schedule_state.name)
+                )
+
             if schedule_state.status == ScheduleStatus.RUNNING and not self.running_schedule_count(
                 schedule_state.schedule_origin_id
             ):
@@ -1033,6 +1043,7 @@ class DagsterInstance:
                     "repository_pointer": schedule_state.pipeline_origin.get_repo_cli_args(),
                     "schedule_origin_id": schedule_state.schedule_origin_id,
                     "repository_origin_id": schedule_state.repository_origin_id,
+                    "scheduler_id": schedule_state.scheduler_id,
                 }
             }
 

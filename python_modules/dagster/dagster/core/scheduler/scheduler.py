@@ -1,4 +1,5 @@
 import abc
+from abc import abstractproperty
 from collections import namedtuple
 from enum import Enum
 
@@ -9,7 +10,7 @@ from dagster.core.errors import DagsterError
 from dagster.core.host_representation import ExternalSchedule
 from dagster.core.instance import DagsterInstance
 from dagster.core.origin import ScheduleOrigin
-from dagster.serdes import whitelist_for_serdes
+from dagster.serdes import create_snapshot_id, whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
 
 
@@ -114,8 +115,8 @@ class SchedulerDebugInfo(
 
 
 @whitelist_for_serdes
-class ScheduleState(namedtuple("_StoredScheduleState", "origin status cron_schedule")):
-    def __new__(cls, origin, status, cron_schedule):
+class ScheduleState(namedtuple("_StoredScheduleState", "origin status cron_schedule scheduler_id")):
+    def __new__(cls, origin, status, cron_schedule, scheduler_id=None):
 
         return super(ScheduleState, cls).__new__(
             cls,
@@ -123,6 +124,8 @@ class ScheduleState(namedtuple("_StoredScheduleState", "origin status cron_sched
             check.inst_param(origin, "origin", ScheduleOrigin),
             check.inst_param(status, "status", ScheduleStatus),
             check.str_param(cron_schedule, "cron_schedule"),
+            # scheduler_id was introduced in 0.9.2
+            check.opt_str_param(scheduler_id, "scheduler_id"),
         )
 
     @property
@@ -153,6 +156,13 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
     """Abstract base class for a scheduler. This component is responsible for interfacing with
     an external system such as cron to ensure scheduled repeated execution according.
     """
+
+    @abstractproperty
+    def inst_data(self):
+        pass
+
+    def get_id(self):
+        return create_snapshot_id(self.inst_data)
 
     def _get_schedule_state(self, instance, schedule_origin_id):
         schedule_state = instance.get_schedule_state(schedule_origin_id)
@@ -189,10 +199,14 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
             existing_schedule_state = instance.get_schedule_state(external_schedule.get_origin_id())
             if existing_schedule_state:
                 # Keep the status, update target and cron schedule
+                import pdb
+
+                pdb.set_trace()
                 schedule_state = ScheduleState(
                     external_schedule.get_origin(),
                     existing_schedule_state.status,
                     external_schedule.cron_schedule,
+                    scheduler_id=self.get_id(),
                 )
 
                 instance.update_schedule_state(schedule_state)
@@ -202,6 +216,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
                     external_schedule.get_origin(),
                     ScheduleStatus.STOPPED,
                     external_schedule.cron_schedule,
+                    scheduler_id=self.get_id(),
                 )
 
                 instance.add_schedule_state(schedule_state)

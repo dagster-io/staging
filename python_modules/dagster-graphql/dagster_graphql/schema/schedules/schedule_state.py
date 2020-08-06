@@ -35,6 +35,7 @@ class DauphinScheduleState(dauphin.ObjectType):
     class Meta(object):
         name = "ScheduleState"
 
+    scheduler_id = dauphin.NonNull(dauphin.String)
     schedule_origin_id = dauphin.NonNull(dauphin.String)
     schedule_name = dauphin.NonNull(dauphin.String)
     cron_schedule = dauphin.NonNull(dauphin.String)
@@ -48,18 +49,24 @@ class DauphinScheduleState(dauphin.ObjectType):
     logs_path = dauphin.NonNull(dauphin.String)
     running_schedule_count = dauphin.NonNull(dauphin.Int)
     repository_origin_id = dauphin.NonNull(dauphin.String)
+    has_stale_scheduler_id = dauphin.NonNull(dauphin.Boolean)
     id = dauphin.NonNull(dauphin.ID)
 
     def __init__(self, _graphene_info, schedule_state):
         self._schedule_state = check.inst_param(schedule_state, "schedule", ScheduleState)
         self._external_schedule_origin_id = self._schedule_state.schedule_origin_id
+        self._scheduler_id = self._schedule_state.scheduler_id
 
         super(DauphinScheduleState, self).__init__(
+            scheduler_id=schedule_state.scheduler_id,
             schedule_origin_id=schedule_state.schedule_origin_id,
             schedule_name=schedule_state.name,
             cron_schedule=schedule_state.cron_schedule,
             status=schedule_state.status,
         )
+
+    def resolve_has_stale_scheduler_id(self, graphene_info):
+        return self._scheduler_id == graphene_info.context.instance.get_scheduler_id()
 
     def resolve_id(self, _graphene_info):
         return self._external_schedule_origin_id
