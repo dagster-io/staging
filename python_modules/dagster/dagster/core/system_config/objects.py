@@ -101,21 +101,30 @@ class EnvironmentConfig(
 
         config_value = config_evr.value
 
-        config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
-        config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
-        config_mapped_execution_configs = config_map_executors(pipeline_def, config_value, mode)
-
-        solid_config_dict = composite_descent(pipeline_def, config_value.get('solids', {}))
-        # TODO:  replace this with a simple call to from_dict of the config.get when ready to fully deprecate
-        temp_intermed = config_value.get('intermediate_storage')
+        mode_def = pipeline_def.get_mode_definition(mode)
+        config_mapped_intermediate_storage_configs = config_map_objects(
+            config_value, mode_def.intermediate_storage_defs, 'intermediate_storage',
+        )
+        # TODO:  replace this with a simple call to from_dict of config_mapped_intermediate_storage_configs when ready to fully deprecate
+        temp_intermed = config_mapped_intermediate_storage_configs
         if config_value.get('storage'):
             if temp_intermed is None:
                 temp_intermed = {EmptyIntermediateStoreBackcompatConfig(): {}}
 
+        config_mapped_execution_configs = config_map_objects(config_value, mode_def.executor_defs)
+        config_mapped_system_storage_configs = config_map_objects(
+            config_value, mode_def.system_storage_defs, 'storage'
+        )
+
+        config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
+        config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
+
+        solid_config_dict = composite_descent(pipeline_def, config_value.get('solids', {}))
+
         return EnvironmentConfig(
             solids=solid_config_dict,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
-            storage=StorageConfig.from_dict(config_value.get('storage')),
+            storage=StorageConfig.from_dict(config_mapped_system_storage_configs),
             intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
             loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
@@ -188,12 +197,12 @@ def config_map_loggers(pipeline_def, config_value, mode):
     return config_mapped_logger_configs
 
 
-def config_map_executors(pipeline_def, config_value, mode):
+def config_map_objects(config_value, defs, class_name='execution'):
     '''This function executes the config mappings for executors with respect to IConfigMappable.
     It calls the ensure_single_item macro on the incoming config and then applies config mapping to
     the result and the first executor_def with the same name on the mode_def.'''
 
-    config = config_value.get('execution')
+    config = config_value.get(class_name)
 
     check.opt_dict_param(config, 'config', key_type=str)
     if not config:
@@ -201,9 +210,8 @@ def config_map_executors(pipeline_def, config_value, mode):
 
     executor_name, executor_config = ensure_single_item(config)
 
-    mode_def = pipeline_def.get_mode_definition(mode)
     executor_def = next(
-        (defi for defi in mode_def.executor_defs if defi.name == executor_name)
+        (defi for defi in defs if defi.name == executor_name)
     )  # TODO can we be sure this doesn't raise (because the config should be validated??) ?
     # TODO alternatively a default iterator value + a check.invariant(executor_def) ?
     executor_config_evr = executor_def.apply_config_mapping(executor_config)
