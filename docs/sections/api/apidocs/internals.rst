@@ -176,6 +176,11 @@ Scheduling
 .. autoclass:: SystemCronScheduler
 
 
+.. currentmodule:: dagster_k8s.scheduler
+
+.. autoclass:: K8sScheduler
+
+
 .. currentmodule:: dagster.core.storage.schedules
 
 .. autoclass:: ScheduleStorage
