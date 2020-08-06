@@ -3,59 +3,96 @@ from functools import update_wrapper
 
 from dagster import check
 from dagster.config.field_utils import check_user_facing_opt_config_param
+from dagster.core.definitions.config_mappable import IConfigMappable
 from dagster.utils.backcompat import canonicalize_backcompat_args, rename_warning
 
 
-class IntermediateStorageDefinition(
-    namedtuple(
-        '_IntermediateStorageDefinition',
-        'name is_persistent config_schema intermediate_storage_creation_fn required_resource_keys',
-    )
-):
+class IntermediateStorageDefinition(IConfigMappable):
     '''Defines intermediate data storage behaviors.
     Args:
         name (str): Name of the storage mode.
         is_persistent (bool): Whether the storage is persistent in a way that can cross process/node
             boundaries. Re-execution with, for example, the multiprocess executor, or with
             dagster-airflow, requires a persistent storage mode.
+        required_resource_keys(Optional[Set[str]]): The resources that this storage needs at runtime to function.
         config_schema (Optional[ConfigSchema]): The schema for the storage's configuration schema.
             Configuration data passed in this schema will be made available to the
             ``intermediate_storage_creation_fn`` under ``init_context.intermediate_storage_config``.
         intermediate_storage_creation_fn: (Callable[[InitIntermediateStorageContext], IntermediateStorage])
             Called to construct the storage. This function should consume the init context and emit
             a :py:class:`IntermediateStorage`.
-        required_resource_keys(Optional[Set[str]]): The resources that this storage needs at runtime to function.
+        _configured_config_mapping_fn: This argument is for internal use only. Users should not
+            specify this field. To preconfigure a resource, use the :py:func:`configured` API.
     '''
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         name,
         is_persistent,
         required_resource_keys,
         config_schema=None,
         intermediate_storage_creation_fn=None,
+        _configured_config_mapping_fn=None,
     ):
-        return super(IntermediateStorageDefinition, cls).__new__(
-            cls,
-            name=check.str_param(name, 'name'),
-            is_persistent=check.bool_param(is_persistent, 'is_persistent'),
-            config_schema=check_user_facing_opt_config_param(config_schema, 'config_schema'),
-            intermediate_storage_creation_fn=check.opt_callable_param(
-                intermediate_storage_creation_fn, 'intermediate_storage_creation_fn'
-            ),
-            required_resource_keys=frozenset(
-                check.set_param(
-                    required_resource_keys if required_resource_keys else set(),
-                    'required_resource_keys',
-                    of_type=str,
-                )
-            ),
+        self._name = check.str_param(name, 'name')
+        self._is_persistent = check.bool_param(is_persistent, 'is_persistent')
+        self._config_schema = check_user_facing_opt_config_param(config_schema, 'config_schema')
+        self._intermediate_storage_creation_fn = check.opt_callable_param(
+            intermediate_storage_creation_fn, 'intermediate_storage_creation_fn'
         )
+        self._required_resource_keys = frozenset(
+            check.set_param(
+                required_resource_keys if required_resource_keys else set(),
+                'required_resource_keys',
+                of_type=str,
+            )
+        )
+        self.__configured_config_mapping_fn = check.opt_callable_param(
+            _configured_config_mapping_fn, 'config_mapping_fn'
+        )
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def is_persistent(self):
+        return self._is_persistent
+
+    @property
+    def config_schema(self):
+        return self._config_schema
+
+    @property
+    def intermediate_storage_creation_fn(self):
+        return self._intermediate_storage_creation_fn
+
+    @property
+    def required_resource_keys(self):
+        return self._required_resource_keys
 
     @property
     def config_field(self):
         rename_warning('config_schema', 'config_field', '0.9.0')
         return self.config_schema
+
+    @property
+    def _configured_config_mapping_fn(self):
+        return self.__configured_config_mapping_fn
+
+    def configured(self, config_or_config_fn, config_schema=None, **kwargs):
+        wrapped_config_mapping_fn = self._get_wrapped_config_mapping_fn(
+            config_or_config_fn, config_schema
+        )
+
+        return IntermediateStorageDefinition(
+            name=kwargs.get('name', self.name),
+            is_persistent=self.is_persistent,
+            required_resource_keys=self.required_resource_keys,
+            config_schema=config_schema,
+            intermediate_storage_creation_fn=self.intermediate_storage_creation_fn,
+            _configured_config_mapping_fn=wrapped_config_mapping_fn,
+        )
 
 
 def intermediate_storage(
