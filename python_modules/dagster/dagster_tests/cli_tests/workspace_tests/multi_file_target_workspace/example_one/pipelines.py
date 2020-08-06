@@ -1,4 +1,4 @@
-from solids import example_one_solid
+from solids import example_one_solid  # pylint: disable=import-error
 
 from dagster import pipeline
 
