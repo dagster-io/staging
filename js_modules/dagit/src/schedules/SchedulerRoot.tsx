@@ -13,6 +13,7 @@ import PythonErrorInfo from "../PythonErrorInfo";
 import { SCHEDULE_STATE_FRAGMENT } from "./ScheduleUtils";
 import { useRepositoryOptions } from "../DagsterRepositoryContext";
 import { Callout, Intent, Code, Button } from "@blueprintjs/core";
+import { CustomConfirmationProvider } from "../CustomConfirmationProvider";
 
 export const SchedulerRoot: React.FunctionComponent<{}> = () => {
   const queryResult = useQuery<SchedulerRootQuery>(SCHEDULER_ROOT_QUERY, {
@@ -118,13 +119,15 @@ const ScheduleStates: React.FunctionComponent<{
       <h3 style={{ marginTop: 20 }}>Unloadable schedules:</h3>
       <UnloadableScheduleInfo />
 
-      {unLoadableSchedules.map(scheduleState => (
-        <ScheduleStateRow
-          scheduleState={scheduleState}
-          key={scheduleState.scheduleOriginId}
-          showStatus={true}
-        />
-      ))}
+      <CustomConfirmationProvider>
+        {unLoadableSchedules.map(scheduleState => (
+          <ScheduleStateRow
+            scheduleState={scheduleState}
+            key={scheduleState.scheduleOriginId}
+            showStatus={true}
+          />
+        ))}
+      </CustomConfirmationProvider>
     </div>
   );
 };
