@@ -169,6 +169,25 @@ def resource(config_schema=None, description=None):
     return _wrap
 
 
+@resource
+def magic_mock_resource(_):
+    from dagster.seven import mock
+
+    return mock.MagicMock()
+
+
+def get_hardcoded_resource(obj):
+    @resource
+    def hardcoded_resource(_):
+        return obj
+
+    return hardcoded_resource
+
+
+resource.magic_mock = magic_mock_resource
+resource.hardcoded = get_hardcoded_resource
+
+
 class ScopedResourcesBuilder(namedtuple('ScopedResourcesBuilder', 'resource_instance_dict')):
     '''There are concepts in the codebase (e.g. solids, system storage) that receive
     only the resources that they have specified in required_resource_keys.
