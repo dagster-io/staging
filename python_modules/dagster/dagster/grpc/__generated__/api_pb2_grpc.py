@@ -79,7 +79,7 @@ class DagsterApiStub(object):
         )
         self.ShutdownServer = channel.unary_unary(
             '/api.DagsterApi/ShutdownServer',
-            request_serializer=api__pb2.Empty.SerializeToString,
+            request_serializer=api__pb2.ShutdownServerRequest.SerializeToString,
             response_deserializer=api__pb2.ShutdownServerReply.FromString,
         )
         self.ExecuteRun = channel.unary_stream(
@@ -274,7 +274,7 @@ def add_DagsterApiServicer_to_server(servicer, server):
         ),
         'ShutdownServer': grpc.unary_unary_rpc_method_handler(
             servicer.ShutdownServer,
-            request_deserializer=api__pb2.Empty.FromString,
+            request_deserializer=api__pb2.ShutdownServerRequest.FromString,
             response_serializer=api__pb2.ShutdownServerReply.SerializeToString,
         ),
         'ExecuteRun': grpc.unary_stream_rpc_method_handler(
@@ -624,7 +624,7 @@ class DagsterApi(object):
             request,
             target,
             '/api.DagsterApi/ShutdownServer',
-            api__pb2.Empty.SerializeToString,
+            api__pb2.ShutdownServerRequest.SerializeToString,
             api__pb2.ShutdownServerReply.FromString,
             options,
             channel_credentials,
