@@ -12,6 +12,31 @@ from .dagster_docker import DagsterDockerImage
 
 
 @contextlib.contextmanager
+def copy_directories(path_lists, cwd):
+    check.invariant(os.path.exists(cwd), 'Images directory does not exist')
+
+    paths_to_copy = []
+    for path_list in path_lists:
+        src_path = os.path.join(git_repo_root(), *path_list)
+        check.invariant(os.path.exists(src_path), 'Path for copying to image build does not exist')
+
+        dest_name = path_list[-1]
+        dest_path = os.path.join(cwd, dest_name)
+
+        paths_to_copy.append((src_path, dest_path))
+
+    try:
+        for src_path, dest_path in paths_to_copy:
+            print('Syncing {} to build dir {}...'.format(src_path, dest_path))
+            shutil.copytree(src_path, dest_path)
+        yield
+
+    finally:
+        for _, dest_path in paths_to_copy:
+            shutil.rmtree(os.path.join(dest_path))
+
+
+@contextlib.contextmanager
 def buildkite_integration_cm(cwd):
     '''For the buildkite integration base image, we first copy over scala_modules into the image
     build directory.
@@ -38,14 +63,11 @@ def buildkite_integration_cm(cwd):
 
 @contextlib.contextmanager
 def k8s_example_cm(cwd):
-    example_project_dir = os.path.join(git_repo_root(), 'examples', 'deploy_k8s', 'example_project')
     try:
-        print('Syncing {} to build dir {}...'.format(example_project_dir, cwd))
-        shutil.copytree(example_project_dir, os.path.join(cwd, 'example_project'))
-        yield
-
+        with copy_directories([['examples', 'deploy_k8s', 'example_project']], cwd):
+            yield
     finally:
-        shutil.rmtree(os.path.join(cwd, 'example_project'))
+        pass
 
 
 # Some images have custom build context manager functions, listed here
