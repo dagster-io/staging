@@ -278,8 +278,10 @@ class DagsterGrpcClient(object):
             )
             raise exc
 
-    def shutdown_server(self):
-        res = self._query('ShutdownServer', api_pb2.Empty)
+    def shutdown_server(self, hard):
+        check.bool_param(hard, 'hard')
+
+        res = self._query('ShutdownServer', api_pb2.ShutdownServerRequest, hard=hard)
         return deserialize_json_to_dagster_namedtuple(res.serialized_shutdown_server_result)
 
     def cancel_execution(self, cancel_execution_request):
@@ -344,9 +346,10 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
     '''A client that tells the server process that created it to shut down once it is destroyed or leaves a context manager.'''
 
     def __init__(
-        self, server_process=None, *args, **kwargs
+        self, server_process=None, hard_shutdown=True, *args, **kwargs
     ):  # pylint: disable=keyword-arg-before-vararg
         self._server_process = check.inst_param(server_process, 'server_process', subprocess.Popen)
+        self._hard_shutdown = check.bool_param(hard_shutdown, 'hard_shutdown')
         super(EphemeralDagsterGrpcClient, self).__init__(*args, **kwargs)
 
     def __enter__(self):
@@ -360,13 +363,21 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
 
     def _dispose(self):
         if self._server_process and self._server_process.poll() is None:
-            self.shutdown_server()
+            try:
+                self.shutdown_server(hard=self._hard_shutdown)
+            except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
+                if self._server_process.poll() is not None:
+                    raise
             self._server_process = None
 
 
 @contextmanager
 def ephemeral_grpc_api_client(
-    loadable_target_origin=None, force_port=False, max_retries=10, max_workers=1
+    loadable_target_origin=None,
+    force_port=False,
+    max_retries=10,
+    max_workers=1,
+    hard_shutdown=False,
 ):
     check.opt_inst_param(loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin)
     check.bool_param(force_port, 'force_port')
@@ -377,5 +388,5 @@ def ephemeral_grpc_api_client(
         force_port=force_port,
         max_retries=max_retries,
         max_workers=max_workers,
-    ).create_ephemeral_client() as client:
+    ).create_ephemeral_client(hard_shutdown=hard_shutdown) as client:
         yield client
