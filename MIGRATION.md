@@ -11,8 +11,6 @@ We have removed the `config` argument to the `ConfigMapping`, `@composite_solid`
 and `ResourceDefinition` APIs, which we deprecated in 0.8.0, in favor of `config_schema`, as
 described [here](#renaming-config).
 
-# Migrating to 0.8.8
-
 ## Deprecation: `Materialization`
 
 We deprecated the `Materialization` event type in favor of the new `AssetMaterialization` event type,
@@ -53,8 +51,6 @@ from dagster_aws.s3 import s3_plus_default_intermediate_storage_defs
 ModeDefinition(intermediate_storage_defs=s3_plus_default_intermediate_storage_defs)
 ```
 
-# Migrating to 0.8.7
-
 ## Loading python modules from the working directory
 
 Loading python modules reliant on the working directory being on the PYTHONPATH is no longer
@@ -63,7 +59,6 @@ PYTHONPATH when resolving modules, which may break some imports. Explicitly inst
 packages can be specified in workspaces using the `python_package` workspace yaml config option.
 The `python_module` config option is deprecated and will be removed in a future release.
 
-# Migrating to 0.8.6
 
 ## dagster-celery
 
@@ -129,15 +124,11 @@ MyType = DagsterType(
 )
 ```
 
-# Migrating to 0.8.5
-
 ## Python 3.5
 Python 3.5 is no longer under test.
 
 ## `Engine` and `ExecutorConfig` -> `Executor`
 `Engine` and `ExecutorConfig` have been deleted in favor of `Executor`. Instead of the `@executor` decorator decorating a function that returns an `ExecutorConfig` it should now decorate a function that returns an `Executor`.
-
-# Migrating to 0.8.3
 
 ## Change: `gcs_resource`
 
