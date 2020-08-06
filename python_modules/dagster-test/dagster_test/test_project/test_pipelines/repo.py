@@ -21,9 +21,11 @@ from dagster import (
     ModeDefinition,
     Output,
     OutputDefinition,
+    PresetDefinition,
     RetryRequested,
     String,
     default_executors,
+    file_relative_path,
     lambda_solid,
     pipeline,
     repository,
@@ -77,7 +79,26 @@ def demo_pipeline():
 
 
 def define_demo_pipeline_celery():
-    @pipeline(mode_defs=celery_mode_defs())
+    @pipeline(
+        mode_defs=celery_mode_defs(),
+        preset_defs=[
+            PresetDefinition.from_files(
+                'buildkite-test',
+                config_files=[
+                    file_relative_path(__file__, os.path.join('..', 'environments', 'env.yaml')),
+                    file_relative_path(__file__, os.path.join('..', 'environments', 'env_s3.yaml')),
+                    file_relative_path(
+                        __file__, os.path.join('..', 'environments', 'env_celery_k8s.yaml')
+                    ),
+                    # os.path.join(test_project_environments_path(), 'env_s3.yaml'),
+                    # file_relative_path(
+                    #     __file__, os.path.join('..', 'run_config', 'celery_k8s.yaml')
+                    # ),
+                    # file_relative_path(__file__, os.path.join('..', 'run_config', 'pipeline.yaml')),
+                ],
+            ),
+        ],
+    )
     def demo_pipeline_celery():
         count_letters(multiply_the_word())
 
