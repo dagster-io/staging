@@ -68,6 +68,51 @@ def canonicalize_backcompat_args(new_val, new_arg, old_val, old_arg, breaking_ve
     return new_val
 
 
+def deprecation_warning(old_val, old_arg, breaking_version, **kwargs):
+    '''
+    Utility for deprecating an argument.
+
+    For example if you had an existing function
+
+    def is_new(old_flag):
+        return None
+
+    And you decided you wanted a new function to be:
+
+    def is_new():
+        return None
+
+    However you want an in between period where either flag is accepted. Use
+    deprecation_warning to manage that:
+
+    def is_new(old_flag=None):
+        deprecation_warning(
+            old_val=old_flag,
+            old_arg='old_flag',
+            breaking_version='0.9.0',
+        )
+        return None
+
+    '''
+    additional_warn_txt = kwargs.get('additional_warn_txt')
+    # stacklevel=3 punches up to the caller of canonicalize_backcompat_args
+    stacklevel = kwargs.get('stacklevel', 3)
+
+    check.str_param(old_arg, 'old_arg')
+    check.opt_str_param(additional_warn_txt, 'additional_warn_txt')
+    check.opt_int_param(stacklevel, 'stacklevel')
+    if old_val is not None:
+        warnings.warn(
+            '"{old_arg}" is deprecated and will be removed in {breaking_version}. '.format(
+                old_arg=old_arg, breaking_version=breaking_version
+            )
+            + ((' ' + additional_warn_txt) if additional_warn_txt else ''),
+            stacklevel=stacklevel,
+        )
+
+    return old_val
+
+
 def rename_warning(new_name, old_name, breaking_version, additional_warn_txt=None, stacklevel=3):
     '''
     Common utility for managing backwards compatibility of renaming.
