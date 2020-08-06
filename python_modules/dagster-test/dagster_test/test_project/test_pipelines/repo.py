@@ -21,9 +21,11 @@ from dagster import (
     ModeDefinition,
     Output,
     OutputDefinition,
+    PresetDefinition,
     RetryRequested,
     String,
     default_executors,
+    file_relative_path,
     lambda_solid,
     pipeline,
     repository,
@@ -77,7 +79,7 @@ def demo_pipeline():
 
 
 def define_demo_pipeline_celery():
-    @pipeline(mode_defs=celery_mode_defs())
+    @pipeline(mode_defs=celery_mode_defs(),)
     def demo_pipeline_celery():
         count_letters(multiply_the_word())
 
