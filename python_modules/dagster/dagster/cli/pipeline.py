@@ -569,7 +569,7 @@ def execute_launch_command(instance, kwargs):
         if config:
             raise click.UsageError('Can not use --preset with --config.')
 
-        preset = external_pipeline.get_preset(preset)
+        # preset = external_pipeline.get_preset(preset)
     else:
         preset = None
 
