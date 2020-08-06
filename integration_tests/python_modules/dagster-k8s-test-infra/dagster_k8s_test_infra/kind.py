@@ -145,6 +145,7 @@ def kind_cluster(cluster_name=None, should_cleanup=False, kind_ready_timeout=60.
 
         with kind_kubeconfig(cluster_name, use_internal_address) as kubeconfig_file:
             kubernetes.config.load_kube_config(config_file=kubeconfig_file)
+            kubernetes.client.configuration.assert_hostname = False
             yield ClusterConfig(cluster_name, kubeconfig_file)
 
             if should_cleanup:
@@ -157,6 +158,7 @@ def kind_cluster(cluster_name=None, should_cleanup=False, kind_ready_timeout=60.
         with create_kind_cluster(cluster_name, should_cleanup=should_cleanup):
             with kind_kubeconfig(cluster_name, use_internal_address) as kubeconfig_file:
                 kubernetes.config.load_kube_config(config_file=kubeconfig_file)
+                kubernetes.client.configuration.assert_hostname = False
                 kind_sync_dockerconfig()
 
                 try:
