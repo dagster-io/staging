@@ -42,20 +42,6 @@ make_python_type_usable_as_dagster_type(
 PARQUET_SPECIAL_CHARACTERS = r'[ ,;{}()\n\t=]'
 
 
-def _notebook_path(name):
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'notebooks', name)
-
-
-def notebook_solid(name, notebook_path, input_defs, output_defs, required_resource_keys):
-    return define_dagstermill_solid(
-        name,
-        _notebook_path(notebook_path),
-        input_defs,
-        output_defs,
-        required_resource_keys=required_resource_keys,
-    )
-
-
 # need a sql context w a sqlalchemy engine
 def sql_solid(name, select_statement, materialization_strategy, table_name=None, input_defs=None):
     '''Return a new solid that executes and materializes a SQL select statement.
@@ -448,9 +434,14 @@ westbound_delays = sql_solid(
     table_name='westbound_delays',
 )
 
-delays_by_geography = notebook_solid(
+
+def _notebook_path(name):
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'notebooks', name)
+
+
+delays_by_geography = define_dagstermill_solid(
     'delays_by_geography',
-    'Delays_by_Geography.ipynb',
+    _notebook_path('Delays_by_Geography.ipynb'),
     input_defs=[
         InputDefinition(
             'westbound_delays',
@@ -473,38 +464,30 @@ delays_by_geography = notebook_solid(
     required_resource_keys={'db_info'},
 )
 
-delays_vs_fares_nb = notebook_solid(
+delays_vs_fares_nb = define_dagstermill_solid(
     'fares_vs_delays',
-    'Fares_vs_Delays.ipynb',
+    _notebook_path('Fares_vs_Delays.ipynb'),
     input_defs=[
         InputDefinition(
-            'table_name', SqlTableName, description='The SQL table to use for calcuations.'
+            'table_name', SqlTableName, description='The SQL table to use for calculations.'
         )
     ],
     output_defs=[
-        OutputDefinition(
-            dagster_type=FileHandle,
-            # name='plots_pdf_path',
-            description='The path to the saved PDF plots.',
-        )
+        OutputDefinition(dagster_type=FileHandle, description='The path to the saved PDF plots.')
     ],
     required_resource_keys={'db_info'},
 )
 
-sfo_delays_by_destination = notebook_solid(
+sfo_delays_by_destination = define_dagstermill_solid(
     'sfo_delays_by_destination',
-    'SFO_Delays_by_Destination.ipynb',
+    _notebook_path('SFO_Delays_by_Destination.ipynb'),
     input_defs=[
         InputDefinition(
-            'table_name', SqlTableName, description='The SQL table to use for calcuations.'
+            'table_name', SqlTableName, description='The SQL table to use for calculations.'
         )
     ],
     output_defs=[
-        OutputDefinition(
-            dagster_type=FileHandle,
-            # name='plots_pdf_path',
-            description='The path to the saved PDF plots.',
-        )
+        OutputDefinition(dagster_type=FileHandle, description='The path to the saved PDF plots.')
     ],
     required_resource_keys={'db_info'},
 )
