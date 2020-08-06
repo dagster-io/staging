@@ -2,11 +2,11 @@ import PyObject from 'components/PyObject';
 import { DynamicMetaTags } from 'components/MetaTags';
 
 <DynamicMetaTags
-  title="Deploying on Kubernetes | Dagster"
+  title="Deploying on Kubernetes Part 1 | Dagster"
   description="Dagster is a system for building modern data applications."
 />
 
-# Deploying on Kubernetes
+# Deploying on Kubernetes Part 1
 
 ## Quickstart
 
@@ -46,7 +46,7 @@ dagit:
     repository: 'your_repo/your_image:latest'
     tag: 'latest'
 
-# This image is used to launch the run coordinator job and the step execution jobs
+# This image is used to launch the run coordinator job
 pipeline_run:
   image:
     repository: 'your_repo/your_image:latest'
@@ -59,8 +59,8 @@ You can then install the Helm chart with the image configured:
 helm install dagster dagster/dagster -f /path/to/values.yaml
 ```
 
-_**Note:** Currently, Dagit must run on the user code image, but this constraint will be relaxed in
-an upcoming release._
+_**Note:** In this example, Dagit runs on the user code image. In
+[the next section](https://docs.dagster.io/deploying/k8s_part2), we relax this constraint._
 
 ## System overview
 
