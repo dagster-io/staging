@@ -636,6 +636,7 @@ def test_print_command_baz():
     assert res.exit_code == 0, res.stdout
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_mode_command():
     runner = CliRunner()
 
@@ -695,6 +696,7 @@ def test_execute_mode_command():
         assert double_adder_result
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_preset_command():
     with mocked_instance():
         runner = CliRunner()
@@ -1527,6 +1529,7 @@ def mocked_instance(overrides=None):
             yield DagsterInstance.local_temp(temp_dir, overrides=overrides)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_tags_pipeline():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1576,6 +1579,7 @@ def test_tags_pipeline():
         assert run.tags.get('foo') == 'bar'
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_backfill_tags_pipeline():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1694,6 +1698,7 @@ def test_execute_subset_pipeline_invalid():
         assert 'No qualified solids to execute found for solid_selection' in str(result.exception)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_launch_subset_pipeline():
     runner = CliRunner()
     # single clause, solid name
