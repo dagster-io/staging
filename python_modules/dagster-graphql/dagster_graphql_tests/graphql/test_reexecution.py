@@ -4,6 +4,7 @@ from dagster_graphql.client.query import (
 )
 from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
 
+from dagster.core.test_utils import wait_for_all_runs_to_finish
 from dagster.core.utils import make_new_run_id
 
 from .graphql_context_test_suite import ExecutingGraphQLContextTestMatrix
@@ -146,7 +147,7 @@ class TestReexecution(ExecutingGraphQLContextTestMatrix):
         assert result.data['launchPipelineExecution']['__typename'] == 'LaunchPipelineRunSuccess'
         assert result.data['launchPipelineExecution']['run']['status'] == 'NOT_STARTED'
 
-        instance.run_launcher.join()
+        wait_for_all_runs_to_finish(instance)
 
         result = execute_dagster_graphql(
             context=graphql_context, query=RUN_QUERY, variables={'runId': run_id}
@@ -174,7 +175,7 @@ class TestReexecution(ExecutingGraphQLContextTestMatrix):
         )
         assert result.data['launchPipelineReexecution']['__typename'] == 'LaunchPipelineRunSuccess'
 
-        instance.run_launcher.join()
+        wait_for_all_runs_to_finish(instance)
 
         result = execute_dagster_graphql(
             context=graphql_context, query=RUN_QUERY, variables={'runId': new_run_id}

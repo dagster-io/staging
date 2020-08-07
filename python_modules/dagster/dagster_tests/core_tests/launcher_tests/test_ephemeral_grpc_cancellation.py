@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from dagster import DagsterInstance, Field, Int, Materialization, pipeline, repository, seven, solid
 from dagster.core.origin import PipelineGrpcServerOrigin, RepositoryGrpcServerOrigin
+from dagster.core.test_utils import wait_for_all_runs_to_finish
 from dagster.grpc.server import GrpcServerProcess
 from dagster.grpc.types import CancelExecutionRequest, ExecuteRunArgs, LoadableTargetOrigin
 
@@ -16,7 +17,7 @@ def temp_instance():
         try:
             yield instance
         finally:
-            instance.run_launcher.join()
+            wait_for_all_runs_to_finish(instance)
 
 
 def poll_for_run(instance, run_id, timeout=5):
