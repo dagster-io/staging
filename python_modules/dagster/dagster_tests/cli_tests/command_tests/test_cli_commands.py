@@ -51,7 +51,7 @@ from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import InMemoryRunStorage
 from dagster.core.storage.schedules import SqliteScheduleStorage
-from dagster.core.test_utils import environ
+from dagster.core.test_utils import environ, wait_for_all_runs_to_finish
 from dagster.grpc.server import GrpcServerProcess
 from dagster.grpc.types import LoadableTargetOrigin
 from dagster.serdes import ConfigurableClass
@@ -636,7 +636,6 @@ def test_print_command_baz():
     assert res.exit_code == 0, res.stdout
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_mode_command():
     runner = CliRunner()
 
@@ -696,7 +695,6 @@ def test_execute_mode_command():
         assert double_adder_result
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_preset_command():
     with mocked_instance():
         runner = CliRunner()
@@ -733,7 +731,6 @@ def test_execute_preset_command():
         assert bad_res.exit_code == 2
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 @pytest.mark.parametrize('execute_args', valid_execute_args())
 def test_execute_command_no_env(execute_args):
     with mocked_instance():
@@ -750,7 +747,6 @@ def test_execute_command_no_env(execute_args):
             execute_execute_command(env_file_list=None, cli_args=cli_args)
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 @pytest.mark.parametrize('execute_args', valid_execute_args())
 def test_execute_command_env(execute_args):
     with mocked_instance():
@@ -773,7 +769,6 @@ def test_execute_command_env(execute_args):
             )
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 @pytest.mark.parametrize('execute_cli_args', valid_cli_args())
 def test_execute_command_runner(execute_cli_args):
     cli_args, uses_legacy_repository_yaml_format = execute_cli_args
@@ -803,7 +798,6 @@ def test_execute_command_runner(execute_cli_args):
             )
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_output_execute_log_stdout(capfd):
     with mocked_instance(
         overrides={
@@ -827,7 +821,6 @@ def test_output_execute_log_stdout(capfd):
         assert 'HELLO WORLD' in captured.err
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_output_execute_log_stderr(capfd):
     with mocked_instance(
         overrides={
@@ -1302,9 +1295,6 @@ def test_schedules_logs(_patch_scheduler_instance):
     assert result.output.endswith('scheduler.log\n')
 
 
-@pytest.mark.skipif(
-    os.name == 'nt', reason="multiproc directory test disabled for windows because of fs contention"
-)
 def test_multiproc():
     with mocked_instance():
         runner = CliRunner()
@@ -1512,7 +1502,6 @@ def run_launch(execution_args, expected_count=None):
                 assert len(run_launcher.queue()) == expected_count
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 @pytest.mark.parametrize('execute_cli_args', valid_cli_args())
 def test_launch_pipeline(execute_cli_args):
     cli_args, uses_legacy_repository_yaml_format = execute_cli_args
@@ -1532,10 +1521,13 @@ def test_launch_pipeline(execute_cli_args):
 def mocked_instance(overrides=None):
     with seven.TemporaryDirectory() as temp_dir:
         with environ({'DAGSTER_HOME': temp_dir}):
-            yield DagsterInstance.local_temp(temp_dir, overrides=overrides)
+            instance = DagsterInstance.local_temp(temp_dir, overrides=overrides)
+            try:
+                yield instance
+            finally:
+                wait_for_all_runs_to_finish(instance)
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_tags_pipeline():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1585,7 +1577,6 @@ def test_tags_pipeline():
         assert run.tags.get('foo') == 'bar'
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_backfill_tags_pipeline():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1617,10 +1608,8 @@ def test_backfill_tags_pipeline():
         run = runs[0]
         assert len(run.tags) >= 1
         assert run.tags.get('foo') == 'bar'
-        instance.run_launcher.join()
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_subset_pipeline_single_clause_solid_name():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1643,7 +1632,6 @@ def test_execute_subset_pipeline_single_clause_solid_name():
         assert run.solids_to_execute == {'do_something'}
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_subset_pipeline_single_clause_dsl():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1666,7 +1654,6 @@ def test_execute_subset_pipeline_single_clause_dsl():
         assert run.solids_to_execute == {'do_something', 'do_input'}
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_subset_pipeline_multiple_clauses_dsl_and_solid_name():
     runner = CliRunner()
     with mocked_instance() as instance:
@@ -1689,7 +1676,6 @@ def test_execute_subset_pipeline_multiple_clauses_dsl_and_solid_name():
         assert run.solids_to_execute == {'do_something', 'do_input'}
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_subset_pipeline_invalid():
     runner = CliRunner()
     with mocked_instance():
@@ -1708,7 +1694,6 @@ def test_execute_subset_pipeline_invalid():
         assert 'No qualified solids to execute found for solid_selection' in str(result.exception)
 
 
-@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_launch_subset_pipeline():
     runner = CliRunner()
     # single clause, solid name
