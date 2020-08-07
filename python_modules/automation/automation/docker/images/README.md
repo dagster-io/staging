@@ -49,3 +49,9 @@ to a pipeline in buildkite.
 6. Next you have to update the Dockerfile in `dagster-test` manually with the value in
    `UNIT_IMAGE_VERSION` in the `FROM` directive.
 7. Update `UNIT_IMAGE_VERSION` and put up a diff with these planned changes.
+
+## Notes
+
+- When pushing a new image to ECR, you must register the image first.
+- `GPG error: ... At least one invalid signature was encountered.` can occur when Docker hits its
+maximum cache size. `docker system prune` may resolve it
