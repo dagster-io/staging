@@ -2,6 +2,8 @@ import os
 import sys
 import time
 
+import pytest
+
 from dagster import (
     EventMetadataEntry,
     Failure,
@@ -389,6 +391,7 @@ def segfault_pipeline():
     segfault_solid()
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="Different exception on Windows")
 def test_crash_hard_multiprocessing():
     instance = DagsterInstance.local_temp()
     result = execute_pipeline(

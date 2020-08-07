@@ -636,6 +636,7 @@ def test_print_command_baz():
     assert res.exit_code == 0, res.stdout
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_execute_mode_command():
     runner = CliRunner()
 
@@ -1527,6 +1528,7 @@ def mocked_instance(overrides=None):
             yield DagsterInstance.local_temp(temp_dir, overrides=overrides)
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="TemporaryDirectory contention: see issue #2789")
 def test_tags_pipeline():
     runner = CliRunner()
     with mocked_instance() as instance:
