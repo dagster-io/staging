@@ -22,6 +22,7 @@ from dagster.core.storage.local_compute_log_manager import LocalComputeLogManage
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import InMemoryRunStorage
 from dagster.core.storage.schedules.sqlite.sqlite_schedule_storage import SqliteScheduleStorage
+from dagster.core.test_utils import wait_for_all_runs_to_finish
 from dagster.grpc.server import GrpcServerProcess
 from dagster.grpc.types import LoadableTargetOrigin
 from dagster.utils.test.postgres_instance import TestPostgresInstance
@@ -182,7 +183,7 @@ class InstanceManagers:
                 try:
                     yield instance
                 finally:
-                    instance.run_launcher.join()
+                    wait_for_all_runs_to_finish(instance)
 
         return MarkedManager(
             _sqlite_instance_with_default_hijack,
@@ -231,7 +232,7 @@ class InstanceManagers:
                     try:
                         yield instance
                     finally:
-                        instance.run_launcher.join()
+                        wait_for_all_runs_to_finish(instance)
 
         return MarkedManager(
             _postgres_instance_with_default_hijack,
