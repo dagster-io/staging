@@ -1,14 +1,17 @@
 import os
+import time
 from contextlib import contextmanager
 
 from dagster import (
     DagsterInvariantViolationError,
     Output,
     SolidDefinition,
+    check,
     composite_solid,
     pipeline,
     solid,
 )
+from dagster.core.instance import DagsterInstance
 
 
 def step_output_event_filter(pipe_iterator):
@@ -112,6 +115,24 @@ def environ(env):
                 del os.environ[key]
             else:
                 os.environ[key] = value
+
+
+def wait_for_all_runs_to_finish(instance, timeout=5):
+    check.inst_param(instance, 'instance', DagsterInstance)
+    total_time = 0
+    backoff = 0.01
+
+    while True:
+        unfinished_runs = [run for run in instance.get_runs() if not run.is_finished]
+        if not unfinished_runs:
+            return
+
+        if total_time > timeout:
+            raise Exception('Timed out')
+
+        time.sleep(backoff)
+        total_time += backoff
+        backoff = backoff * 2
 
 
 def create_run_for_test(

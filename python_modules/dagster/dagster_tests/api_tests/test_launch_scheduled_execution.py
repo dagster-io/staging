@@ -16,7 +16,7 @@ from dagster.core.scheduler import (
     ScheduledExecutionSkipped,
     ScheduledExecutionSuccess,
 )
-from dagster.core.test_utils import environ
+from dagster.core.test_utils import environ, wait_for_all_runs_to_finish
 from dagster.grpc.server import GrpcServerProcess
 from dagster.grpc.types import LoadableTargetOrigin
 from dagster.utils import find_free_port
@@ -113,7 +113,6 @@ def grpc_schedule_origin(schedule_name):
                 yield repo_origin.get_schedule_origin(schedule_name)
 
 
-@pytest.mark.skip(reason="TemporaryDirectory contention: see issue #2789")
 @pytest.mark.parametrize(
     'schedule_origin_context', [cli_api_schedule_origin, grpc_schedule_origin,],
 )
@@ -128,6 +127,7 @@ def test_launch_scheduled_execution(schedule_origin_context):
 
         ticks = instance.get_schedule_ticks(schedule_origin.get_id())
         assert ticks[0].status == ScheduleTickStatus.SUCCESS
+        wait_for_all_runs_to_finish(instance)
 
 
 @pytest.mark.parametrize('schedule_origin_context', [cli_api_schedule_origin, grpc_schedule_origin])

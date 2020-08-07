@@ -11,6 +11,7 @@ from dagster.core.host_representation.repository_location import GrpcServerRepos
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRunStatus
+from dagster.core.test_utils import wait_for_all_runs_to_finish
 from dagster.grpc.server import GrpcServerProcess
 from dagster.grpc.types import LoadableTargetOrigin
 
@@ -102,7 +103,7 @@ def temp_instance():
         try:
             yield instance
         finally:
-            instance.run_launcher.join()
+            wait_for_all_runs_to_finish(instance)
 
 
 def test_repo_construction():
