@@ -586,12 +586,15 @@ def do_execute_command(
         '-e, --env is deprecated and will be removed in 0.9.0.'
     ),
 )
-def pipeline_launch_command(config, preset, mode, **kwargs):
-    return _logged_pipeline_launch_command(config, preset, mode, DagsterInstance.get(), kwargs)
+def pipeline_launch_command(**kwargs):
+    return execute_launch_command(DagsterInstance.get(), kwargs)
 
 
 @telemetry_wrapper
-def _logged_pipeline_launch_command(config, preset, mode, instance, kwargs):
+def execute_launch_command(instance, kwargs):
+    config = kwargs.get('config')
+    preset = kwargs.get('preset')
+    mode = kwargs.get('mode')
     check.inst_param(instance, 'instance', DagsterInstance)
     env = (
         canonicalize_backcompat_args(

@@ -1,14 +1,21 @@
 import os
+import time
 from contextlib import contextmanager
+
+import yaml
 
 from dagster import (
     DagsterInvariantViolationError,
     Output,
     SolidDefinition,
+    check,
     composite_solid,
     pipeline,
+    seven,
     solid,
 )
+from dagster.core.instance import DagsterInstance
+from dagster.utils import merge_dicts
 
 
 def step_output_event_filter(pipe_iterator):
@@ -112,6 +119,54 @@ def environ(env):
                 del os.environ[key]
             else:
                 os.environ[key] = value
+
+
+def wait_for_all_runs_to_finish(instance, timeout=5):
+    check.inst_param(instance, 'instance', DagsterInstance)
+    total_time = 0
+    backoff = 0.01
+
+    while True:
+        unfinished_runs = [run for run in instance.get_runs() if not run.is_finished]
+        if not unfinished_runs:
+            return
+
+        if total_time > timeout:
+            raise Exception('Timed out')
+
+        time.sleep(backoff)
+        total_time += backoff
+        backoff = backoff * 2
+
+
+@contextmanager
+def mocked_instance(overrides=None, enable_telemetry=False):
+    with seven.TemporaryDirectory() as temp_dir:
+        with mocked_instance_tempdir(temp_dir, overrides, enable_telemetry) as instance:
+            yield instance
+
+
+@contextmanager
+def mocked_instance_tempdir(temp_dir, overrides=None, enable_telemetry=False):
+    # Disable telemetry by default to avoid writing to the tempdir while cleaning it up
+    overrides = merge_dicts(
+        overrides if overrides else {}, {'telemetry': {'enabled': enable_telemetry}}
+    )
+    with seven.TemporaryDirectory() as temp_dir:
+        # Write any overrides to disk and set DAGSTER_HOME so that they will still apply when
+        # DagsterInstance.get() is called from a different process
+        with environ({'DAGSTER_HOME': temp_dir}):
+            with open(os.path.join(temp_dir, 'dagster.yaml'), 'w') as fd:
+                yaml.dump(overrides, fd, default_flow_style=False)
+            try:
+                instance = DagsterInstance.get()
+                yield instance
+            finally:
+                # To avoid filesystem contention when we close the temporary directory, wait for
+                # all runs to reach a terminal state, and close any subprocesses or threads
+                # that might be accessing the run history DB.
+                instance.run_launcher.join()
+                wait_for_all_runs_to_finish(instance)
 
 
 def create_run_for_test(

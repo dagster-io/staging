@@ -903,6 +903,9 @@ class GrpcServerProcess(object):
         if self.server_process is None:
             raise CouldNotStartServerProcess(port=self.port, socket=self.socket)
 
+    def wait(self, timeout=None):
+        self.server_process.wait(timeout)
+
     def create_ephemeral_client(self):
         from dagster.grpc.client import EphemeralDagsterGrpcClient
 
