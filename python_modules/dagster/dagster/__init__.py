@@ -288,6 +288,7 @@ __all__ = [
     # type creation
     'DagsterType',
     'PythonObjectDagsterType',
+    'PythonUnionDagsterType',
     'make_python_type_usable_as_dagster_type',
     'usable_as_dagster_type',
     # config
