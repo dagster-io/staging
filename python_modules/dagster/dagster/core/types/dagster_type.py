@@ -502,7 +502,7 @@ class PythonUnionDagsterType(DagsterType):
     Args:
         python_types (Tuple[Type]): The dagster typecheck function calls instanceof on
             this type tuple.
-        name (Optional[str]): Name the type. Defaults to the name of ``python_types``.
+        name (Optional[str]): Name the type. Defaults to "Union[```(type.__name__ for type in python_types)```]".
         key (Optional[str]): Key of the type. Defaults to name.
         description (Optional[str]): A markdown-formatted string, displayed in tooling.
         loader (Optional[DagsterTypeLoader]): An instance of a class that
