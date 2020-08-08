@@ -344,9 +344,10 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
     '''A client that tells the server process that created it to shut down once it is destroyed or leaves a context manager.'''
 
     def __init__(
-        self, server_process=None, *args, **kwargs
+        self, server_process=None, wait_for_end=False, *args, **kwargs
     ):  # pylint: disable=keyword-arg-before-vararg
         self._server_process = check.inst_param(server_process, 'server_process', subprocess.Popen)
+        self._wait_for_end = wait_for_end
         super(EphemeralDagsterGrpcClient, self).__init__(*args, **kwargs)
 
     def __enter__(self):
@@ -361,6 +362,8 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
     def _dispose(self):
         if self._server_process and self._server_process.poll() is None:
             self.shutdown_server()
+            if self._wait_for_end:
+                self._server_process.wait()
             self._server_process = None
 
 
