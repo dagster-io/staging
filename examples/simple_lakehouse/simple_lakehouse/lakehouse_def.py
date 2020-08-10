@@ -20,12 +20,12 @@ class LocalFileSystem:
         self._root = config['root']
 
     def get_fs_path(self, path: Tuple[str, ...]) -> str:
-        rpath = os.path.join(self._root, *(path[:-1]), path[-1] + '.csv')
+        rpath = os.path.join(self._root, *path) + '.csv'
         return os.path.abspath(rpath)
 
 
 @asset_storage(config_schema={'root': StringSource})
-def pandas_df_local_filesystem_storage(init_context):
+def local_fs_storage(init_context):
     local_fs = LocalFileSystem(init_context.resource_config)
 
     class Storage(AssetStorage):
@@ -42,13 +42,10 @@ def pandas_df_local_filesystem_storage(init_context):
     return Storage()
 
 
-def make_simple_lakehouse():
-    dev_mode = ModeDefinition(
-        name='dev',
-        resource_defs={'filesystem': pandas_df_local_filesystem_storage.configured({'root': '.'}),},
-    )
-
-    return Lakehouse(mode_defs=[dev_mode])
-
-
-simple_lakehouse = make_simple_lakehouse()
+simple_lakehouse = Lakehouse(
+    mode_defs=[
+        ModeDefinition(
+            name='dev', resource_defs={'filesystem': local_fs_storage.configured({'root': '.'})},
+        )
+    ]
+)
