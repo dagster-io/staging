@@ -4,6 +4,7 @@ import six
 
 from dagster import check
 from dagster.config.evaluate_value_result import EvaluateValueResult
+from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.config.validate import process_config
 from dagster.core.errors import DagsterConfigMappingFunctionError, user_code_error_boundary
 
@@ -141,6 +142,7 @@ def configured(configurable, config_schema=None, **kwargs):
     '''
 
     check.inst_param(configurable, 'configurable', IConfigMappable)
+    config_schema = check_user_facing_opt_config_param(config_schema, 'config_schema')
 
     def _configured(config_or_config_fn):
         return configurable.configured(

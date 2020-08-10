@@ -126,7 +126,7 @@ def _composite_descent(parent_stack, solids_config_dict):
         # If there is a config mapping, invoke it and get the descendent solids
         # config that way. Else just grabs the solids entry of the current config
         solids_dict = (
-            _get_mapped_solids_dict(composite_def, current_stack, current_solid_config)
+            _get_mapped_solids_dict(solid, composite_def, current_stack, current_solid_config)
             if composite_def.config_mapping
             else current_solid_config.get('solids', {})
         )
@@ -135,7 +135,7 @@ def _composite_descent(parent_stack, solids_config_dict):
             yield sce
 
 
-def _get_mapped_solids_dict(composite_def, current_stack, current_solid_config):
+def _get_mapped_solids_dict(composite, composite_def, current_stack, current_solid_config):
     # the spec of the config mapping function is that it takes the dictionary at:
     # solid_name:
     #    config: {dict_passed_to_user}
@@ -147,11 +147,23 @@ def _get_mapped_solids_dict(composite_def, current_stack, current_solid_config):
     # We must call the config mapping function and then validate it against
     # the child schema.
 
+    # if has been @configured, then we need to map before we map... *taps brow with finger indicating cleverness
+    transformed_current_solid_config = composite_def.apply_config_mapping(current_solid_config)
+    if not transformed_current_solid_config.success:
+        raise DagsterInvalidConfigError(
+            'Error in config for composite solid {}'.format(composite.name),
+            transformed_current_solid_config.errors,
+            transformed_current_solid_config,
+        )
+
     with user_code_error_boundary(
         DagsterConfigMappingFunctionError, _get_error_lambda(current_stack)
     ):
         mapped_solids_config = composite_def.config_mapping.config_fn(
-            current_solid_config.get('config', {})
+            transformed_current_solid_config.value.get(
+                'config',
+                {},  # TODO this default value is unnecessary because process_config({'config': <schema>}, {}) will return {'config': {}}... good to keep defensively?
+            )  # TODO change this (s/transformed/config_mapped) as well as in the method above
         )
 
     # Dynamically construct the type that the output of the config mapping function will
