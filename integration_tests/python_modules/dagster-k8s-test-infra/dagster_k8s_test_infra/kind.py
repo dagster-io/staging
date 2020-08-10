@@ -15,6 +15,8 @@ from dagster.utils import safe_tempfile_path
 from .cluster import ClusterConfig
 from .integration_utils import check_output, which_, within_docker
 
+CLUSTER_INFO_DUMP_DIR = os.path.abspath('kind-info-dump')
+
 
 def kind_load_images(cluster_name, local_dagster_test_image, additional_images=None):
     check.str_param(cluster_name, 'cluster_name')
@@ -66,6 +68,8 @@ def create_kind_cluster(cluster_name, should_cleanup=True):
     finally:
         # ensure cleanup happens on error or normal exit
         if should_cleanup:
+            cluster_info_dump()
+
             print('--- Cleaning up kind cluster {cluster_name}'.format(cluster_name=cluster_name))
             check_output(['kind', 'delete', 'cluster', '--name', cluster_name])
 
@@ -181,3 +185,40 @@ def kind_cluster(cluster_name=None, should_cleanup=False, kind_ready_timeout=60.
                     time.sleep(1)
 
                 yield ClusterConfig(cluster_name, kubeconfig_file)
+
+
+def cluster_info_dump():
+    print(
+        'Writing out cluster info to {output_directory}'.format(
+            output_directory=CLUSTER_INFO_DUMP_DIR
+        )
+    )
+
+    p = subprocess.Popen(
+        [
+            'kubectl',
+            'cluster-info',
+            'dump',
+            '--all-namespaces=true',
+            '--output-directory={output_directory}'.format(output_directory=CLUSTER_INFO_DUMP_DIR),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout, stderr = p.communicate()
+    print('Cluster info dumped with stdout: ', stdout)
+    print('Cluster info dumped with stderr: ', stderr)
+
+    p = subprocess.Popen(
+        [
+            'buildkite-agent',
+            'artifact',
+            'upload',
+            '{output_directory}/**/*'.format(output_directory=CLUSTER_INFO_DUMP_DIR),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout, stderr = p.communicate()
+    print('Buildkite artifact added with stdout: ', stdout)
+    print('Buildkite artifact added with stderr: ', stderr)
