@@ -15,8 +15,10 @@ from dagster.cli.workspace.cli_target import (
     get_external_pipeline_from_kwargs,
     get_external_repository_from_kwargs,
     get_external_repository_from_repo_location,
+    get_pipeline_python_origin_from_kwargs,
     get_repository_location_from_kwargs,
     pipeline_target_argument,
+    python_pipeline_target_argument,
     repository_target_argument,
 )
 from dagster.core.definitions.executable import ExecutablePipeline
@@ -213,7 +215,7 @@ def print_solid(printer, pipeline_snapshot, solid_invocation_snap):
         instructions=get_pipeline_instructions('execute')
     ),
 )
-@pipeline_target_argument
+@python_pipeline_target_argument
 @click.option(
     '-c',
     '--config',
@@ -275,11 +277,8 @@ def execute_execute_command(instance, kwargs):
 
     tags = get_tags_from_args(kwargs)
 
-    external_pipeline = get_external_pipeline_from_kwargs(kwargs, instance)
-    # We should move this to use external pipeline
-    # https://github.com/dagster-io/dagster/issues/2556
-
-    pipeline = recon_pipeline_from_origin(external_pipeline.handle.get_origin())
+    pipeline_origin = get_pipeline_python_origin_from_kwargs(kwargs)
+    pipeline = recon_pipeline_from_origin(pipeline_origin)
     solid_selection = get_solid_selection_from_args(kwargs)
     result = do_execute_command(pipeline, instance, config, mode, tags, solid_selection, preset)
 

@@ -189,16 +189,16 @@ def grpc_server_bar_pipeline_args():
 # This iterates over a list of contextmanagers that can be used to contruct
 # (cli_args, uses_legacy_repository_yaml_format, instance tuples)
 def launch_command_contexts():
-    for pipeline_target_args in valid_pipeline_target_args():
+    for pipeline_target_args in valid_external_pipeline_target_args():
         yield args_with_default_instance(*pipeline_target_args)
         yield args_with_managed_grpc_instance(*pipeline_target_args)
     yield grpc_server_bar_pipeline_args()
 
 
-def execute_command_contexts():
+def pipeline_python_origin_contexts():
     return [
-        args_with_default_instance(*pipeline_target_args)
-        for pipeline_target_args in valid_pipeline_target_args()
+        args_with_default_instance(pipeline_target_args)
+        for pipeline_target_args in valid_pipeline_python_origin_target_args()
     ]
 
 
@@ -271,8 +271,64 @@ def grpc_server_backfill_args():
             yield merge_dicts(args, {'noprompt': True}), instance
 
 
+def valid_pipeline_python_origin_target_args():
+    return [
+        {
+            'workspace': None,
+            'pipeline': 'foo',
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'bar',
+        },
+        {
+            'workspace': None,
+            'pipeline': 'foo',
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'bar',
+            'working_directory': os.path.dirname(__file__),
+        },
+        {
+            'workspace': None,
+            'pipeline': 'foo',
+            'python_file': None,
+            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            'attribute': 'bar',
+        },
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': None,
+            'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            'attribute': 'foo_pipeline',
+        },
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'define_foo_pipeline',
+        },
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'define_foo_pipeline',
+            'working_directory': os.path.dirname(__file__),
+        },
+        {
+            'workspace': None,
+            'pipeline': None,
+            'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
+            'module_name': None,
+            'attribute': 'foo_pipeline',
+        },
+    ]
+
+
 # [(cli_args, uses_legacy_repository_yaml_format)]
-def valid_pipeline_target_args():
+def valid_external_pipeline_target_args():
     return [
         (
             {
@@ -294,83 +350,45 @@ def valid_pipeline_target_args():
             },
             True,
         ),
-        (
-            {
-                'workspace': None,
-                'pipeline': 'foo',
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'bar',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': 'foo',
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'bar',
-                'working_directory': os.path.dirname(__file__),
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': 'foo',
-                'python_file': None,
-                'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                'attribute': 'bar',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': None,
-                'module_name': 'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                'attribute': 'foo_pipeline',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'define_foo_pipeline',
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'define_foo_pipeline',
-                'working_directory': os.path.dirname(__file__),
-            },
-            False,
-        ),
-        (
-            {
-                'workspace': None,
-                'pipeline': None,
-                'python_file': file_relative_path(__file__, 'test_cli_commands.py'),
-                'module_name': None,
-                'attribute': 'foo_pipeline',
-            },
-            False,
-        ),
+    ] + [(args, False) for args in valid_pipeline_python_origin_target_args()]
+
+
+def valid_pipeline_python_origin_target_cli_args():
+    return [
+        ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'bar', '-p', 'foo'],
+        [
+            '-f',
+            file_relative_path(__file__, 'test_cli_commands.py'),
+            '-d',
+            os.path.dirname(__file__),
+            '-a',
+            'bar',
+            '-p',
+            'foo',
+        ],
+        [
+            '-m',
+            'dagster_tests.cli_tests.command_tests.test_cli_commands',
+            '-a',
+            'bar',
+            '-p',
+            'foo',
+        ],
+        ['-m', 'dagster_tests.cli_tests.command_tests.test_cli_commands', '-a', 'foo_pipeline'],
+        ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'define_foo_pipeline',],
+        [
+            '-f',
+            file_relative_path(__file__, 'test_cli_commands.py'),
+            '-d',
+            os.path.dirname(__file__),
+            '-a',
+            'define_foo_pipeline',
+        ],
     ]
 
 
 # [(cli_args, uses_legacy_repository_yaml_format)]
-def valid_pipeline_target_cli_args():
+def valid_external_pipeline_target_cli_args():
     return [
         (['-w', file_relative_path(__file__, 'repository_file.yaml'), '-p', 'foo'], True),
         (['-w', file_relative_path(__file__, 'repository_module.yaml'), '-p', 'foo'], True),
@@ -386,59 +404,7 @@ def valid_pipeline_target_cli_args():
             ],
             False,
         ),
-        (
-            ['-f', file_relative_path(__file__, 'test_cli_commands.py'), '-a', 'bar', '-p', 'foo'],
-            False,
-        ),
-        (
-            [
-                '-f',
-                file_relative_path(__file__, 'test_cli_commands.py'),
-                '-d',
-                os.path.dirname(__file__),
-                '-a',
-                'bar',
-                '-p',
-                'foo',
-            ],
-            False,
-        ),
-        (
-            [
-                '-m',
-                'dagster_tests.cli_tests.command_tests.test_cli_commands',
-                '-a',
-                'bar',
-                '-p',
-                'foo',
-            ],
-            False,
-        ),
-        (
-            ['-m', 'dagster_tests.cli_tests.command_tests.test_cli_commands', '-a', 'foo_pipeline'],
-            False,
-        ),
-        (
-            [
-                '-f',
-                file_relative_path(__file__, 'test_cli_commands.py'),
-                '-a',
-                'define_foo_pipeline',
-            ],
-            False,
-        ),
-        (
-            [
-                '-f',
-                file_relative_path(__file__, 'test_cli_commands.py'),
-                '-d',
-                os.path.dirname(__file__),
-                '-a',
-                'define_foo_pipeline',
-            ],
-            False,
-        ),
-    ]
+    ] + [(args, False) for args in valid_pipeline_python_origin_target_cli_args()]
 
 
 def test_run_list():
