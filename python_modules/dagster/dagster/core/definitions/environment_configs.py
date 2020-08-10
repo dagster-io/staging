@@ -251,9 +251,13 @@ def define_isolid_field(solid, handle, dependency_structure):
 
     composite_def = check.inst(solid.definition, CompositeSolidDefinition)
 
-    if composite_def.has_config_mapping:
+    if composite_def.is_preconfigured or composite_def.has_config_mapping:
+        # if has been @configured, then that's the schema that should appear in the env type
         return construct_leaf_solid_config(
-            solid, handle, dependency_structure, composite_def.config_mapping.config_schema
+            solid,
+            handle,
+            dependency_structure,
+            composite_def.config_schema,  # resolves to __configured_config_schema
         )
     else:
         return filtered_system_dict(
