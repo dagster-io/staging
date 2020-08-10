@@ -251,6 +251,15 @@ def define_isolid_field(solid, handle, dependency_structure):
 
     composite_def = check.inst(solid.definition, CompositeSolidDefinition)
 
+    if (
+        composite_def.config_schema
+    ):  # if has been @configured, then that's what we want to expose in run_config
+        return construct_leaf_solid_config(
+            solid,
+            handle,
+            dependency_structure,
+            composite_def.config_schema,  # aka __configured_config_schema
+        )
     if composite_def.has_config_mapping:
         return construct_leaf_solid_config(
             solid, handle, dependency_structure, composite_def.config_mapping.config_schema
