@@ -128,18 +128,6 @@ def wait_for_all_runs_to_finish(instance, timeout=5):
 
     instance.run_launcher.join()
 
-    while True:
-        unfinished_runs = [run for run in instance.get_runs() if not run.is_finished]
-        if not unfinished_runs:
-            return
-
-        if total_time > timeout:
-            raise Exception('Timed out')
-
-        time.sleep(backoff)
-        total_time += backoff
-        backoff = backoff * 2
-
 
 @contextmanager
 def mocked_instance(overrides=None, enable_telemetry=False):
