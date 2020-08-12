@@ -530,8 +530,9 @@ class PythonUnionDagsterType(DagsterType):
     '''
 
     def __init__(self, python_types, key=None, name=None, description=None, **kwargs):
+        #ugly workaround to handle unions in tuples
         self.python_types = check.tuple_param(
-            python_types, 'python_types', of_type=check.type_types
+            python_types, 'python_types', of_type=tuple(check.type_types for item in python_types)
         )
         self.type_str = 'Union[{}]'.format(
             ', '.join(python_type.__name__ for python_type in python_types)
