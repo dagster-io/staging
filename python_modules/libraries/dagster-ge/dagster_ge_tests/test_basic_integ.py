@@ -29,7 +29,6 @@ def hello_world_pipeline():
     return reyielder(ge_validation_solid_factory("getest", "basic.warning")(yielder()))
 
 
-
 def test_yielded_results_config(snapshot):
     run_config = {
         'resources': {
@@ -49,6 +48,6 @@ def test_yielded_results_config(snapshot):
     assert len(expectations) == 1
     mainexpect = expectations[0]
     assert mainexpect.success
-    #purge system specific metadata for testing
+    # purge system specific metadata for testing
     metadata = mainexpect.metadata_entries[0].entry_data.md_str.split("### Info")[0]
     snapshot.assert_match(metadata)
