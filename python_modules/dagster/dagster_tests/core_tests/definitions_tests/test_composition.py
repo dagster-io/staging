@@ -8,7 +8,9 @@ from dagster import (
     Output,
     OutputDefinition,
     PipelineDefinition,
+    SolidDefinition,
     composite_solid,
+    configured,
     execute_pipeline,
     lambda_solid,
     pipeline,
@@ -64,6 +66,23 @@ def adder(_context, int_1, int_2):
 def return_mult(_context):
     yield Output(1, 'one')
     yield Output(2, 'two')
+
+
+@solid(config_schema=int)
+def return_config_int(context):
+    return context.solid_config
+
+
+def get_duplicate_solids():
+    return (
+        SolidDefinition('a_solid', [], lambda: None, []),
+        SolidDefinition('a_solid', [], lambda: None, []),
+    )
+
+
+def get_duplicate_configured_solids():
+    a_solid = SolidDefinition('a_solid', [], lambda: None, [])
+    return configured(a_solid)({}), configured(a_solid)({})
 
 
 def test_basic():
@@ -145,6 +164,127 @@ def test_dupes_fail():
             one, two = return_mult()
             add_one(num=one)
             add_one.alias('add_one')(num=two)  # explicit alias disables autoalias
+
+
+def test_configured_dupes_fail():
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match='conflicting configured solid definitions with the same name "return_config_int"',
+    ):
+        return_1 = return_config_int.configured(1)
+        return_2 = return_config_int.configured(2)
+
+        @composite_solid
+        def _test():
+            return_1()
+            return_2()
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match='conflicting configured solid definitions with the same name "return_config_int"',
+    ):
+        return_1 = configured(return_config_int)(1)
+        return_2 = configured(return_config_int)(2)
+
+        @composite_solid
+        def _test():
+            return_1()
+            return_2()
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match='conflicting configured solid definitions with the same name "return_config_int"',
+    ):
+        return_1 = return_config_int.configured(1)
+        return_2 = return_config_int.configured(2)
+
+        @composite_solid
+        def _test():
+            return_1.alias('return_1')()
+            return_2.alias('return_2')()
+
+
+def test_composite_with_duplicate_solids():
+    solid_1, solid_2 = get_duplicate_solids()
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match='Detected conflicting solid definitions with the same name',
+    ):
+
+        @composite_solid
+        def name_conflict_composite():
+            solid_1()
+            solid_2()
+
+
+def test_composite_with_duplicate_configured_solids():
+    solid_1, solid_2 = get_duplicate_configured_solids()
+    with pytest.raises(
+        DagsterInvalidDefinitionError, match='Detected conflicting configured solid definitions'
+    ):
+
+        @composite_solid
+        def name_conflict_composite():
+            solid_1()
+            solid_2()
+
+
+def test_pipeline_with_duplicate_solids():
+    solid_1, solid_2 = get_duplicate_solids()
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match='Detected conflicting solid definitions with the same name',
+    ):
+
+        @pipeline
+        def name_conflict_pipeline():
+            solid_1()
+            solid_2()
+
+
+def test_pipeline_with_duplicate_configured_solids():
+    solid_1, solid_2 = get_duplicate_configured_solids()
+    with pytest.raises(
+        DagsterInvalidDefinitionError, match='Detected conflicting configured solid definitions'
+    ):
+
+        @pipeline
+        def name_conflict_pipeline():
+            solid_1()
+            solid_2()
+
+
+def test_repo_with_duplicate_solids():  # https://open.spotify.com/track/4NV2p6QSrr5aidQIA7nErN?si=W3SzPehfQ42-Paia9DFCig
+    solid_1, solid_2 = get_duplicate_solids()
+
+    pipeline_1 = PipelineDefinition([solid_1], name='pipeline_1')
+    pipeline_2 = PipelineDefinition([solid_2], name='pipeline_2')
+
+    @repository
+    def name_conflict_repository():
+        return [pipeline_1, pipeline_2]
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError, match='Duplicate solids found in repository with name',
+    ):
+        name_conflict_repository.get_all_pipelines()  # this is the method that actually raises
+
+
+def test_repo_with_duplicate_configured_solids():
+    solid_1, solid_2 = get_duplicate_configured_solids()
+
+    pipeline_1 = PipelineDefinition([solid_1], name='pipeline_1')
+    pipeline_2 = PipelineDefinition([solid_2], name='pipeline_2')
+
+    @repository
+    def name_conflict_repository():
+        return [pipeline_1, pipeline_2]
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=r"Detected conflicting configured solid definitions with the same name.*Solid is defined in pipeline",
+    ):
+        name_conflict_repository.get_all_pipelines()  # this is the method that actually raises
 
 
 def test_multiple():

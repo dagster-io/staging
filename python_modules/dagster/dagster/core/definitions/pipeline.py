@@ -9,6 +9,7 @@ from dagster.core.errors import (
 from dagster.core.types.dagster_type import DagsterTypeKind, construct_dagster_type_dictionary
 from dagster.core.utils import str_format_set
 
+from .config_mappable import raise_for_conflicting_configured_solid_defs
 from .dependency import (
     DependencyDefinition,
     MultiDependencyDefinition,
@@ -698,7 +699,11 @@ def _build_all_solid_defs(solid_defs):
     for current_level_solid_def in solid_defs:
         for solid_def in current_level_solid_def.iterate_solid_defs():
             if solid_def.name in all_defs:
-                if all_defs[solid_def.name] != solid_def:
+                existing_solid_with_name = all_defs[solid_def.name]
+                if existing_solid_with_name != solid_def:
+                    if existing_solid_with_name.is_preconfigured and solid_def.is_preconfigured:
+                        raise_for_conflicting_configured_solid_defs(solid_def.name)
+
                     raise DagsterInvalidDefinitionError(
                         'Detected conflicting solid definitions with the same name "{name}"'.format(
                             name=solid_def.name

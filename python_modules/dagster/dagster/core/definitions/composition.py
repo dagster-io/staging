@@ -4,6 +4,7 @@ from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import frozentags
 
+from .config_mappable import raise_for_conflicting_configured_solid_defs
 from .dependency import DependencyDefinition, MultiDependencyDefinition, SolidInvocation
 from .hook import HookDefinition
 from .output import OutputDefinition
@@ -95,6 +96,12 @@ class CompleteCompositionContext(
         for invocation in invocations.values():
             def_name = invocation.solid_def.name
             if def_name in solid_def_dict and solid_def_dict[def_name] is not invocation.solid_def:
+                if (
+                    solid_def_dict[def_name].is_preconfigured
+                    and invocation.solid_def.is_preconfigured
+                ):
+                    raise_for_conflicting_configured_solid_defs(def_name)
+
                 raise DagsterInvalidDefinitionError(
                     'Detected conflicting solid definitions with the same name "{name}"'.format(
                         name=def_name

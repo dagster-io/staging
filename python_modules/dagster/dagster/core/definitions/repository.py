@@ -1,4 +1,5 @@
 from dagster import check
+from dagster.core.definitions.config_mappable import raise_for_conflicting_configured_solid_defs
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import merge_dicts
 
@@ -430,6 +431,15 @@ class RepositoryData(object):
                     first_name, second_name = sorted(
                         [solid_to_pipeline[solid_def.name], pipeline.name]
                     )
+                    if solid_defs[solid_def.name].is_preconfigured and solid_def.is_preconfigured:
+                        raise_for_conflicting_configured_solid_defs(
+                            solid_def.name,
+                            'Solid is defined in pipeline \'{first_pipeline_name}\' and in pipeline'
+                            ' \'{second_pipeline_name}\'.',
+                        ).format(
+                            first_pipeline_name=first_name, second_pipeline_name=second_name,
+                        )
+
                     raise DagsterInvalidDefinitionError(
                         (
                             'Duplicate solids found in repository with name \'{solid_def_name}\'. '

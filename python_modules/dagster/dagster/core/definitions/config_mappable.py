@@ -6,7 +6,11 @@ from dagster import check
 from dagster.config.evaluate_value_result import EvaluateValueResult
 from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.config.validate import process_config
-from dagster.core.errors import DagsterConfigMappingFunctionError, user_code_error_boundary
+from dagster.core.errors import (
+    DagsterConfigMappingFunctionError,
+    DagsterInvalidDefinitionError,
+    user_code_error_boundary,
+)
 
 
 class IConfigMappable(six.with_metaclass(ABCMeta)):
@@ -190,3 +194,15 @@ def configured(configurable, config_schema=None, **kwargs):
         )
 
     return _configured
+
+
+def raise_for_conflicting_configured_solid_defs(def_name, more_info=''):
+    raise DagsterInvalidDefinitionError(
+        (
+            'Detected conflicting configured solid definitions with the same name '
+            '"{name}". {more_info} In order to configure and use the "{name}" multiple ways in '
+            'the same container, specify a unique `name` argument every time you '
+            'call the `configured` method to differentiate each resulting solid. '
+            'For examples, see https://docs.dagster.io/overview/configuration#configured'
+        ).format(name=def_name, more_info=more_info)
+    )
