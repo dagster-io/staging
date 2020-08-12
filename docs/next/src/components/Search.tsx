@@ -5,7 +5,7 @@ import {
   connectHits,
 } from 'react-instantsearch-dom';
 import useClickAway from 'react-use/lib/useClickAway';
-import { useState, useRef, Dispatch, SetStateAction } from 'react';
+import { useState, useRef } from 'react';
 import algoliasearch from 'algoliasearch/lite';
 import { SearchBoxProvided } from 'react-instantsearch-core';
 const searchClient = algoliasearch(
@@ -29,7 +29,7 @@ const Hit: React.FunctionComponent<{ hit: any }> = ({ hit }) => {
     data: 'teal',
     cmdoptoin: 'pink',
   };
-
+  console.log(hit);
   return (
     <li className="border-b border-gray-100">
       <a
@@ -71,7 +71,7 @@ const Hits: React.FunctionComponent<{ hits: any[] }> = ({ hits }) => {
     <div className="bg-white border shadow overflow-hidden sm:rounded-md">
       <ul>
         {hits.splice(0, 6).map((hit) => (
-          <Hit hit={hit} />
+          <Hit hit={hit} key={hit.objectID} />
         ))}
       </ul>
     </div>

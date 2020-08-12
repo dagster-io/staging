@@ -65,8 +65,7 @@ function isLinkLegit(rawTarget: string, allMdxFileSet: Set<string>): boolean {
     return candidates.some((name) => allMdxFileSet.has(name));
   }
 
-  const [target, headingName] = rawTarget.split(/#+/);
-  const headingLevel = (rawTarget.match(/#/g) || []).length;
+  const target = rawTarget.split(/#+/)[0];
 
   const targetFilePath = [`${target}.mdx`, `${target}/index.mdx`].find((name) =>
     allMdxFileSet.has(name),
@@ -74,6 +73,8 @@ function isLinkLegit(rawTarget: string, allMdxFileSet: Set<string>): boolean {
 
   if (targetFilePath) {
     // TODO: can read the mdx ast again and check if the heading/slug actually exists
+    // const [target, headingName] = rawTarget.split(/#+/);
+    // const headingLevel = (rawTarget.match(/#/g) || []).length;
     // (using the `headingName` and `headingLevel` above)
     return true;
   }

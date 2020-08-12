@@ -1,0 +1,7 @@
+{
+  "extends": "react-app",
+  "rules": {
+    "react/jsx-key": "error",
+    "react/react-in-jsx-scope": "off"
+  }
+}

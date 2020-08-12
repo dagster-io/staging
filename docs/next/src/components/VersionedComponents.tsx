@@ -36,6 +36,7 @@ export function VersionedGithubLink(props: { filePath: string; word: string }) {
     <a
       href={`https://github.com/dagster-io/dagster/tree/${version}/${filePath}`}
       target="_blank"
+      rel="noreferrer"
     >
       {word}
     </a>

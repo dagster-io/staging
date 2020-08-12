@@ -7,8 +7,6 @@ import data from '../data/searchindex.json';
 // Folder paths
 const DATA_PATH = path.join(__dirname, '../data');
 const MODULE_PATH = path.join(DATA_PATH, '_modules');
-const EXAMPLES_PATH = path.join(__dirname, '../../../../examples');
-const EXAMPLES_FOLDER_PATH = path.join(__dirname, '../pages/examples');
 
 process.on('unhandledRejection', (error) => {
   console.error(error); // This prints error with stack included (as for normal errors)

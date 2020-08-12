@@ -7,6 +7,7 @@ const Index: NextPage<{ userAgent: string }> = () => (
       <div className="text-center">
         <div className="flex justify-center">
           <img
+            alt="dagster-logo"
             className="w-1/2 sm:w-1/3 md:w-1/5 h-auto text-center h-full"
             src="https://user-images.githubusercontent.com/28738937/44878798-b6e17e00-ac5c-11e8-8d25-2e47e5a53418.png"
           />

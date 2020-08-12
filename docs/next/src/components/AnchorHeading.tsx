@@ -30,7 +30,7 @@ const AnchorHeading: React.FC<AnchorHeadingProps> = ({
       .toLowerCase()
       .trim()
       // Remove special characters
-      .replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>\{\}\[\]\\\/]/gi, '')
+      .replace(/[`~!@#$%^&*()_|+\-=?;:'",.<>{}[\]\\/]/gi, '')
       .split(' ')
       .join('-')}`;
 

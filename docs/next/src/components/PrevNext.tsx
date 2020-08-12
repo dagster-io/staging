@@ -1,5 +1,5 @@
 import { useRouter } from 'next/router';
-import { flatten, TreeLink } from 'utils/treeOfContents/flatten';
+import { flatten } from 'utils/treeOfContents/flatten';
 import { useTreeOfContents } from 'hooks/useTreeOfContents';
 import { VersionedLink } from './VersionedComponents';
 

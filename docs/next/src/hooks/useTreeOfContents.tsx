@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 
-import data from 'data/searchindex.json';
 import examples from 'pages/examples/examples.json';
 import treeOfContents from 'treeOfContents.json';
 
