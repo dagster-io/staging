@@ -16,6 +16,8 @@ from dagster.core.definitions.reconstructable import (
 )
 from dagster.core.errors import PartitionExecutionError, user_code_error_boundary
 from dagster.core.host_representation.external_data import (
+    ExternalPartitionBackfillData,
+    ExternalPartitionBackfillRunData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
@@ -24,11 +26,13 @@ from dagster.core.host_representation.external_data import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.origin import PipelineOrigin, RepositoryGrpcServerOrigin, RepositoryOrigin
+from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
+from dagster.core.utils import make_new_backfill_id
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 from dagster.serdes.ipc import IPCErrorMessage, open_ipc_subprocess
 from dagster.seven import multiprocessing
-from dagster.utils import find_free_port, safe_tempfile_path_unmanaged
+from dagster.utils import find_free_port, merge_dicts, safe_tempfile_path_unmanaged
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_repository_from_origin
 
@@ -55,6 +59,7 @@ from .types import (
     ListRepositoriesResponse,
     LoadableRepositorySymbol,
     PartitionArgs,
+    PartitionBackfillArgs,
     PartitionNamesArgs,
     PipelineSubsetSnapshotArgs,
     ShutdownServerResult,
@@ -335,6 +340,71 @@ class DagsterApiServer(DagsterApiServicer):
                     ExternalPartitionExecutionErrorData(
                         serializable_error_info_from_exc_info(sys.exc_info())
                     )
+                )
+            )
+
+    def ExternalPartitionBackfill(self, request, _context):
+        partition_backfill_args = deserialize_json_to_dagster_namedtuple(
+            request.serialized_partition_backfill_args
+        )
+
+        check.inst_param(partition_backfill_args, 'partition_backfill_args', PartitionBackfillArgs)
+
+        recon_repo = self._recon_repository_from_origin(partition_backfill_args.repository_origin)
+        definition = recon_repo.get_definition()
+        partition_set_def = definition.get_partition_set_def(
+            partition_backfill_args.partition_set_name
+        )
+
+        try:
+            with user_code_error_boundary(
+                PartitionExecutionError,
+                lambda: 'Error occurred during the partition generation for partition set '
+                '{partition_set_name}'.format(partition_set_name=partition_set_def.name),
+            ):
+                all_partitions = partition_set_def.get_partitions()
+            partitions = [
+                partition
+                for partition in all_partitions
+                if partition.name in partition_backfill_args.partition_names
+            ]
+            backfill_id = make_new_backfill_id()
+            run_tags = PipelineRun.tags_for_backfill_id(backfill_id)
+
+            run_data = []
+            for partition in partitions:
+
+                def _error_message_fn(partition_set_name, partition_name):
+                    return lambda: (
+                        'Error occurred during the partition config and tag generation for '
+                        'partition set {partition_set_name}::{partition_name}'.format(
+                            partition_set_name=partition_set_name, partition_name=partition_name
+                        )
+                    )
+
+                with user_code_error_boundary(
+                    PartitionExecutionError,
+                    _error_message_fn(partition_set_def.name, partition.name),
+                ):
+                    run_config = partition_set_def.run_config_for_partition(partition)
+                    tags = merge_dicts(partition_set_def.tags_for_partition(partition), run_tags)
+
+                run_data.append(
+                    ExternalPartitionBackfillRunData(
+                        name=partition.name, tags=tags, run_config=run_config,
+                    )
+                )
+
+            return api_pb2.ExternalPartitionBackfillReply(
+                serialized_external_partition_backfill_data_or_external_partition_execution_error=serialize_dagster_namedtuple(
+                    ExternalPartitionBackfillData(backfill_id=backfill_id, run_data=run_data)
+                )
+            )
+
+        except PartitionExecutionError:
+            return api_pb2.ExternalPartitionBackfillReply(
+                ExternalPartitionExecutionErrorData(
+                    serializable_error_info_from_exc_info(sys.exc_info())
                 )
             )
 
