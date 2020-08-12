@@ -3,7 +3,9 @@ import datetime
 import great_expectations as ge
 from dagster_pandas import DataFrame
 from great_expectations.core import convert_to_json_serializable
-from great_expectations.render.page_renderer_util import render_multiple_validation_result_pages_markdown
+from great_expectations.render.page_renderer_util import (
+    render_multiple_validation_result_pages_markdown,
+)
 
 from dagster import (
     EventMetadataEntry,
@@ -71,15 +73,13 @@ def ge_validation_solid_factory(datasource_name, suite_name):
             "action_list_operator", assets_to_validate=[batch], run_id=run_id
         )
         res = convert_to_json_serializable(results.list_validation_results())[0]
-        #TODO: replace with well built markdown
+        # TODO: replace with well built markdown
         md_str = render_multiple_validation_result_pages_markdown(
-            validation_operator_result=results,
-            run_info_at_end=True,
+            validation_operator_result=results, run_info_at_end=True,
         )
         meta_stats = EventMetadataEntry.md(md_str=md_str, label="Expectation Results")
         yield ExpectationResult(
-            success=res["success"],
-            metadata_entries=[meta_stats, ],
+            success=res["success"], metadata_entries=[meta_stats,],
         )
         yield Output(res)
 
