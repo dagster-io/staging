@@ -13,6 +13,7 @@ service DagsterApi {
   rpc ExternalPartitionNames (ExternalPartitionNamesRequest) returns (ExternalPartitionNamesReply) {}
   rpc ExternalPartitionConfig (ExternalPartitionConfigRequest) returns (ExternalPartitionConfigReply) {}
   rpc ExternalPartitionTags (ExternalPartitionTagsRequest) returns (ExternalPartitionTagsReply) {}
+  rpc ExternalPartitionBackfill (ExternalPartitionBackfillRequest) returns (ExternalPartitionBackfillReply) {}
   rpc ExternalPipelineSubsetSnapshot (ExternalPipelineSubsetSnapshotRequest) returns (ExternalPipelineSubsetSnapshotReply) {}
   rpc ExternalRepository (ExternalRepositoryRequest) returns (ExternalRepositoryReply) {}
   rpc ExternalScheduleExecution (ExternalScheduleExecutionRequest) returns (ExternalScheduleExecutionReply) {}
@@ -74,6 +75,14 @@ message ExternalPartitionTagsRequest {
 
 message ExternalPartitionTagsReply {
   string serialized_external_partition_tags_or_external_partition_execution_error = 1;
+}
+
+message ExternalPartitionBackfillRequest {
+  string serialized_partition_backfill_args = 1;
+}
+
+message ExternalPartitionBackfillReply {
+  string serialized_external_partition_backfill_data_or_external_partition_execution_error = 1;
 }
 
 message ListRepositoriesRequest {

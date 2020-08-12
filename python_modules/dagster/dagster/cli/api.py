@@ -28,6 +28,7 @@ from dagster.core.execution.retries import Retries
 from dagster.core.host_representation import external_repository_data_from_def
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import (
+    ExternalPartitionBackfillData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
@@ -58,6 +59,7 @@ from dagster.grpc.impl import (
     get_external_execution_plan_snapshot,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
+    get_partition_backfill_data,
     get_partition_config,
     get_partition_names,
     get_partition_tags,
@@ -71,6 +73,7 @@ from dagster.grpc.types import (
     ListRepositoriesResponse,
     LoadableRepositorySymbol,
     PartitionArgs,
+    PartitionBackfillArgs,
     PartitionNamesArgs,
     PipelineSubsetSnapshotArgs,
     ScheduleExecutionDataMode,
@@ -240,6 +243,19 @@ def partition_tags_command(args):
 )
 def partition_names_command(args):
     return get_partition_names(args)
+
+
+@unary_api_cli_command(
+    name='partition_backfill_data',
+    help_str=(
+        '[INTERNAL] Return the args for launching a partition backfill. This is an internal '
+        'utility. Users should generally not invoke this command interactively.'
+    ),
+    input_cls=PartitionBackfillArgs,
+    output_cls=(ExternalPartitionBackfillData, ExternalPartitionExecutionErrorData),
+)
+def partition_backfill_command(args):
+    return get_partition_backfill_data(args)
 
 
 @unary_api_cli_command(
@@ -687,6 +703,7 @@ def create_api_cli_group():
     group.add_command(partition_config_command)
     group.add_command(partition_tags_command)
     group.add_command(partition_names_command)
+    group.add_command(partition_backfill_command)
     group.add_command(schedule_execution_data_command)
     group.add_command(launch_scheduled_execution)
     group.add_command(grpc_command)
