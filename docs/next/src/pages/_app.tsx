@@ -13,7 +13,7 @@ import AnchorHeading from 'components/AnchorHeading';
 import useAnchorHeadingsCleanup from 'hooks/AnchorHeadings/useAnchorHeadingsCleanup';
 import useScrollToTopAfterRender from 'hooks/useScrollToTopAfterRender';
 import Head from 'next/head';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 
 const components: MDXProviderComponentsProp = {
   h2: (props) => <AnchorHeading tag={'h2'} {...props} />,

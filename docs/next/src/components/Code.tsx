@@ -4,7 +4,7 @@ import Transition from 'components/Transition';
 import CopyToClipboard from 'react-copy-to-clipboard';
 
 import cx from 'classnames';
-import { useState } from 'react';
+import React, { useState } from 'react';
 
 const CopyButton: React.FC<{ code: string; inline?: boolean }> = ({
   code,

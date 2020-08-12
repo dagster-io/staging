@@ -1,3 +1,4 @@
+import React from 'react';
 import { useRouter } from 'next/router';
 import { flatten, TreeLink } from 'utils/treeOfContents/flatten';
 import { useTreeOfContents } from 'hooks/useTreeOfContents';

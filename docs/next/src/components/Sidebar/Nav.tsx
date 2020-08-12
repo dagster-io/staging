@@ -1,3 +1,4 @@
+import React from 'react';
 import cx from 'classnames';
 import { useRouter } from 'next/router';
 import CommunityLinks from 'components/CommunityLinks';

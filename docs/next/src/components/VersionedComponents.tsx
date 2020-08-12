@@ -1,3 +1,4 @@
+import React from 'react';
 import NextLink, { LinkProps } from 'next/link';
 import { format } from 'url';
 import getConfig from 'next/config';

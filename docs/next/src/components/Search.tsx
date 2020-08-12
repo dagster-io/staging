@@ -5,7 +5,7 @@ import {
   connectHits,
 } from 'react-instantsearch-dom';
 import useClickAway from 'react-use/lib/useClickAway';
-import { useState, useRef, Dispatch, SetStateAction } from 'react';
+import React, { useState, useRef, Dispatch, SetStateAction } from 'react';
 import algoliasearch from 'algoliasearch/lite';
 import { SearchBoxProvided } from 'react-instantsearch-core';
 const searchClient = algoliasearch(
