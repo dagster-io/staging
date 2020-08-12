@@ -8,11 +8,11 @@ from dagster.utils.backcompat import rename_warning
 
 class IntermediateStorageDefinition(
     namedtuple(
-        '_IntermediateStorageDefinition',
-        'name is_persistent config_schema intermediate_storage_creation_fn required_resource_keys',
+        "_IntermediateStorageDefinition",
+        "name is_persistent config_schema intermediate_storage_creation_fn required_resource_keys",
     )
 ):
-    '''Defines intermediate data storage behaviors.
+    """Defines intermediate data storage behaviors.
     Args:
         name (str): Name of the storage mode.
         is_persistent (bool): Whether the storage is persistent in a way that can cross process/node
@@ -25,7 +25,7 @@ class IntermediateStorageDefinition(
             Called to construct the storage. This function should consume the init context and emit
             a :py:class:`IntermediateStorage`.
         required_resource_keys(Optional[Set[str]]): The resources that this storage needs at runtime to function.
-    '''
+    """
 
     def __new__(
         cls,
@@ -37,16 +37,16 @@ class IntermediateStorageDefinition(
     ):
         return super(IntermediateStorageDefinition, cls).__new__(
             cls,
-            name=check.str_param(name, 'name'),
-            is_persistent=check.bool_param(is_persistent, 'is_persistent'),
-            config_schema=check_user_facing_opt_config_param(config_schema, 'config_schema'),
+            name=check.str_param(name, "name"),
+            is_persistent=check.bool_param(is_persistent, "is_persistent"),
+            config_schema=check_user_facing_opt_config_param(config_schema, "config_schema"),
             intermediate_storage_creation_fn=check.opt_callable_param(
-                intermediate_storage_creation_fn, 'intermediate_storage_creation_fn'
+                intermediate_storage_creation_fn, "intermediate_storage_creation_fn"
             ),
             required_resource_keys=frozenset(
                 check.set_param(
                     required_resource_keys if required_resource_keys else set(),
-                    'required_resource_keys',
+                    "required_resource_keys",
                     of_type=str,
                 )
             ),
@@ -54,14 +54,14 @@ class IntermediateStorageDefinition(
 
     @property
     def config_field(self):
-        rename_warning('config_schema', 'config_field', '0.9.0')
+        rename_warning("config_schema", "config_field", "0.9.0")
         return self.config_schema
 
 
 def intermediate_storage(
     required_resource_keys=None, name=None, is_persistent=True, config_schema=None
 ):
-    '''Creates an intermediate storage definition
+    """Creates an intermediate storage definition
 
     The decorated function will be passed as the ``intermediate_storage_creation_fn`` to a
     :py:class:`IntermediateStorageDefinition`.
@@ -75,7 +75,7 @@ def intermediate_storage(
             The resources that this storage needs at runtime to function.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data available in
             `init_context.intermediate_storage_config`.
-    '''
+    """
 
     if callable(name):
         check.invariant(is_persistent is True)
@@ -95,15 +95,15 @@ class _IntermediateStorageDecoratorCallable(object):
     def __init__(
         self, name=None, is_persistent=True, config_schema=None, required_resource_keys=None
     ):
-        self.name = check.opt_str_param(name, 'name')
-        self.is_persistent = check.bool_param(is_persistent, 'is_persistent')
-        self.config_schema = check_user_facing_opt_config_param(config_schema, 'config_schema')
+        self.name = check.opt_str_param(name, "name")
+        self.is_persistent = check.bool_param(is_persistent, "is_persistent")
+        self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
         self.required_resource_keys = check.opt_set_param(
-            required_resource_keys, 'required_resource_keys', of_type=str
+            required_resource_keys, "required_resource_keys", of_type=str
         )
 
     def __call__(self, fn):
-        check.callable_param(fn, 'fn')
+        check.callable_param(fn, "fn")
 
         if not self.name:
             self.name = fn.__name__

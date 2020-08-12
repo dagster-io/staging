@@ -24,7 +24,7 @@ from .workspace import Workspace
 def _cli_load_invariant(condition, msg=None):
     msg = (
         msg
-        or 'Invalid set of CLI arguments for loading repository/pipeline. See --help for details.'
+        or "Invalid set of CLI arguments for loading repository/pipeline. See --help for details."
     )
     if not condition:
         raise UsageError(msg)
@@ -44,24 +44,24 @@ def are_all_keys_empty(kwargs, keys):
 
 
 WORKSPACE_CLI_ARGS = (
-    'workspace',
-    'python_file',
-    'working_directory',
-    'module_name',
-    'attribute',
-    'repository_yaml',
-    'host',
-    'port',
-    'socket',
+    "workspace",
+    "python_file",
+    "working_directory",
+    "module_name",
+    "attribute",
+    "repository_yaml",
+    "host",
+    "port",
+    "socket",
 )
 
-WorkspaceFileTarget = namedtuple('WorkspaceFileTarget', 'paths')
-PythonFileTarget = namedtuple('PythonFileTarget', 'python_file attribute working_directory')
-ModuleTarget = namedtuple('ModuleTarget', 'module_name attribute')
-GrpcServerTarget = namedtuple('GrpcServerTarget', 'host port socket')
+WorkspaceFileTarget = namedtuple("WorkspaceFileTarget", "paths")
+PythonFileTarget = namedtuple("PythonFileTarget", "python_file attribute working_directory")
+ModuleTarget = namedtuple("ModuleTarget", "module_name attribute")
+GrpcServerTarget = namedtuple("GrpcServerTarget", "host port socket")
 
 #  Utility target for graphql commands that do not require a workspace, e.g. downloading schema
-EmptyWorkspaceTarget = namedtuple('EmptyWorkspaceTarget', '')
+EmptyWorkspaceTarget = namedtuple("EmptyWorkspaceTarget", "")
 
 WorkspaceLoadTarget = (
     WorkspaceFileTarget,
@@ -73,89 +73,89 @@ WorkspaceLoadTarget = (
 
 
 def created_workspace_load_target(kwargs):
-    check.dict_param(kwargs, 'kwargs')
+    check.dict_param(kwargs, "kwargs")
     if are_all_keys_empty(kwargs, WORKSPACE_CLI_ARGS):
-        if kwargs.get('empty_workspace'):
+        if kwargs.get("empty_workspace"):
             return EmptyWorkspaceTarget()
-        if os.path.exists('workspace.yaml'):
-            return WorkspaceFileTarget(paths=['workspace.yaml'])
-        elif os.path.exists('repository.yaml'):
+        if os.path.exists("workspace.yaml"):
+            return WorkspaceFileTarget(paths=["workspace.yaml"])
+        elif os.path.exists("repository.yaml"):
             warnings.warn(
                 'You are automatically loading a "repository.yaml", a deprecated '
-                'capability. This capability will be eliminated in 0.9.0.'
+                "capability. This capability will be eliminated in 0.9.0."
             )
-            return WorkspaceFileTarget(paths=['repository.yaml'])
-        raise click.UsageError('No arguments given and workspace.yaml not found.')
-    if kwargs.get('repository_yaml'):
+            return WorkspaceFileTarget(paths=["repository.yaml"])
+        raise click.UsageError("No arguments given and workspace.yaml not found.")
+    if kwargs.get("repository_yaml"):
         warnings.warn(
-            'You have used -y or --repository-yaml to load a workspace. '
-            'This is deprecated and will be eliminated in 0.9.0.'
+            "You have used -y or --repository-yaml to load a workspace. "
+            "This is deprecated and will be eliminated in 0.9.0."
         )
         _check_cli_arguments_none(
             kwargs,
-            'python_file',
-            'working_directory',
-            'module_name',
-            'attribute',
-            'workspace',
-            'host',
-            'port',
-            'socket',
+            "python_file",
+            "working_directory",
+            "module_name",
+            "attribute",
+            "workspace",
+            "host",
+            "port",
+            "socket",
         )
-        return WorkspaceFileTarget(paths=[kwargs['repository_yaml']])
-    if kwargs.get('workspace'):
+        return WorkspaceFileTarget(paths=[kwargs["repository_yaml"]])
+    if kwargs.get("workspace"):
         _check_cli_arguments_none(
             kwargs,
-            'python_file',
-            'working_directory',
-            'module_name',
-            'attribute',
-            'host',
-            'port',
-            'socket',
+            "python_file",
+            "working_directory",
+            "module_name",
+            "attribute",
+            "host",
+            "port",
+            "socket",
         )
-        return WorkspaceFileTarget(paths=list(kwargs['workspace']))
-    if kwargs.get('python_file'):
-        _check_cli_arguments_none(kwargs, 'workspace', 'module_name', 'host', 'port', 'socket')
+        return WorkspaceFileTarget(paths=list(kwargs["workspace"]))
+    if kwargs.get("python_file"):
+        _check_cli_arguments_none(kwargs, "workspace", "module_name", "host", "port", "socket")
         working_directory = (
-            kwargs.get('working_directory') if kwargs.get('working_directory') else os.getcwd()
+            kwargs.get("working_directory") if kwargs.get("working_directory") else os.getcwd()
         )
         return PythonFileTarget(
-            python_file=kwargs.get('python_file'),
-            attribute=kwargs.get('attribute'),
+            python_file=kwargs.get("python_file"),
+            attribute=kwargs.get("attribute"),
             working_directory=working_directory,
         )
-    if kwargs.get('module_name'):
+    if kwargs.get("module_name"):
         _check_cli_arguments_none(
-            kwargs, 'workspace', 'python_file', 'working_directory', 'host', 'port', 'socket'
+            kwargs, "workspace", "python_file", "working_directory", "host", "port", "socket"
         )
         return ModuleTarget(
-            module_name=kwargs.get('module_name'), attribute=kwargs.get('attribute'),
+            module_name=kwargs.get("module_name"), attribute=kwargs.get("attribute"),
         )
-    if kwargs.get('port'):
-        _check_cli_arguments_none(kwargs, 'socket')
+    if kwargs.get("port"):
+        _check_cli_arguments_none(kwargs, "socket")
         return GrpcServerTarget(
-            port=kwargs.get('port'),
+            port=kwargs.get("port"),
             socket=None,
-            host=(kwargs.get('host') if kwargs.get('host') else 'localhost'),
+            host=(kwargs.get("host") if kwargs.get("host") else "localhost"),
         )
-    elif kwargs.get('socket'):
+    elif kwargs.get("socket"):
         return GrpcServerTarget(
             port=None,
-            socket=kwargs.get('socket'),
-            host=(kwargs.get('host') if kwargs.get('host') else 'localhost'),
+            socket=kwargs.get("socket"),
+            host=(kwargs.get("host") if kwargs.get("host") else "localhost"),
         )
-    check.failed('invalid')
+    check.failed("invalid")
 
 
 def workspace_from_load_target(load_target, instance):
-    check.inst_param(load_target, 'load_target', WorkspaceLoadTarget)
-    check.inst_param(instance, 'instance', DagsterInstance)
+    check.inst_param(load_target, "load_target", WorkspaceLoadTarget)
+    check.inst_param(instance, "instance", DagsterInstance)
 
-    opt_in_settings = instance.get_settings('opt_in')
+    opt_in_settings = instance.get_settings("opt_in")
     python_user_process_api = (
         UserProcessApi.GRPC
-        if (opt_in_settings and opt_in_settings['local_servers'])
+        if (opt_in_settings and opt_in_settings["local_servers"])
         else UserProcessApi.CLI
     )
 
@@ -193,32 +193,32 @@ def workspace_from_load_target(load_target, instance):
     elif isinstance(load_target, EmptyWorkspaceTarget):
         return Workspace([])
     else:
-        check.not_implemented('Unsupported: {}'.format(load_target))
+        check.not_implemented("Unsupported: {}".format(load_target))
 
 
 def get_workspace_from_kwargs(kwargs, instance):
-    check.inst_param(instance, 'instance', DagsterInstance)
+    check.inst_param(instance, "instance", DagsterInstance)
     return workspace_from_load_target(created_workspace_load_target(kwargs), instance)
 
 
 def python_target_click_options():
     return [
         click.option(
-            '--python-file',
-            '-f',
+            "--python-file",
+            "-f",
             type=click.Path(exists=True),
-            help='Specify python file where repository or pipeline function lives.',
+            help="Specify python file where repository or pipeline function lives.",
         ),
         click.option(
-            '--module-name', '-m', help='Specify module where repository or pipeline function lives'
+            "--module-name", "-m", help="Specify module where repository or pipeline function lives"
         ),
-        click.option('--working-directory', '-d', help='Specify working directory'),
+        click.option("--working-directory", "-d", help="Specify working directory"),
         click.option(
-            '--attribute',
-            '-a',
+            "--attribute",
+            "-a",
             help=(
-                'Attribute that is either a 1) repository or pipeline or '
-                '2) a function that returns a repository or pipeline.'
+                "Attribute that is either a 1) repository or pipeline or "
+                "2) a function that returns a repository or pipeline."
             ),
         ),
     ]
@@ -226,28 +226,28 @@ def python_target_click_options():
 
 def grpc_server_target_click_options():
     return [
-        click.option('--port', type=click.INT, required=False),
-        click.option('--socket', type=click.Path(), required=False),
-        click.option('--host', type=click.STRING, required=False),
+        click.option("--port", type=click.INT, required=False),
+        click.option("--socket", type=click.Path(), required=False),
+        click.option("--host", type=click.STRING, required=False),
     ]
 
 
 def workspace_target_click_options():
     return (
         [
-            click.option('--empty-workspace', is_flag=True, help='Allow an empty workspace'),
+            click.option("--empty-workspace", is_flag=True, help="Allow an empty workspace"),
             click.option(
-                '--workspace',
-                '-w',
+                "--workspace",
+                "-w",
                 multiple=True,
                 type=click.Path(exists=True),
-                help=('Path to workspace file. Argument can be provided multiple times.'),
+                help=("Path to workspace file. Argument can be provided multiple times."),
             ),
             click.option(
-                '--repository-yaml',
-                '-y',
+                "--repository-yaml",
+                "-y",
                 type=click.Path(exists=True),
-                help=('Path to legacy repository.yaml file'),
+                help=("Path to legacy repository.yaml file"),
             ),
         ]
         + python_target_click_options()
@@ -281,17 +281,17 @@ def repository_target_argument(f):
     return apply_click_params(
         workspace_target_argument(f),
         click.option(
-            '--repository',
-            '-r',
+            "--repository",
+            "-r",
             help=(
-                'Repository within the workspace, necessary if more than one repository is present.'
+                "Repository within the workspace, necessary if more than one repository is present."
             ),
         ),
         click.option(
-            '--location',
-            '-l',
+            "--location",
+            "-l",
             help=(
-                'RepositoryLocation within the workspace, necessary if more than one location is present.'
+                "RepositoryLocation within the workspace, necessary if more than one location is present."
             ),
         ),
     )
@@ -303,10 +303,10 @@ def pipeline_target_argument(f):
     return apply_click_params(
         repository_target_argument(f),
         click.option(
-            '--pipeline',
-            '-p',
+            "--pipeline",
+            "-p",
             help=(
-                'Pipeline within the repository, necessary if more than one pipeline is present.'
+                "Pipeline within the repository, necessary if more than one pipeline is present."
             ),
         ),
     )
@@ -334,16 +334,16 @@ def get_repository_origin_from_kwargs(kwargs):
             host=load_target.host,
             port=load_target.port,
             socket=load_target.socket,
-            repository_name=kwargs['repository'],
+            repository_name=kwargs["repository"],
         )
     else:
-        check.failed('invalid')
+        check.failed("invalid")
 
 
 def get_repository_location_from_kwargs(kwargs, instance):
-    check.inst_param(instance, 'instance', DagsterInstance)
+    check.inst_param(instance, "instance", DagsterInstance)
     workspace = get_workspace_from_kwargs(kwargs, instance)
-    provided_location_name = kwargs.get('location')
+    provided_location_name = kwargs.get("location")
 
     if provided_location_name is None and len(workspace.repository_location_handles) == 1:
         return RepositoryLocation.from_handle(next(iter(workspace.repository_location_handles)))
@@ -351,8 +351,8 @@ def get_repository_location_from_kwargs(kwargs, instance):
     if provided_location_name is None:
         raise click.UsageError(
             (
-                'Must provide --location as there are more than one locations '
-                'available. Options are: {}'
+                "Must provide --location as there are more than one locations "
+                "available. Options are: {}"
             ).format(_sorted_quoted(workspace.repository_location_names))
         )
 
@@ -360,7 +360,7 @@ def get_repository_location_from_kwargs(kwargs, instance):
         raise click.UsageError(
             (
                 'Location "{provided_location_name}" not found in workspace. '
-                'Found {found_names} instead.'
+                "Found {found_names} instead."
             ).format(
                 provided_location_name=provided_location_name,
                 found_names=_sorted_quoted(workspace.repository_location_names),
@@ -373,11 +373,11 @@ def get_repository_location_from_kwargs(kwargs, instance):
 
 
 def get_external_repository_from_repo_location(repo_location, provided_repo_name):
-    check.inst_param(repo_location, 'repo_location', RepositoryLocation)
-    check.opt_str_param(provided_repo_name, 'provided_repo_name')
+    check.inst_param(repo_location, "repo_location", RepositoryLocation)
+    check.opt_str_param(provided_repo_name, "provided_repo_name")
 
     repo_dict = repo_location.get_repositories()
-    check.invariant(repo_dict, 'There should be at least one repo.')
+    check.invariant(repo_dict, "There should be at least one repo.")
 
     # no name provided and there is only one repo. Automatically return
     if provided_repo_name is None and len(repo_dict) == 1:
@@ -386,8 +386,8 @@ def get_external_repository_from_repo_location(repo_location, provided_repo_name
     if provided_repo_name is None:
         raise click.UsageError(
             (
-                'Must provide --repository as there are more than one repositories '
-                'in {location}. Options are: {repos}.'
+                "Must provide --repository as there are more than one repositories "
+                "in {location}. Options are: {repos}."
             ).format(location=repo_location.name, repos=_sorted_quoted(repo_dict.keys()))
         )
 
@@ -395,7 +395,7 @@ def get_external_repository_from_repo_location(repo_location, provided_repo_name
         raise click.UsageError(
             (
                 'Repository "{provided_repo_name}" not found in location "{location_name}". '
-                'Found {found_names} instead.'
+                "Found {found_names} instead."
             ).format(
                 provided_repo_name=provided_repo_name,
                 location_name=repo_location.name,
@@ -407,15 +407,15 @@ def get_external_repository_from_repo_location(repo_location, provided_repo_name
 
 
 def get_external_repository_from_kwargs(kwargs, instance):
-    check.inst_param(instance, 'instance', DagsterInstance)
+    check.inst_param(instance, "instance", DagsterInstance)
     repo_location = get_repository_location_from_kwargs(kwargs, instance)
-    provided_repo_name = kwargs.get('repository')
+    provided_repo_name = kwargs.get("repository")
     return get_external_repository_from_repo_location(repo_location, provided_repo_name)
 
 
 def get_external_pipeline_from_external_repo(external_repo, provided_pipeline_name):
-    check.inst_param(external_repo, 'external_repo', ExternalRepository)
-    check.opt_str_param(provided_pipeline_name, 'provided_pipeline_name')
+    check.inst_param(external_repo, "external_repo", ExternalRepository)
+    check.opt_str_param(provided_pipeline_name, "provided_pipeline_name")
 
     external_pipelines = {ep.name: ep for ep in external_repo.get_all_external_pipelines()}
 
@@ -427,8 +427,8 @@ def get_external_pipeline_from_external_repo(external_repo, provided_pipeline_na
     if provided_pipeline_name is None:
         raise click.UsageError(
             (
-                'Must provide --pipeline as there is more than one pipeline '
-                'in {repository}. Options are: {pipelines}.'
+                "Must provide --pipeline as there is more than one pipeline "
+                "in {repository}. Options are: {pipelines}."
             ).format(
                 repository=external_repo.name, pipelines=_sorted_quoted(external_pipelines.keys())
             )
@@ -438,7 +438,7 @@ def get_external_pipeline_from_external_repo(external_repo, provided_pipeline_na
         raise click.UsageError(
             (
                 'Pipeline "{provided_pipeline_name}" not found in repository "{repository_name}". '
-                'Found {found_names} instead.'
+                "Found {found_names} instead."
             ).format(
                 provided_pipeline_name=provided_pipeline_name,
                 repository_name=external_repo.name,
@@ -450,11 +450,11 @@ def get_external_pipeline_from_external_repo(external_repo, provided_pipeline_na
 
 
 def get_external_pipeline_from_kwargs(kwargs, instance):
-    check.inst_param(instance, 'instance', DagsterInstance)
+    check.inst_param(instance, "instance", DagsterInstance)
     external_repo = get_external_repository_from_kwargs(kwargs, instance)
-    provided_pipeline_name = kwargs.get('pipeline')
+    provided_pipeline_name = kwargs.get("pipeline")
     return get_external_pipeline_from_external_repo(external_repo, provided_pipeline_name)
 
 
 def _sorted_quoted(strings):
-    return '[' + ', '.join(["'{}'".format(s) for s in sorted(list(strings))]) + ']'
+    return "[" + ", ".join(["'{}'".format(s) for s in sorted(list(strings))]) + "]"

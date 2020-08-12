@@ -17,12 +17,12 @@ from dagster import (
 )
 
 
-@resource(config_schema={'ge_root_dir': Noneable(StringSource)})
+@resource(config_schema={"ge_root_dir": Noneable(StringSource)})
 def ge_data_context(context):
-    if context.resource_config['ge_root_dir'] is None:
+    if context.resource_config["ge_root_dir"] is None:
         yield ge.data_context.DataContext()
     else:
-        yield ge.data_context.DataContext(context_root_dir=context.resource_config['ge_root_dir'])
+        yield ge.data_context.DataContext(context_root_dir=context.resource_config["ge_root_dir"])
 
 
 def ge_validation_solid_factory(datasource_name, suite_name):
@@ -39,7 +39,7 @@ def ge_validation_solid_factory(datasource_name, suite_name):
     """
 
     @solid(
-        input_defs=[InputDefinition('pandas_df', dagster_type=DataFrame)],
+        input_defs=[InputDefinition("pandas_df", dagster_type=DataFrame)],
         output_defs=[
             OutputDefinition(
                 dagster_type=dict,
@@ -51,8 +51,8 @@ def ge_validation_solid_factory(datasource_name, suite_name):
         """,
             )
         ],
-        required_resource_keys={'ge_data_context'},
-        tags={'kind': 'ge'},
+        required_resource_keys={"ge_data_context"},
+        tags={"kind": "ge"},
     )
     def ge_validation_solid(context, pandas_df):
         data_context = context.resources.ge_data_context
@@ -71,7 +71,7 @@ def ge_validation_solid_factory(datasource_name, suite_name):
         )
         res = convert_to_json_serializable(results.list_validation_results())[0]
         nmeta = EventMetadataEntry.json(
-            {'overall': res['statistics'], 'individual': res['results']}, 'constraint-metadata',
+            {"overall": res["statistics"], "individual": res["results"]}, "constraint-metadata",
         )
         yield ExpectationResult(success=res["success"], metadata_entries=[nmeta])
         yield Output(res)

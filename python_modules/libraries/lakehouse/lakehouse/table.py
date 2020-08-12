@@ -6,14 +6,14 @@ from .asset import Asset
 
 
 class Table(Asset):
-    '''A table is an asset that's a dataset in a relational store.
+    """A table is an asset that's a dataset in a relational store.
 
     It knows the set of columns that its materializations are expected to contain.
-    '''
+    """
 
     def __init__(self, storage_key, path, computation, columns):
         super(Table, self).__init__(storage_key, path, computation)
-        self._columns = check.opt_list_param(columns, 'columns', Column)
+        self._columns = check.opt_list_param(columns, "columns", Column)
 
     @property
     def columns(self):
@@ -24,5 +24,5 @@ def source_table(storage_key, path, columns):
     return Table(storage_key=storage_key, path=path, columns=columns, computation=None)
 
 
-class Column(namedtuple('_Column', 'name data_type')):
+class Column(namedtuple("_Column", "name data_type")):
     pass

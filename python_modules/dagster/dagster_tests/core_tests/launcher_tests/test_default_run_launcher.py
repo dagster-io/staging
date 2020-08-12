@@ -79,12 +79,12 @@ def nope():
     return [noop_pipeline, crashy_pipeline, sleepy_pipeline, math_diamond]
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def temp_instance():
     with seven.TemporaryDirectory() as temp_dir:
         instance = DagsterInstance.local_temp(
             temp_dir,
-            overrides={'run_launcher': {'module': 'dagster', 'class': 'DefaultRunLauncher',}},
+            overrides={"run_launcher": {"module": "dagster", "class": "DefaultRunLauncher",}},
         )
         try:
             yield instance
@@ -93,7 +93,7 @@ def temp_instance():
 
 
 def test_repo_construction():
-    repo_yaml = file_relative_path(__file__, 'repo.yaml')
+    repo_yaml = file_relative_path(__file__, "repo.yaml")
     assert ReconstructableRepository.from_legacy_repository_yaml(repo_yaml).get_definition()
 
 
@@ -109,11 +109,11 @@ def poll_for_run(instance, run_id, timeout=20):
             time.sleep(interval)
             total_time += interval
             if total_time > timeout:
-                raise Exception('Timed out')
+                raise Exception("Timed out")
 
 
 def poll_for_step_start(instance, run_id, timeout=10):
-    poll_for_event(instance, run_id, event_type='STEP_START', message=None, timeout=timeout)
+    poll_for_event(instance, run_id, event_type="STEP_START", message=None, timeout=timeout)
 
 
 def poll_for_event(instance, run_id, event_type, message, timeout=10):
@@ -138,12 +138,12 @@ def poll_for_event(instance, run_id, event_type, message, timeout=10):
         total_time += backoff
         backoff = backoff * 2
         if total_time > timeout:
-            raise Exception('Timed out')
+            raise Exception("Timed out")
 
 
 @contextmanager
 def get_external_pipeline_from_grpc_server_repository(pipeline_name):
-    repo_yaml = file_relative_path(__file__, 'repo.yaml')
+    repo_yaml = file_relative_path(__file__, "repo.yaml")
     recon_repo = ReconstructableRepository.from_legacy_repository_yaml(repo_yaml)
     loadable_target_origin = LoadableTargetOrigin.from_python_origin(recon_repo.get_origin())
     with GrpcServerProcess(
@@ -151,11 +151,11 @@ def get_external_pipeline_from_grpc_server_repository(pipeline_name):
     ).create_ephemeral_client() as server:
         repository_location = GrpcServerRepositoryLocation(
             RepositoryLocationHandle.create_grpc_server_location(
-                location_name='test', port=server.port, socket=server.socket, host='localhost',
+                location_name="test", port=server.port, socket=server.socket, host="localhost",
             )
         )
 
-        yield repository_location.get_repository('nope').get_full_external_pipeline(pipeline_name)
+        yield repository_location.get_repository("nope").get_full_external_pipeline(pipeline_name)
 
 
 @contextmanager
@@ -163,24 +163,24 @@ def get_external_pipeline_from_managed_grpc_python_env_repository(pipeline_name)
 
     repository_location_handle = RepositoryLocationHandle.create_process_bound_grpc_server_location(
         loadable_target_origin=LoadableTargetOrigin(
-            attribute='nope',
-            python_file=file_relative_path(__file__, 'test_cli_api_run_launcher.py'),
+            attribute="nope",
+            python_file=file_relative_path(__file__, "test_cli_api_run_launcher.py"),
         ),
-        location_name='nope',
+        location_name="nope",
     )
 
     repository_location = GrpcServerRepositoryLocation(repository_location_handle)
 
-    yield repository_location.get_repository('nope').get_full_external_pipeline(pipeline_name)
+    yield repository_location.get_repository("nope").get_full_external_pipeline(pipeline_name)
 
 
 @contextmanager
 def get_external_pipeline_from_in_process_location(pipeline_name):
-    repo_yaml = file_relative_path(__file__, 'repo.yaml')
+    repo_yaml = file_relative_path(__file__, "repo.yaml")
     recon_repo = ReconstructableRepository.from_legacy_repository_yaml(repo_yaml)
     yield (
         InProcessRepositoryLocation(recon_repo)
-        .get_repository('nope')
+        .get_repository("nope")
         .get_full_external_pipeline(pipeline_name)
     )
 
@@ -286,32 +286,32 @@ def test_terminated_run(
         poll_for_run(instance, run_id)
 
         poll_for_event(
-            instance, run_id, event_type='ENGINE_EVENT', message='Process for pipeline exited'
+            instance, run_id, event_type="ENGINE_EVENT", message="Process for pipeline exited"
         )
 
         run_logs = instance.all_logs(run_id)
         event_types = [event.dagster_event.event_type_value for event in run_logs]
         if in_process:
             assert event_types == [
-                'ENGINE_EVENT',
-                'ENGINE_EVENT',
-                'PIPELINE_START',
-                'ENGINE_EVENT',
-                'STEP_START',
-                'STEP_FAILURE',
-                'PIPELINE_FAILURE',
-                'ENGINE_EVENT',
+                "ENGINE_EVENT",
+                "ENGINE_EVENT",
+                "PIPELINE_START",
+                "ENGINE_EVENT",
+                "STEP_START",
+                "STEP_FAILURE",
+                "PIPELINE_FAILURE",
+                "ENGINE_EVENT",
             ]
         else:
             assert event_types == [
-                'ENGINE_EVENT',
-                'PIPELINE_START',
-                'ENGINE_EVENT',
-                'STEP_START',
-                'STEP_FAILURE',
-                'PIPELINE_FAILURE',
-                'ENGINE_EVENT',
-                'ENGINE_EVENT',
+                "ENGINE_EVENT",
+                "PIPELINE_START",
+                "ENGINE_EVENT",
+                "STEP_START",
+                "STEP_FAILURE",
+                "PIPELINE_FAILURE",
+                "ENGINE_EVENT",
+                "ENGINE_EVENT",
             ]
 
 
@@ -354,7 +354,7 @@ def test_single_solid_selection_execution(
     instance = temp_instance
 
     pipeline_run = instance.create_run_for_pipeline(
-        pipeline_def=math_diamond, run_config=None, solids_to_execute={'return_one'}
+        pipeline_def=math_diamond, run_config=None, solids_to_execute={"return_one"}
     )
     run_id = pipeline_run.run_id
 
@@ -371,7 +371,7 @@ def test_single_solid_selection_execution(
         assert finished_pipeline_run.run_id == run_id
         assert finished_pipeline_run.status == PipelineRunStatus.SUCCESS
 
-        assert _get_successful_step_keys(event_records) == {'return_one.compute'}
+        assert _get_successful_step_keys(event_records) == {"return_one.compute"}
 
 
 @pytest.mark.parametrize(
@@ -390,7 +390,7 @@ def test_multi_solid_selection_execution(
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=math_diamond,
         run_config=None,
-        solids_to_execute={'return_one', 'multiply_by_2'},
+        solids_to_execute={"return_one", "multiply_by_2"},
     )
     run_id = pipeline_run.run_id
 
@@ -408,8 +408,8 @@ def test_multi_solid_selection_execution(
         assert finished_pipeline_run.status == PipelineRunStatus.SUCCESS
 
         assert _get_successful_step_keys(event_records) == {
-            'return_one.compute',
-            'multiply_by_2.compute',
+            "return_one.compute",
+            "multiply_by_2.compute",
         }
 
 
@@ -441,7 +441,7 @@ def test_engine_events(
         assert finished_pipeline_run.status == PipelineRunStatus.SUCCESS
 
         poll_for_event(
-            instance, run_id, event_type='ENGINE_EVENT', message='Process for pipeline exited'
+            instance, run_id, event_type="ENGINE_EVENT", message="Process for pipeline exited"
         )
         event_records = instance.all_logs(run_id)
 
@@ -454,25 +454,25 @@ def test_engine_events(
                 process_exited,
             ) = tuple(_get_engine_events(event_records))
 
-            assert 'About to start process' in about_to_start.message
-            assert 'Started process for pipeline' in started_process.message
-            assert 'Executing steps in process' in executing_steps.message
-            assert 'Finished steps in process' in finished_steps.message
-            assert 'Process for pipeline exited' in process_exited.message
+            assert "About to start process" in about_to_start.message
+            assert "Started process for pipeline" in started_process.message
+            assert "Executing steps in process" in executing_steps.message
+            assert "Finished steps in process" in finished_steps.message
+            assert "Process for pipeline exited" in process_exited.message
         else:
             (started_process, executing_steps, finished_steps, process_exited) = tuple(
                 _get_engine_events(event_records)
             )
 
-            assert 'Started process for pipeline' in started_process.message
-            assert 'Executing steps in process' in executing_steps.message
-            assert 'Finished steps in process' in finished_steps.message
-            assert 'Process for pipeline exited' in process_exited.message
+            assert "Started process for pipeline" in started_process.message
+            assert "Executing steps in process" in executing_steps.message
+            assert "Finished steps in process" in finished_steps.message
+            assert "Process for pipeline exited" in process_exited.message
 
 
 def test_not_initialized():  # pylint: disable=redefined-outer-name
     run_launcher = DefaultRunLauncher()
-    run_id = 'dummy'
+    run_id = "dummy"
 
     assert run_launcher.join() is None
     assert run_launcher.can_terminate(run_id) is False

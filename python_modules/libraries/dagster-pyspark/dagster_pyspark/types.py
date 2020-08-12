@@ -19,18 +19,18 @@ from dagster.core.storage.system_storage import fs_intermediate_storage, fs_syst
 from dagster.core.storage.type_storage import TypeStoragePlugin
 
 WriteModeOptions = Enum(
-    'WriteMode',
+    "WriteMode",
     [
         EnumValue(
-            'append', description="Append contents of this :class:`DataFrame` to existing data."
+            "append", description="Append contents of this :class:`DataFrame` to existing data."
         ),
-        EnumValue('overwrite', description="Overwrite existing data."),
-        EnumValue('ignore', description="Silently ignore this operation if data already exists."),
+        EnumValue("overwrite", description="Overwrite existing data."),
+        EnumValue("ignore", description="Silently ignore this operation if data already exists."),
         EnumValue(
-            'error', description="(default case): Throw an exception if data already exists."
+            "error", description="(default case): Throw an exception if data already exists."
         ),
         EnumValue(
-            'errorifexists',
+            "errorifexists",
             description="(default case): Throw an exception if data already exists.",
         ),
     ],
@@ -38,35 +38,35 @@ WriteModeOptions = Enum(
 
 
 WriteCompressionTextOptions = Enum(
-    'WriteCompressionText',
+    "WriteCompressionText",
     [
-        EnumValue('none'),
-        EnumValue('bzip2'),
-        EnumValue('gzip'),
-        EnumValue('lz4'),
-        EnumValue('snappy'),
-        EnumValue('deflate'),
+        EnumValue("none"),
+        EnumValue("bzip2"),
+        EnumValue("gzip"),
+        EnumValue("lz4"),
+        EnumValue("snappy"),
+        EnumValue("deflate"),
     ],
 )
 
 
 WriteCompressionOrcOptions = Enum(
-    'WriteCompressionOrc',
-    [EnumValue('none'), EnumValue('snappy'), EnumValue('zlib'), EnumValue('lzo'),],
+    "WriteCompressionOrc",
+    [EnumValue("none"), EnumValue("snappy"), EnumValue("zlib"), EnumValue("lzo"),],
 )
 
 
 WriteCompressionParquetOptions = Enum(
-    'WriteCompressionParquet',
+    "WriteCompressionParquet",
     [
-        EnumValue('none'),
-        EnumValue('uncompressed'),
-        EnumValue('snappy'),
-        EnumValue('gzip'),
-        EnumValue('lzo'),
-        EnumValue('brotli'),
-        EnumValue('lz4'),
-        EnumValue('zstd'),
+        EnumValue("none"),
+        EnumValue("uncompressed"),
+        EnumValue("snappy"),
+        EnumValue("gzip"),
+        EnumValue("lzo"),
+        EnumValue("brotli"),
+        EnumValue("lz4"),
+        EnumValue("zstd"),
     ],
 )
 
@@ -74,89 +74,89 @@ WriteCompressionParquetOptions = Enum(
 @dagster_type_materializer(
     Selector(
         {
-            'csv': Permissive(
+            "csv": Permissive(
                 {
-                    'path': Field(
+                    "path": Field(
                         String,
                         is_required=True,
                         description="the path in any Hadoop supported file system.",
                     ),
-                    'mode': Field(
+                    "mode": Field(
                         WriteModeOptions,
                         is_required=False,
                         description="specifies the behavior of the save operation when data already exists.",
                     ),
-                    'compression': Field(
+                    "compression": Field(
                         WriteCompressionTextOptions,
                         is_required=False,
                         description="compression codec to use when saving to file.",
                     ),
-                    'sep': Field(
+                    "sep": Field(
                         String,
                         is_required=False,
                         description="sets a single character as a separator for each field and value. If None is set, it uses the default value, ``,``.",
                     ),
-                    'quote': Field(
+                    "quote": Field(
                         String,
                         is_required=False,
                         description="""sets a single character used for escaping quoted values where the separator can be part of the value. If None is set, it uses the default value, ``"``. If an empty string is set, it uses ``u0000`` (null character).""",
                     ),
-                    'escape': Field(
+                    "escape": Field(
                         String,
                         is_required=False,
                         description="sets a single character used for escaping quotes inside an already quoted value. If None is set, it uses the default value, ``\\``.",
                     ),
-                    'escapeQuotes': Field(
+                    "escapeQuotes": Field(
                         Bool,
                         is_required=False,
                         description="a flag indicating whether values containing quotes should always be enclosed in quotes. If None is set, it uses the default value ``true``, escaping all values containing a quote character.",
                     ),
-                    'quoteAll': Field(
+                    "quoteAll": Field(
                         Bool,
                         is_required=False,
                         description="a flag indicating whether all values should always be enclosed in quotes. If None is set, it uses the default value ``false``, only escaping values containing a quote character.",
                     ),
-                    'header': Field(
+                    "header": Field(
                         Bool,
                         is_required=False,
                         description="writes the names of columns as the first line. If None is set, it uses the default value, ``false``.",
                     ),
-                    'nullValue': Field(
+                    "nullValue": Field(
                         String,
                         is_required=False,
                         description="sets the string representation of a null value. If None is set, it uses the default value, empty string.",
                     ),
-                    'dateFormat': Field(
+                    "dateFormat": Field(
                         String,
                         is_required=False,
                         description="sets the string that indicates a date format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to date type. If None is set, it uses the default value, ``yyyy-MM-dd``.",
                     ),
-                    'timestampFormat': Field(
+                    "timestampFormat": Field(
                         String,
                         is_required=False,
                         description="sets the string that indicates a timestamp format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to timestamp type. If None is set, it uses the default value, ``yyyy-MM-dd'T'HH:mm:ss.SSSXXX``.",
                     ),
-                    'ignoreLeadingWhiteSpace': Field(
+                    "ignoreLeadingWhiteSpace": Field(
                         Bool,
                         is_required=False,
                         description="a flag indicating whether or not leading whitespaces from values being written should be skipped. If None is set, it uses the default value, ``true``.",
                     ),
-                    'ignoreTrailingWhiteSpace': Field(
+                    "ignoreTrailingWhiteSpace": Field(
                         Bool,
                         is_required=False,
                         description="a flag indicating whether or not trailing whitespaces from values being written should be skipped. If None is set, it uses the default value, ``true``.",
                     ),
-                    'charToEscapeQuoteEscaping': Field(
+                    "charToEscapeQuoteEscaping": Field(
                         String,
                         is_required=False,
                         description="sets a single character used for escaping the escape for the quote character. If None is set, the default value is escape character when escape and quote characters are different, ``\0`` otherwise..",
                     ),
-                    'encoding': Field(
+                    "encoding": Field(
                         String,
                         is_required=False,
                         description="sets the encoding (charset) of saved csv files. If None is set, the default UTF-8 charset will be used.",
                     ),
-                    'emptyValue': Field(
+                    "emptyValue": Field(
                         String,
                         is_required=False,
                         description="sets the string representation of an empty value. If None is set, it uses the default value, ``"
@@ -164,145 +164,145 @@ WriteCompressionParquetOptions = Enum(
                     ),
                 }
             ),
-            'parquet': Permissive(
+            "parquet": Permissive(
                 {
-                    'path': Field(
+                    "path": Field(
                         String,
                         is_required=True,
                         description="the path in any Hadoop supported file system.",
                     ),
-                    'mode': Field(
+                    "mode": Field(
                         WriteModeOptions,
                         is_required=False,
                         description="specifies the behavior of the save operation when data already exists.",
                     ),
-                    'partitionBy': Field(
+                    "partitionBy": Field(
                         String, is_required=False, description="names of partitioning columns."
                     ),
-                    'compression': Field(
+                    "compression": Field(
                         WriteCompressionParquetOptions,
                         is_required=False,
                         description="compression codec to use when saving to file. This will override ``spark.sql.parquet.compression.codec``. If None is set, it uses the value specified in ``spark.sql.parquet.compression.codec``.",
                     ),
                 }
             ),
-            'json': Permissive(
+            "json": Permissive(
                 {
-                    'path': Field(
+                    "path": Field(
                         String,
                         is_required=True,
                         description="the path in any Hadoop supported file system.",
                     ),
-                    'mode': Field(
+                    "mode": Field(
                         WriteModeOptions,
                         is_required=False,
                         description="specifies the behavior of the save operation when data already exists.",
                     ),
-                    'compression': Field(
+                    "compression": Field(
                         WriteCompressionTextOptions,
                         is_required=False,
                         description="compression codec to use when saving to file.",
                     ),
-                    'dateFormat': Field(
+                    "dateFormat": Field(
                         String,
                         is_required=False,
                         description="sets the string that indicates a date format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to date type. If None is set, it uses the default value, ``yyyy-MM-dd``.",
                     ),
-                    'timestampFormat': Field(
+                    "timestampFormat": Field(
                         String,
                         is_required=False,
                         description="sets the string that indicates a timestamp format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to timestamp type. If None is set, it uses the default value, ``yyyy-MM-dd'T'HH:mm:ss.SSSXXX``.",
                     ),
-                    'encoding': Field(
+                    "encoding": Field(
                         String,
                         is_required=False,
                         description="sets the encoding (charset) of saved csv files. If None is set, the default UTF-8 charset will be used.",
                     ),
-                    'lineSep': Field(
+                    "lineSep": Field(
                         String,
                         is_required=False,
                         description="defines the line separator that should be used for writing. If None is set, it uses the default value, ``\\n``.",
                     ),
                 }
             ),
-            'jdbc': Permissive(
+            "jdbc": Permissive(
                 {
-                    'url': Field(
+                    "url": Field(
                         String,
                         is_required=True,
                         description="a JDBC URL of the form ``jdbc:subprotocol:subname``.",
                     ),
-                    'table': Field(
+                    "table": Field(
                         String,
                         is_required=True,
                         description="Name of the table in the external database.",
                     ),
-                    'mode': Field(
+                    "mode": Field(
                         WriteModeOptions,
                         is_required=False,
                         description="specifies the behavior of the save operation when data already exists.",
                     ),
-                    'properties': Field(
+                    "properties": Field(
                         Permissive(),
                         is_required=False,
                         description="""a dictionary of JDBC database connection arguments. Normally at least properties "user" and "password" with their corresponding values. For example { 'user' : 'SYSTEM', 'password' : 'mypassword' }.""",
                     ),
                 }
             ),
-            'orc': Permissive(
+            "orc": Permissive(
                 {
-                    'path': Field(
+                    "path": Field(
                         String,
                         is_required=True,
                         description="the path in any Hadoop supported file system.",
                     ),
-                    'mode': Field(
+                    "mode": Field(
                         WriteModeOptions,
                         is_required=False,
                         description="specifies the behavior of the save operation when data already exists.",
                     ),
-                    'partitionBy': Field(
+                    "partitionBy": Field(
                         String, is_required=False, description="names of partitioning columns."
                     ),
-                    'compression': Field(
+                    "compression": Field(
                         WriteCompressionOrcOptions,
                         is_required=False,
                         description="compression codec to use when saving to file. This will override ``orc.compress`` and ``spark.sql.orc.compression.codec``. If None is set, it uses the value specified in ``spark.sql.orc.compression.codec``.",
                     ),
                 }
             ),
-            'saveAsTable': Permissive(
+            "saveAsTable": Permissive(
                 {
-                    'name': Field(String, is_required=True, description="the table name."),
-                    'format': Field(
+                    "name": Field(String, is_required=True, description="the table name."),
+                    "format": Field(
                         String, is_required=False, description="the format used to save."
                     ),
-                    'mode': Field(
+                    "mode": Field(
                         WriteModeOptions,
                         is_required=False,
                         description="specifies the behavior of the save operation when data already exists.",
                     ),
-                    'partitionBy': Field(
+                    "partitionBy": Field(
                         String, is_required=False, description="names of partitioning columns."
                     ),
-                    'options': Field(
+                    "options": Field(
                         Permissive(), is_required=False, description="all other string options."
                     ),
                 }
             ),
-            'text': Permissive(
+            "text": Permissive(
                 {
-                    'path': Field(
+                    "path": Field(
                         String,
                         is_required=True,
                         description="he path in any Hadoop supported file system.",
                     ),
-                    'compression': Field(
+                    "compression": Field(
                         WriteCompressionTextOptions,
                         is_required=False,
                         description="compression codec to use when saving to file. This will override ``orc.compress`` and ``spark.sql.orc.compression.codec``. If None is set, it uses the value specified in ``spark.sql.orc.compression.codec``.",
                     ),
-                    'lineSep': Field(
+                    "lineSep": Field(
                         String,
                         is_required=False,
                         description="defines the line separator that should be used for writing. If None is set, it uses the default value, ``\\n``.",
@@ -315,29 +315,29 @@ WriteCompressionParquetOptions = Enum(
 def spark_df_materializer(_context, config, spark_df):
     file_type, file_options = list(config.items())[0]
 
-    if file_type == 'csv':
+    if file_type == "csv":
         spark_df.write.csv(**file_options)
-        return AssetMaterialization.file(file_options['path'])
-    elif file_type == 'parquet':
+        return AssetMaterialization.file(file_options["path"])
+    elif file_type == "parquet":
         spark_df.write.parquet(**file_options)
-        return AssetMaterialization.file(file_options['path'])
-    elif file_type == 'json':
+        return AssetMaterialization.file(file_options["path"])
+    elif file_type == "json":
         spark_df.write.json(**file_options)
-        return AssetMaterialization.file(file_options['path'])
-    elif file_type == 'jdbc':
+        return AssetMaterialization.file(file_options["path"])
+    elif file_type == "jdbc":
         spark_df.write.jdbc(**file_options)
-        return AssetMaterialization.file(file_options['url'])
-    elif file_type == 'orc':
+        return AssetMaterialization.file(file_options["url"])
+    elif file_type == "orc":
         spark_df.write.orc(**file_options)
-        return AssetMaterialization.file(file_options['path'])
-    elif file_type == 'saveAsTable':
+        return AssetMaterialization.file(file_options["path"])
+    elif file_type == "saveAsTable":
         spark_df.write.saveAsTable(**file_options)
-        return AssetMaterialization.file(file_options['name'])
-    elif file_type == 'text':
+        return AssetMaterialization.file(file_options["name"])
+    elif file_type == "text":
         spark_df.write.text(**file_options)
-        return AssetMaterialization.file(file_options['path'])
+        return AssetMaterialization.file(file_options["path"])
     else:
-        check.failed('Unsupported file type: {}'.format(file_type))
+        check.failed("Unsupported file type: {}".format(file_type))
 
 
 class SparkDataFrameS3StoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
@@ -367,7 +367,7 @@ class SparkDataFrameS3StoragePlugin(TypeStoragePlugin):  # pylint: disable=no-in
 
     @classmethod
     def required_resource_keys(cls):
-        return frozenset({'pyspark'})
+        return frozenset({"pyspark"})
 
     @staticmethod
     def protocol(context):
@@ -376,10 +376,10 @@ class SparkDataFrameS3StoragePlugin(TypeStoragePlugin):  # pylint: disable=no-in
         # If we're on EMR, s3 is preferred:
         # https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-plan-file-systems.html
         # Otherwise, s3a is preferred
-        if hadoopConf.get('fs.s3.impl') == 'com.amazon.ws.emr.hadoop.fs.EmrFileSystem':
-            return 's3://'
+        if hadoopConf.get("fs.s3.impl") == "com.amazon.ws.emr.hadoop.fs.EmrFileSystem":
+            return "s3://"
         else:
-            return 's3a://'
+            return "s3a://"
 
 
 class SparkDataFrameFilesystemStoragePlugin(TypeStoragePlugin):  # pylint: disable=no-init
@@ -403,13 +403,13 @@ class SparkDataFrameFilesystemStoragePlugin(TypeStoragePlugin):  # pylint: disab
 
     @classmethod
     def required_resource_keys(cls):
-        return frozenset({'pyspark'})
+        return frozenset({"pyspark"})
 
 
 DataFrame = PythonObjectDagsterType(
     python_type=NativeSparkDataFrame,
-    name='PySparkDataFrame',
-    description='A PySpark data frame.',
+    name="PySparkDataFrame",
+    description="A PySpark data frame.",
     auto_plugins=[SparkDataFrameS3StoragePlugin, SparkDataFrameFilesystemStoragePlugin],
     materializer=spark_df_materializer,
 )

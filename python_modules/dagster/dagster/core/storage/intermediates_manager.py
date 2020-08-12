@@ -38,7 +38,7 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
     def uncovered_inputs(self, context, step):
         from dagster.core.execution.plan.objects import ExecutionStep
 
-        check.inst_param(step, 'step', ExecutionStep)
+        check.inst_param(step, "step", ExecutionStep)
         uncovered_inputs = []
         for step_input in step.step_inputs:
 
@@ -75,26 +75,26 @@ class InMemoryIntermediateStorage(IntermediateStorage):
     def get_intermediate(
         self, context, dagster_type=None, step_output_handle=None,
     ):
-        check.opt_inst_param(context, 'context', SystemExecutionContext)
-        check.opt_inst_param(dagster_type, 'dagster_type', DagsterType)
-        check.inst_param(step_output_handle, 'step_output_handle', StepOutputHandle)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.opt_inst_param(dagster_type, "dagster_type", DagsterType)
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         return self.values[step_output_handle]
 
     def set_intermediate(
         self, context, dagster_type=None, step_output_handle=None, value=None,
     ):
-        check.opt_inst_param(context, 'context', SystemExecutionContext)
-        check.opt_inst_param(dagster_type, 'dagster_type', DagsterType)
-        check.inst_param(step_output_handle, 'step_output_handle', StepOutputHandle)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.opt_inst_param(dagster_type, "dagster_type", DagsterType)
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         self.values[step_output_handle] = value
 
     def has_intermediate(self, context, step_output_handle):
-        check.opt_inst_param(context, 'context', SystemExecutionContext)
-        check.inst_param(step_output_handle, 'step_output_handle', StepOutputHandle)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         return step_output_handle in self.values
 
     def copy_intermediate_from_run(self, context, run_id, step_output_handle):
-        check.failed('not implemented in in memory')
+        check.failed("not implemented in in memory")
 
     @property
     def is_persistent(self):
@@ -104,19 +104,19 @@ class InMemoryIntermediateStorage(IntermediateStorage):
 class ObjectStoreIntermediateStorage(IntermediateStorage):
     def __init__(self, intermediate_store):
         self._intermediate_store = check.inst_param(
-            intermediate_store, 'intermediate_store', IntermediateStore
+            intermediate_store, "intermediate_store", IntermediateStore
         )
 
     def _get_paths(self, step_output_handle):
-        return ['intermediates', step_output_handle.step_key, step_output_handle.output_name]
+        return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
 
     def get_intermediate(
         self, context, dagster_type=None, step_output_handle=None,
     ):
         dagster_type = resolve_dagster_type(dagster_type)
-        check.opt_inst_param(context, 'context', SystemExecutionContext)
-        check.inst_param(dagster_type, 'dagster_type', DagsterType)
-        check.inst_param(step_output_handle, 'step_output_handle', StepOutputHandle)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(dagster_type, "dagster_type", DagsterType)
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         check.invariant(self.has_intermediate(context, step_output_handle))
 
         return self._intermediate_store.get_value(
@@ -127,13 +127,13 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         self, context, dagster_type=None, step_output_handle=None, value=None,
     ):
 
-        check.opt_inst_param(context, 'context', SystemExecutionContext)
-        check.inst_param(dagster_type, 'dagster_type', DagsterType)
-        check.inst_param(step_output_handle, 'step_output_handle', StepOutputHandle)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(dagster_type, "dagster_type", DagsterType)
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
         if self.has_intermediate(context, step_output_handle):
             context.log.warning(
-                'Replacing existing intermediate for %s.%s'
+                "Replacing existing intermediate for %s.%s"
                 % (step_output_handle.step_key, step_output_handle.output_name)
             )
 
@@ -145,8 +145,8 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def has_intermediate(self, context, step_output_handle):
-        check.opt_inst_param(context, 'context', SystemExecutionContext)
-        check.inst_param(step_output_handle, 'step_output_handle', StepOutputHandle)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
         return self._intermediate_store.has_object(context, self._get_paths(step_output_handle))
 

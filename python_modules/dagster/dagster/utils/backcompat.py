@@ -4,7 +4,7 @@ from dagster import check
 
 
 def canonicalize_backcompat_args(new_val, new_arg, old_val, old_arg, breaking_version, **kwargs):
-    '''
+    """
     Utility for managing backwards compatibility of two related arguments.
 
     For example if you had an existing function
@@ -36,17 +36,17 @@ def canonicalize_backcompat_args(new_val, new_arg, old_val, old_arg, breaking_ve
     , warn, and then execute.
 
     canonicalize_backcompat_args returns the value as if *only* new_val were specified
-    '''
-    coerce_old_to_new = kwargs.get('coerce_old_to_new')
-    additional_warn_txt = kwargs.get('additional_warn_txt')
+    """
+    coerce_old_to_new = kwargs.get("coerce_old_to_new")
+    additional_warn_txt = kwargs.get("additional_warn_txt")
     # stacklevel=3 punches up to the caller of canonicalize_backcompat_args
-    stacklevel = kwargs.get('stacklevel', 3)
+    stacklevel = kwargs.get("stacklevel", 3)
 
-    check.str_param(new_arg, 'new_arg')
-    check.str_param(old_arg, 'old_arg')
-    check.opt_callable_param(coerce_old_to_new, 'coerce_old_to_new')
-    check.opt_str_param(additional_warn_txt, 'additional_warn_txt')
-    check.opt_int_param(stacklevel, 'stacklevel')
+    check.str_param(new_arg, "new_arg")
+    check.str_param(old_arg, "old_arg")
+    check.opt_callable_param(coerce_old_to_new, "coerce_old_to_new")
+    check.opt_str_param(additional_warn_txt, "additional_warn_txt")
+    check.opt_int_param(stacklevel, "stacklevel")
     if new_val is not None:
         if old_val is not None:
             check.failed(
@@ -60,7 +60,7 @@ def canonicalize_backcompat_args(new_val, new_arg, old_val, old_arg, breaking_ve
             '"{old_arg}" is deprecated and will be removed in {breaking_version}, use "{new_arg}" instead.'.format(
                 old_arg=old_arg, new_arg=new_arg, breaking_version=breaking_version
             )
-            + ((' ' + additional_warn_txt) if additional_warn_txt else ''),
+            + ((" " + additional_warn_txt) if additional_warn_txt else ""),
             stacklevel=stacklevel,
         )
         return coerce_old_to_new(old_val) if coerce_old_to_new else old_val
@@ -69,13 +69,13 @@ def canonicalize_backcompat_args(new_val, new_arg, old_val, old_arg, breaking_ve
 
 
 def rename_warning(new_name, old_name, breaking_version, additional_warn_txt=None, stacklevel=3):
-    '''
+    """
     Common utility for managing backwards compatibility of renaming.
-    '''
+    """
     warnings.warn(
         '"{old_name}" is deprecated and will be removed in {breaking_version}, use "{new_name}" instead.'.format(
             old_name=old_name, new_name=new_name, breaking_version=breaking_version,
         )
-        + ((' ' + additional_warn_txt) if additional_warn_txt else ''),
+        + ((" " + additional_warn_txt) if additional_warn_txt else ""),
         stacklevel=stacklevel,
     )

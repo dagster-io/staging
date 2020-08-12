@@ -9,7 +9,7 @@ from .table import Table
 
 
 def computed_asset(storage_key, path=None, input_assets=None):
-    '''Create an Asset with its computation built from the decorated function.
+    """Create an Asset with its computation built from the decorated function.
 
     The type annotations on the arguments and return value of the decorated function are use to
     determine which TypeStoragePolicy will be used to load and save its outputs and inputs.
@@ -50,7 +50,7 @@ def computed_asset(storage_key, path=None, input_assets=None):
             def one_asset() -> int:
                 return 1
 
-    '''
+    """
 
     def _computed_asset(fn):
         _path = path or (fn.__name__,)
@@ -69,7 +69,7 @@ def computed_asset(storage_key, path=None, input_assets=None):
 
 
 def computed_table(storage_key, path=None, input_assets=None, columns=None):
-    '''Create a Table with its computation built from the decorated function.
+    """Create a Table with its computation built from the decorated function.
 
     The type annotations on the arguments and return value of the decorated function are use to
     determine which TypeStoragePolicy will be used to load and save its outputs and inputs.
@@ -84,7 +84,7 @@ def computed_table(storage_key, path=None, input_assets=None, columns=None):
             If a list is passed, the first asset in the list is mapped to the first argument of the
             decorated function, and so on.
         columns (Optional[List[Column]]): The table's columns.
-    '''
+    """
 
     def _computed_table(fn):
         _path = path or (fn.__name__,)
@@ -104,13 +104,13 @@ def computed_table(storage_key, path=None, input_assets=None, columns=None):
 
 
 def _deps_by_arg_name(input_assets, fn):
-    '''
+    """
     Args:
         input_assets (Optional[Union[List[Asset], Dict[str, Asset]]])
         fn (Callable)
 
     Returns (Dict[str, AssetDependency])
-    '''
+    """
     kwarg_types = _infer_kwarg_types(fn)
     if isinstance(input_assets, list):
         check.invariant(
@@ -129,7 +129,7 @@ def _deps_by_arg_name(input_assets, fn):
     elif isinstance(input_assets, dict):
         check.invariant(
             kwarg_types.keys() == input_assets.keys(),
-            'input_assets keys {kwarg_deps_keys} must match keyword args {kwargs}'.format(
+            "input_assets keys {kwarg_deps_keys} must match keyword args {kwargs}".format(
                 kwarg_deps_keys=input_assets.keys(), kwargs=kwarg_types.keys(),
             ),
         )
@@ -138,7 +138,7 @@ def _deps_by_arg_name(input_assets, fn):
             for kwarg in kwarg_types.keys()
         }
     else:
-        check.failed('input_assets must be a list or a dict')
+        check.failed("input_assets must be a list or a dict")
 
 
 def _infer_kwarg_types(fn):
