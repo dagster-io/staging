@@ -23,6 +23,7 @@ from .types import (
     ExternalScheduleExecutionArgs,
     LoadableTargetOrigin,
     PartitionArgs,
+    PartitionBackfillArgs,
     PartitionNamesArgs,
     PipelineSubsetSnapshotArgs,
 )
@@ -158,6 +159,21 @@ class DagsterGrpcClient(object):
 
         return deserialize_json_to_dagster_namedtuple(
             res.serialized_external_partition_tags_or_external_partition_execution_error
+        )
+
+    def external_partition_backfill(self, partition_backfill_args):
+        check.inst_param(partition_backfill_args, 'partition_backfill_args', PartitionBackfillArgs)
+
+        res = self._query(
+            'ExternalPartitionBackfill',
+            api_pb2.ExternalPartitionBackfillRequest,
+            serialized_partition_backfill_args=serialize_dagster_namedtuple(
+                partition_backfill_args
+            ),
+        )
+
+        return deserialize_json_to_dagster_namedtuple(
+            res.serialized_external_partition_backfill_data_or_external_partition_execution_error
         )
 
     def external_pipeline_subset(self, pipeline_subset_snapshot_args):

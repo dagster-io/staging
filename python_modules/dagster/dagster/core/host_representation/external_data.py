@@ -231,6 +231,33 @@ class ExternalPartitionTagsData(namedtuple('_ExternalPartitionTagsData', 'name t
 
 
 @whitelist_for_serdes
+class ExternalPartitionBackfillRunData(
+    namedtuple('_ExternalPartitionBackfillRunData', 'name tags run_config')
+):
+    def __new__(cls, name, tags, run_config):
+        return super(ExternalPartitionBackfillRunData, cls).__new__(
+            cls,
+            name=check.str_param(name, 'name'),
+            tags=check.dict_param(tags, 'tags'),
+            run_config=check.opt_dict_param(run_config, 'run_config'),
+        )
+
+
+@whitelist_for_serdes
+class ExternalPartitionBackfillData(
+    namedtuple('_ExternalPartitionBackfillData', 'backfill_id run_data')
+):
+    def __new__(cls, backfill_id, run_data):
+        return super(ExternalPartitionBackfillData, cls).__new__(
+            cls,
+            backfill_id=check.str_param(backfill_id, 'backfill_id'),
+            run_data=check.list_param(
+                run_data, 'run_data', of_type=ExternalPartitionBackfillRunData
+            ),
+        )
+
+
+@whitelist_for_serdes
 class ExternalPartitionExecutionErrorData(
     namedtuple('_ExternalPartitionExecutionErrorData', 'error')
 ):
