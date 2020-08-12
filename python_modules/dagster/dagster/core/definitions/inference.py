@@ -22,9 +22,9 @@ def infer_output_definitions(decorator_name, solid_name, fn):
     except CheckError as type_error:
         six.raise_from(
             DagsterInvalidDefinitionError(
-                'Error inferring Dagster type for return type '
+                "Error inferring Dagster type for return type "
                 '"{type_annotation}" from {decorator} "{solid}". '
-                'Correct the issue or explicitly pass definitions to {decorator}.'.format(
+                "Correct the issue or explicitly pass definitions to {decorator}.".format(
                     decorator=decorator_name,
                     solid=solid_name,
                     type_annotation=signature.return_annotation,
@@ -49,7 +49,7 @@ def infer_input_definitions_for_lambda_solid(solid_name, fn):
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
 
-    return _infer_inputs_from_params(params, '@lambda_solid', solid_name)
+    return _infer_inputs_from_params(params, "@lambda_solid", solid_name)
 
 
 def _infer_inputs_from_params(params, decorator_name, solid_name):
@@ -68,9 +68,9 @@ def _infer_inputs_from_params(params, decorator_name, solid_name):
         except CheckError as type_error:
             six.raise_from(
                 DagsterInvalidDefinitionError(
-                    'Error inferring Dagster type for input name {param} typed as '
+                    "Error inferring Dagster type for input name {param} typed as "
                     '"{type_annotation}" from {decorator} "{solid}". '
-                    'Correct the issue or explicitly pass definitions to {decorator}.'.format(
+                    "Correct the issue or explicitly pass definitions to {decorator}.".format(
                         decorator=decorator_name,
                         solid=solid_name,
                         param=param.name,
@@ -87,11 +87,11 @@ def infer_input_definitions_for_composite_solid(solid_name, fn):
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
 
-    return _infer_inputs_from_params(params, '@composite_solid', solid_name)
+    return _infer_inputs_from_params(params, "@composite_solid", solid_name)
 
 
 def infer_input_definitions_for_solid(solid_name, fn):
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
 
-    return _infer_inputs_from_params(params[1:], '@solid', solid_name)
+    return _infer_inputs_from_params(params[1:], "@solid", solid_name)

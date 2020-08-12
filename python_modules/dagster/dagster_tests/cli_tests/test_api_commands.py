@@ -16,7 +16,7 @@ def runner_execute_run_with_structured_logs(runner, cli_args):
         # CliRunner captures stdout so printing it out here
         raise Exception(
             (
-                'dagster runner_execute_run_with_structured_logs commands with cli_args {cli_args} '
+                "dagster runner_execute_run_with_structured_logs commands with cli_args {cli_args} "
                 'returned exit_code {exit_code} with stdout:\n"{stdout}"'
                 '\n exception: "\n{exception}"'
                 '\n and result as string: "{result}"'
@@ -38,9 +38,9 @@ def test_execute_run_with_structured_logs(pipeline_handle):
     runner = CliRunner()
 
     with seven.TemporaryDirectory() as temp_dir:
-        with environ({'DAGSTER_HOME': temp_dir}):
+        with environ({"DAGSTER_HOME": temp_dir}):
             instance = DagsterInstance.get()
-            run = create_run_for_test(instance, pipeline_name='foo', run_id='new_run')
+            run = create_run_for_test(instance, pipeline_name="foo", run_id="new_run")
 
             input_json = serialize_dagster_namedtuple(
                 ExecuteRunArgs(
@@ -52,7 +52,7 @@ def test_execute_run_with_structured_logs(pipeline_handle):
 
             result = runner_execute_run_with_structured_logs(runner, [input_json],)
 
-    assert 'PIPELINE_SUCCESS' in result.stdout, 'no match, result: {}'.format(result)
+    assert "PIPELINE_SUCCESS" in result.stdout, "no match, result: {}".format(result)
 
 
 def runner_execute_step_with_structured_logs(runner, cli_args):
@@ -61,7 +61,7 @@ def runner_execute_step_with_structured_logs(runner, cli_args):
         # CliRunner captures stdout so printing it out here
         raise Exception(
             (
-                'dagster runner_execute_step_with_structured_logs commands with cli_args {cli_args} '
+                "dagster runner_execute_step_with_structured_logs commands with cli_args {cli_args} "
                 'returned exit_code {exit_code} with stdout:\n"{stdout}"'
                 '\n exception: "\n{exception}"'
                 '\n and result as string: "{result}"'
@@ -83,7 +83,7 @@ def test_execute_step_with_structured_logs(pipeline_handle):
     with seven.TemporaryDirectory() as temp_dir:
         instance = DagsterInstance.local_temp(temp_dir)
 
-        run = create_run_for_test(instance, pipeline_name='foo', run_id='new_run')
+        run = create_run_for_test(instance, pipeline_name="foo", run_id="new_run")
 
         input_json = serialize_dagster_namedtuple(
             ExecuteStepArgs(
@@ -95,4 +95,4 @@ def test_execute_step_with_structured_logs(pipeline_handle):
 
         result = runner_execute_step_with_structured_logs(runner, [input_json],)
 
-    assert 'STEP_SUCCESS' in result.stdout
+    assert "STEP_SUCCESS" in result.stdout

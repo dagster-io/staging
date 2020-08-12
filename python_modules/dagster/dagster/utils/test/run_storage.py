@@ -10,7 +10,7 @@ from dagster.serdes import serialize_pp
 
 
 class TestRunStorage:
-    '''
+    """
     You can extend this class to easily run these set of tests on any run storage. When extending,
     you simply need to override the `run_storage` fixture and return your implementation of
     `RunStorage`.
@@ -27,9 +27,9 @@ class TestRunStorage:
         def run_storage(self):  # pylint: disable=arguments-differ
             return MyStorageImplementation()
     ```
-    '''
+    """
 
-    @pytest.fixture(name='storage', params=[])
+    @pytest.fixture(name="storage", params=[])
     def run_storage(self, request):
         with request.param() as s:
             yield s
@@ -38,7 +38,7 @@ class TestRunStorage:
     def build_run(
         run_id,
         pipeline_name,
-        mode='default',
+        mode="default",
         tags=None,
         status=PipelineRunStatus.NOT_STARTED,
         parent_run_id=None,
@@ -60,7 +60,7 @@ class TestRunStorage:
         run_id = make_new_run_id()
         added = storage.add_run(
             TestRunStorage.build_run(
-                run_id=run_id, pipeline_name='some_pipeline', tags={'foo': 'bar'}
+                run_id=run_id, pipeline_name="some_pipeline", tags={"foo": "bar"}
             )
         )
         assert added
@@ -68,18 +68,18 @@ class TestRunStorage:
         assert len(runs) == 1
         run = runs[0]
         assert run.run_id == run_id
-        assert run.pipeline_name == 'some_pipeline'
+        assert run.pipeline_name == "some_pipeline"
         assert run.tags
-        assert run.tags.get('foo') == 'bar'
+        assert run.tags.get("foo") == "bar"
         assert storage.has_run(run_id)
         fetched_run = storage.get_run_by_id(run_id)
         assert fetched_run.run_id == run_id
-        assert fetched_run.pipeline_name == 'some_pipeline'
+        assert fetched_run.pipeline_name == "some_pipeline"
 
     def test_clear(self, storage):
         assert storage
         run_id = make_new_run_id()
-        storage.add_run(TestRunStorage.build_run(run_id=run_id, pipeline_name='some_pipeline'))
+        storage.add_run(TestRunStorage.build_run(run_id=run_id, pipeline_name="some_pipeline"))
         assert len(storage.get_runs()) == 1
         storage.wipe()
         assert list(storage.get_runs()) == []
@@ -88,10 +88,10 @@ class TestRunStorage:
         assert storage
         one = make_new_run_id()
         two = make_new_run_id()
-        storage.add_run(TestRunStorage.build_run(run_id=one, pipeline_name='some_pipeline'))
-        storage.add_run(TestRunStorage.build_run(run_id=two, pipeline_name='some_other_pipeline'))
+        storage.add_run(TestRunStorage.build_run(run_id=one, pipeline_name="some_pipeline"))
+        storage.add_run(TestRunStorage.build_run(run_id=two, pipeline_name="some_other_pipeline"))
         assert len(storage.get_runs()) == 2
-        some_runs = storage.get_runs(PipelineRunsFilter(pipeline_name='some_pipeline'))
+        some_runs = storage.get_runs(PipelineRunsFilter(pipeline_name="some_pipeline"))
         assert len(some_runs) == 1
         assert some_runs[0].run_id == one
 
@@ -104,23 +104,23 @@ class TestRunStorage:
         storage.add_run(
             TestRunStorage.build_run(
                 run_id=one,
-                pipeline_name='some_pipeline',
-                tags={'tag': 'hello', 'tag2': 'world'},
+                pipeline_name="some_pipeline",
+                tags={"tag": "hello", "tag2": "world"},
                 status=PipelineRunStatus.SUCCESS,
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
                 run_id=two,
-                pipeline_name='some_pipeline',
-                tags={'tag': 'hello'},
+                pipeline_name="some_pipeline",
+                tags={"tag": "hello"},
                 status=PipelineRunStatus.FAILURE,
             ),
         )
 
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=three, pipeline_name='other_pipeline', status=PipelineRunStatus.SUCCESS
+                run_id=three, pipeline_name="other_pipeline", status=PipelineRunStatus.SUCCESS
             )
         )
 
@@ -132,8 +132,8 @@ class TestRunStorage:
         assert count == 1
         assert some_runs[0].run_id == one
 
-        some_runs = storage.get_runs(PipelineRunsFilter(pipeline_name='some_pipeline'))
-        count = storage.get_runs_count(PipelineRunsFilter(pipeline_name='some_pipeline'))
+        some_runs = storage.get_runs(PipelineRunsFilter(pipeline_name="some_pipeline"))
+        count = storage.get_runs_count(PipelineRunsFilter(pipeline_name="some_pipeline"))
         assert len(some_runs) == 2
         assert count == 2
         assert some_runs[0].run_id == two
@@ -146,24 +146,24 @@ class TestRunStorage:
         assert some_runs[0].run_id == three
         assert some_runs[1].run_id == one
 
-        some_runs = storage.get_runs(PipelineRunsFilter(tags={'tag': 'hello'}))
-        count = storage.get_runs_count(PipelineRunsFilter(tags={'tag': 'hello'}))
+        some_runs = storage.get_runs(PipelineRunsFilter(tags={"tag": "hello"}))
+        count = storage.get_runs_count(PipelineRunsFilter(tags={"tag": "hello"}))
         assert len(some_runs) == 2
         assert count == 2
         assert some_runs[0].run_id == two
         assert some_runs[1].run_id == one
 
-        some_runs = storage.get_runs(PipelineRunsFilter(tags={'tag': 'hello', 'tag2': 'world'}))
-        count = storage.get_runs_count(PipelineRunsFilter(tags={'tag': 'hello', 'tag2': 'world'}))
+        some_runs = storage.get_runs(PipelineRunsFilter(tags={"tag": "hello", "tag2": "world"}))
+        count = storage.get_runs_count(PipelineRunsFilter(tags={"tag": "hello", "tag2": "world"}))
         assert len(some_runs) == 1
         assert count == 1
         assert some_runs[0].run_id == one
 
         some_runs = storage.get_runs(
-            PipelineRunsFilter(pipeline_name="some_pipeline", tags={'tag': 'hello'})
+            PipelineRunsFilter(pipeline_name="some_pipeline", tags={"tag": "hello"})
         )
         count = storage.get_runs_count(
-            PipelineRunsFilter(pipeline_name="some_pipeline", tags={'tag': 'hello'})
+            PipelineRunsFilter(pipeline_name="some_pipeline", tags={"tag": "hello"})
         )
         assert len(some_runs) == 2
         assert count == 2
@@ -173,14 +173,14 @@ class TestRunStorage:
         some_runs = storage.get_runs(
             PipelineRunsFilter(
                 pipeline_name="some_pipeline",
-                tags={'tag': 'hello'},
+                tags={"tag": "hello"},
                 status=PipelineRunStatus.SUCCESS,
             )
         )
         count = storage.get_runs_count(
             PipelineRunsFilter(
                 pipeline_name="some_pipeline",
-                tags={'tag': 'hello'},
+                tags={"tag": "hello"},
                 status=PipelineRunStatus.SUCCESS,
             )
         )
@@ -193,7 +193,7 @@ class TestRunStorage:
             PipelineRunsFilter(
                 run_ids=[one],
                 pipeline_name="some_pipeline",
-                tags={'tag': 'hello'},
+                tags={"tag": "hello"},
                 status=PipelineRunStatus.SUCCESS,
             )
         )
@@ -201,7 +201,7 @@ class TestRunStorage:
             PipelineRunsFilter(
                 run_ids=[one],
                 pipeline_name="some_pipeline",
-                tags={'tag': 'hello'},
+                tags={"tag": "hello"},
                 status=PipelineRunStatus.SUCCESS,
             )
         )
@@ -222,32 +222,32 @@ class TestRunStorage:
         storage.add_run(
             TestRunStorage.build_run(
                 run_id=one,
-                pipeline_name='some_pipeline',
-                tags={'mytag': 'hello', 'mytag2': 'world'},
+                pipeline_name="some_pipeline",
+                tags={"mytag": "hello", "mytag2": "world"},
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
                 run_id=two,
-                pipeline_name='some_pipeline',
-                tags={'mytag': 'goodbye', 'mytag2': 'world'},
+                pipeline_name="some_pipeline",
+                tags={"mytag": "goodbye", "mytag2": "world"},
             )
         )
-        storage.add_run(TestRunStorage.build_run(run_id=three, pipeline_name='some_pipeline'))
+        storage.add_run(TestRunStorage.build_run(run_id=three, pipeline_name="some_pipeline"))
         assert len(storage.get_runs()) == 3
 
         run_count = storage.get_runs_count(
-            filters=PipelineRunsFilter(tags={'mytag': 'hello', 'mytag2': 'world'})
+            filters=PipelineRunsFilter(tags={"mytag": "hello", "mytag2": "world"})
         )
         assert run_count == 1
 
-        run_count = storage.get_runs_count(filters=PipelineRunsFilter(tags={'mytag2': 'world'}))
+        run_count = storage.get_runs_count(filters=PipelineRunsFilter(tags={"mytag2": "world"}))
         assert run_count == 2
 
         run_count = storage.get_runs_count()
         assert run_count == 3
 
-        assert storage.get_run_tags() == [('mytag', {'hello', 'goodbye'}), ('mytag2', {'world'})]
+        assert storage.get_run_tags() == [("mytag", {"hello", "goodbye"}), ("mytag2", {"world"})]
 
     def test_fetch_by_tags(self, storage):
         assert storage
@@ -257,26 +257,26 @@ class TestRunStorage:
         storage.add_run(
             TestRunStorage.build_run(
                 run_id=one,
-                pipeline_name='some_pipeline',
-                tags={'mytag': 'hello', 'mytag2': 'world'},
+                pipeline_name="some_pipeline",
+                tags={"mytag": "hello", "mytag2": "world"},
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
                 run_id=two,
-                pipeline_name='some_pipeline',
-                tags={'mytag': 'goodbye', 'mytag2': 'world'},
+                pipeline_name="some_pipeline",
+                tags={"mytag": "goodbye", "mytag2": "world"},
             )
         )
-        storage.add_run(TestRunStorage.build_run(run_id=three, pipeline_name='some_pipeline'))
+        storage.add_run(TestRunStorage.build_run(run_id=three, pipeline_name="some_pipeline"))
         assert len(storage.get_runs()) == 3
 
-        some_runs = storage.get_runs(PipelineRunsFilter(tags={'mytag': 'hello', 'mytag2': 'world'}))
+        some_runs = storage.get_runs(PipelineRunsFilter(tags={"mytag": "hello", "mytag2": "world"}))
 
         assert len(some_runs) == 1
         assert some_runs[0].run_id == one
 
-        some_runs = storage.get_runs(PipelineRunsFilter(tags={'mytag2': 'world'}))
+        some_runs = storage.get_runs(PipelineRunsFilter(tags={"mytag2": "world"}))
         assert len(some_runs) == 2
         assert some_runs[0].run_id == two
         assert some_runs[1].run_id == one
@@ -289,17 +289,17 @@ class TestRunStorage:
         one, two, three = [make_new_run_id(), make_new_run_id(), make_new_run_id()]
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=one, pipeline_name='some_pipeline', tags={'mytag': 'hello'}
+                run_id=one, pipeline_name="some_pipeline", tags={"mytag": "hello"}
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=two, pipeline_name='some_pipeline', tags={'mytag': 'hello'}
+                run_id=two, pipeline_name="some_pipeline", tags={"mytag": "hello"}
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=three, pipeline_name='some_pipeline', tags={'mytag': 'hello'}
+                run_id=three, pipeline_name="some_pipeline", tags={"mytag": "hello"}
             )
         )
 
@@ -309,18 +309,18 @@ class TestRunStorage:
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
 
-        all_runs = storage.get_runs(PipelineRunsFilter(pipeline_name='some_pipeline'))
+        all_runs = storage.get_runs(PipelineRunsFilter(pipeline_name="some_pipeline"))
         assert len(all_runs) == 3
         sliced_runs = storage.get_runs(
-            PipelineRunsFilter(pipeline_name='some_pipeline'), cursor=three, limit=1
+            PipelineRunsFilter(pipeline_name="some_pipeline"), cursor=three, limit=1
         )
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
 
-        all_runs = storage.get_runs(PipelineRunsFilter(tags={'mytag': 'hello'}))
+        all_runs = storage.get_runs(PipelineRunsFilter(tags={"mytag": "hello"}))
         assert len(all_runs) == 3
         sliced_runs = storage.get_runs(
-            PipelineRunsFilter(tags={'mytag': 'hello'}), cursor=three, limit=1
+            PipelineRunsFilter(tags={"mytag": "hello"}), cursor=three, limit=1
         )
         assert len(sliced_runs) == 1
         assert sliced_runs[0].run_id == two
@@ -333,22 +333,22 @@ class TestRunStorage:
         four = make_new_run_id()
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=one, pipeline_name='some_pipeline', status=PipelineRunStatus.NOT_STARTED
+                run_id=one, pipeline_name="some_pipeline", status=PipelineRunStatus.NOT_STARTED
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=two, pipeline_name='some_pipeline', status=PipelineRunStatus.STARTED
+                run_id=two, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=three, pipeline_name='some_pipeline', status=PipelineRunStatus.STARTED
+                run_id=three, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=four, pipeline_name='some_pipeline', status=PipelineRunStatus.FAILURE
+                run_id=four, pipeline_name="some_pipeline", status=PipelineRunStatus.FAILURE
             )
         )
 
@@ -380,22 +380,22 @@ class TestRunStorage:
         four = make_new_run_id()
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=one, pipeline_name='some_pipeline', status=PipelineRunStatus.STARTED
+                run_id=one, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=two, pipeline_name='some_pipeline', status=PipelineRunStatus.STARTED
+                run_id=two, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=three, pipeline_name='some_pipeline', status=PipelineRunStatus.NOT_STARTED
+                run_id=three, pipeline_name="some_pipeline", status=PipelineRunStatus.NOT_STARTED
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=four, pipeline_name='some_pipeline', status=PipelineRunStatus.STARTED
+                run_id=four, pipeline_name="some_pipeline", status=PipelineRunStatus.STARTED
             )
         )
 
@@ -425,7 +425,7 @@ class TestRunStorage:
     def test_delete(self, storage):
         assert storage
         run_id = make_new_run_id()
-        storage.add_run(TestRunStorage.build_run(run_id=run_id, pipeline_name='some_pipeline'))
+        storage.add_run(TestRunStorage.build_run(run_id=run_id, pipeline_name="some_pipeline"))
         assert len(storage.get_runs()) == 1
         storage.delete_run(run_id)
         assert list(storage.get_runs()) == []
@@ -435,7 +435,7 @@ class TestRunStorage:
         run_id = make_new_run_id()
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=run_id, pipeline_name='some_pipeline', tags={run_id: run_id},
+                run_id=run_id, pipeline_name="some_pipeline", tags={run_id: run_id},
             )
         )
         assert len(storage.get_runs()) == 1
@@ -445,21 +445,21 @@ class TestRunStorage:
         assert run_id not in [key for key, value in storage.get_run_tags()]
 
     def test_wipe_tags(self, storage):
-        run_id = 'some_run_id'
-        run = PipelineRun(run_id=run_id, pipeline_name='a_pipeline', tags={'foo': 'bar'})
+        run_id = "some_run_id"
+        run = PipelineRun(run_id=run_id, pipeline_name="a_pipeline", tags={"foo": "bar"})
 
         storage.add_run(run)
 
         assert storage.get_run_by_id(run_id) == run
-        assert dict(storage.get_run_tags()) == {'foo': {'bar'}}
+        assert dict(storage.get_run_tags()) == {"foo": {"bar"}}
 
         storage.wipe()
         assert list(storage.get_runs()) == []
         assert dict(storage.get_run_tags()) == {}
 
     def test_write_conflicting_run_id(self, storage):
-        double_run_id = 'double_run_id'
-        pipeline_def = PipelineDefinition(name='some_pipeline', solid_defs=[])
+        double_run_id = "double_run_id"
+        pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
 
         run = PipelineRun(run_id=double_run_id, pipeline_name=pipeline_def.name)
 
@@ -468,7 +468,7 @@ class TestRunStorage:
             storage.add_run(run)
 
     def test_add_get_snapshot(self, storage):
-        pipeline_def = PipelineDefinition(name='some_pipeline', solid_defs=[])
+        pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
         pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
         pipeline_snapshot_id = create_pipeline_snapshot_id(pipeline_snapshot)
 
@@ -477,15 +477,15 @@ class TestRunStorage:
         assert fetched_pipeline_snapshot
         assert serialize_pp(fetched_pipeline_snapshot) == serialize_pp(pipeline_snapshot)
         assert storage.has_pipeline_snapshot(pipeline_snapshot_id)
-        assert not storage.has_pipeline_snapshot('nope')
+        assert not storage.has_pipeline_snapshot("nope")
 
         storage.wipe()
 
         assert not storage.has_pipeline_snapshot(pipeline_snapshot_id)
 
     def test_single_write_read_with_snapshot(self, storage):
-        run_with_snapshot_id = 'lkasjdflkjasdf'
-        pipeline_def = PipelineDefinition(name='some_pipeline', solid_defs=[])
+        run_with_snapshot_id = "lkasjdflkjasdf"
+        pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
 
         pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
 
@@ -516,13 +516,13 @@ class TestRunStorage:
 
     def test_single_write_with_missing_snapshot(self, storage):
 
-        run_with_snapshot_id = 'lkasjdflkjasdf'
-        pipeline_def = PipelineDefinition(name='some_pipeline', solid_defs=[])
+        run_with_snapshot_id = "lkasjdflkjasdf"
+        pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
 
         run_with_missing_snapshot = PipelineRun(
             run_id=run_with_snapshot_id,
             pipeline_name=pipeline_def.name,
-            pipeline_snapshot_id='nope',
+            pipeline_snapshot_id="nope",
         )
 
         with pytest.raises(DagsterSnapshotDoesNotExist):
@@ -532,7 +532,7 @@ class TestRunStorage:
         from dagster.core.execution.api import create_execution_plan
         from dagster.core.snap import snapshot_from_execution_plan
 
-        pipeline_def = PipelineDefinition(name='some_pipeline', solid_defs=[])
+        pipeline_def = PipelineDefinition(name="some_pipeline", solid_defs=[])
         execution_plan = create_execution_plan(pipeline_def)
         ep_snapshot = snapshot_from_execution_plan(
             execution_plan, pipeline_def.get_pipeline_snapshot_id()
@@ -543,7 +543,7 @@ class TestRunStorage:
         assert fetched_ep_snapshot
         assert serialize_pp(fetched_ep_snapshot) == serialize_pp(ep_snapshot)
         assert storage.has_execution_plan_snapshot(snapshot_id)
-        assert not storage.has_execution_plan_snapshot('nope')
+        assert not storage.has_execution_plan_snapshot("nope")
 
         storage.wipe()
 
@@ -556,12 +556,12 @@ class TestRunStorage:
 
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=one, pipeline_name='some_pipeline', status=PipelineRunStatus.SUCCESS,
+                run_id=one, pipeline_name="some_pipeline", status=PipelineRunStatus.SUCCESS,
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=two, pipeline_name='some_pipeline', status=PipelineRunStatus.SUCCESS,
+                run_id=two, pipeline_name="some_pipeline", status=PipelineRunStatus.SUCCESS,
             ),
         )
 
@@ -574,7 +574,7 @@ class TestRunStorage:
 
     def test_fetch_run_group(self, storage):
         assert storage
-        root_run = TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name='foo_pipeline')
+        root_run = TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name="foo_pipeline")
         runs = [root_run]
 
         # Create 3 children and 3 descendants of the rightmost child:
@@ -592,7 +592,7 @@ class TestRunStorage:
             runs.append(
                 TestRunStorage.build_run(
                     run_id=make_new_run_id(),
-                    pipeline_name='foo_pipeline',
+                    pipeline_name="foo_pipeline",
                     root_run_id=root_run.run_id,
                     parent_run_id=root_run.run_id,
                     tags={PARENT_RUN_ID_TAG: root_run.run_id, ROOT_RUN_ID_TAG: root_run.run_id},
@@ -605,7 +605,7 @@ class TestRunStorage:
             runs.append(
                 TestRunStorage.build_run(
                     run_id=make_new_run_id(),
-                    pipeline_name='foo_pipeline',
+                    pipeline_name="foo_pipeline",
                     root_run_id=root_run_id,
                     parent_run_id=parent_run_id,
                     tags={PARENT_RUN_ID_TAG: parent_run_id, ROOT_RUN_ID_TAG: root_run_id},
@@ -627,7 +627,7 @@ class TestRunStorage:
 
     def test_fetch_run_group_not_found(self, storage):
         assert storage
-        run = TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name='foo_pipeline')
+        run = TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name="foo_pipeline")
         storage.add_run(run)
 
         run_group_result = storage.get_run_group(make_new_run_id())
@@ -636,7 +636,7 @@ class TestRunStorage:
     def test_fetch_run_groups(self, storage):
         assert storage
         root_runs = [
-            TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name='foo_pipeline')
+            TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name="foo_pipeline")
             for i in range(3)
         ]
         runs = [run for run in root_runs]
@@ -645,7 +645,7 @@ class TestRunStorage:
                 runs.append(
                     TestRunStorage.build_run(
                         run_id=make_new_run_id(),
-                        pipeline_name='foo_pipeline',
+                        pipeline_name="foo_pipeline",
                         tags={PARENT_RUN_ID_TAG: root_run.run_id, ROOT_RUN_ID_TAG: root_run.run_id},
                     )
                 )
@@ -661,14 +661,14 @@ class TestRunStorage:
         }
 
         for root_run_id in run_groups:
-            assert len(run_groups[root_run_id]['runs']) == expected_group_lens[root_run_id]
-            assert run_groups[root_run_id]['count'] == 6
+            assert len(run_groups[root_run_id]["runs"]) == expected_group_lens[root_run_id]
+            assert run_groups[root_run_id]["count"] == 6
 
     def test_fetch_run_groups_filter(self, storage):
         assert storage
 
         root_runs = [
-            TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name='foo_pipeline')
+            TestRunStorage.build_run(run_id=make_new_run_id(), pipeline_name="foo_pipeline")
             for i in range(3)
         ]
 
@@ -678,7 +678,7 @@ class TestRunStorage:
             runs.append(
                 TestRunStorage.build_run(
                     run_id=failed_run_id,
-                    pipeline_name='foo_pipeline',
+                    pipeline_name="foo_pipeline",
                     tags={PARENT_RUN_ID_TAG: root_run.run_id, ROOT_RUN_ID_TAG: root_run.run_id},
                     status=PipelineRunStatus.FAILURE,
                 )
@@ -687,7 +687,7 @@ class TestRunStorage:
                 runs.append(
                     TestRunStorage.build_run(
                         run_id=make_new_run_id(),
-                        pipeline_name='foo_pipeline',
+                        pipeline_name="foo_pipeline",
                         tags={PARENT_RUN_ID_TAG: failed_run_id, ROOT_RUN_ID_TAG: root_run.run_id},
                     )
                 )
@@ -702,27 +702,27 @@ class TestRunStorage:
         assert len(run_groups) == 3
 
         for root_run_id in run_groups:
-            assert len(run_groups[root_run_id]['runs']) == 2
-            assert run_groups[root_run_id]['count'] == 5
+            assert len(run_groups[root_run_id]["runs"]) == 2
+            assert run_groups[root_run_id]["count"] == 5
 
     def test_fetch_run_groups_ordering(self, storage):
         assert storage
 
         first_root_run = TestRunStorage.build_run(
-            run_id=make_new_run_id(), pipeline_name='foo_pipeline'
+            run_id=make_new_run_id(), pipeline_name="foo_pipeline"
         )
 
         storage.add_run(first_root_run)
 
         second_root_run = TestRunStorage.build_run(
-            run_id=make_new_run_id(), pipeline_name='foo_pipeline'
+            run_id=make_new_run_id(), pipeline_name="foo_pipeline"
         )
 
         storage.add_run(second_root_run)
 
         second_root_run_child = TestRunStorage.build_run(
             run_id=make_new_run_id(),
-            pipeline_name='foo_pipeline',
+            pipeline_name="foo_pipeline",
             tags={
                 PARENT_RUN_ID_TAG: second_root_run.run_id,
                 ROOT_RUN_ID_TAG: second_root_run.run_id,
@@ -733,7 +733,7 @@ class TestRunStorage:
 
         first_root_run_child = TestRunStorage.build_run(
             run_id=make_new_run_id(),
-            pipeline_name='foo_pipeline',
+            pipeline_name="foo_pipeline",
             tags={
                 PARENT_RUN_ID_TAG: first_root_run.run_id,
                 ROOT_RUN_ID_TAG: first_root_run.run_id,

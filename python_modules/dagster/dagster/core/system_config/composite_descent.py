@@ -15,21 +15,21 @@ from dagster.core.errors import (
 from dagster.core.system_config.objects import SolidConfig
 
 
-class SolidConfigEntry(namedtuple('_SolidConfigEntry', 'handle solid_config')):
+class SolidConfigEntry(namedtuple("_SolidConfigEntry", "handle solid_config")):
     def __new__(cls, handle, solid_config):
         return super(SolidConfigEntry, cls).__new__(
             cls,
-            check.inst_param(handle, 'handle', SolidHandle),
-            check.inst_param(solid_config, 'solid_config', SolidConfig),
+            check.inst_param(handle, "handle", SolidHandle),
+            check.inst_param(solid_config, "solid_config", SolidConfig),
         )
 
 
-class DescentStack(namedtuple('_DescentStack', 'pipeline_def handle')):
+class DescentStack(namedtuple("_DescentStack", "pipeline_def handle")):
     def __new__(cls, pipeline_def, handle):
         return super(DescentStack, cls).__new__(
             cls,
-            pipeline_def=check.inst_param(pipeline_def, 'pipeline_def', PipelineDefinition),
-            handle=check.opt_inst_param(handle, 'handle', SolidHandle),
+            pipeline_def=check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition),
+            handle=check.opt_inst_param(handle, "handle", SolidHandle),
         )
 
     @property
@@ -51,7 +51,7 @@ class DescentStack(namedtuple('_DescentStack', 'pipeline_def handle')):
 
 
 def composite_descent(pipeline_def, solids_config):
-    '''
+    """
     This function is responsible for constructing the dictionary
     of SolidConfig (indexed by handle) that will be passed into the
     EnvironmentConfig. Critically this is the codepath that manages config mapping,
@@ -61,9 +61,9 @@ def composite_descent(pipeline_def, solids_config):
     pipeline_def (PipelineDefintiion): PipelineDefinition
     solids_config (dict): Configuration for the solids in the pipeline. The "solids" entry
     of the run_config. Assumed to have already been validated.
-    '''
-    check.inst_param(pipeline_def, 'pipeline_def', PipelineDefinition)
-    check.dict_param(solids_config, 'solids_config')
+    """
+    check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
+    check.dict_param(solids_config, "solids_config")
 
     return {
         handle.to_string(): solid_config
@@ -74,7 +74,7 @@ def composite_descent(pipeline_def, solids_config):
 
 
 def _composite_descent(parent_stack, solids_config_dict):
-    '''
+    """
     The core implementation of composite_descent. This yields a stream of
     SolidConfigEntry. This is used by composite_descent to construct a
     dictionary.
@@ -85,7 +85,7 @@ def _composite_descent(parent_stack, solids_config_dict):
     producing the config that is necessary to configure the child solids.
 
     This process unrolls recursively as you descend down the tree.
-    '''
+    """
 
     for solid in parent_stack.current_container.solids:
 
@@ -101,7 +101,7 @@ def _composite_descent(parent_stack, solids_config_dict):
             )
             if not transformed_current_solid_config.success:
                 raise DagsterInvalidConfigError(
-                    'Error in config for solid {}'.format(solid.name),
+                    "Error in config for solid {}".format(solid.name),
                     transformed_current_solid_config.errors,
                     transformed_current_solid_config,
                 )
@@ -117,8 +117,8 @@ def _composite_descent(parent_stack, solids_config_dict):
             current_handle,
             SolidConfig.from_dict(
                 {
-                    'inputs': current_solid_config.get('inputs'),
-                    'outputs': current_solid_config.get('outputs'),
+                    "inputs": current_solid_config.get("inputs"),
+                    "outputs": current_solid_config.get("outputs"),
                 }
             ),
         )
@@ -128,7 +128,7 @@ def _composite_descent(parent_stack, solids_config_dict):
         solids_dict = (
             _get_mapped_solids_dict(composite_def, current_stack, current_solid_config)
             if composite_def.config_mapping
-            else current_solid_config.get('solids', {})
+            else current_solid_config.get("solids", {})
         )
 
         for sce in _composite_descent(current_stack, solids_dict):
@@ -151,7 +151,7 @@ def _get_mapped_solids_dict(composite_def, current_stack, current_solid_config):
         DagsterConfigMappingFunctionError, _get_error_lambda(current_stack)
     ):
         mapped_solids_config = composite_def.config_mapping.config_fn(
-            current_solid_config.get('config', {})
+            current_solid_config.get("config", {})
         )
 
     # Dynamically construct the type that the output of the config mapping function will
@@ -173,34 +173,34 @@ def _get_mapped_solids_dict(composite_def, current_stack, current_solid_config):
 
 def _get_error_lambda(current_stack):
     return lambda: (
-        'The config mapping function on the composite solid definition '
+        "The config mapping function on the composite solid definition "
         '"{definition_name}" at solid "{solid_name}" in pipeline "{pipeline_name}" '
-        'has thrown an unexpected error during its execution. The definition is '
+        "has thrown an unexpected error during its execution. The definition is "
         'instantiated at stack "{stack_str}".'
     ).format(
         definition_name=current_stack.current_solid.definition.name,
         solid_name=current_stack.current_solid.name,
         pipeline_name=current_stack.pipeline_def.name,
-        stack_str=':'.join(current_stack.handle.path),
+        stack_str=":".join(current_stack.handle.path),
     )
 
 
 def raise_composite_descent_config_error(descent_stack, failed_config_value, evr):
-    check.inst_param(descent_stack, 'descent_stack', DescentStack)
-    check.inst_param(evr, 'evr', EvaluateValueResult)
+    check.inst_param(descent_stack, "descent_stack", DescentStack)
+    check.inst_param(evr, "evr", EvaluateValueResult)
 
     solid = descent_stack.current_solid
-    message = 'In pipeline {pipeline_name} at stack {stack}: \n'.format(
-        pipeline_name=descent_stack.pipeline_def.name, stack=':'.join(descent_stack.handle.path),
+    message = "In pipeline {pipeline_name} at stack {stack}: \n".format(
+        pipeline_name=descent_stack.pipeline_def.name, stack=":".join(descent_stack.handle.path),
     )
     message += (
         'Solid "{solid_name}" with definition "{solid_def_name}" has a '
-        'configuration error. '
-        'It has produced config a via its config_fn that fails to '
-        'pass validation in the solids that it contains. '
-        'This indicates an error in the config mapping function itself. It must '
-        'produce correct config for its constiuent solids in all cases. The correct '
-        'resolution is to fix the mapping function. Details on the error (and the paths '
+        "configuration error. "
+        "It has produced config a via its config_fn that fails to "
+        "pass validation in the solids that it contains. "
+        "This indicates an error in the config mapping function itself. It must "
+        "produce correct config for its constiuent solids in all cases. The correct "
+        "resolution is to fix the mapping function. Details on the error (and the paths "
         'on this error are relative to config mapping function "root", not the entire document): '
     ).format(solid_name=solid.name, solid_def_name=solid.definition.name,)
 

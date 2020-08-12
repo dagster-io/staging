@@ -16,17 +16,17 @@ def create_pyspark_df():
 
 
 @pytest.mark.parametrize(
-    'file_type,read',
+    "file_type,read",
     [
-        pytest.param('csv', spark.read.csv, id='csv'),
-        pytest.param('parquet', spark.read.parquet, id='parquet'),
-        pytest.param('json', spark.read.json, id='json'),
+        pytest.param("csv", spark.read.csv, id="csv"),
+        pytest.param("parquet", spark.read.parquet, id="parquet"),
+        pytest.param("json", spark.read.json, id="json"),
     ],
 )
 def test_dataframe_outputs(file_type, read):
     df = create_pyspark_df()
 
-    @solid(output_defs=[OutputDefinition(dagster_type=DagsterPySparkDataFrame, name='df')])
+    @solid(output_defs=[OutputDefinition(dagster_type=DagsterPySparkDataFrame, name="df")])
     def return_df(_):
         return df
 
@@ -36,7 +36,7 @@ def test_dataframe_outputs(file_type, read):
         result = execute_solid(
             return_df,
             run_config={
-                'solids': {'return_df': {'outputs': [{'df': {file_type: {'path': temp_path}}}]}}
+                "solids": {"return_df": {"outputs": [{"df": {file_type: {"path": temp_path}}}]}}
             },
         )
         assert result.success
@@ -46,15 +46,15 @@ def test_dataframe_outputs(file_type, read):
         result = execute_solid(
             return_df,
             run_config={
-                'solids': {
-                    'return_df': {
-                        'outputs': [
+                "solids": {
+                    "return_df": {
+                        "outputs": [
                             {
-                                'df': {
+                                "df": {
                                     file_type: {
-                                        'path': temp_path,
-                                        'mode': 'overwrite',
-                                        'compression': 'gzip',
+                                        "path": temp_path,
+                                        "mode": "overwrite",
+                                        "compression": "gzip",
                                     }
                                 }
                             }

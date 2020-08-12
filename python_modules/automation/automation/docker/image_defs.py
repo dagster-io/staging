@@ -13,56 +13,56 @@ from .dagster_docker import DagsterDockerImage
 
 @contextlib.contextmanager
 def buildkite_integration_cm(cwd):
-    '''For the buildkite integration base image, we first copy over scala_modules into the image
+    """For the buildkite integration base image, we first copy over scala_modules into the image
     build directory.
-    '''
-    scala_modules_dir = os.path.join(git_repo_root(), 'scala_modules')
+    """
+    scala_modules_dir = os.path.join(git_repo_root(), "scala_modules")
     try:
         cmd = [
-            'rsync',
-            '-av',
+            "rsync",
+            "-av",
             "--exclude='*target*'",
             "--exclude='*.idea*'",
             "--exclude='*.class'",
             scala_modules_dir,
-            '.',
+            ".",
         ]
-        print('Syncing scala_modules to build dir...')
+        print("Syncing scala_modules to build dir...")
         print(cmd)
         subprocess.call(cmd, cwd=cwd)
         yield
 
     finally:
-        shutil.rmtree(os.path.join(cwd, 'scala_modules'))
+        shutil.rmtree(os.path.join(cwd, "scala_modules"))
 
 
 @contextlib.contextmanager
 def k8s_example_cm(cwd):
-    example_project_dir = os.path.join(git_repo_root(), 'examples', 'deploy_k8s', 'example_project')
+    example_project_dir = os.path.join(git_repo_root(), "examples", "deploy_k8s", "example_project")
     try:
-        print('Syncing {} to build dir {}...'.format(example_project_dir, cwd))
-        shutil.copytree(example_project_dir, os.path.join(cwd, 'example_project'))
+        print("Syncing {} to build dir {}...".format(example_project_dir, cwd))
+        shutil.copytree(example_project_dir, os.path.join(cwd, "example_project"))
         yield
 
     finally:
-        shutil.rmtree(os.path.join(cwd, 'example_project'))
+        shutil.rmtree(os.path.join(cwd, "example_project"))
 
 
 # Some images have custom build context manager functions, listed here
 CUSTOM_BUILD_CONTEXTMANAGERS = {
-    'buildkite-integration-base': buildkite_integration_cm,
-    'k8s-example': k8s_example_cm,
+    "buildkite-integration-base": buildkite_integration_cm,
+    "k8s-example": k8s_example_cm,
 }
 
 
 def list_images():
-    '''List all images that we manage.
+    """List all images that we manage.
 
     Returns:
         List[DagsterDockerImage]: A list of all images managed by this tool.
-    '''
+    """
 
-    images_path = os.path.join(os.path.dirname(__file__), 'images')
+    images_path = os.path.join(os.path.dirname(__file__), "images")
     image_folders = [f.name for f in os.scandir(images_path) if f.is_dir()]
 
     images = []
@@ -75,8 +75,8 @@ def list_images():
 
 
 def get_image(name):
-    '''Retrieve the image information from the list defined above.
-    '''
+    """Retrieve the image information from the list defined above.
+    """
     image = next((img for img in list_images() if img.image == name), None)
-    check.invariant(image is not None, 'could not find image {}'.format(name))
+    check.invariant(image is not None, "could not find image {}".format(name))
     return image

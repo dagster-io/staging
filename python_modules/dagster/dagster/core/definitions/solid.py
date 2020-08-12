@@ -23,17 +23,17 @@ class ISolidDefinition(six.with_metaclass(ABCMeta)):
         self, name, input_defs, output_defs, description=None, tags=None, positional_inputs=None
     ):
         self._name = check_valid_name(name)
-        self._description = check.opt_str_param(description, 'description')
+        self._description = check.opt_str_param(description, "description")
         self._tags = validate_tags(tags)
         self._input_defs = frozenlist(input_defs)
         self._input_dict = frozendict({input_def.name: input_def for input_def in input_defs})
-        check.invariant(len(self._input_defs) == len(self._input_dict), 'Duplicate input def names')
+        check.invariant(len(self._input_defs) == len(self._input_dict), "Duplicate input def names")
         self._output_defs = frozenlist(output_defs)
         self._output_dict = frozendict({output_def.name: output_def for output_def in output_defs})
         check.invariant(
-            len(self._output_defs) == len(self._output_dict), 'Duplicate output def names'
+            len(self._output_defs) == len(self._output_dict), "Duplicate output def names"
         )
-        check.opt_list_param(positional_inputs, 'positional_inputs', str)
+        check.opt_list_param(positional_inputs, "positional_inputs", str)
         self._positional_inputs = (
             positional_inputs
             if positional_inputs is not None
@@ -76,7 +76,7 @@ class ISolidDefinition(six.with_metaclass(ABCMeta)):
             names = [
                 inp.name for inp in self._input_defs if inp.name not in self._positional_inputs
             ]
-            check.invariant(len(names) == 1, 'if check above should prevent this')
+            check.invariant(len(names) == 1, "if check above should prevent this")
             return names[0]
 
         return self._positional_inputs[idx]
@@ -90,19 +90,19 @@ class ISolidDefinition(six.with_metaclass(ABCMeta)):
         return self._output_dict
 
     def has_input(self, name):
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
         return name in self._input_dict
 
     def input_def_named(self, name):
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
         return self._input_dict[name]
 
     def has_output(self, name):
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
         return name in self._output_dict
 
     def output_def_named(self, name):
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
         return self._output_dict[name]
 
     @property
@@ -152,7 +152,7 @@ class ISolidDefinition(six.with_metaclass(ABCMeta)):
     def alias(self, name):
         from .composition import CallableSolidNode
 
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
 
         return CallableSolidNode(self, given_alias=name)
 
@@ -168,7 +168,7 @@ class ISolidDefinition(six.with_metaclass(ABCMeta)):
 
 
 class SolidDefinition(ISolidDefinition, IConfigMappable):
-    '''
+    """
     The definition of a Solid that performs a user-defined computation.
 
     For more details on what a solid is, refer to the
@@ -217,7 +217,7 @@ class SolidDefinition(ISolidDefinition, IConfigMappable):
                 output_defs=[OutputDefinition(Int)], # default name ("result")
                 compute_fn=_add_one,
             )
-    '''
+    """
 
     def __init__(
         self,
@@ -232,21 +232,21 @@ class SolidDefinition(ISolidDefinition, IConfigMappable):
         positional_inputs=None,
         _configured_config_mapping_fn=None,
     ):
-        self._compute_fn = check.callable_param(compute_fn, 'compute_fn')
-        self._config_schema = check_user_facing_opt_config_param(config_schema, 'config_schema')
+        self._compute_fn = check.callable_param(compute_fn, "compute_fn")
+        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
         self._required_resource_keys = frozenset(
-            check.opt_set_param(required_resource_keys, 'required_resource_keys', of_type=str)
+            check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
         )
         self.__configured_config_mapping_fn = check.opt_callable_param(
-            _configured_config_mapping_fn, 'config_mapping_fn'
+            _configured_config_mapping_fn, "config_mapping_fn"
         )
 
         super(SolidDefinition, self).__init__(
             name=name,
-            input_defs=check.list_param(input_defs, 'input_defs', InputDefinition),
-            output_defs=check.list_param(output_defs, 'output_defs', OutputDefinition),
+            input_defs=check.list_param(input_defs, "input_defs", InputDefinition),
+            output_defs=check.list_param(output_defs, "output_defs", OutputDefinition),
             description=description,
-            tags=check.opt_dict_param(tags, 'tags', key_type=str),
+            tags=check.opt_dict_param(tags, "tags", key_type=str),
             positional_inputs=positional_inputs,
         )
 
@@ -256,7 +256,7 @@ class SolidDefinition(ISolidDefinition, IConfigMappable):
 
     @property
     def config_field(self):
-        rename_warning('config_schema', 'config_field', '0.9.0')
+        rename_warning("config_schema", "config_field", "0.9.0")
         return self._config_schema
 
     @property
@@ -297,12 +297,12 @@ class SolidDefinition(ISolidDefinition, IConfigMappable):
         )
 
         return SolidDefinition(
-            name=kwargs.get('name', self.name),
+            name=kwargs.get("name", self.name),
             input_defs=self.input_defs,
             compute_fn=self.compute_fn,
             output_defs=self.output_defs,
             config_schema=config_schema,
-            description=kwargs.get('description', self.description),
+            description=kwargs.get("description", self.description),
             tags=self.tags,
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
@@ -311,7 +311,7 @@ class SolidDefinition(ISolidDefinition, IConfigMappable):
 
 
 class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
-    '''The core unit of composition and abstraction, composite solids allow you to
+    """The core unit of composition and abstraction, composite solids allow you to
     define a solid from a graph of solids.
 
     In the same way you would refactor a block of code in to a function to deduplicate, organize,
@@ -363,7 +363,7 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
                 input_mappings=[InputDefinition('num', Int).mapping_to('adder_1', 'num')],
                 output_mappings=[OutputDefinition(Int).mapping_from('adder_2')],
             )
-    '''
+    """
 
     def __init__(
         self,
@@ -377,8 +377,8 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         tags=None,
         positional_inputs=None,
     ):
-        check.str_param(name, 'name')
-        self._solid_defs = check.list_param(solid_defs, 'solid_defs', of_type=ISolidDefinition)
+        check.str_param(name, "name")
+        self._solid_defs = check.list_param(solid_defs, "solid_defs", of_type=ISolidDefinition)
 
         self._dependencies = validate_dependency_dict(dependencies)
         dependency_structure, solid_dict = create_execution_structure(
@@ -387,14 +387,14 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
 
         # List[InputMapping]
         self._input_mappings, input_def_list = _validate_in_mappings(
-            check.opt_list_param(input_mappings, 'input_mappings'), solid_dict, name
+            check.opt_list_param(input_mappings, "input_mappings"), solid_dict, name
         )
         # List[OutputMapping]
         self._output_mappings = _validate_out_mappings(
-            check.opt_list_param(output_mappings, 'output_mappings'), solid_dict, name
+            check.opt_list_param(output_mappings, "output_mappings"), solid_dict, name
         )
 
-        self._config_mapping = check.opt_inst_param(config_mapping, 'config_mapping', ConfigMapping)
+        self._config_mapping = check.opt_inst_param(config_mapping, "config_mapping", ConfigMapping)
         self._solid_dict = solid_dict
         self._dependency_structure = dependency_structure
 
@@ -439,17 +439,17 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         return list(self._solid_dict.values())
 
     def solid_named(self, name):
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
 
         return self._solid_dict[name]
 
     def has_solid_named(self, name):
-        check.str_param(name, 'name')
+        check.str_param(name, "name")
 
         return name in self._solid_dict
 
     def get_solid(self, handle):
-        check.inst_param(handle, 'handle', SolidHandle)
+        check.inst_param(handle, "handle", SolidHandle)
 
         current = handle
         lineage = []
@@ -500,8 +500,8 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         )
 
     def mapped_input(self, solid_name, input_name):
-        check.str_param(solid_name, 'solid_name')
-        check.str_param(input_name, 'input_name')
+        check.str_param(solid_name, "solid_name")
+        check.str_param(input_name, "input_name")
 
         for mapping in self._input_mappings:
             if mapping.solid_name == solid_name and mapping.input_name == input_name:
@@ -509,52 +509,52 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         return None
 
     def get_output_mapping(self, output_name):
-        check.str_param(output_name, 'output_name')
+        check.str_param(output_name, "output_name")
         for mapping in self._output_mappings:
             if mapping.definition.name == output_name:
                 return mapping
         return None
 
     def get_input_mapping(self, input_name):
-        check.str_param(input_name, 'input_name')
+        check.str_param(input_name, "input_name")
         for mapping in self._input_mappings:
             if mapping.definition.name == input_name:
                 return mapping
         return None
 
     def resolve_output_to_origin(self, output_name, handle):
-        check.str_param(output_name, 'output_name')
-        check.inst_param(handle, 'handle', SolidHandle)
+        check.str_param(output_name, "output_name")
+        check.inst_param(handle, "handle", SolidHandle)
 
         mapping = self.get_output_mapping(output_name)
-        check.invariant(mapping, 'Can only resolve outputs for valid output names')
+        check.invariant(mapping, "Can only resolve outputs for valid output names")
         mapped_solid = self.solid_named(mapping.solid_name)
         return mapped_solid.definition.resolve_output_to_origin(
             mapping.output_name, SolidHandle(mapped_solid.name, handle),
         )
 
     def input_has_default(self, input_name):
-        check.str_param(input_name, 'input_name')
+        check.str_param(input_name, "input_name")
 
         # base case
         if self.input_def_named(input_name).has_default_value:
             return True
 
         mapping = self.get_input_mapping(input_name)
-        check.invariant(mapping, 'Can only resolve inputs for valid input names')
+        check.invariant(mapping, "Can only resolve inputs for valid input names")
         mapped_solid = self.solid_named(mapping.solid_name)
 
         return mapped_solid.definition.input_has_default(mapping.input_name)
 
     def default_value_for_input(self, input_name):
-        check.str_param(input_name, 'input_name')
+        check.str_param(input_name, "input_name")
 
         # base case
         if self.input_def_named(input_name).has_default_value:
             return self.input_def_named(input_name).default_value
 
         mapping = self.get_input_mapping(input_name)
-        check.invariant(mapping, 'Can only resolve inputs for valid input names')
+        check.invariant(mapping, "Can only resolve inputs for valid input names")
         mapped_solid = self.solid_named(mapping.solid_name)
 
         return mapped_solid.definition.default_value_for_input(mapping.input_name)
@@ -575,8 +575,8 @@ def _validate_in_mappings(input_mappings, solid_dict, name):
             if input_def_dict.get(mapping.definition.name):
                 if input_def_dict[mapping.definition.name] != mapping.definition:
                     raise DagsterInvalidDefinitionError(
-                        'In CompositeSolid {name} multiple input mappings with same '
-                        'definition name but different definitions'.format(name=name),
+                        "In CompositeSolid {name} multiple input mappings with same "
+                        "definition name but different definitions".format(name=name),
                     )
             else:
                 input_def_dict[mapping.definition.name] = mapping.definition

@@ -23,12 +23,12 @@ GRPC_REPOSITORY_LOCATION_HANDLE_TYPES = (
 
 
 class GrpcRunLauncher(RunLauncher, ConfigurableClass):
-    '''Launches runs against running GRPC servers.
+    """Launches runs against running GRPC servers.
 
     During the transition period from the previous CLI-based user process strategy to GRPC, you
     should use the :py:class`dagster.DefaultRunLauncher`, which is aware of instance- and
     repository-level settings allowing it to switch between the two strategies.
-    '''
+    """
 
     def __init__(self, inst_data=None):
         self._instance_weakref = None
@@ -54,23 +54,23 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
         return self._instance_weakref() if self._instance_weakref else None
 
     def initialize(self, instance):
-        check.inst_param(instance, 'instance', DagsterInstance)
-        check.invariant(self._instance is None, 'Must only call initialize once')
+        check.inst_param(instance, "instance", DagsterInstance)
+        check.invariant(self._instance is None, "Must only call initialize once")
         # Store a weakref to avoid a circular reference / enable GC
         self._instance_weakref = weakref.ref(instance)
 
     def launch_run(self, instance, run, external_pipeline):
-        '''Subclasses must implement this method.'''
+        """Subclasses must implement this method."""
 
-        check.inst_param(run, 'run', PipelineRun)
-        check.inst_param(external_pipeline, 'external_pipeline', ExternalPipeline)
+        check.inst_param(run, "run", PipelineRun)
+        check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
 
         repository_location_handle = external_pipeline.repository_handle.repository_location_handle
 
         check.inst(
             repository_location_handle,
             GRPC_REPOSITORY_LOCATION_HANDLE_TYPES,
-            'GrpcRunLauncher: Can\'t launch runs for pipeline not loaded from a GRPC server',
+            "GrpcRunLauncher: Can't launch runs for pipeline not loaded from a GRPC server",
         )
         res = repository_location_handle.client.start_run(
             ExecuteRunArgs(
@@ -91,7 +91,7 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
         return run
 
     def can_terminate(self, run_id):
-        check.str_param(run_id, 'run_id')
+        check.str_param(run_id, "run_id")
 
         if run_id not in self._run_id_to_repository_location_handle_cache:
             return False
@@ -103,7 +103,7 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
         return res.can_cancel
 
     def terminate(self, run_id):
-        check.str_param(run_id, 'run_id')
+        check.str_param(run_id, "run_id")
 
         if run_id not in self._run_id_to_repository_location_handle_cache:
             return False

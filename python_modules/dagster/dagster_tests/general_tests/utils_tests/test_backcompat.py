@@ -10,12 +10,12 @@ from dagster.utils.backcompat import canonicalize_backcompat_args
 def is_new(old_flag=None, new_flag=None, include_additional_warn_txt=True):
     actual_new_flag = canonicalize_backcompat_args(
         new_val=new_flag,
-        new_arg='new_flag',
+        new_arg="new_flag",
         old_val=old_flag,
-        old_arg='old_flag',
-        breaking_version='0.9.0',
+        old_arg="old_flag",
+        breaking_version="0.9.0",
         coerce_old_to_new=lambda val: not val,
-        additional_warn_txt='Will remove at next release.' if include_additional_warn_txt else None,
+        additional_warn_txt="Will remove at next release." if include_additional_warn_txt else None,
     )
 
     return actual_new_flag
@@ -34,7 +34,7 @@ def test_backcompat_old_flag():
         UserWarning,
         match=re.escape(
             '"old_flag" is deprecated and will be removed in 0.9.0, use "new_flag" instead. Will '
-            'remove at next release.'
+            "remove at next release."
         ),
     ):
         assert is_new(old_flag=False) is True

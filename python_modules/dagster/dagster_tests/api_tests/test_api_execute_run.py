@@ -20,10 +20,10 @@ def test_execute_run_api(pipeline_handle):
     with seven.TemporaryDirectory() as temp_dir:
         instance = DagsterInstance.local_temp(temp_dir)
         pipeline_run = instance.create_run(
-            pipeline_name='foo',
+            pipeline_name="foo",
             run_id=None,
             run_config={},
-            mode='default',
+            mode="default",
             solids_to_execute=None,
             step_keys_to_execute=None,
             status=None,
@@ -42,17 +42,17 @@ def test_execute_run_api(pipeline_handle):
 
     assert len(events) == 11
     assert [event.event_type_value for event in events] == [
-        'PIPELINE_START',
-        'ENGINE_EVENT',
-        'STEP_START',
-        'STEP_OUTPUT',
-        'STEP_SUCCESS',
-        'STEP_START',
-        'STEP_INPUT',
-        'STEP_OUTPUT',
-        'STEP_SUCCESS',
-        'ENGINE_EVENT',
-        'PIPELINE_SUCCESS',
+        "PIPELINE_START",
+        "ENGINE_EVENT",
+        "STEP_START",
+        "STEP_OUTPUT",
+        "STEP_SUCCESS",
+        "STEP_START",
+        "STEP_INPUT",
+        "STEP_OUTPUT",
+        "STEP_SUCCESS",
+        "ENGINE_EVENT",
+        "PIPELINE_SUCCESS",
     ]
 
 
@@ -63,10 +63,10 @@ def test_execute_run_api_grpc_server_handle(pipeline_handle):
     with seven.TemporaryDirectory() as temp_dir:
         instance = DagsterInstance.local_temp(temp_dir)
         pipeline_run = instance.create_run(
-            pipeline_name='foo',
+            pipeline_name="foo",
             run_id=None,
             run_config={},
-            mode='default',
+            mode="default",
             solids_to_execute=None,
             step_keys_to_execute=None,
             status=None,
@@ -89,20 +89,20 @@ def test_execute_run_api_grpc_server_handle(pipeline_handle):
 
     assert len(events) == 14
     assert [event.event_type_value for event in events] == [
-        'ENGINE_EVENT',
-        'ENGINE_EVENT',
-        'PIPELINE_START',
-        'ENGINE_EVENT',
-        'STEP_START',
-        'STEP_OUTPUT',
-        'STEP_SUCCESS',
-        'STEP_START',
-        'STEP_INPUT',
-        'STEP_OUTPUT',
-        'STEP_SUCCESS',
-        'ENGINE_EVENT',
-        'PIPELINE_SUCCESS',
-        'ENGINE_EVENT',
+        "ENGINE_EVENT",
+        "ENGINE_EVENT",
+        "PIPELINE_START",
+        "ENGINE_EVENT",
+        "STEP_START",
+        "STEP_OUTPUT",
+        "STEP_SUCCESS",
+        "STEP_START",
+        "STEP_INPUT",
+        "STEP_OUTPUT",
+        "STEP_SUCCESS",
+        "ENGINE_EVENT",
+        "PIPELINE_SUCCESS",
+        "ENGINE_EVENT",
     ]
 
 
@@ -113,10 +113,10 @@ def test_execute_run_api_grpc_python_handle(pipeline_handle):
     with seven.TemporaryDirectory() as temp_dir:
         instance = DagsterInstance.local_temp(temp_dir)
         pipeline_run = instance.create_run(
-            pipeline_name='foo',
+            pipeline_name="foo",
             run_id=None,
             run_config={},
-            mode='default',
+            mode="default",
             solids_to_execute=None,
             step_keys_to_execute=None,
             status=None,
@@ -147,18 +147,18 @@ def test_execute_run_api_grpc_python_handle(pipeline_handle):
 
             assert len(events) == 14
             assert [event.event_type_value for event in events] == [
-                'ENGINE_EVENT',
-                'ENGINE_EVENT',
-                'PIPELINE_START',
-                'ENGINE_EVENT',
-                'STEP_START',
-                'STEP_OUTPUT',
-                'STEP_SUCCESS',
-                'STEP_START',
-                'STEP_INPUT',
-                'STEP_OUTPUT',
-                'STEP_SUCCESS',
-                'ENGINE_EVENT',
-                'PIPELINE_SUCCESS',
-                'ENGINE_EVENT',
+                "ENGINE_EVENT",
+                "ENGINE_EVENT",
+                "PIPELINE_START",
+                "ENGINE_EVENT",
+                "STEP_START",
+                "STEP_OUTPUT",
+                "STEP_SUCCESS",
+                "STEP_START",
+                "STEP_INPUT",
+                "STEP_OUTPUT",
+                "STEP_SUCCESS",
+                "ENGINE_EVENT",
+                "PIPELINE_SUCCESS",
+                "ENGINE_EVENT",
             ]
