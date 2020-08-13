@@ -146,6 +146,7 @@ def test_pyspark_emr(mock_is_emr_step_complete):
                     ),
                 }
             },
+            "storage": {"in_memory": {}},
         },
     )
     assert result.success
