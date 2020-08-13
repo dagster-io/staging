@@ -6,7 +6,7 @@ from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.logger import LoggerDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.run_config_schema import create_environment_type
-from dagster.core.errors import DagsterInvalidConfigError
+from dagster.core.errors import DagsterInvalidConfigError, DagsterInvariantViolationError
 from dagster.utils import ensure_single_item
 
 
@@ -92,6 +92,9 @@ class EnvironmentConfig(
         mode = mode or pipeline_def.get_default_mode_name()
         environment_type = create_environment_type(pipeline_def, mode)
 
+        intermediate_storage_defs = pipeline_def.get_mode_definition(mode).intermediate_storage_defs
+        system_storage_defs = pipeline_def.get_mode_definition(mode).system_storage_defs
+
         config_evr = process_config(environment_type, run_config)
         if not config_evr.success:
             raise DagsterInvalidConfigError(
@@ -116,8 +119,10 @@ class EnvironmentConfig(
         return EnvironmentConfig(
             solids=solid_config_dict,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
-            storage=StorageConfig.from_dict(config_value.get('storage')),
-            intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
+            storage=StorageConfig.from_dict(config_value.get('storage'), system_storage_defs),
+            intermediate_storage=IntermediateStorageConfig.from_dict(
+                temp_intermed, intermediate_storage_defs
+            ),
             loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
@@ -246,20 +251,26 @@ class StorageConfig(namedtuple('_FilesConfig', 'system_storage_name system_stora
     def __new__(cls, system_storage_name, system_storage_config):
         return super(StorageConfig, cls).__new__(
             cls,
-            system_storage_name=check.opt_str_param(
-                system_storage_name, 'system_storage_name', 'in_memory'
-            ),
+            system_storage_name=check.opt_str_param(system_storage_name, 'system_storage_name'),
             system_storage_config=check.opt_dict_param(
                 system_storage_config, 'system_storage_config', key_type=str
             ),
         )
 
     @staticmethod
-    def from_dict(config=None):
+    def from_dict(config=None, system_storage_defs=None):
         check.opt_dict_param(config, 'config', key_type=str)
         if config:
             system_storage_name, system_storage_config = ensure_single_item(config)
             return StorageConfig(system_storage_name, system_storage_config.get('config'))
+        elif len(system_storage_defs) > 0:
+            if not system_storage_defs[0].config_schema:
+                return StorageConfig(system_storage_defs[0].name, {})
+            else:
+                raise DagsterInvariantViolationError(
+                    'Run config required for system storage, but none provided.'
+                )
+
         return StorageConfig(None, None)
 
 
@@ -281,7 +292,8 @@ class IntermediateStorageConfig(
         )
 
     @staticmethod
-    def from_dict(config=None):
+    def from_dict(config=None, intermediate_storage_defs=None):
+
         check.opt_dict_param(
             config, 'config', key_type=(str, EmptyIntermediateStoreBackcompatConfig)
         )
@@ -290,4 +302,14 @@ class IntermediateStorageConfig(
             return IntermediateStorageConfig(
                 intermediate_storage_name, intermediate_storage_config.get('config')
             )
+        elif len(intermediate_storage_defs) > 0:
+            if not intermediate_storage_defs[0].config_schema:
+                # When an intermediate storage definition is provided, and it does not require
+                # any configuration, the system can infer to use that definition.
+                return IntermediateStorageConfig(intermediate_storage_defs[0].name, {})
+            else:
+                raise DagsterInvariantViolationError(
+                    'Run config required for intermediate storage, but none provided.'
+                )
+
         return IntermediateStorageConfig(None, None)
