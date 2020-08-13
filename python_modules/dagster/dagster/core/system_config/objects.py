@@ -111,11 +111,13 @@ class EnvironmentConfig(
             IntermediateStorageDefinition,
             "intermediate storage",
         )
+
         # TODO:  replace this with a simple call to from_dict of config_mapped_intermediate_storage_configs when ready to fully deprecate
         # TODO:  tracking: https://github.com/dagster-io/dagster/issues/2705
-        temp_intermed = config_mapped_intermediate_storage_configs
-        if config_value.get("storage") and temp_intermed is None:
-            temp_intermed = {EmptyIntermediateStoreBackcompatConfig(): {}}
+        # Use intermediate storage if it has run config provided. Otherwise, default to system storage.
+        temp_intermed_run_config = config_mapped_intermediate_storage_configs
+        if not temp_intermed_run_config:
+            temp_intermed_run_config = {EmptyIntermediateStoreBackcompatConfig(): {}}
 
         config_mapped_execution_configs = config_map_objects(
             config_value, mode_def.executor_defs, "execution", ExecutorDefinition, "executor"
@@ -137,7 +139,7 @@ class EnvironmentConfig(
             solids=solid_config_dict,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
             storage=StorageConfig.from_dict(config_mapped_system_storage_configs),
-            intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
+            intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed_run_config),
             loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,

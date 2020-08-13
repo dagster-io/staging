@@ -67,6 +67,11 @@ class ModeDefinition(
                 "intermediate_storage_defs for intermediates and resource_defs for files"
             )
 
+        if intermediate_storage_defs:
+            cls._intermediate_storage_defs_provided = True
+        else:
+            cls._intermediate_storage_defs_provided = False
+
         return super(ModeDefinition, cls).__new__(
             cls,
             name=check.opt_str_param(name, "name", DEFAULT_MODE_NAME),
@@ -102,6 +107,10 @@ class ModeDefinition(
     @property
     def resource_key_set(self):
         return frozenset(self.resource_defs.keys())
+
+    @property
+    def intermediate_storage_defs_provided(self):
+        return self._intermediate_storage_defs_provided
 
     def get_system_storage_def(self, name):
         check.str_param(name, "name")

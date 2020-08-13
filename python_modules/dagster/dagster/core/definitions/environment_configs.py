@@ -3,9 +3,13 @@ from collections import namedtuple
 from dagster.config import Field, Selector
 from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
 from dagster.config.field import check_opt_field_param
-from dagster.config.field_utils import Shape
+from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.storage.system_storage import (
+    default_intermediate_storage_defs,
+    default_system_storage_defs,
+)
 from dagster.core.types.dagster_type import ALL_RUNTIME_BUILTINS, construct_dagster_type_dictionary
 from dagster.utils import check, ensure_single_item
 
@@ -87,8 +91,41 @@ def define_logger_dictionary_cls(creation_data):
     return Shape(fields)
 
 
+def define_storage_field(storage_selector, names_list):
+    """Define storage field using default options, if additional storage options have been provided."""
+    default_storage = FIELD_NO_DEFAULT_PROVIDED
+    def_key = list(names_list)[0]
+    possible_default = storage_selector.fields[def_key]
+    if all_optional_type(possible_default.config_type):
+        default_storage = {def_key: {}}
+    return Field(storage_selector, default_value=default_storage)
+
+
 def define_environment_cls(creation_data):
     check.inst_param(creation_data, "creation_data", EnvironmentClassCreationData)
+
+    # If intermediate storage definitions have been provided to the mode,
+    # then we should select a reasonable default among them if one exists.
+    if creation_data.mode_definition.intermediate_storage_defs_provided:
+        storage_selector = define_intermediate_storage_config_cls(creation_data.mode_definition)
+        intermediate_storage_field = define_storage_field(
+            storage_selector,
+            names_list=[
+                dfn.name for dfn in creation_data.mode_definition.intermediate_storage_defs
+            ],
+        )
+        storage_field = None
+    # If intermediate storage definitions have not been provided to the mode,
+    # we should default to using system storage until it is fully deprecated (0.10.0).
+    else:
+        intermediate_storage_field = Field(
+            define_intermediate_storage_config_cls(creation_data.mode_definition), is_required=False
+        )
+        storage_selector = define_storage_config_cls(creation_data.mode_definition)
+        storage_field = define_storage_field(
+            storage_selector,
+            names_list=[dfn.name for dfn in creation_data.mode_definition.system_storage_defs],
+        )
 
     return Shape(
         fields=remove_none_entries(
@@ -98,13 +135,8 @@ def define_environment_cls(creation_data):
                         creation_data.solids, creation_data.dependency_structure,
                     )
                 ),
-                "storage": Field(
-                    define_storage_config_cls(creation_data.mode_definition), is_required=False,
-                ),
-                "intermediate_storage": Field(
-                    define_intermediate_storage_config_cls(creation_data.mode_definition),
-                    is_required=False,
-                ),
+                "storage": storage_field,
+                "intermediate_storage": intermediate_storage_field,
                 "execution": Field(
                     define_executor_config_cls(creation_data.mode_definition), is_required=False,
                 ),
