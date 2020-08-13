@@ -1,6 +1,19 @@
 import pytest
 
-from dagster import DagsterInstance, ModeDefinition, PipelineDefinition, resource, solid
+from dagster import (
+    DagsterInstance,
+    Field,
+    ModeDefinition,
+    PipelineDefinition,
+    StringSource,
+    intermediate_storage,
+    resource,
+    solid,
+    system_storage,
+)
+from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
+from dagster.core.definitions.system_storage import SystemStorageDefinition
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.context_creation_pipeline import PipelineExecutionContextManager
 from dagster.core.execution.resources_init import (
@@ -98,3 +111,94 @@ def test_clean_event_generator_exit():
     ).get_generator()
     next(generator)
     generator.close()
+
+
+def test_empty_run_config():
+    '''Test pipeline creation when no run config is provided'''
+
+    system_storage_unused = SystemStorageDefinition(
+        name='test_system', is_persistent=False, required_resource_keys=set()
+    )
+
+    system_storage_unused_config = SystemStorageDefinition(
+        name='test_system_requires_config',
+        is_persistent=False,
+        required_resource_keys=set(),
+        config_schema={'field': Field(StringSource)},
+    )
+
+    intermediate_storage_unused = IntermediateStorageDefinition(
+        name='test_intermediate', is_persistent=False, required_resource_keys=set()
+    )
+
+    intermediate_storage_unused_config = IntermediateStorageDefinition(
+        name='test_intermediate_requires_config',
+        is_persistent=False,
+        required_resource_keys=set(),
+        config_schema={'field': Field(StringSource)},
+    )
+
+    @solid
+    def fake_solid(_):
+        pass
+
+    fake_mode = ModeDefinition(
+        name='fakemode',
+        intermediate_storage_defs=[intermediate_storage_unused],
+        system_storage_defs=[system_storage_unused],
+    )
+
+    pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
+
+    environment_config = EnvironmentConfig.build(pipeline_def, {}, mode='fakemode')
+
+    assert environment_config.intermediate_storage.intermediate_storage_name == 'test_intermediate'
+
+    assert environment_config.storage.system_storage_name == 'test_system'
+
+    fake_mode_in_mem = ModeDefinition(
+        name='fakemodeinmem', intermediate_storage_defs=[], system_storage_defs=[]
+    )
+
+    pipeline_def_in_mem = PipelineDefinition(
+        [fake_solid], name="fakename2", mode_defs=[fake_mode_in_mem]
+    )
+    environment_config_local = EnvironmentConfig.build(
+        pipeline_def_in_mem, {}, mode='fakemodeinmem'
+    )
+
+    # The default intermediate_storage_defs for any mode is the list [in_memory, filesystem].
+    # If no run_config is provided, should default to the first, which is in_memory
+    assert environment_config_local.intermediate_storage.intermediate_storage_name == 'in_memory'
+
+    assert environment_config_local.storage.system_storage_name == 'in_memory'
+
+    fake_mode_config_required_intermediate = ModeDefinition(
+        name='fakemodeconfigonly', intermediate_storage_defs=[intermediate_storage_unused_config]
+    )
+
+    pipeline_def_config_required_intermediate = PipelineDefinition(
+        [fake_solid], name="fakename3", mode_defs=[fake_mode_config_required_intermediate]
+    )
+
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match='Run config required for intermediate storage, but none provided.',
+    ):
+        EnvironmentConfig.build(
+            pipeline_def_config_required_intermediate, {}, mode='fakemodeconfigonly'
+        )
+
+    fake_mode_config_required_system = ModeDefinition(
+        name='fakemodeconfigonly', system_storage_defs=[system_storage_unused_config]
+    )
+
+    pipeline_def_config_required_system = PipelineDefinition(
+        [fake_solid], name="fakename3", mode_defs=[fake_mode_config_required_system]
+    )
+
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match='Run config required for system storage, but none provided.',
+    ):
+        EnvironmentConfig.build(pipeline_def_config_required_system, {}, mode='fakemodeconfigonly')
