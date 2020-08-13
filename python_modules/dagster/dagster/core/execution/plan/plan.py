@@ -13,7 +13,7 @@ from dagster.core.definitions import (
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
 from dagster.core.system_config.objects import (
-    EmptyIntermediateStoreBackcompatConfig,
+    EmptyIntermediateStorageBackcompatConfig,
     EnvironmentConfig,
 )
 from dagster.core.types.dagster_type import DagsterTypeKind
@@ -113,7 +113,7 @@ class _PlanBuilder(object):
     def storage_is_persistent(self):
         if isinstance(
             self.environment_config.intermediate_storage.intermediate_storage_name,
-            EmptyIntermediateStoreBackcompatConfig,
+            EmptyIntermediateStorageBackcompatConfig,
         ):
             return self.mode_definition.get_system_storage_def(
                 self.environment_config.storage.system_storage_name
