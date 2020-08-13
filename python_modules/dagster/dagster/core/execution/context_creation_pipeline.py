@@ -27,7 +27,7 @@ from dagster.core.storage.intermediate_storage import IntermediateStorage
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.type_storage import construct_type_storage_plugin_registry
 from dagster.core.system_config.objects import (
-    EmptyIntermediateStoreBackcompatConfig,
+    EmptyIntermediateStorageBackcompatConfig,
     EnvironmentConfig,
 )
 from dagster.loggers import default_loggers, default_system_loggers
@@ -67,7 +67,7 @@ def construct_intermediate_storage_data(storage_init_context):
 def intermediate_storage_def_from_config(mode_definition, environment_config):
     if isinstance(
         environment_config.intermediate_storage.intermediate_storage_name,
-        EmptyIntermediateStoreBackcompatConfig,
+        EmptyIntermediateStorageBackcompatConfig,
     ):
         return None
     for intermediate_storage_def in mode_definition.intermediate_storage_defs:

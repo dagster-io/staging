@@ -28,10 +28,10 @@ class SolidConfig(namedtuple('_SolidConfig', 'config inputs outputs')):
         )
 
 
-class EmptyIntermediateStoreBackcompatConfig(object):
+class EmptyIntermediateStorageBackcompatConfig(object):
     '''
-    This class is a sentinel object indicating that no intermediate stores have been passed in
-    and that the pipeline should instead use system storage to define an intermediate store.
+    This class is a sentinel object indicating that no intermediate storages have been passed in
+    and that the pipeline should instead use system storage to define an intermediate storage.
     '''
 
 
@@ -115,7 +115,7 @@ class EnvironmentConfig(
         # TODO:  tracking: https://github.com/dagster-io/dagster/issues/2705
         temp_intermed = config_mapped_intermediate_storage_configs
         if config_value.get('storage') and temp_intermed is None:
-            temp_intermed = {EmptyIntermediateStoreBackcompatConfig(): {}}
+            temp_intermed = {EmptyIntermediateStorageBackcompatConfig(): {}}
 
         config_mapped_execution_configs = config_map_objects(
             config_value, mode_def.executor_defs, 'execution', ExecutorDefinition, 'executor'
@@ -300,7 +300,7 @@ class IntermediateStorageConfig(
             intermediate_storage_name=check.opt_inst_param(
                 intermediate_storage_name,
                 'intermediate_storage_name',
-                (str, EmptyIntermediateStoreBackcompatConfig),
+                (str, EmptyIntermediateStorageBackcompatConfig),
                 'in_memory',
             ),
             intermediate_storage_config=check.opt_dict_param(
@@ -311,7 +311,7 @@ class IntermediateStorageConfig(
     @staticmethod
     def from_dict(config=None):
         check.opt_dict_param(
-            config, 'config', key_type=(str, EmptyIntermediateStoreBackcompatConfig)
+            config, 'config', key_type=(str, EmptyIntermediateStorageBackcompatConfig)
         )
         if config:
             intermediate_storage_name, intermediate_storage_config = ensure_single_item(config)
