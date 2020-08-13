@@ -1,5 +1,5 @@
 from .composite_solid import composite_solid
-from .hook import failure_hook, success_hook
+from .hook import failed_expectation_hook, failure_hook, succeeded_expectation_hook, success_hook
 from .lambda_solid import lambda_solid
 from .pipeline import pipeline
 from .repository import repository

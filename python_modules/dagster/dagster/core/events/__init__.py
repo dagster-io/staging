@@ -344,6 +344,10 @@ class DagsterEvent(
         return self.event_type == DagsterEventType.ENGINE_EVENT
 
     @property
+    def is_expectation_result(self):
+        return self.event_type == DagsterEventType.STEP_EXPECTATION_RESULT
+
+    @property
     def asset_key(self):
         if self.event_type != DagsterEventType.STEP_MATERIALIZATION:
             return None
