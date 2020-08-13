@@ -11,7 +11,7 @@ from dagster import (
 )
 from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
 from dagster.core.definitions.system_storage import SystemStorageDefinition
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvalidConfigError, DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.context_creation_pipeline import PipelineExecutionContextManager
 from dagster.core.execution.resources_init import (
@@ -230,3 +230,58 @@ def test_backcompat_intermediate_storage_config():
         EmptyIntermediateStoreBackcompatConfig,
     )
     assert environment_config.storage.system_storage_name == 'filesystem'
+
+
+def test_system_storage_definition_run_config_required():
+    """Run config required for system storage definition, none provided to pipeline def."""
+
+    system_storage_requires_config = SystemStorageDefinition(
+        name='test_system_requires_config',
+        is_persistent=False,
+        required_resource_keys=set(),
+        config_schema={'field': Field(StringSource)},
+    )
+    run_config = {'storage': {'test_system_requires_config': {'config': {'field': 'value'}}}}
+
+    fake_mode = ModeDefinition(
+        name='fakemode', system_storage_defs=[system_storage_requires_config]
+    )
+    pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
+
+    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode='fakemode')
+
+    assert environment_config.storage.system_storage_name == 'test_system_requires_config'
+
+    with pytest.raises(DagsterInvalidConfigError):
+        environment_config = EnvironmentConfig.build(pipeline_def, {}, mode='fakemode')
+
+
+def test_intermediate_storage_definition_run_config_required():
+    """Run config required for intermediate storage definition, none provided to pipeline def."""
+
+    intermediate_storage_requires_config = IntermediateStorageDefinition(
+        name='test_intermediate_requires_config',
+        is_persistent=False,
+        required_resource_keys=set(),
+        config_schema={'field': Field(StringSource)},
+    )
+    run_config = {
+        'intermediate_storage': {
+            'test_intermediate_requires_config': {'config': {'field': 'value'}}
+        }
+    }
+
+    fake_mode = ModeDefinition(
+        name='fakemode', intermediate_storage_defs=[intermediate_storage_requires_config]
+    )
+    pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
+
+    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode='fakemode')
+
+    assert (
+        environment_config.intermediate_storage.intermediate_storage_name
+        == 'test_intermediate_requires_config'
+    )
+
+    with pytest.raises(DagsterInvalidConfigError):
+        environment_config = EnvironmentConfig.build(pipeline_def, {}, mode='fakemode')
