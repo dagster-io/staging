@@ -3,7 +3,7 @@ from collections import namedtuple
 from dagster.config import Field, Selector
 from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
 from dagster.config.field import check_opt_field_param
-from dagster.config.field_utils import Shape
+from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import ALL_RUNTIME_BUILTINS, construct_dagster_type_dictionary
@@ -90,6 +90,57 @@ def define_logger_dictionary_cls(creation_data):
 def define_environment_cls(creation_data):
     check.inst_param(creation_data, 'creation_data', EnvironmentClassCreationData)
 
+    system_storage_config = define_storage_config_cls(creation_data.mode_definition)
+    keylist_system = list(system_storage_config.fields.keys())
+
+    # This case preserves backward compatibility with system storage.
+    # When no intermediate storage definitions are provided,
+    # the system is expected to defer to system storage.
+    # Therefore, we don't specify a default value when no custom system storage
+    # definitions have been provided.
+    if set(keylist_system) == set(['in_memory', 'filesystem']):
+        system_field = Field(
+            define_storage_config_cls(creation_data.mode_definition), is_required=False
+        )
+    else:
+        default_system_storage = FIELD_NO_DEFAULT_PROVIDED
+        if len(keylist_system) > 0:
+            def_key = keylist_system[0]
+            possible_default = system_storage_config.fields[def_key]
+            if all_optional_type(possible_default.config_type):
+                default_system_storage = {def_key: {}}
+        system_field = Field(
+            define_storage_config_cls(creation_data.mode_definition),
+            default_value=default_system_storage,
+        )
+
+    intermediate_storage_config = define_intermediate_storage_config_cls(
+        creation_data.mode_definition
+    )
+    keylist_intermediate = list(intermediate_storage_config.fields.keys())
+
+    # This case preserves backward compatibility with system storage.
+    # When no intermediate storage definitions are provided,
+    # the system is expected to defer to system storage.
+    # Therefore, we don't specify a default value when no custom intermediate storage
+    # definitions have been provided.
+    if set(keylist_intermediate) == set(['in_memory', 'filesystem']):
+        intermediate_field = Field(
+            define_intermediate_storage_config_cls(creation_data.mode_definition), is_required=False
+        )
+    else:
+        default_intermediate_storage = FIELD_NO_DEFAULT_PROVIDED
+        # Provide a default intermediate storage option if the first definition provided requires no config.
+        if len(keylist_intermediate) > 0:
+            def_key = keylist_intermediate[0]
+            possible_default = intermediate_storage_config.fields[def_key]
+            if all_optional_type(possible_default.config_type):
+                default_intermediate_storage = {def_key: {}}
+        intermediate_field = Field(
+            define_intermediate_storage_config_cls(creation_data.mode_definition),
+            default_value=default_intermediate_storage,
+        )
+
     return Shape(
         fields=remove_none_entries(
             {
@@ -98,13 +149,8 @@ def define_environment_cls(creation_data):
                         creation_data.solids, creation_data.dependency_structure,
                     )
                 ),
-                'storage': Field(
-                    define_storage_config_cls(creation_data.mode_definition), is_required=False,
-                ),
-                'intermediate_storage': Field(
-                    define_intermediate_storage_config_cls(creation_data.mode_definition),
-                    is_required=False,
-                ),
+                'storage': system_field,
+                'intermediate_storage': intermediate_field,
                 'execution': Field(
                     define_executor_config_cls(creation_data.mode_definition), is_required=False,
                 ),
