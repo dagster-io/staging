@@ -2,6 +2,7 @@ from .config import ConfigMapping
 from .decorators import (
     composite_solid,
     daily_schedule,
+    failed_expectation_hook,
     failure_hook,
     hook,
     hourly_schedule,
@@ -11,6 +12,7 @@ from .decorators import (
     repository,
     schedule,
     solid,
+    succeeded_expectation_hook,
     success_hook,
     weekly_schedule,
 )

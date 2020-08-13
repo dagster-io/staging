@@ -1,9 +1,19 @@
 from collections import defaultdict
 
 from dagster import ModeDefinition, execute_pipeline, pipeline, resource, solid
-from dagster.core.definitions import failure_hook, success_hook
+from dagster.core.definitions import (
+    failed_expectation_hook,
+    failure_hook,
+    succeeded_expectation_hook,
+    success_hook,
+)
 from dagster.core.definitions.decorators.hook import event_list_hook
-from dagster.core.definitions.events import HookExecutionResult
+from dagster.core.definitions.events import (
+    EventMetadataEntry,
+    ExpectationResult,
+    HookExecutionResult,
+    Output,
+)
 
 
 class SomeUserException(Exception):
@@ -67,6 +77,88 @@ def test_success_hook_on_solid_instance():
     result = execute_pipeline(a_pipeline, raise_on_error=False)
     assert not result.success
     assert called_hook_to_solids['a_hook'] == {'a_solid', 'solid_with_hook'}
+
+
+def test_successful_expectation_hook_on_solid_instance():
+
+    called_hook_to_solids = defaultdict(set)
+    called_metadata = defaultdict(set)
+
+    @succeeded_expectation_hook(required_resource_keys={'resource_a'})
+    def a_hook(context, metadata):
+        called_hook_to_solids[context.hook_def.name].add(context.solid.name)
+        called_metadata[context.hook_def.name].add(metadata[0].entry_data.text)
+        assert context.resources.resource_a == 1
+
+    @solid
+    def a_solid(_):
+        yield ExpectationResult(
+            success=True,
+            description='This is always true.',
+            metadata_entries=[EventMetadataEntry.text('success', label='success')],
+        )
+        yield Output(1)
+
+    @solid
+    def failed_solid(_):
+        yield ExpectationResult(
+            success=False,
+            description='This is never true.',
+            metadata_entries=[EventMetadataEntry.text('failure', label='failure')],
+        )
+        yield Output(1)
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={'resource_a': resource_a})])
+    def a_pipeline():
+        a_solid.with_hooks(hook_defs={a_hook})()
+        a_solid.alias('solid_with_hook').with_hooks(hook_defs={a_hook})()
+        a_solid.alias('solid_without_hook')()
+        failed_solid.with_hooks(hook_defs={a_hook})()
+
+    execute_pipeline(a_pipeline, raise_on_error=False)
+    assert called_hook_to_solids['a_hook'] == {'a_solid', 'solid_with_hook'}
+    assert called_metadata['a_hook'] == {'success'}
+
+
+def test_failed_expectation_hook_on_solid_instance():
+
+    called_hook_to_solids = defaultdict(set)
+    called_metadata = defaultdict(set)
+
+    @failed_expectation_hook(required_resource_keys={'resource_a'})
+    def a_hook(context, metadata):
+        called_hook_to_solids[context.hook_def.name].add(context.solid.name)
+        called_metadata[context.hook_def.name].add(metadata[0].entry_data.text)
+        assert context.resources.resource_a == 1
+
+    @solid
+    def a_solid(_):
+        yield ExpectationResult(
+            success=True,
+            description='This is always true.',
+            metadata_entries=[EventMetadataEntry.text('success', label='success')],
+        )
+        yield Output(1)
+
+    @solid
+    def failed_solid(_):
+        yield ExpectationResult(
+            success=False,
+            description='This is never true.',
+            metadata_entries=[EventMetadataEntry.text('failure', label='failure')],
+        )
+        yield Output(1)
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={'resource_a': resource_a})])
+    def a_pipeline():
+        a_solid.with_hooks(hook_defs={a_hook})()
+        a_solid.alias('solid_with_hook').with_hooks(hook_defs={a_hook})()
+        a_solid.alias('solid_without_hook')()
+        failed_solid.with_hooks(hook_defs={a_hook})()
+
+    execute_pipeline(a_pipeline, raise_on_error=False)
+    assert called_hook_to_solids['a_hook'] == {'failed_solid'}
+    assert called_metadata['a_hook'] == {'failure'}
 
 
 def test_failure_hook_on_solid_instance():

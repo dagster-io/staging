@@ -86,6 +86,140 @@ def event_list_hook(name=None, required_resource_keys=None):
     return _Hook(name=name, required_resource_keys=required_resource_keys)
 
 
+def failed_expectation_hook(name=None, required_resource_keys=None):
+    '''Create a hook on failed expectations with the specified parameters from the decorated function.
+
+    Args:
+        name (Optional[str]): The name of this hook.
+        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
+            hook.
+
+    Examples:
+
+        .. code-block:: python
+
+            @success_hook(required_resource_keys={'slack'})
+            def slack_on_success(context, metadata):
+                message = 'solid {} failed expectations with metadata {}'.format(context.solid.name, metadata[0].entry_data.md_str)
+                context.resources.slack.send_message(message)
+
+            @success_hook
+            def do_something_on_success(context, metadata):
+                do_something()
+
+
+    '''
+
+    def wrapper(fn):
+        check.callable_param(fn, 'fn')
+
+        expected_positionals = ['context', 'metadata']
+        fn_positionals, _ = split_function_parameters(fn, expected_positionals)
+        missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
+        if missing_positional:
+            raise DagsterInvalidDefinitionError(
+                "@success_hook '{hook_name}' decorated function does not have required positional "
+                "parameter '{missing_param}'. Hook functions should only have keyword arguments "
+                "that match input names and a first positional parameter named 'context'.".format(
+                    hook_name=fn.__name__, missing_param=missing_positional
+                )
+            )
+
+        if name is None or callable(name):
+            _name = fn.__name__
+        else:
+            _name = name
+
+        @event_list_hook(_name, required_resource_keys)
+        def _failed_expectation_hook(context, event_list):
+            for event in event_list:
+                if (
+                    event.is_expectation_result
+                    and not event.event_specific_data.expectation_result.success
+                ):
+                    fn(context, event.event_specific_data.expectation_result.metadata_entries)
+                    return HookExecutionResult(hook_name=_name, is_skipped=False)
+
+            # hook is skipped when fn didn't run
+            return HookExecutionResult(hook_name=_name, is_skipped=True)
+
+        return _failed_expectation_hook
+
+    # This case is for when decorator is used bare, without arguments, i.e. @success_hook
+    if callable(name):
+        check.invariant(required_resource_keys is None)
+        return wrapper(name)
+
+    return wrapper
+
+
+def succeeded_expectation_hook(name=None, required_resource_keys=None):
+    '''Create a hook on succeeded expectations with the specified parameters from the decorated function.
+
+    Args:
+        name (Optional[str]): The name of this hook.
+        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
+            hook.
+
+    Examples:
+
+        .. code-block:: python
+
+            @success_hook(required_resource_keys={'slack'})
+            def slack_on_success(context, metadata):
+                message = 'solid {} succeeded expectations with metadata {}'.format(context.solid.name, metadata[0].entry_data.md_str)
+                context.resources.slack.send_message(message)
+
+            @success_hook
+            def do_something_on_success(context, metadata):
+                do_something()
+
+
+    '''
+
+    def wrapper(fn):
+        check.callable_param(fn, 'fn')
+
+        expected_positionals = ['context', 'metadata']
+        fn_positionals, _ = split_function_parameters(fn, expected_positionals)
+        missing_positional = validate_decorated_fn_positionals(fn_positionals, expected_positionals)
+        if missing_positional:
+            raise DagsterInvalidDefinitionError(
+                "@success_hook '{hook_name}' decorated function does not have required positional "
+                "parameter '{missing_param}'. Hook functions should only have keyword arguments "
+                "that match input names and a first positional parameter named 'context'.".format(
+                    hook_name=fn.__name__, missing_param=missing_positional
+                )
+            )
+
+        if name is None or callable(name):
+            _name = fn.__name__
+        else:
+            _name = name
+
+        @event_list_hook(_name, required_resource_keys)
+        def _succeeded_expectation_hook(context, event_list):
+            for event in event_list:
+                if (
+                    event.is_expectation_result
+                    and event.event_specific_data.expectation_result.success
+                ):
+                    fn(context, event.event_specific_data.expectation_result.metadata_entries)
+                    return HookExecutionResult(hook_name=_name, is_skipped=False)
+
+            # hook is skipped when fn didn't run
+            return HookExecutionResult(hook_name=_name, is_skipped=True)
+
+        return _succeeded_expectation_hook
+
+    # This case is for when decorator is used bare, without arguments, i.e. @success_hook
+    if callable(name):
+        check.invariant(required_resource_keys is None)
+        return wrapper(name)
+
+    return wrapper
+
+
 def success_hook(name=None, required_resource_keys=None):
     '''Create a hook on step success events with the specified parameters from the decorated function.
 
