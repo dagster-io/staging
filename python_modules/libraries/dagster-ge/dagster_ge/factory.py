@@ -73,7 +73,6 @@ def ge_validation_solid_factory(datasource_name, suite_name):
             "action_list_operator", assets_to_validate=[batch], run_id=run_id
         )
         res = convert_to_json_serializable(results.list_validation_results())[0]
-        # TODO: replace with well built markdown
         md_str = render_multiple_validation_result_pages_markdown(
             validation_operator_result=results, run_info_at_end=True,
         )
