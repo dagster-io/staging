@@ -98,13 +98,13 @@ def failed_expectation_hook(name=None, required_resource_keys=None):
 
         .. code-block:: python
 
-            @success_hook(required_resource_keys={'slack'})
-            def slack_on_success(context, metadata):
+            @failed_expectation_hook(required_resource_keys={'slack'})
+            def slack_on_failed_expectation(context, metadata):
                 message = 'solid {} failed expectations with metadata {}'.format(context.solid.name, metadata[0].entry_data.md_str)
                 context.resources.slack.send_message(message)
 
-            @success_hook
-            def do_something_on_success(context, metadata):
+            @failed_expectation_hook
+            def do_something_on_failed_expectation(context, metadata):
                 do_something()
 
 
@@ -165,13 +165,13 @@ def succeeded_expectation_hook(name=None, required_resource_keys=None):
 
         .. code-block:: python
 
-            @success_hook(required_resource_keys={'slack'})
-            def slack_on_success(context, metadata):
+            @succeeded_expectation_hook(required_resource_keys={'slack'})
+            def slack_on_succeeded_expectation(context, metadata):
                 message = 'solid {} succeeded expectations with metadata {}'.format(context.solid.name, metadata[0].entry_data.md_str)
                 context.resources.slack.send_message(message)
 
-            @success_hook
-            def do_something_on_success(context, metadata):
+            @succeeded_expectation_hook
+            def do_something_on_succeeded_expectation(context, metadata):
                 do_something()
 
 
