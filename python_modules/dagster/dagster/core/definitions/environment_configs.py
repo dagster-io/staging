@@ -3,9 +3,13 @@ from collections import namedtuple
 from dagster.config import Field, Selector
 from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
 from dagster.config.field import check_opt_field_param
-from dagster.config.field_utils import Shape
+from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.storage.system_storage import (
+    default_intermediate_storage_defs,
+    default_system_storage_defs,
+)
 from dagster.core.types.dagster_type import ALL_RUNTIME_BUILTINS, construct_dagster_type_dictionary
 from dagster.utils import check, ensure_single_item
 
@@ -87,9 +91,33 @@ def define_logger_dictionary_cls(creation_data):
     return Shape(fields)
 
 
+def define_storage_field(
+    mode_definition, config_cls_fn, defaults, not_provided=FIELD_NO_DEFAULT_PROVIDED,
+):
+    """Define storage field using default options, if additional storage options have been provided."""
+    storage_config = config_cls_fn(mode_definition)
+    keyset = set(storage_config.fields.keys())
+    # If no custom storage options have been provided,
+    # then users do not need to provide any configuration.
+    if keyset == defaults:
+        return Field(config_cls_fn(mode_definition), is_required=False)
+    else:
+        default_storage = not_provided
+        if len(keyset) > 0:
+            def_key = list(keyset)[0]
+            possible_default = storage_config.fields[def_key]
+            if all_optional_type(possible_default.config_type):
+                default_storage = {def_key: {}}
+        return Field(storage_config, default_value=default_storage)
+
+
 def define_environment_cls(creation_data):
+<<<<<<< HEAD
     check.inst_param(creation_data, "creation_data", EnvironmentClassCreationData)
 
+=======
+    check.inst_param(creation_data, 'creation_data', EnvironmentClassCreationData)
+>>>>>>> made it unnecessary to require run config for intermediate storage when the intermediate_storage has no config schema.
     return Shape(
         fields=remove_none_entries(
             {
@@ -98,12 +126,15 @@ def define_environment_cls(creation_data):
                         creation_data.solids, creation_data.dependency_structure,
                     )
                 ),
-                "storage": Field(
-                    define_storage_config_cls(creation_data.mode_definition), is_required=False,
+                'storage': define_storage_field(
+                    creation_data.mode_definition,
+                    define_storage_config_cls,
+                    defaults=set([storage.name for storage in default_system_storage_defs]),
                 ),
-                "intermediate_storage": Field(
-                    define_intermediate_storage_config_cls(creation_data.mode_definition),
-                    is_required=False,
+                'intermediate_storage': define_storage_field(
+                    creation_data.mode_definition,
+                    define_intermediate_storage_config_cls,
+                    defaults=set([storage.name for storage in default_intermediate_storage_defs]),
                 ),
                 "execution": Field(
                     define_executor_config_cls(creation_data.mode_definition), is_required=False,
