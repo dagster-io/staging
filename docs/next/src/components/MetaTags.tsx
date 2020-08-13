@@ -9,7 +9,7 @@ type Props = {
 export function DynamicMetaTags(props: Props) {
   const {
     title = 'Dagster — A Python library for building data applications',
-    description = "Dagster is a system for building modern data applications. Combining an elegant programming model and beautiful UI, Dagster allows infrastructure engineers, data engineers, and data scientists to seamlessly collaborate to process and produce the trusted, reliable data needed in today's world.",
+    description = 'Dagster is a data orchestrator for machine learning, analytics, and ETL',
   } = props;
 
   return (
