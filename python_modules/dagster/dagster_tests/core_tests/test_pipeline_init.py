@@ -1,6 +1,13 @@
 import pytest
 
-from dagster import DagsterInstance, ModeDefinition, PipelineDefinition, resource, solid
+from dagster import (
+    DagsterInstance,
+    ModeDefinition,
+    PipelineDefinition,
+    intermediate_storage,
+    resource,
+    solid,
+)
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.context_creation_pipeline import PipelineExecutionContextManager
 from dagster.core.execution.resources_init import (
@@ -98,3 +105,36 @@ def test_clean_event_generator_exit():
     ).get_generator()
     next(generator)
     generator.close()
+
+
+def test_intermediate_storage_no_run_config():
+    '''Test creation of intermediate storage options that dont require any additional configuration'''
+
+    @intermediate_storage(name="test_intermediate")
+    def storage_unused(_):
+        pass
+
+    @solid
+    def fake_solid(_):
+        pass
+
+    fake_mode = ModeDefinition(name='fakemode', intermediate_storage_defs=[storage_unused])
+
+    pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
+
+    environment_config = EnvironmentConfig.build(pipeline_def, {}, mode='fakemode')
+
+    assert environment_config.intermediate_storage.intermediate_storage_name == 'test_intermediate'
+
+    fake_mode_in_mem = ModeDefinition(name='fakemodeinmem', intermediate_storage_defs=[])
+
+    pipeline_def_in_mem = PipelineDefinition(
+        [fake_solid], name="fakename2", mode_defs=[fake_mode_in_mem]
+    )
+    environment_config_local = EnvironmentConfig.build(
+        pipeline_def_in_mem, {}, mode='fakemodeinmem'
+    )
+
+    # The default intermediate_storage_defs for any mode is the list [in_memory, filesystem].
+    # If no run_config is provided, should default to the first, which is in_memory
+    assert environment_config_local.intermediate_storage.intermediate_storage_name == 'in_memory'

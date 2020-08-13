@@ -92,6 +92,8 @@ class EnvironmentConfig(
         mode = mode or pipeline_def.get_default_mode_name()
         environment_type = create_environment_type(pipeline_def, mode)
 
+        intermediate_storage_defs = pipeline_def.get_mode_definition(mode).intermediate_storage_defs
+
         config_evr = process_config(environment_type, run_config)
         if not config_evr.success:
             raise DagsterInvalidConfigError(
@@ -117,7 +119,9 @@ class EnvironmentConfig(
             solids=solid_config_dict,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
             storage=StorageConfig.from_dict(config_value.get('storage')),
-            intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
+            intermediate_storage=IntermediateStorageConfig.from_dict(
+                temp_intermed, intermediate_storage_defs
+            ),
             loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
@@ -281,7 +285,7 @@ class IntermediateStorageConfig(
         )
 
     @staticmethod
-    def from_dict(config=None):
+    def from_dict(config=None, intermediate_storage_defs=None):
         check.opt_dict_param(
             config, 'config', key_type=(str, EmptyIntermediateStoreBackcompatConfig)
         )
@@ -290,4 +294,8 @@ class IntermediateStorageConfig(
             return IntermediateStorageConfig(
                 intermediate_storage_name, intermediate_storage_config.get('config')
             )
+        elif len(intermediate_storage_defs) > 0:
+            intermediate_storage_def = intermediate_storage_defs[0]
+            return IntermediateStorageConfig(intermediate_storage_def.name, {})
+
         return IntermediateStorageConfig(None, None)
