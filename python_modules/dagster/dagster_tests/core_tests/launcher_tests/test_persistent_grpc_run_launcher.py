@@ -11,8 +11,8 @@ from dagster.core.host_representation.repository_location import GrpcServerRepos
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRunStatus
+from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
-from dagster.grpc.types import LoadableTargetOrigin
 
 
 @solid
