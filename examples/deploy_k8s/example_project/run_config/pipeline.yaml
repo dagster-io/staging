@@ -4,3 +4,5 @@ solids:
       word: test
     config:
       factor: 2
+storage:
+  in_memory:
