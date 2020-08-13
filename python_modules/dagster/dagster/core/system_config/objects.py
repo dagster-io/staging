@@ -6,7 +6,7 @@ from dagster.core.definitions.executor import ExecutorDefinition
 from dagster.core.definitions.logger import LoggerDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.run_config_schema import create_environment_type
-from dagster.core.errors import DagsterInvalidConfigError
+from dagster.core.errors import DagsterInvalidConfigError, DagsterInvariantViolationError
 from dagster.utils import ensure_single_item
 
 
@@ -92,6 +92,8 @@ class EnvironmentConfig(
         mode = mode or pipeline_def.get_default_mode_name()
         environment_type = create_environment_type(pipeline_def, mode)
 
+        intermediate_storage_defs = pipeline_def.get_mode_definition(mode).intermediate_storage_defs
+
         config_evr = process_config(environment_type, run_config)
         if not config_evr.success:
             raise DagsterInvalidConfigError(
@@ -117,7 +119,9 @@ class EnvironmentConfig(
             solids=solid_config_dict,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
             storage=StorageConfig.from_dict(config_value.get('storage')),
-            intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
+            intermediate_storage=IntermediateStorageConfig.from_dict(
+                temp_intermed, intermediate_storage_defs
+            ),
             loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
@@ -281,7 +285,13 @@ class IntermediateStorageConfig(
         )
 
     @staticmethod
-    def from_dict(config=None):
+    def from_dict(config=None, intermediate_storage_defs=None):
+        def _get_def_no_config(defs=None):
+            for d in defs:
+                if not d.config_schema:
+                    return d
+            return None
+
         check.opt_dict_param(
             config, 'config', key_type=(str, EmptyIntermediateStoreBackcompatConfig)
         )
@@ -290,4 +300,15 @@ class IntermediateStorageConfig(
             return IntermediateStorageConfig(
                 intermediate_storage_name, intermediate_storage_config.get('config')
             )
+        elif len(intermediate_storage_defs) > 0:
+            def_to_use = _get_def_no_config(intermediate_storage_defs)
+            if not def_to_use:
+                raise DagsterInvariantViolationError(
+                    'No run config provided for intermediate storage defs which require it: {}'.format(
+                        [d.name for d in intermediate_storage_defs]
+                    )
+                )
+            else:
+                return IntermediateStorageConfig(def_to_use.name, {})
+
         return IntermediateStorageConfig(None, None)
