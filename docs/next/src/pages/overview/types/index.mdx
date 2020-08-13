@@ -1,14 +1,13 @@
 import PyObject from 'components/PyObject';
 import { DynamicMetaTags } from 'components/MetaTags';
 
-<DynamicMetaTags
-  title="Dagster Types | Dagster"
-  description="Dagster Types."
-/>
+<!-- TODO -->
+
+<DynamicMetaTags title="Dagster Types | Dagster" description="Dagster Types." />
 
 # Dagster Types
 
-The Dagster type system helps users describe what kind of values their solids accept and produce.  Each solid input and output can be annotated with a <PyObject module="dagster" object="DagsterType" />.
+The Dagster type system helps users describe what kind of values their solids accept and produce. Each solid input and output can be annotated with a <PyObject module="dagster" object="DagsterType" />.
 
 The type system is _gradual_ and
 _optional_ - pipelines can run without types specified explicitly, and specifying types in some places doesn't require that types be specified everywhere. Inputs and outputs default to the <PyObject module="dagster" object="Any" /> type.
@@ -17,7 +16,7 @@ The Dagster type system is independent from the [PEP 484](https://www.python.org
 system, although we overload the type annotation syntax on functions to
 make it easier to specify the input and output types of your solids.
 
-Dagster type-checking happens at solid execution time - each type defines a `type_check_fn` that knows how to check whether values match what it expects.  When a type is specified for a solid's input, then the type check occurs immediately before the solid is executed.  When a type is specified for a solid's output, then the type check occurs immediately after the solid is executed.
+Dagster type-checking happens at solid execution time - each type defines a `type_check_fn` that knows how to check whether values match what it expects. When a type is specified for a solid's input, then the type check occurs immediately before the solid is executed. When a type is specified for a solid's output, then the type check occurs immediately after the solid is executed.
 
 ## DagsterType
 
