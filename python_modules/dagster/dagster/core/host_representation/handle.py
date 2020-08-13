@@ -1,7 +1,10 @@
 import sys
 import threading
+from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 from enum import Enum
+
+import six
 
 from dagster import check
 from dagster.api.list_repositories import sync_list_repositories, sync_list_repositories_grpc
@@ -31,19 +34,18 @@ def _assign_grpc_location_name(port, socket, host):
     )
 
 
-def _assign_python_env_location_name(repository_code_pointer_dict):
-    check.dict_param(
-        repository_code_pointer_dict,
-        'repository_code_pointer_dict',
-        key_type=str,
-        value_type=CodePointer,
-    )
-    if len(repository_code_pointer_dict) > 1:
-        raise DagsterInvariantViolationError(
-            'If there is one than more repository you must provide a location name'
-        )
+def _assign_python_env_location_name(loadable_target_origin):
+    check.inst_param(loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin)
 
-    return next(iter(repository_code_pointer_dict.keys()))
+    name = (
+        loadable_target_origin.module_name
+        if loadable_target_origin.module_name
+        else loadable_target_origin.python_file
+    )
+    if loadable_target_origin.attribute:
+        name = loadable_target_origin.attribute + ':' + name
+
+    return name
 
 
 # Which API the host process should use to communicate with the process
@@ -55,7 +57,11 @@ class UserProcessApi(Enum):
     GRPC = 'GRPC'
 
 
-class RepositoryLocationHandle:
+class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
+    @abstractmethod
+    def create_reloaded_handle(self):
+        pass
+
     @staticmethod
     def create_in_process_location(pointer):
         check.inst_param(pointer, 'pointer', CodePointer)
@@ -116,8 +122,8 @@ class RepositoryLocationHandle:
         return PythonEnvRepositoryLocationHandle(
             location_name=location_name
             if location_name
-            else _assign_python_env_location_name(repository_code_pointer_dict),
-            executable_path=loadable_target_origin.executable_path,
+            else _assign_python_env_location_name(loadable_target_origin),
+            loadable_target_origin=loadable_target_origin,
             repository_code_pointer_dict=repository_code_pointer_dict,
         )
 
@@ -138,10 +144,11 @@ class RepositoryLocationHandle:
         code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
         return ManagedGrpcPythonEnvRepositoryLocationHandle(
+            loadable_target_origin=loadable_target_origin,
             executable_path=list_repositories_response.executable_path,
             location_name=location_name
             if location_name
-            else _assign_python_env_location_name(code_pointer_dict),
+            else _assign_python_env_location_name(loadable_target_origin),
             repository_code_pointer_dict=code_pointer_dict,
             client=client,
             grpc_server_process=server,
@@ -200,6 +207,11 @@ class GrpcServerRepositoryLocationHandle(
             check.set_param(repository_names, 'repository_names', of_type=str),
         )
 
+    def create_reloaded_handle(self):
+        return RepositoryLocationHandle.create_grpc_server_location(
+            self.port, self.socket, self.host, self.location_name
+        )
+
     def get_current_image(self):
         job_image = self.client.get_current_image().current_image
         if not job_image:
@@ -231,14 +243,16 @@ class GrpcServerRepositoryLocationHandle(
 class PythonEnvRepositoryLocationHandle(
     namedtuple(
         '_PythonEnvRepositoryLocationHandle',
-        'executable_path location_name repository_code_pointer_dict',
+        'loadable_target_origin location_name repository_code_pointer_dict',
     ),
     RepositoryLocationHandle,
 ):
-    def __new__(cls, executable_path, location_name, repository_code_pointer_dict):
+    def __new__(cls, loadable_target_origin, location_name, repository_code_pointer_dict):
         return super(PythonEnvRepositoryLocationHandle, cls).__new__(
             cls,
-            check.str_param(executable_path, 'executable_path'),
+            check.inst_param(
+                loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin
+            ),
             check.str_param(location_name, 'location_name'),
             check.dict_param(
                 repository_code_pointer_dict,
@@ -248,11 +262,20 @@ class PythonEnvRepositoryLocationHandle(
             ),
         )
 
+    @property
+    def executable_path(self):
+        return self.loadable_target_origin.executable_path
+
+    def create_reloaded_handle(self):
+        return RepositoryLocationHandle.create_python_env_location(
+            self.loadable_target_origin, self.location_name,
+        )
+
 
 class ManagedGrpcPythonEnvRepositoryLocationHandle(
     namedtuple(
         '_ManagedGrpcPythonEnvRepositoryLocationHandle',
-        'executable_path location_name repository_code_pointer_dict grpc_server_process client',
+        'loadable_target_origin executable_path location_name repository_code_pointer_dict grpc_server_process client',
     ),
     RepositoryLocationHandle,
 ):
@@ -262,6 +285,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(
 
     def __new__(
         cls,
+        loadable_target_origin,
         executable_path,
         location_name,
         repository_code_pointer_dict,
@@ -273,6 +297,9 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(
 
         return super(ManagedGrpcPythonEnvRepositoryLocationHandle, cls).__new__(
             cls,
+            check.inst_param(
+                loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin
+            ),
             check.str_param(executable_path, 'executable_path'),
             check.str_param(location_name, 'location_name'),
             check.dict_param(
@@ -301,6 +328,11 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(
     def socket(self):
         return self.grpc_server_process.socket
 
+    def create_reloaded_handle(self):
+        return RepositoryLocationHandle.create_process_bound_grpc_server_location(
+            self.loadable_target_origin, self.location_name,
+        )
+
 
 class InProcessRepositoryLocationHandle(
     namedtuple('_InProcessRepositoryLocationHandle', 'location_name repository_code_pointer_dict'),
@@ -317,6 +349,9 @@ class InProcessRepositoryLocationHandle(
                 value_type=CodePointer,
             ),
         )
+
+    def create_reloaded_handle(self):
+        raise NotImplementedError('Not implemented for in-process')
 
 
 class RepositoryHandle(
