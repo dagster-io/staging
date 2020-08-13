@@ -224,6 +224,13 @@ def config_map_executors(pipeline_def, config_value, mode):
     return {executor_name: executor_config_evr.value}
 
 
+def get_def_no_config(defs=None):
+    for d in defs:
+        if not d.config_schema:
+            return d
+    return None
+
+
 class ExecutionConfig(
     namedtuple('_ExecutionConfig', 'execution_engine_name execution_engine_config')
 ):
