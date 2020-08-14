@@ -2,6 +2,7 @@ const path = require('path');
 const visit = require('unist-util-visit');
 const fs = require('fs');
 const limitSnippetLines = require('./src/scripts/limitSnippetLines');
+const withMdxEnhanced = require('next-mdx-enhanced');
 
 const DIRECTIVE_PATTERN = 'literalinclude';
 
@@ -52,14 +53,11 @@ const transform = () => (tree) => {
   visit(tree, 'code', visitor);
 };
 
-const withMDX = require('@next/mdx')({
-  extension: /\.mdx?$/,
-  options: {
-    remarkPlugins: [transform],
-  },
-});
-
-module.exports = withMDX({
+// 'next-mdx-enhanced' can handle the markdown frontmatter
+module.exports = withMdxEnhanced({
+  fileExtensions: ['mdx'],
+  remarkPlugins: [transform],
+})({
   pageExtensions: ['mdx', 'jsx', 'js', 'ts', 'tsx'],
   assetPrefix: process.env.BASE_PATH || '',
   publicRuntimeConfig: {
