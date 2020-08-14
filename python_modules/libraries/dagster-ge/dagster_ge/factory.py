@@ -28,12 +28,13 @@ def ge_data_context(context):
         yield ge.data_context.DataContext(context_root_dir=context.resource_config['ge_root_dir'])
 
 
-def ge_validation_solid_factory(datasource_name, suite_name):
+def ge_validation_solid_factory(datasource_name, suite_name, save_to_file=False):
     """
         Generates solids for interacting with GE, currently only works on pandas dataframes
     Args:
         datasource_name (str): the name of your pandas DataSource, see your great_expectations.yml
         suite_name (str): the name of your expectation suite, see your great_expectations.yml
+        save_to_file (Optional[bool]): whether to save validation results and data docs to file.
 
     Returns:
         A solid that takes in an in-memory dataframe and yields both an expectation with relevant metadata
@@ -59,6 +60,14 @@ def ge_validation_solid_factory(datasource_name, suite_name):
     )
     def ge_validation_solid(context, pandas_df):
         data_context = context.resources.ge_data_context
+        if save_to_file:
+            validation_operator = 'action_list_operator'
+        else:
+            validation_operator = 'ephemeral_validation'
+            data_context.add_validation_operator(
+                'ephemeral_validation',
+                {'class_name': 'ActionListValidationOperator', 'action_list': []},
+            )
         suite = data_context.get_expectation_suite(suite_name)
         batch_kwargs = {
             "dataset": pandas_df,
@@ -70,7 +79,7 @@ def ge_validation_solid_factory(datasource_name, suite_name):
             "run_time": datetime.datetime.utcnow(),
         }
         results = data_context.run_validation_operator(
-            "action_list_operator", assets_to_validate=[batch], run_id=run_id
+            validation_operator, assets_to_validate=[batch], run_id=run_id
         )
         res = convert_to_json_serializable(results.list_validation_results())[0]
         md_str = render_multiple_validation_result_pages_markdown(
