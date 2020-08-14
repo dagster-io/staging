@@ -193,29 +193,35 @@ def get_external_pipeline_from_managed_grpc_python_env_repository(pipeline_name)
     "get_external_pipeline",
     [
         get_external_pipeline_from_grpc_server_repository,
-        get_external_pipeline_from_managed_grpc_python_env_repository,
+        #        get_external_pipeline_from_managed_grpc_python_env_repository,
     ],
 )
 def test_successful_run(get_external_pipeline):  # pylint: disable=redefined-outer-name
-    with grpc_instance() as instance:
-        pipeline_run = instance.create_run_for_pipeline(pipeline_def=noop_pipeline, run_config=None)
-
-        with get_external_pipeline(pipeline_run.pipeline_name) as external_pipeline:
-            run_id = pipeline_run.run_id
-
-            assert instance.get_run_by_id(run_id).status == PipelineRunStatus.NOT_STARTED
-
-            launcher = instance.run_launcher
-            launcher.launch_run(
-                instance=instance, run=pipeline_run, external_pipeline=external_pipeline
+    for i in range(1, 20):
+        with grpc_instance() as instance:
+            pipeline_run = instance.create_run_for_pipeline(
+                pipeline_def=noop_pipeline, run_config=None
             )
 
-            pipeline_run = instance.get_run_by_id(run_id)
-            assert pipeline_run
-            assert pipeline_run.run_id == run_id
+            with get_external_pipeline(pipeline_run.pipeline_name) as external_pipeline:
+                run_id = pipeline_run.run_id
 
-            pipeline_run = poll_for_run(instance, run_id)
-            assert pipeline_run.status == PipelineRunStatus.SUCCESS
+                assert instance.get_run_by_id(run_id).status == PipelineRunStatus.NOT_STARTED
+
+                launcher = instance.run_launcher
+                launcher.launch_run(
+                    instance=instance, run=pipeline_run, external_pipeline=external_pipeline
+                )
+
+                pipeline_run = instance.get_run_by_id(run_id)
+                assert pipeline_run
+                assert pipeline_run.run_id == run_id
+
+                pipeline_run = poll_for_run(instance, run_id)
+
+                print(repr(instance.all_logs(run_id)))
+
+                assert pipeline_run.status == PipelineRunStatus.SUCCESS
 
 
 def test_run_always_finishes():  # pylint: disable=redefined-outer-name
