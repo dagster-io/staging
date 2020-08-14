@@ -95,6 +95,39 @@ class TestRunStorage:
         assert len(some_runs) == 1
         assert some_runs[0].run_id == one
 
+    def test_add_run_tags(self, storage):
+        assert storage
+        one = make_new_run_id()
+
+        storage.add_run(TestRunStorage.build_run(run_id=one, pipeline_name='foo'))
+
+        assert storage.get_run_tags() == []
+
+        storage.add_run_tags(one, {'tag1': 'val1'})
+
+        assert storage.get_run_tags() == [('tag1', {'val1'})]
+
+        storage.add_run_tags(one, {'tag1': 'val2', 'tag2': 'val3'})
+
+        test_run = storage.get_run_by_id(one)
+
+        assert len(test_run.tags) == 2
+        assert test_run.tags['tag1'] == 'val2'
+        assert test_run.tags['tag2'] == 'val3'
+
+        assert storage.get_run_tags() == [('tag1', {'val2'}), ('tag2', {'val3'})]
+
+        some_runs = storage.get_runs(PipelineRunsFilter(tags={'tag2': 'val3'}))
+
+        assert len(some_runs) == 1
+        assert some_runs[0].run_id == one
+
+        runs_with_old_tag = storage.get_runs(PipelineRunsFilter(tags={'tag1': 'val1'}))
+        assert len(runs_with_old_tag) == 0
+
+        runs_with_new_tag = storage.get_runs(PipelineRunsFilter(tags={'tag1': 'val2'}))
+        assert len(runs_with_new_tag) == 1
+
     def test_fetch_by_filter(self, storage):
         assert storage
         one = make_new_run_id()
