@@ -10,11 +10,11 @@ from dagster import (
     Field,
     Permissive,
     PythonObjectDagsterType,
+    Selector,
     String,
     check,
     dagster_type_materializer,
 )
-from dagster.config.field_utils import Selector
 from dagster.core.storage.system_storage import fs_intermediate_storage, fs_system_storage
 from dagster.core.storage.type_storage import TypeStoragePlugin
 
@@ -420,10 +420,271 @@ class SparkDataFrameFilesystemStoragePlugin(TypeStoragePlugin):  # pylint: disab
         return frozenset({'pyspark'})
 
 
-DataFrame = PythonObjectDagsterType(
+OldDataFrame = PythonObjectDagsterType(
     python_type=NativeSparkDataFrame,
     name='PySparkDataFrame',
     description='A PySpark data frame.',
     auto_plugins=[SparkDataFrameS3StoragePlugin, SparkDataFrameFilesystemStoragePlugin],
     materializer=spark_df_materializer,
+)
+
+# Goals
+#
+
+
+class Materializer:
+    def __init__(self, key, config_schema, resolver):
+        self.key = key
+        self.config_schema = config_schema
+        self.resolver = resolver
+
+
+class ComposableMaterializer:
+    def __init__(self, materializers):
+        self._materializer_dict = {
+            mat.key: mat
+            for mat in check.list_param(materializers, 'materializers', of_type=Materializer)
+        }
+
+    def create_config_schema(self):
+        selector_fields = {}
+        for key, mat in self._materializer_dict.items():
+            selector_fields[key] = mat.config_schema
+        return Selector(selector_fields)
+
+    def get_type_materializer(self):
+        @dagster_type_materializer(config_schema=self.create_config_schema())
+        def _materializer_impl(_context, config, obj):
+            key, config_for_key = list(config.items())[0]
+            check.invariant(key in self._materializer_dict, 'Config schema should ensure this')
+            materializer = self._materializer_dict[key]
+            return materializer.resolver(config_for_key, obj)
+
+        return _materializer_impl
+
+
+def create_composable_type_materializer(materializers):
+    materializer_dict = {
+        mat.key: mat
+        for mat in check.list_param(materializers, 'materializers', of_type=Materializer)
+    }
+
+    selector_fields = {}
+    for key, mat in materializer_dict.items():
+        selector_fields[key] = mat.config_schema
+    config_schema = Selector(selector_fields)
+
+    @dagster_type_materializer(config_schema=config_schema)
+    def _materializer_impl(_context, config, obj):
+        key, config_for_key = list(config.items())[0]
+        check.invariant(key in materializer_dict, 'Config schema should ensure this')
+        materializer = materializer_dict[key]
+        return materializer.resolver(config_for_key, obj)
+
+    return _materializer_impl
+
+
+DEFAULT_DESCRIPTION = 'A PySpark data frame.'
+
+
+def create_pyspark_dataframe_type(
+    name='PySparkDataFrame', materializers=None, description=DEFAULT_DESCRIPTION,
+):
+    check.str_param(name, 'name')
+    materializers = check.opt_list_param(materializers, 'materializers', of_type=Materializer)
+    check.str_param(description, 'description')
+    return PythonObjectDagsterType(
+        python_type=NativeSparkDataFrame,
+        name=name,
+        description=description,
+        auto_plugins=[SparkDataFrameS3StoragePlugin, SparkDataFrameFilesystemStoragePlugin],
+        materializer=create_composable_type_materializer(materializers) if materializers else None,
+    )
+
+
+def create_csv_materializer():
+    config_schema = Permissive(
+        {
+            'path': Field(
+                String,
+                is_required=True,
+                description="the path in any Hadoop supported file system.",
+            ),
+            'mode': Field(
+                WriteModeOptions,
+                is_required=False,
+                description="specifies the behavior of the save operation when data already exists.",
+            ),
+            'compression': Field(
+                WriteCompressionTextOptions,
+                is_required=False,
+                description="compression codec to use when saving to file.",
+            ),
+            'sep': Field(
+                String,
+                is_required=False,
+                description="sets a single character as a separator for each field and value. If None is set, it uses the default value, ``,``.",
+            ),
+            'quote': Field(
+                String,
+                is_required=False,
+                description="""sets a single character used for escaping quoted values where the separator can be part of the value. If None is set, it uses the default value, ``"``. If an empty string is set, it uses ``u0000`` (null character).""",
+            ),
+            'escape': Field(
+                String,
+                is_required=False,
+                description="sets a single character used for escaping quotes inside an already quoted value. If None is set, it uses the default value, ``\\``.",
+            ),
+            'escapeQuotes': Field(
+                Bool,
+                is_required=False,
+                description="a flag indicating whether values containing quotes should always be enclosed in quotes. If None is set, it uses the default value ``true``, escaping all values containing a quote character.",
+            ),
+            'quoteAll': Field(
+                Bool,
+                is_required=False,
+                description="a flag indicating whether all values should always be enclosed in quotes. If None is set, it uses the default value ``false``, only escaping values containing a quote character.",
+            ),
+            'header': Field(
+                Bool,
+                is_required=False,
+                description="writes the names of columns as the first line. If None is set, it uses the default value, ``false``.",
+            ),
+            'nullValue': Field(
+                String,
+                is_required=False,
+                description="sets the string representation of a null value. If None is set, it uses the default value, empty string.",
+            ),
+            'dateFormat': Field(
+                String,
+                is_required=False,
+                description="sets the string that indicates a date format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to date type. If None is set, it uses the default value, ``yyyy-MM-dd``.",
+            ),
+            'timestampFormat': Field(
+                String,
+                is_required=False,
+                description="sets the string that indicates a timestamp format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to timestamp type. If None is set, it uses the default value, ``yyyy-MM-dd'T'HH:mm:ss.SSSXXX``.",
+            ),
+            'ignoreLeadingWhiteSpace': Field(
+                Bool,
+                is_required=False,
+                description="a flag indicating whether or not leading whitespaces from values being written should be skipped. If None is set, it uses the default value, ``true``.",
+            ),
+            'ignoreTrailingWhiteSpace': Field(
+                Bool,
+                is_required=False,
+                description="a flag indicating whether or not trailing whitespaces from values being written should be skipped. If None is set, it uses the default value, ``true``.",
+            ),
+            'charToEscapeQuoteEscaping': Field(
+                String,
+                is_required=False,
+                description="sets a single character used for escaping the escape for the quote character. If None is set, the default value is escape character when escape and quote characters are different, ``\0`` otherwise..",
+            ),
+            'encoding': Field(
+                String,
+                is_required=False,
+                description="sets the encoding (charset) of saved csv files. If None is set, the default UTF-8 charset will be used.",
+            ),
+            'emptyValue': Field(
+                String,
+                is_required=False,
+                description="sets the string representation of an empty value. If None is set, it uses the default value, ``"
+                "``.",
+            ),
+        }
+    )
+
+    def _csv_resolver(file_options, spark_df):
+        spark_df.write.csv(**file_options)
+        return AssetMaterialization.file(file_options['path'])
+
+    return Materializer(key='csv', config_schema=config_schema, resolver=_csv_resolver)
+
+
+def create_parquet_materializer():
+    config_schema = Permissive(
+        {
+            'path': Field(
+                String,
+                is_required=True,
+                description="the path in any Hadoop supported file system.",
+            ),
+            'mode': Field(
+                WriteModeOptions,
+                is_required=False,
+                description="specifies the behavior of the save operation when data already exists.",
+            ),
+            'partitionBy': Field(
+                String, is_required=False, description="names of partitioning columns."
+            ),
+            'compression': Field(
+                WriteCompressionParquetOptions,
+                is_required=False,
+                description="compression codec to use when saving to file. This will override ``spark.sql.parquet.compression.codec``. If None is set, it uses the value specified in ``spark.sql.parquet.compression.codec``.",
+            ),
+        }
+    )
+
+    def _parquet_resolver(file_options, spark_df):
+        spark_df.write.parquet(**file_options)
+        return AssetMaterialization.file(file_options['path'])
+
+    return Materializer('parquet', config_schema, _parquet_resolver)
+
+
+def create_json_materializer():
+    config_schema = Permissive(
+        {
+            'path': Field(
+                String,
+                is_required=True,
+                description="the path in any Hadoop supported file system.",
+            ),
+            'mode': Field(
+                WriteModeOptions,
+                is_required=False,
+                description="specifies the behavior of the save operation when data already exists.",
+            ),
+            'compression': Field(
+                WriteCompressionTextOptions,
+                is_required=False,
+                description="compression codec to use when saving to file.",
+            ),
+            'dateFormat': Field(
+                String,
+                is_required=False,
+                description="sets the string that indicates a date format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to date type. If None is set, it uses the default value, ``yyyy-MM-dd``.",
+            ),
+            'timestampFormat': Field(
+                String,
+                is_required=False,
+                description="sets the string that indicates a timestamp format. Custom date formats follow the formats at ``java.text.SimpleDateFormat``. This applies to timestamp type. If None is set, it uses the default value, ``yyyy-MM-dd'T'HH:mm:ss.SSSXXX``.",
+            ),
+            'encoding': Field(
+                String,
+                is_required=False,
+                description="sets the encoding (charset) of saved csv files. If None is set, the default UTF-8 charset will be used.",
+            ),
+            'lineSep': Field(
+                String,
+                is_required=False,
+                description="defines the line separator that should be used for writing. If None is set, it uses the default value, ``\\n``.",
+            ),
+        }
+    )
+
+    def _json_resolver(file_options, spark_df):
+        spark_df.write.json(**file_options)
+        return AssetMaterialization.file(file_options['path'])
+
+    return Materializer('json', config_schema, _json_resolver)
+
+
+# Default dataframe is a created dataframe with autoplugins
+DataFrame = create_pyspark_dataframe_type(
+    materializers=[
+        create_csv_materializer(),
+        create_parquet_materializer(),
+        create_json_materializer(),
+    ]
 )
