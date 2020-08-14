@@ -15,6 +15,7 @@ const Layout: React.FunctionComponent = (props) => {
   const anchorHeadings = Object.values(anchors);
 
   const isHomepage = router.pathname === '/';
+  const isBlog = router.pathname.startsWith('/blog');
 
   return (
     <>
@@ -29,11 +30,13 @@ const Layout: React.FunctionComponent = (props) => {
           'bg-gray-100': router.pathname.indexOf('_apidocs') > 0,
         })}
       >
-        <SidebarMobile
-          isNavigationVisible={isNavigationVisible}
-          setIsNavigationVisible={setIsNavigationVisible}
-        />
-        <SidebarDesktop />
+        {!isBlog && (
+          <SidebarMobile
+            isNavigationVisible={isNavigationVisible}
+            setIsNavigationVisible={setIsNavigationVisible}
+          />
+        )}
+        {!isBlog && <SidebarDesktop />}
         <div className="flex flex-col w-0 flex-1">
           <main
             className="flex-1 relative z-0 overflow-y-auto pt-2 pb-6 focus:outline-none md:py-6"
@@ -43,13 +46,13 @@ const Layout: React.FunctionComponent = (props) => {
             <div className={cx('max-w-7xl mx-auto px-4 sm:px-6 md:px-8')}>
               <div className="flex justify-between">
                 <div className={cx('flex-1 overflow-hidden')}>
-                  <div className={cx('markdown')}>
-                    {props.children}
-                  </div>
+                  <div className={cx('markdown')}>{props.children}</div>
 
                   {!router.pathname.startsWith('/versions') && <PrevNext />}
                 </div>
-                {!isHomepage && <OnThisPage anchors={anchorHeadings} />}
+                {!isHomepage && !isBlog && (
+                  <OnThisPage anchors={anchorHeadings} />
+                )}
               </div>
             </div>
           </main>

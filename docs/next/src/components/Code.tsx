@@ -79,8 +79,6 @@ const Code: React.FunctionComponent<CodeProps> = ({
   startLine = '1',
   ...props
 }) => {
-  // console.log(props);
-
   const language = className ? className.replace(/language-/, '') : 'text';
   const emphasizeLines = props['emphasize-lines'];
   const caption = props['caption'];
