@@ -193,7 +193,7 @@ def get_external_pipeline_from_managed_grpc_python_env_repository(pipeline_name)
     "get_external_pipeline",
     [
         get_external_pipeline_from_grpc_server_repository,
-        get_external_pipeline_from_managed_grpc_python_env_repository,
+        #        get_external_pipeline_from_managed_grpc_python_env_repository,
     ],
 )
 def test_successful_run(get_external_pipeline):  # pylint: disable=redefined-outer-name
@@ -215,6 +215,9 @@ def test_successful_run(get_external_pipeline):  # pylint: disable=redefined-out
             assert pipeline_run.run_id == run_id
 
             pipeline_run = poll_for_run(instance, run_id)
+
+            print(repr(instance.all_logs(run_id)))
+
             assert pipeline_run.status == PipelineRunStatus.SUCCESS
 
 
