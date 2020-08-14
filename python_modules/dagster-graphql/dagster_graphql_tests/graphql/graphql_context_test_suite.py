@@ -659,8 +659,8 @@ class GraphQLContextVariant:
     def all_executing_variants():
         return [
             GraphQLContextVariant.in_memory_instance_in_process_env(),
-            GraphQLContextVariant.sqlite_with_sync_run_launcher_in_process_env(),
-            GraphQLContextVariant.sqlite_with_default_run_launcher_in_process_env(),
+            # GraphQLContextVariant.sqlite_with_sync_run_launcher_in_process_env(),
+            # GraphQLContextVariant.sqlite_with_default_run_launcher_in_process_env(),
         ]
 
     @staticmethod
