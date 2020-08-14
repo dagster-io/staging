@@ -63,6 +63,7 @@ def test_python_object_union_type():
     assert_success(ntype, 1.5)
     assert_failure(ntype, 'a')
 
+
 def test_python_union_type():
     ntype = PythonUnionDagsterType(python_types=(int, float))
     assert ntype.name == 'Union[int, float]'
