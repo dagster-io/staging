@@ -1,0 +1,49 @@
+import { ExampleReferenceLink } from 'components/ExampleReference';
+
+# Great Expectations integration
+
+<ExampleReferenceLink filePath="examples/ge_example" />
+
+This example demonstrates how to use the GE solid factory
+to test incoming data against a set of expectations built through Great Expectations' tooling.
+
+For this example, we'll be using two versions of a dataset of baseball team payroll and wins,
+with one version modified to hold incorrect data.
+
+
+The basic call to the GE solid factory is below.
+
+
+```python literalinclude caption=ge_demo.py
+file:/ge_example/ge_demo.py
+lines:25-27
+```
+
+And here's how you could use that call with other solids
+
+```python literalinclude caption=ge_demo.py
+file:/ge_example/ge_demo.py
+lines:18-23
+```
+
+(alternatively, one could use hooks
+to respond to the expectation result [INSERT HOOK TUTORIAL HERE])
+
+Finally, here's the full pipeline using the GE solid, with presets to use both the
+correct and incorrect data:
+
+```python literalinclude caption=ge_demo.py
+file:/ge_example/ge_demo.py
+lines:1-77
+```
+
+## Open in a playground
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#EXAMPLE=ge_example/https://github.com/dagster-io/dagster)
+
+## Download
+
+```
+curl https://codeload.github.com/dagster-io/dagster/tar.gz/master | tar -xz --strip=2 dagster-master/examples/airflow_ingest
+cd airflow_ingest
+```
