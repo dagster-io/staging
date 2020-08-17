@@ -441,8 +441,11 @@ class _Nothing(DagsterType):
 class PythonObjectDagsterType(DagsterType):
     '''Define a type in dagster whose typecheck is an isinstance check.
 
+    Specifically, the type can either be a single python type (e.g. int),
+    or a tuple of types (e.g. (int, float)) which is treated as a union.
+
     Args:
-        python_type (Type): The dagster typecheck function calls instanceof on
+        python_type (Union[Type, Tuple[Type, ...]): The dagster typecheck function calls instanceof on
             this type.
         name (Optional[str]): Name the type. Defaults to the name of ``python_type``.
         key (Optional[str]): Key of the type. Defaults to name.
