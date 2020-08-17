@@ -401,19 +401,11 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
         </GridScrollContainer>
       </div>
       {stepRows.length === 0 && <EmptyMessage>No data to display.</EmptyMessage>}
-      <div style={{ padding: "10px 0", minHeight: 220 }}>
+      <div style={{ padding: "10px 0" }}>
         <RunTable
           runs={focusedPartition ? focusedPartition.runs : []}
           onSetFilter={() => {}}
-          nonIdealState={
-            <NonIdealState
-              description={
-                focusedPartition
-                  ? `No runs for ${focusedPartitionName}. Select another partition above.`
-                  : `No runs to display. Select a partition above.`
-              }
-            />
-          }
+          nonIdealState={<div />}
         />
       </div>
     </PartitionRunMatrixContainer>
@@ -427,7 +419,6 @@ const EmptyMessage = styled.div`
 
 const PartitionRunMatrixContainer = styled.div`
   display: block;
-  border-bottom: 1px solid ${Colors.GRAY5};
 `;
 
 const OptionsContainer = styled.div`
