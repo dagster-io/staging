@@ -1,6 +1,11 @@
 import collections
 
-from dagster import PythonObjectDagsterType, usable_as_dagster_type
+from dagster import (
+    PythonObjectDagsterType,
+    check_dagster_type,
+    dagster_type,
+    usable_as_dagster_type,
+)
 from dagster.core.types.dagster_type import resolve_dagster_type
 
 
@@ -27,18 +32,28 @@ def test_dagster_type_decorator_name_desc():
     class Something(object):
         pass
 
-    dagster_type = resolve_dagster_type(Something)
-    assert dagster_type.name == 'DifferentName'
-    assert dagster_type.description == 'desc'
+    resolved_type = resolve_dagster_type(Something)
+    assert resolved_type.name == 'DifferentName'
+    assert resolved_type.description == 'desc'
 
 
 def test_make_dagster_type():
     SomeNamedTuple = collections.namedtuple('SomeNamedTuple', 'prop')
     DagsterSomeNamedTuple = PythonObjectDagsterType(SomeNamedTuple)
-    dagster_type = resolve_dagster_type(DagsterSomeNamedTuple)
-    assert dagster_type.name == 'SomeNamedTuple'
+    resolved_type = resolve_dagster_type(DagsterSomeNamedTuple)
+    assert resolved_type.name == 'SomeNamedTuple'
     assert SomeNamedTuple(prop='foo').prop == 'foo'
 
     DagsterNewNameNamedTuple = PythonObjectDagsterType(SomeNamedTuple, name='OverwriteName')
-    dagster_type = resolve_dagster_type(DagsterNewNameNamedTuple)
-    assert dagster_type.name == 'OverwriteName'
+    resolved_type = resolve_dagster_type(DagsterNewNameNamedTuple)
+    assert resolved_type.name == 'OverwriteName'
+
+
+def test_python_object_type_with_custom_type_check():
+    @dagster_type(name='Int3')
+    def eq_3(_, value):
+        return isinstance(value, int) and value == 3
+
+    assert eq_3.name == 'Int3'
+    assert check_dagster_type(eq_3, 3).success
+    assert not check_dagster_type(eq_3, 5).success

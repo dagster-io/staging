@@ -135,6 +135,7 @@ from dagster.core.types.dagster_type import (
     PythonUnionDagsterType,
 )
 from dagster.core.types.decorator import (
+    dagster_type,
     make_python_type_usable_as_dagster_type,
     usable_as_dagster_type,
 )
@@ -282,6 +283,7 @@ __all__ = [
     'String',
     'Tuple',
     'TypeCheck',
+    'dagster_type',
     'dagster_type_loader',
     'dagster_type_materializer',
     'input_hydration_config',

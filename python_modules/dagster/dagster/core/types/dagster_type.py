@@ -151,7 +151,7 @@ class DagsterType(object):
         )
 
         self._type_check_fn = check.callable_param(type_check_fn, 'type_check_fn')
-        _validate_type_check_fn(self._type_check_fn, self.name)
+        validate_type_check_fn(self._type_check_fn, self.name)
 
         auto_plugins = check.opt_list_param(auto_plugins, 'auto_plugins', of_type=type)
 
@@ -242,7 +242,7 @@ class DagsterType(object):
         return self.kind == DagsterTypeKind.NOTHING
 
 
-def _validate_type_check_fn(fn, name):
+def validate_type_check_fn(fn, name):
     from dagster.seven import get_args
 
     args = get_args(fn)
