@@ -29,12 +29,14 @@ interface PartitionViewProps {
   partitionSetName: string;
   cursor: string | undefined;
   setCursor: (cursor: string | undefined) => void;
+  onLoaded?: () => void;
 }
 
 export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
   partitionSetName,
   cursor,
-  setCursor
+  setCursor,
+  onLoaded
 }) => {
   const [cursorStack, setCursorStack] = React.useState<string[]>([]);
   const [pageSize, setPageSize] = React.useState<number | undefined>(7);
@@ -66,6 +68,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
       {(queryResult: QueryResult<PartitionLongitudinalQuery, any>) => (
         <Loading queryResult={queryResult} allowStaleData={true}>
           {({ partitionSetOrError }) => {
+            onLoaded?.();
             if (partitionSetOrError.__typename !== "PartitionSet") {
               return null;
             }
@@ -88,7 +91,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
             const showLoading = queryResult.loading && queryResult.networkStatus !== 6;
             return (
               <div style={{ marginTop: 30 }}>
-                <Header>{`Partition Set: ${partitionSetName}`}</Header>
+                <Header>Longitudinal History</Header>
                 <Divider />
                 <PartitionPagerControls
                   displayed={partitions.slice(0, pageSize)}
