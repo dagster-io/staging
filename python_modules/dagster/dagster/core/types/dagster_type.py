@@ -444,6 +444,22 @@ class PythonObjectDagsterType(DagsterType):
     Specifically, the type can either be a single python type (e.g. int),
     or a tuple of types (e.g. (int, float)) which is treated as a union.
 
+    Examples:
+        ``` python
+        ntype = PythonObjectDagsterType(python_type=int)
+        assert ntype.name == 'int'
+        assert_success(ntype, 1)
+        assert_failure(ntype, 'a')
+        ```
+
+        ``` python
+        ntype = PythonObjectDagsterType(python_type=(int, float))
+        assert ntype.name == 'Union[int, float]'
+        assert_success(ntype, 1)
+        assert_success(ntype, 1.5)
+        assert_failure(ntype, 'a')
+        ```
+
     Args:
         python_type (Union[Type, Tuple[Type, ...]): The dagster typecheck function calls instanceof on
             this type.
