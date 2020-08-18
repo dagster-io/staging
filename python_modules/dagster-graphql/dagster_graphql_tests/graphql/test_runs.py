@@ -12,6 +12,8 @@ from dagster.core.execution.api import execute_run
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.tags import PARENT_RUN_ID_TAG, ROOT_RUN_ID_TAG
 
+from .graphql_context_test_suite import ExecutingGraphQLContextTestMatrix
+
 RUNS_QUERY = '''
 query PipelineRunsRootQuery($selector: PipelineSelector!) {
   pipelineOrError(params: $selector) {
@@ -39,6 +41,10 @@ fragment RunHistoryRunFragment on PipelineRun {
   runConfigYaml
   mode
   canTerminate
+  tags {
+    key
+    value
+  }
 }
 '''
 
@@ -56,10 +62,20 @@ mutation DeleteRun($runId: String!) {
 }
 '''
 
+ALL_TAGS_QUERY = '''
+{
+  pipelineRunTags {
+    ... on PipelineTagAndValues {
+      key
+      values
+    }
+  }
+}
+'''
 
 ALL_RUNS_QUERY = '''
 {
-  pipelineRunsOrError{
+  pipelineRunsOrError {
     ... on PipelineRuns {
       results {
         runId
@@ -148,67 +164,95 @@ def _get_runs_data(result, run_id):
     return None
 
 
-def test_get_runs_over_graphql(graphql_context):
-    # This include needs to be here because its inclusion screws up
-    # other code in this file which reads itself to load a repo
-    from .utils import sync_execute_get_run_log_data
+class TestGetRuns(ExecutingGraphQLContextTestMatrix):
+    def test_get_runs_over_graphql(self, graphql_context):
+        # This include needs to be here because its inclusion screws up
+        # other code in this file which reads itself to load a repo
+        from .utils import sync_execute_get_run_log_data
 
-    selector = infer_pipeline_selector(graphql_context, "multi_mode_with_resources")
+        selector = infer_pipeline_selector(graphql_context, "multi_mode_with_resources")
 
-    payload_one = sync_execute_get_run_log_data(
-        context=graphql_context,
-        variables={
-            'executionParams': {
-                'selector': selector,
-                'mode': 'add_mode',
-                'runConfigData': {'resources': {'op': {'config': 2}}},
-            }
-        },
-    )
-    run_id_one = payload_one['run']['runId']
+        payload_one = sync_execute_get_run_log_data(
+            context=graphql_context,
+            variables={
+                'executionParams': {
+                    'selector': selector,
+                    'mode': 'add_mode',
+                    'runConfigData': {'resources': {'op': {'config': 2}}},
+                    'executionMetadata': {'tags': [{'key': 'fruit', 'value': 'apple'}]},
+                }
+            },
+        )
+        run_id_one = payload_one['run']['runId']
 
-    payload_two = sync_execute_get_run_log_data(
-        context=graphql_context,
-        variables={
-            'executionParams': {
-                'selector': selector,
-                'mode': 'add_mode',
-                'runConfigData': {'resources': {'op': {'config': 3}}},
-            }
-        },
-    )
+        read_context = graphql_context
 
-    run_id_two = payload_two['run']['runId']
+        result = execute_dagster_graphql(read_context, RUNS_QUERY, variables={'selector': selector})
 
-    read_context = graphql_context
+        runs = result.data['pipelineOrError']['runs']
+        assert len(runs) == 1
 
-    result = execute_dagster_graphql(read_context, RUNS_QUERY, variables={'selector': selector})
+        tags = runs[0]['tags']
+        assert len(tags) == 1
 
-    # delete the second run
-    result = execute_dagster_graphql(
-        read_context, DELETE_RUN_MUTATION, variables={'runId': run_id_two}
-    )
-    assert result.data['deletePipelineRun']['__typename'] == 'DeletePipelineRunSuccess'
-    assert result.data['deletePipelineRun']['runId'] == run_id_two
+        assert tags[0]['key'] == 'fruit'
+        assert tags[0]['value'] == 'apple'
 
-    # query it back out
-    result = execute_dagster_graphql(read_context, RUNS_QUERY, variables={'selector': selector})
+        payload_two = sync_execute_get_run_log_data(
+            context=graphql_context,
+            variables={
+                'executionParams': {
+                    'selector': selector,
+                    'mode': 'add_mode',
+                    'runConfigData': {'resources': {'op': {'config': 3}}},
+                    'executionMetadata': {'tags': [{'key': 'veggie', 'value': 'carrot'}]},
+                }
+            },
+        )
 
-    # first is the same
-    run_one_data = _get_runs_data(result, run_id_one)
-    assert run_one_data
+        run_id_two = payload_two['run']['runId']
 
-    # second is gone
-    run_two_data = _get_runs_data(result, run_id_two)
-    assert run_two_data is None
+        result = execute_dagster_graphql(read_context, RUNS_QUERY, variables={'selector': selector})
 
-    # try to delete the second run again
-    execute_dagster_graphql(read_context, DELETE_RUN_MUTATION, variables={'runId': run_id_two})
+        runs = result.data['pipelineOrError']['runs']
+        assert len(runs) == 2
 
-    result = execute_dagster_graphql(
-        read_context, DELETE_RUN_MUTATION, variables={'runId': run_id_two}
-    )
-    assert result.data['deletePipelineRun']['__typename'] == 'PipelineRunNotFoundError'
+        all_tags_result = execute_dagster_graphql(read_context, ALL_TAGS_QUERY)
+        tags = all_tags_result.data['pipelineRunTags']
+
+        assert len(tags) == 2
+        tags_dict = {item['key']: item['values'] for item in tags}
+
+        assert tags_dict == {
+            'fruit': ['apple'],
+            'veggie': ['carrot'],
+        }
+
+        # delete the second run
+        result = execute_dagster_graphql(
+            read_context, DELETE_RUN_MUTATION, variables={'runId': run_id_two}
+        )
+        assert result.data['deletePipelineRun']['__typename'] == 'DeletePipelineRunSuccess'
+        assert result.data['deletePipelineRun']['runId'] == run_id_two
+
+        # query it back out
+        result = execute_dagster_graphql(read_context, RUNS_QUERY, variables={'selector': selector})
+
+        # first is the same
+        run_one_data = _get_runs_data(result, run_id_one)
+        assert run_one_data
+
+        # second is gone
+        run_two_data = _get_runs_data(result, run_id_two)
+        assert run_two_data is None
+
+        # try to delete the second run again
+        execute_dagster_graphql(read_context, DELETE_RUN_MUTATION, variables={'runId': run_id_two})
+
+        result = execute_dagster_graphql(
+            read_context, DELETE_RUN_MUTATION, variables={'runId': run_id_two}
+        )
+        assert result.data['deletePipelineRun']['__typename'] == 'PipelineRunNotFoundError'
 
 
 def get_repo_at_time_1():
