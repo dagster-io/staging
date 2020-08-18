@@ -182,20 +182,3 @@ class Lakehouse:
 
     def query_assets(self, query: str) -> List[Asset]:
         return self._assets.query(query)
-
-
-def get_ancestors(asset: Asset) -> List[Asset]:
-    ancestors = []
-    stack = [asset]
-    covered_asset_paths = set()
-
-    while stack:
-        cur = stack.pop()
-        if cur.computation:
-            for dep in cur.computation.deps.values():
-                if dep.asset.path not in covered_asset_paths:
-                    stack.append(dep.asset)
-                    covered_asset_paths.add(dep.asset.path)
-                    ancestors.append(dep.asset)
-
-    return ancestors
