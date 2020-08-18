@@ -7,16 +7,22 @@ from dagster.cli.workspace.cli_target import (
     get_external_repository_from_kwargs,
     repository_target_argument,
 )
+from lakehouse.asset import Asset
+from lakehouse.house import Lakehouse
 
 
 def load_assets(module_name):
     module = importlib.import_module(module_name)
-    return getattr(module, 'assets')
+    attrs = [getattr(module, attr_name) for attr_name in dir(module)]
+    assets = [attr for attr in attrs if isinstance(attr, Asset)]
+    return assets
 
 
-def load_lakehouse(module_name):
+def load_lakehouses(module_name):
     module = importlib.import_module(module_name)
-    return getattr(module, 'lakehouse')
+    attrs = [getattr(module, attr_name) for attr_name in dir(module)]
+    lakehouses = [attr for attr in attrs if isinstance(attr, Lakehouse)]
+    return lakehouses
 
 
 def print_table(rows, spacing=7):
@@ -137,12 +143,18 @@ def get_internal_repository_from_kwargs(kwargs, instance):
 
 
 @click.command()
-@repository_target_argument
-def update_cli(**kwargs):
-    instance = DagsterInstance.get()
+@click.option('--module', type=click.STRING, required=True)
+@click.option('--mode', type=click.STRING, default='default')
+@click.option('--assets', type=click.STRING, default='*')
+def update_cli(module, mode, assets):
+    lakehouses = load_lakehouses(module)
+    check.invariant(len(lakehouses) == 1, 'There should only be one lakehouse')
+    lakehouse = lakehouses[0]
+    asset_defs = lakehouse.query_assets(assets)
 
-    repo = get_internal_repository_from_kwargs(kwargs, instance)
-    lakehouse_def = repo.get_lakehouse_def()
+    execute_pipeline(
+        lakehouse.build_pipeline_definition('update ' + assets, asset_defs), mode=mode,
+    )
 
 
 def create_lakehouse_cli():
