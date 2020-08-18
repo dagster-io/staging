@@ -251,7 +251,11 @@ const StepSelector = ({
 
   return (
     <>
-      <NavSectionHeader>Run steps</NavSectionHeader>
+      <NavSectionHeader>
+        Run steps
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: 13, opacity: 0.5 }}>Tip: Shift-click to multi-select</span>
+      </NavSectionHeader>
       <NavSection>
         {Object.keys(selected).map(stepKey => (
           <Item
@@ -286,6 +290,7 @@ const NavSectionHeader = styled.div`
   border-bottom: 1px solid ${Colors.GRAY5};
   margin-bottom: 10px;
   padding-bottom: 5px;
+  display: flex;
 `;
 const NavSection = styled.div`
   margin-bottom: 30px;
