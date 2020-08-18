@@ -1,6 +1,7 @@
 import * as React from "react";
+import moment from "moment";
 import { uniq } from "lodash";
-import { Colors, Checkbox, NonIdealState } from "@blueprintjs/core";
+import { Colors, Checkbox, NonIdealState, MultiSlider, Intent } from "@blueprintjs/core";
 import styled from "styled-components/macro";
 
 import {
@@ -38,22 +39,24 @@ const TITLE_TOTAL_FAILURES = "This step failed at least once for this percent of
 
 const TITLE_FINAL_FAILURES = "This step failed to run successfully for this percent of partitions.";
 
-const SUCCESS_COLOR = "#CFE6DC";
+const SUCCESS_COLOR = ({ dimSuccesses }: { dimSuccesses?: boolean }) =>
+  dimSuccesses ? "#CFE6DC" : "#009857";
 
 const BOX_COL_WIDTH = 23;
 
 const OVERSCROLL = 150;
 
+function getStartTime(a: Partition["runs"][0]) {
+  return ("startTime" in a.stats && a.stats.startTime) || 0;
+}
 function byStartTime(a: Partition["runs"][0], b: Partition["runs"][0]) {
-  return (
-    (("startTime" in a.stats && a.stats.startTime) || 0) -
-    (("startTime" in b.stats && b.stats.startTime) || 0)
-  );
+  return getStartTime(a) - getStartTime(b);
 }
 
 interface DisplayOptions {
   showSucessful: boolean;
   showPrevious: boolean;
+  colorizeByAge: boolean;
 }
 
 function buildMatrixData(
@@ -61,22 +64,36 @@ function buildMatrixData(
   partitions: Partition[],
   options: DisplayOptions
 ) {
+  // Note this is sorting partition runs in place, I don't think it matters and
+  // seems better than cloning all the arrays.
+  partitions.forEach(p => p.runs.sort(byStartTime));
+
   const partitionColumns = partitions.map(p => ({
     name: p.name,
     runs: p.runs,
     steps: layout.boxes.map(({ node }) => {
       const statuses = uniq(
-        p.runs
-          .sort(byStartTime)
-          .map(
-            r =>
-              r.stepStats.find(stats => formatStepKey(stats.stepKey) === node.name)?.status ||
-              "missing"
-          )
+        p.runs.map(
+          r =>
+            r.stepStats.find(stats => formatStepKey(stats.stepKey) === node.name)?.status ||
+            "missing"
+        )
       );
+
+      // If there was a successful run, calculate age relative to that run since it's the age of materializations.
+      // If there are no sucessful runs, the age of the (red) box is just the last run time.
+      const lastSuccessIdx = statuses.lastIndexOf(StepEventStatus.SUCCESS);
+      const unix =
+        lastSuccessIdx !== -1
+          ? getStartTime(p.runs[lastSuccessIdx])
+          : p.runs.length
+          ? getStartTime(p.runs[p.runs.length - 1])
+          : 0;
+
       return {
         name: node.name,
-        statuses: statuses
+        statuses: statuses,
+        unix: unix
       };
     })
   }));
@@ -178,9 +195,11 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
   const [focusedPartitionName, setFocusedPartitionName] = React.useState<string>("");
   const [hoveredStepName, setHoveredStepName] = React.useState<string>("");
   const [stepQuery, setStepQuery] = React.useState<string>("");
+  const [colorizeSliceUnix, setColorizeSliceUnix] = React.useState(0);
   const [options, setOptions] = React.useState<DisplayOptions>({
     showPrevious: false,
-    showSucessful: true
+    showSucessful: true,
+    colorizeByAge: false
   });
 
   // Retrieve the pipeline's structure
@@ -217,6 +236,15 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
     visibleRangeStart,
     visibleRangeStart + visibleCount
   );
+
+  let [minUnix, maxUnix] = [Date.now() / 1000, 1];
+  for (const partition of partitionColumns) {
+    for (const step of partition.steps) {
+      if (step.unix === 0) continue;
+      [minUnix, maxUnix] = [Math.min(minUnix, step.unix), Math.max(maxUnix, step.unix)];
+    }
+  }
+
   return (
     <PartitionRunMatrixContainer>
       <OptionsContainer>
@@ -234,6 +262,21 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
           checked={options.showSucessful}
           onChange={() => setOptions({ ...options, showSucessful: !options.showSucessful })}
           style={{ marginBottom: 0, height: 20 }}
+        />
+        <OptionsDivider />
+        <Checkbox
+          label="Colorize by Age"
+          checked={options.colorizeByAge}
+          onChange={() => setOptions({ ...options, colorizeByAge: !options.colorizeByAge })}
+          style={{ marginBottom: 0, height: 20 }}
+        />
+        <div style={{ width: 20 }} />
+        <SliceSlider
+          disabled={!options.colorizeByAge}
+          value={Math.max(minUnix, colorizeSliceUnix)}
+          onChange={setColorizeSliceUnix}
+          maxUnix={maxUnix}
+          minUnix={minUnix}
         />
         <div style={{ flex: 1 }} />
         <RunTagsTokenizingField
@@ -326,17 +369,28 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
                   left: (idx + visibleRangeStart) * BOX_COL_WIDTH
                 }}
                 focused={p.name === focusedPartitionName}
+                dimSuccesses={!options.colorizeByAge}
                 onClick={() => setFocusedPartitionName(p.name)}
               >
                 <TopLabelTilted>
                   <div className="tilted">{p.name}</div>
                 </TopLabelTilted>
-                {p.steps.map(({ name, statuses }) => (
+                {p.steps.map(({ name, statuses, unix }) => (
                   <div
                     key={name}
                     className={`square ${statuses.join("-").toLowerCase()}`}
                     onMouseEnter={() => setHoveredStepName(name)}
                     onMouseLeave={() => setHoveredStepName("")}
+                    style={
+                      options.colorizeByAge
+                        ? {
+                            opacity:
+                              unix >= colorizeSliceUnix
+                                ? 0.3 + 0.7 * ((unix - minUnix) / (maxUnix - minUnix))
+                                : 0.08
+                          }
+                        : {}
+                    }
                   />
                 ))}
                 <Divider />
@@ -445,6 +499,7 @@ const TopLabelTilted = styled.div`
 const GridFloatingContainer = styled.div<{ floating: boolean }>`
   display: flex;
   border-right: 1px solid ${Colors.GRAY5};
+  padding-bottom: 16px;
   width: 330px;
   z-index: 2;
   ${({ floating }) => (floating ? "box-shadow: 1px 0 4px rgba(0, 0, 0, 0.15)" : "")};
@@ -452,12 +507,14 @@ const GridFloatingContainer = styled.div<{ floating: boolean }>`
 
 const GridScrollContainer = styled.div`
   padding-right: 60px;
+  padding-bottom: 16px;
   overflow-x: scroll;
+  z-index: 0;
   background: ${Colors.LIGHT_GRAY5};
   flex: 1;
 `;
 
-const GridColumn = styled.div<{ disabled?: boolean; focused?: boolean }>`
+const GridColumn = styled.div<{ disabled?: boolean; focused?: boolean; dimSuccesses?: boolean }>`
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -632,3 +689,55 @@ const RunTagsTokenizingField: React.FunctionComponent<RunTagsTokenizingFieldProp
     />
   );
 };
+
+const SliceSlider: React.FunctionComponent<{
+  maxUnix: number;
+  minUnix: number;
+  value: number;
+  disabled: boolean;
+  onChange: (val: number) => void;
+}> = ({ minUnix, maxUnix, value, disabled, onChange }) => {
+  const delta = maxUnix - minUnix;
+  const timeout = React.useRef<NodeJS.Timeout>();
+
+  return (
+    <div style={{ width: 220 }}>
+      <SliderWithHandleLabelOnly
+        min={0}
+        max={1}
+        disabled={disabled}
+        stepSize={0.01}
+        labelRenderer={(value: number) => (
+          <span style={{ whiteSpace: "nowrap" }}>
+            {`Run Start > ${moment.unix(delta * value + minUnix).format("YYYY-MM-DD HH:mm")}`}
+          </span>
+        )}
+        onChange={(values: number[]) => {
+          if (timeout.current) clearTimeout(timeout.current);
+          timeout.current = setTimeout(() => onChange(delta * values[0] + minUnix), 10);
+        }}
+      >
+        <MultiSlider.Handle
+          value={(value - minUnix) / delta}
+          type="full"
+          intentAfter={Intent.PRIMARY}
+        />
+      </SliderWithHandleLabelOnly>
+    </div>
+  );
+};
+
+const SliderWithHandleLabelOnly = styled(MultiSlider)`
+  &.bp3-slider {
+    height: 19px;
+  }
+  .bp3-slider-axis > .bp3-slider-label {
+    display: none;
+  }
+  .bp3-slider-handle > .bp3-slider-label {
+    display: none;
+  }
+  .bp3-slider-handle.bp3-active > .bp3-slider-label {
+    display: initial;
+  }
+`;

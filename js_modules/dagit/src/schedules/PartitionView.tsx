@@ -41,7 +41,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
   setCursor
 }) => {
   const [cursorStack, setCursorStack] = React.useState<string[]>([]);
-  const [pageSize, setPageSize] = React.useState<number | undefined>(7);
+  const [pageSize, setPageSize] = React.useState<number | undefined>(30);
   const repositorySelector = useRepositorySelector();
   const popCursor = () => {
     const nextStack = [...cursorStack];
@@ -105,12 +105,11 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
                   setCursor={setCursor}
                 />
                 <div style={{ position: "relative" }}>
+                  <PartitionRunMatrix pipelineName={pipelineName} partitions={partitions} />
                   <PartitionContent
                     partitions={partitions}
                     allStepKeys={Object.keys(allStepKeys)}
                   />
-                  <PartitionRunMatrix pipelineName={pipelineName} partitions={partitions} />
-
                   {showLoading && (
                     <Overlay>
                       <Spinner size={48} />
@@ -292,8 +291,7 @@ const NavSection = styled.div`
   margin-bottom: 30px;
 `;
 const NavContainer = styled.div`
-  width: 450px;
-  margin: 20px 10px;
+  margin: 20px 0 0 10px;
   padding: 10px;
   background-color: #fff;
   border: 1px solid ${Colors.GRAY5};
@@ -476,26 +474,20 @@ const PartitionPagerControls: React.FunctionComponent<PartitionPagerProps> = ({
   return (
     <PartitionPagerContainer>
       <ButtonGroup>
+        {[7, 30, 120].map(size => (
+          <Button
+            key={size}
+            active={!hasNextPage && pageSize === size}
+            onClick={() => {
+              setCursor(undefined);
+              setPageSize(size);
+            }}
+          >
+            Last {size}
+          </Button>
+        ))}
         <Button
-          disabled={!hasNextPage && pageSize === 7}
-          onClick={() => {
-            setCursor(undefined);
-            setPageSize(7);
-          }}
-        >
-          Last 7
-        </Button>
-        <Button
-          disabled={!hasNextPage && pageSize === 30}
-          onClick={() => {
-            setCursor(undefined);
-            setPageSize(30);
-          }}
-        >
-          Last 30
-        </Button>
-        <Button
-          disabled={pageSize === undefined}
+          active={pageSize === undefined}
           onClick={() => {
             setCursor(undefined);
             setPageSize(undefined);
