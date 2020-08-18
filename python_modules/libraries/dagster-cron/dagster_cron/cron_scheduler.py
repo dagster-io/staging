@@ -99,6 +99,13 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
                 )
             )
 
+    def refresh_schedule(self, instance, external_schedule):
+        check.inst_param(instance, 'instance', DagsterInstance)
+        check.inst_param(external_schedule, 'external_schedule', ExternalSchedule)
+
+        self.start_schedule(instance, external_schedule)
+        self.stop_schedule(instance, external_schedule.get_origin_id())
+
     def wipe(self, instance):
         # Note: This method deletes schedules from ALL repositories
         check.inst_param(instance, 'instance', DagsterInstance)
