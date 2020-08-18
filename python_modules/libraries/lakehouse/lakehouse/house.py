@@ -11,6 +11,7 @@ from dagster import (
 )
 
 from .asset import Asset
+from .queryable_asset_set import QueryableAssetSet
 from typing import List
 
 
@@ -74,7 +75,7 @@ class Lakehouse:
     '''
 
     def __init__(
-        self, preset_defs=None, mode_defs=None, in_memory_type_resource_keys=None,
+        self, preset_defs=None, mode_defs=None, in_memory_type_resource_keys=None, assets=None
     ):
         '''
         Args:
@@ -85,10 +86,12 @@ class Lakehouse:
             in_memory_type_resource_keys (Dict[type, List[str]]): For any type, declares resource
                 keys that need to be around when that type is an input or output of an asset
                 derivation, e.g. "pyspark" for asset whose derivation involves PySpark DataFrames.
+            assets (List[Asset]): The assets in the house.
         '''
         self._preset_defs = preset_defs
         self._mode_defs = mode_defs
         self._in_memory_type_resource_keys = in_memory_type_resource_keys or {}
+        self._assets = QueryableAssetSet(assets)
 
     def build_pipeline_definition(self, name, assets_to_update):
         solid_defs = {}
@@ -176,6 +179,9 @@ class Lakehouse:
             yield Output(value=asset.path, output_name=output_def.name)
 
         return compute
+
+    def query_assets(self, query: str) -> List[Asset]:
+        return self._assets.query(query)
 
 
 def get_ancestors(asset: Asset) -> List[Asset]:
