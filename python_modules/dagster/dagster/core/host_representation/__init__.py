@@ -15,11 +15,11 @@ from .external import (
     ExternalSchedule,
 )
 from .external_data import (
-    ExternalPartitionBackfillData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
     ExternalPartitionSetData,
+    ExternalPartitionSetExecutionParamData,
     ExternalPartitionTagsData,
     ExternalPipelineData,
     ExternalPipelineSubsetResult,
