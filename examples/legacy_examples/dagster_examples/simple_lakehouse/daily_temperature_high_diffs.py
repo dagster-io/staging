@@ -1,10 +1,9 @@
+from dagster_examples.simple_lakehouse.daily_temperature_highs import daily_temperature_highs_table
+from lakehouse import Column, computed_table
+from pyarrow import date32, float64
 from pyspark.sql import DataFrame as SparkDF
 from pyspark.sql import Window
 from pyspark.sql import functions as f
-
-from lakehouse import Column, computed_table
-from pyarrow import float64, date32
-from dagster_examples.simple_lakehouse.daily_temperature_highs import daily_temperature_highs_table
 
 
 @computed_table(
