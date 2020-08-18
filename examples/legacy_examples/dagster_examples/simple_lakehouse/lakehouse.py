@@ -168,7 +168,7 @@ def make_simple_lakehouse():
         name='dev',
         resource_defs={
             'pyspark': pyspark_resource,
-            'filesystem': local_file_system_storage.configured({'root': os.path.dirname(__file__)}),
+            'filesystem': local_file_system_storage.configured({'root': '.'}),
         },
     )
 
