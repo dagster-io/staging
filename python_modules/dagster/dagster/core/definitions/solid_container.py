@@ -227,6 +227,8 @@ def create_execution_structure(solid_defs, dependencies_dict, container_definiti
 def _build_pipeline_solid_dict(
     solid_defs, name_to_aliases, alias_to_solid_instance, container_definition
 ):
+    from .solid import CompositeSolidDefinition
+
     pipeline_solids = []
     for solid_def in solid_defs:
         uses_of_solid = name_to_aliases.get(solid_def.name, {solid_def.name})
@@ -236,10 +238,19 @@ def _build_pipeline_solid_dict(
 
             solid_instance_tags = solid_instance.tags if solid_instance else {}
             hook_defs = solid_instance.hook_defs if solid_instance else frozenset()
+
+            definition = (
+                # if the hooks are applied on a composite solid invocation, we will need to apply
+                # them on each of the solid instance in the CompositeSolidDefinition
+                solid_def.clone_with_hooks(hook_defs)
+                if isinstance(solid_def, CompositeSolidDefinition)
+                else solid_def
+            )
+
             pipeline_solids.append(
                 Solid(
                     name=alias,
-                    definition=solid_def,
+                    definition=definition,
                     container_definition=container_definition,
                     tags=solid_instance_tags,
                     hook_defs=hook_defs,

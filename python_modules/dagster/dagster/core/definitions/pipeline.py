@@ -481,7 +481,7 @@ class PipelineDefinition(IContainSolids):
             deps[hooked_invocation] = input_dep_dict
 
         return PipelineDefinition(
-            solid_defs=self.all_solid_defs,
+            solid_defs=self.top_level_solid_defs,
             name=self.name,
             description=self.description,
             dependencies=deps,
