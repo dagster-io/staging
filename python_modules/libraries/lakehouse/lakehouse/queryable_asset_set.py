@@ -1,6 +1,8 @@
-from dagster.core.selector.subset_selector import clause_to_subset, Traverser
-from typing import Dict, Set, List
+from typing import Dict, List, Set
+
 from lakehouse.asset import Asset
+
+from dagster.core.selector.subset_selector import Traverser, clause_to_subset
 
 
 class QueryableAssetSet:

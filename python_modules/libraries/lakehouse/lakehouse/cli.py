@@ -1,8 +1,9 @@
 import importlib
-import click
 
-from dagster import execute_pipeline, check
+import click
 from lakehouse.house import Lakehouse
+
+from dagster import check, execute_pipeline
 
 
 def load_lakehouses(module_name):

@@ -1,4 +1,5 @@
 from functools import wraps
+from typing import List
 
 from dagster import (
     DependencyDefinition,
@@ -12,7 +13,6 @@ from dagster import (
 
 from .asset import Asset
 from .queryable_asset_set import QueryableAssetSet
-from typing import List
 
 
 class Lakehouse:
@@ -181,4 +181,4 @@ class Lakehouse:
         return compute
 
     def query_assets(self, query: str) -> List[Asset]:
-        return self._assets.query(query)
+        return self._assets.query_assets(query)
