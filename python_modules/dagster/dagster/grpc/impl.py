@@ -20,11 +20,11 @@ from dagster.core.events import EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_run_iterator
 from dagster.core.host_representation import external_pipeline_data_from_def
 from dagster.core.host_representation.external_data import (
-    ExternalPartitionBackfillData,
-    ExternalPartitionBackfillRunData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
+    ExternalPartitionExecutionParamData,
     ExternalPartitionNamesData,
+    ExternalPartitionSetExecutionParamData,
     ExternalPartitionTagsData,
     ExternalPipelineSubsetResult,
     ExternalScheduleExecutionData,
@@ -36,7 +36,6 @@ from dagster.core.snap.execution_plan_snapshot import (
     snapshot_from_execution_plan,
 )
 from dagster.core.storage.pipeline_run import PipelineRun
-from dagster.core.utils import make_new_backfill_id
 from dagster.grpc.types import (
     ExecutionPlanSnapshotArgs,
     ExternalScheduleExecutionArgs,
@@ -46,11 +45,11 @@ from dagster.grpc.types import (
 )
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from dagster.serdes.ipc import IPCErrorMessage
-from dagster.utils import merge_dicts, start_termination_thread
+from dagster.utils import start_termination_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_repository_from_origin
 
-from .types import ExecuteRunArgs, ExternalScheduleExecutionArgs, PartitionBackfillArgs
+from .types import ExecuteRunArgs, ExternalScheduleExecutionArgs, PartitionSetExecutionParamArgs
 
 
 class RunInSubprocessComplete:
@@ -336,8 +335,8 @@ def get_external_execution_plan_snapshot(recon_pipeline, args):
         )
 
 
-def get_partition_backfill_data(args):
-    check.inst_param(args, 'args', PartitionBackfillArgs)
+def get_partition_set_execution_param_data(args):
+    check.inst_param(args, 'args', PartitionSetExecutionParamArgs)
     recon_repo = recon_repository_from_origin(args.repository_origin)
     repo_definition = recon_repo.get_definition()
     partition_set_def = repo_definition.get_partition_set_def(args.partition_set_name)
@@ -351,10 +350,8 @@ def get_partition_backfill_data(args):
         partitions = [
             partition for partition in all_partitions if partition.name in args.partition_names
         ]
-        backfill_id = make_new_backfill_id()
-        run_tags = PipelineRun.tags_for_backfill_id(backfill_id)
 
-        run_data = []
+        partition_data = []
         for partition in partitions:
 
             def _error_message_fn(partition_set_name, partition_name):
@@ -369,15 +366,15 @@ def get_partition_backfill_data(args):
                 PartitionExecutionError, _error_message_fn(partition_set_def.name, partition.name)
             ):
                 run_config = partition_set_def.run_config_for_partition(partition)
-                tags = merge_dicts(partition_set_def.tags_for_partition(partition), run_tags)
+                tags = partition_set_def.tags_for_partition(partition)
 
-            run_data.append(
-                ExternalPartitionBackfillRunData(
+            partition_data.append(
+                ExternalPartitionExecutionParamData(
                     name=partition.name, tags=tags, run_config=run_config,
                 )
             )
 
-        return ExternalPartitionBackfillData(backfill_id=backfill_id, run_data=run_data,)
+        return ExternalPartitionSetExecutionParamData(partition_data=partition_data)
 
     except PartitionExecutionError:
         return ExternalPartitionExecutionErrorData(

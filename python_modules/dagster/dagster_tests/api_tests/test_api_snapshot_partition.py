@@ -1,20 +1,20 @@
 import string
 
 from dagster.api.snapshot_partition import (
-    sync_get_external_partition_backfill_data,
-    sync_get_external_partition_backfill_data_grpc,
     sync_get_external_partition_config,
     sync_get_external_partition_config_grpc,
     sync_get_external_partition_names,
     sync_get_external_partition_names_grpc,
+    sync_get_external_partition_set_execution_param_data,
+    sync_get_external_partition_set_execution_param_data_grpc,
     sync_get_external_partition_tags,
     sync_get_external_partition_tags_grpc,
 )
 from dagster.core.host_representation import (
-    ExternalPartitionBackfillData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
+    ExternalPartitionSetExecutionParamData,
     ExternalPartitionTagsData,
 )
 
@@ -130,32 +130,30 @@ def test_external_partitions_tags_error_grpc():
     assert isinstance(error, ExternalPartitionExecutionErrorData)
 
 
-def test_external_partition_backfill():
+def test_external_partition_set_execution_params():
     repository_handle = get_bar_repo_handle()
-    data = sync_get_external_partition_backfill_data(
+    data = sync_get_external_partition_set_execution_param_data(
         repository_handle, 'baz_partitions', ['a', 'b', 'c']
     )
-    assert isinstance(data, ExternalPartitionBackfillData)
-    assert data.backfill_id
-    assert len(data.run_data) == 3
+    assert isinstance(data, ExternalPartitionSetExecutionParamData)
+    assert len(data.partition_data) == 3
 
 
-def test_external_partition_backfill_grpc():
+def test_external_partition_set_execution_params_grpc():
     repository_handle = get_bar_grpc_repo_handle()
-    data = sync_get_external_partition_backfill_data_grpc(
+    data = sync_get_external_partition_set_execution_param_data_grpc(
         repository_handle.repository_location_handle.client,
         repository_handle,
         'baz_partitions',
         ['a', 'b', 'c'],
     )
-    assert isinstance(data, ExternalPartitionBackfillData)
-    assert data.backfill_id
-    assert len(data.run_data) == 3
+    assert isinstance(data, ExternalPartitionSetExecutionParamData)
+    assert len(data.partition_data) == 3
 
 
-def test_external_partition_backfill_error():
+def test_external_partition_set_execution_params_error():
     repository_handle = get_bar_repo_handle()
-    error = sync_get_external_partition_backfill_data(
+    error = sync_get_external_partition_set_execution_param_data(
         repository_handle, 'error_partitions', ['a', 'b', 'c']
     )
     assert isinstance(error, ExternalPartitionExecutionErrorData)

@@ -165,11 +165,11 @@ class PartitionNamesArgs(namedtuple('_PartitionNamesArgs', 'repository_origin pa
 
 
 @whitelist_for_serdes
-class PartitionBackfillArgs(
-    namedtuple('_PartitionBackfillArgs', 'repository_origin partition_set_name partition_names',)
+class PartitionSetExecutionParamArgs(
+    namedtuple('_PartitionSetExecutionParamArgs', 'repository_origin partition_set_name partition_names',)
 ):
     def __new__(cls, repository_origin, partition_set_name, partition_names):
-        return super(PartitionBackfillArgs, cls).__new__(
+        return super(PartitionSetExecutionParamArgs, cls).__new__(
             cls,
             repository_origin=check.inst_param(
                 repository_origin, 'repository_origin', RepositoryOrigin

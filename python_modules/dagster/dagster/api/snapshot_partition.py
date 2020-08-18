@@ -1,13 +1,13 @@
 from dagster import check
 from dagster.core.host_representation.external_data import (
-    ExternalPartitionBackfillData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
+    ExternalPartitionSetExecutionParamData,
     ExternalPartitionTagsData,
 )
 from dagster.core.host_representation.handle import RepositoryHandle
-from dagster.grpc.types import PartitionArgs, PartitionBackfillArgs, PartitionNamesArgs
+from dagster.grpc.types import PartitionArgs, PartitionNamesArgs, PartitionSetExecutionParamArgs
 
 from .utils import execute_unary_api_cli_command
 
@@ -131,7 +131,7 @@ def sync_get_external_partition_tags_grpc(
     )
 
 
-def sync_get_external_partition_backfill_data(
+def sync_get_external_partition_set_execution_param_data(
     repository_handle, partition_set_name, partition_names
 ):
     check.inst_param(repository_handle, 'repository_handle', RepositoryHandle)
@@ -143,18 +143,18 @@ def sync_get_external_partition_backfill_data(
     return check.inst(
         execute_unary_api_cli_command(
             repository_origin.executable_path,
-            'partition_backfill_data',
-            PartitionBackfillArgs(
+            'partition_set_execution_param_data',
+            PartitionSetExecutionParamArgs(
                 repository_origin=repository_origin,
                 partition_set_name=partition_set_name,
                 partition_names=partition_names,
             ),
         ),
-        (ExternalPartitionBackfillData, ExternalPartitionExecutionErrorData),
+        (ExternalPartitionSetExecutionParamData, ExternalPartitionExecutionErrorData),
     )
 
 
-def sync_get_external_partition_backfill_data_grpc(
+def sync_get_external_partition_set_execution_param_data_grpc(
     api_client, repository_handle, partition_set_name, partition_names
 ):
     from dagster.grpc.client import DagsterGrpcClient
@@ -167,12 +167,12 @@ def sync_get_external_partition_backfill_data_grpc(
     repository_origin = repository_handle.get_origin()
 
     return check.inst(
-        api_client.external_partition_backfill(
-            partition_backfill_args=PartitionBackfillArgs(
+        api_client.external_partition_set_execution_params(
+            partition_set_execution_param_args=PartitionSetExecutionParamArgs(
                 repository_origin=repository_origin,
                 partition_set_name=partition_set_name,
                 partition_names=partition_names,
             ),
         ),
-        (ExternalPartitionBackfillData, ExternalPartitionExecutionErrorData),
+        (ExternalPartitionSetExecutionParamData, ExternalPartitionExecutionErrorData),
     )

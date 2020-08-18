@@ -231,11 +231,11 @@ class ExternalPartitionTagsData(namedtuple('_ExternalPartitionTagsData', 'name t
 
 
 @whitelist_for_serdes
-class ExternalPartitionBackfillRunData(
-    namedtuple('_ExternalPartitionBackfillRunData', 'name tags run_config')
+class ExternalPartitionExecutionParamData(
+    namedtuple('_ExternalPartitionExecutionParamData', 'name tags run_config')
 ):
     def __new__(cls, name, tags, run_config):
-        return super(ExternalPartitionBackfillRunData, cls).__new__(
+        return super(ExternalPartitionExecutionParamData, cls).__new__(
             cls,
             name=check.str_param(name, 'name'),
             tags=check.dict_param(tags, 'tags'),
@@ -244,15 +244,14 @@ class ExternalPartitionBackfillRunData(
 
 
 @whitelist_for_serdes
-class ExternalPartitionBackfillData(
-    namedtuple('_ExternalPartitionBackfillData', 'backfill_id run_data')
+class ExternalPartitionSetExecutionParamData(
+    namedtuple('_ExternalPartitionSetExecutionParamData', 'partition_data')
 ):
-    def __new__(cls, backfill_id, run_data):
-        return super(ExternalPartitionBackfillData, cls).__new__(
+    def __new__(cls, partition_data):
+        return super(ExternalPartitionSetExecutionParamData, cls).__new__(
             cls,
-            backfill_id=check.str_param(backfill_id, 'backfill_id'),
-            run_data=check.list_param(
-                run_data, 'run_data', of_type=ExternalPartitionBackfillRunData
+            partition_data=check.list_param(
+                partition_data, 'partition_data', of_type=ExternalPartitionExecutionParamData
             ),
         )
 

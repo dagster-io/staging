@@ -33,14 +33,16 @@ from dagster.core.host_representation import (
     RepositoryLocation,
 )
 from dagster.core.host_representation.external_data import (
-    ExternalPartitionBackfillData,
     ExternalPartitionExecutionErrorData,
+    ExternalPartitionSetExecutionParamData,
 )
 from dagster.core.host_representation.selector import PipelineSelector
 from dagster.core.instance import DagsterInstance
 from dagster.core.snap import PipelineSnapshot, SolidInvocationSnap
 from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshotErrorData
+from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.telemetry import log_external_repo_stats, telemetry_wrapper
+from dagster.core.utils import make_new_backfill_id
 from dagster.seven import IS_WINDOWS, JSONDecodeError, json
 from dagster.utils import DEFAULT_WORKSPACE_YAML_FILENAME, load_yaml_from_glob_list, merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -830,33 +832,35 @@ def execute_backfill_command(cli_args, print_fn, instance):
 
         print_fn('Launching runs... ')
 
-        backfill_data = repo_location.get_external_partition_backfill_data(
+        backfill_id = make_new_backfill_id()
+        backfill_tags = PipelineRun.tags_for_backfill_id(backfill_id)
+        partition_execution_data = repo_location.get_external_partition_set_execution_param_data(
             repository_handle=repo_handle,
             partition_set_name=partition_set_name,
             partition_names=partition_names,
         )
 
-        if isinstance(backfill_data, ExternalPartitionExecutionErrorData):
-            return print_fn('Backfill failed: {}'.format(backfill_data.error))
+        if isinstance(partition_execution_data, ExternalPartitionExecutionErrorData):
+            return print_fn('Backfill failed: {}'.format(partition_execution_data.error))
 
-        assert isinstance(backfill_data, ExternalPartitionBackfillData)
+        assert isinstance(partition_execution_data, ExternalPartitionSetExecutionParamData)
 
-        for run_data in backfill_data.run_data:
+        for partition_data in partition_execution_data.partition_data:
             run = _create_external_pipeline_run(
                 instance=instance,
                 repo_location=repo_location,
                 external_repo=external_repo,
                 external_pipeline=external_pipeline,
-                run_config=run_data.run_config,
+                run_config=partition_data.run_config,
                 mode=mode,
                 preset=None,
-                tags=merge_dicts(run_data.tags, run_tags),
+                tags=merge_dicts(merge_dicts(partition_data.tags, backfill_tags), run_tags),
                 solid_selection=frozenset(solid_selection) if solid_selection else None,
             )
 
             instance.launch_run(run.run_id, external_pipeline)
 
-        print_fn('Launched backfill job `{}`'.format(backfill_data.backfill_id))
+        print_fn('Launched backfill job `{}`'.format(backfill_id))
 
     else:
         print_fn('Aborted!')
