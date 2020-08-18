@@ -1,8 +1,9 @@
 from typing import Dict, List, Set
 
 from lakehouse.asset import Asset
+from lakehouse.errors import LakehouseAssetQueryError
 
-from dagster.core.selector.subset_selector import Traverser, clause_to_subset
+from dagster.core.selector.subset_selector import Traverser, clause_to_subset, parse_clause
 
 
 class QueryableAssetSet:
@@ -14,6 +15,13 @@ class QueryableAssetSet:
         """Returns all assets that match the query.  The supported query syntax is described in
         detail at https://docs.dagster.io/overview/solid-selection.
         """
+        if query == "*":
+            return list(self._assets_by_path_str.values())
+
+        queried_asset_path = parse_clause(query)[1]
+        if queried_asset_path not in self._assets_by_path_str.keys():
+            raise LakehouseAssetQueryError(f"{queried_asset_path} does not exist in set of assets.")
+
         traverser = Traverser(graph=self._dep_graph)
         return [
             self._assets_by_path_str[pstr]
