@@ -223,8 +223,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
             # Restart is only needed if the schedule was previously running
             if schedule_state.status == ScheduleStatus.RUNNING:
                 try:
-                    self.stop_schedule(instance, external_schedule.get_origin_id())
-                    self.start_schedule(instance, external_schedule)
+                    self.refresh_schedule(instance, external_schedule)
                 except DagsterSchedulerError as e:
                     schedule_reconciliation_errors.append(e)
 
@@ -329,6 +328,19 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
 
         For example, in the cron scheduler, this method writes a cron job to the cron tab
         for the given schedule.
+
+        Args:
+            instance (DagsterInstance): The current instance.
+            external_schedule (ExternalSchedule): The schedule to start running.
+        '''
+
+    @abc.abstractmethod
+    def refresh_schedule(self, instance, external_schedule):
+        '''Refresh a running schedule. This is called when user reconciles the schedule state.
+
+        For example, in the cron scheduler, this method will call stop_schedule and then
+        start_schedule. In the k8s scheduler, this method will patch the existing cronjob
+        (without stopping it) to minimize downtime.
 
         Args:
             instance (DagsterInstance): The current instance.

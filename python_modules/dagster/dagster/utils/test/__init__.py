@@ -415,6 +415,9 @@ class FilesystemTestScheduler(Scheduler, ConfigurableClass):
     def start_schedule(self, instance, external_schedule):
         pass
 
+    def refresh_schedule(self, instance, external_schedule):
+        pass
+
     def stop_schedule(self, instance, schedule_origin_id):
         pass
 
