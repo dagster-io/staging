@@ -155,6 +155,7 @@ class K8sScheduler(Scheduler, ConfigurableClass):
             )
         time.sleep(self.grace_period_seconds)
 
+    # Update the existing K8s CronJob if it exists; else, create it.
     def start_schedule(self, instance, external_schedule):
         check.inst_param(instance, 'instance', DagsterInstance)
         check.inst_param(external_schedule, 'external_schedule', ExternalSchedule)
@@ -176,6 +177,12 @@ class K8sScheduler(Scheduler, ConfigurableClass):
                 )
             )
         return
+
+    def refresh_schedule(self, instance, external_schedule):
+        check.inst_param(instance, 'instance', DagsterInstance)
+        check.inst_param(external_schedule, 'external_schedule', ExternalSchedule)
+
+        self.start_schedule(instance, external_schedule)
 
     def running_schedule_count(self, schedule_origin_id):
         check.str_param(schedule_origin_id, 'schedule_origin_id')
