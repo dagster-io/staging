@@ -638,16 +638,19 @@ def test_reconcile_failure(
     def failed_start_job(*_):
         raise DagsterSchedulerError("Failed to start")
 
+    def failed_refresh_job(*_):
+        raise DagsterSchedulerError("Failed to refresh")
+
     def failed_end_job(*_):
         raise DagsterSchedulerError("Failed to stop")
 
     instance._scheduler.start_schedule = failed_start_job  # pylint: disable=protected-access
+    instance._scheduler.refresh_schedule = failed_refresh_job  # pylint: disable=protected-access
     instance._scheduler.stop_schedule = failed_end_job  # pylint: disable=protected-access
 
-    # Initialize scheduler
     with pytest.raises(
         DagsterScheduleReconciliationError,
-        match="Error 1: Failed to stop\n    Error 2: Failed to stop\n    Error 3: Failed to stop",
+        match="Error 1: Failed to stop\n    Error 2: Failed to stop\n    Error 3: Failed to refresh",
     ):
         instance.reconcile_scheduler_state(external_repo)
 
