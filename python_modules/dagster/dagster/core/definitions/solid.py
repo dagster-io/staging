@@ -572,11 +572,7 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
             for ttype in solid_def.all_dagster_types():
                 yield ttype
 
-    def with_hooks(self, hook_defs):
-        '''Apply a set of hooks to all solid instances within the composite solid.'''
-
-        from .composition import CallableSolidNode
-
+    def clone_with_hooks(self, hook_defs):
         hook_defs = check.set_param(hook_defs, 'hook_defs', of_type=HookDefinition)
 
         # applying hooks on a composite solid means applying hooks on all the solid instances
@@ -586,7 +582,6 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         deps = {}
         for dep_key, input_dep_dict in self.dependencies.items():
             check.inst(dep_key, six.string_types + (SolidInvocation,))
-            # to add hooks, we make copies of solid invocations
             hooked_invocation = (
                 SolidInvocation(
                     dep_key.name, dep_key.alias, dep_key.tags, dep_key.hook_defs.union(hook_defs),
@@ -597,20 +592,23 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
 
             deps[hooked_invocation] = input_dep_dict
 
-        return CallableSolidNode(
-            CompositeSolidDefinition(
-                name=self.name,
-                solid_defs=self._solid_defs,
-                input_mappings=self.input_mappings,
-                output_mappings=self.output_mappings,
-                config_mapping=self.config_mapping,
-                dependencies=deps,
-                description=self.description,
-                tags=self.tags,
-                positional_inputs=self.positional_inputs,
-            ),
-            hook_defs=hook_defs,
+        return CompositeSolidDefinition(
+            name=self.name,  # TODO: the name of a composite solid def has to be unique
+            solid_defs=self._solid_defs,
+            input_mappings=self.input_mappings,
+            output_mappings=self.output_mappings,
+            config_mapping=self.config_mapping,
+            dependencies=deps,
+            description=self.description,
+            tags=self.tags,
+            positional_inputs=self.positional_inputs,
         )
+
+    def with_hooks(self, hook_defs):
+        '''Apply a set of hooks to all solid instances within the composite solid.'''
+        from .composition import CallableSolidNode
+
+        return CallableSolidNode(self.clone_with_hooks(hook_defs), hook_defs=hook_defs)
 
 
 def _validate_in_mappings(input_mappings, solid_dict, name):
