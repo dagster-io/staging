@@ -1,16 +1,18 @@
 import hashlib
+import json
 import random
 import string
 from collections import namedtuple
 
 import kubernetes
 import six
-import yaml
 
-from dagster import Array, DagsterInvariantViolationError, Field, Noneable, StringSource
+from dagster import Array, Field, Noneable, StringSource
 from dagster import __version__ as dagster_version
 from dagster import check
-from dagster.config.field_utils import Shape
+from dagster.config.field_utils import Permissive, Shape
+from dagster.config.validate import validate_config
+from dagster.core.errors import DagsterInvalidConfigError, DagsterInvariantViolationError
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import frozentags, merge_dicts
 
@@ -34,28 +36,24 @@ DAGSTER_PG_PASSWORD_SECRET_KEY = 'postgresql-password'
 MAX_K8S_NAME_LEN = 63
 
 K8S_RESOURCE_REQUIREMENTS_KEY = 'dagster-k8s/resource_requirements'
-K8s_RESOURCE_REQUIREMENTS_VALID_KEYS = set(['limits', 'requests'])
+K8S_RESOURCE_REQUIREMENTS_SCHEMA = Shape({'limits': Permissive(), 'requests': Permissive()})
 
 
 def get_k8s_resource_requirements(tags):
     check.inst_param(tags, 'tags', frozentags)
-    req_str = tags.get(K8S_RESOURCE_REQUIREMENTS_KEY)
-    if req_str is not None:
-        req_dict = yaml.safe_load(req_str)
 
-        req_keys = set(req_dict.keys())
-        if len(req_keys.difference(K8s_RESOURCE_REQUIREMENTS_VALID_KEYS)) > 0:
-            raise DagsterInvariantViolationError(
-                'Invalid K8s resource specification. {resource} expected to only contain keys in '
-                'set {valid_keys} but found extra keys {extra_keys}'.format(
-                    resource=req_dict,
-                    valid_keys=K8s_RESOURCE_REQUIREMENTS_VALID_KEYS,
-                    extra_keys=req_keys.difference(K8s_RESOURCE_REQUIREMENTS_VALID_KEYS),
-                )
-            )
-        return req_dict
+    if not K8S_RESOURCE_REQUIREMENTS_KEY in tags:
+        return None
 
-    return None
+    resource_requirements = json.loads(tags[K8S_RESOURCE_REQUIREMENTS_KEY])
+    result = validate_config(K8S_RESOURCE_REQUIREMENTS_SCHEMA, resource_requirements)
+
+    if not result.success:
+        raise DagsterInvalidConfigError(
+            'Error in tags for {}'.format(K8S_RESOURCE_REQUIREMENTS_KEY), result.errors, result,
+        )
+
+    return result.value
 
 
 def get_job_name_from_run_id(run_id):
@@ -253,12 +251,54 @@ class DagsterK8sJobConfig(
         return DagsterK8sJobConfig(**config)
 
 
+class DagsterK8sConfig(
+    namedtuple(
+        'DagsterK8sConfig',
+        'container_config pod_template_spec_config pod_spec_config job_config job_spec_config',
+    )
+):
+    def __new__(
+        cls,
+        container_config=None,
+        pod_template_spec_config=None,
+        pod_spec_config=None,
+        job_config=None,
+        job_spec_config=None,
+    ):
+
+        container_config = check.opt_str_param(container_config, 'container_config', {})
+        pod_template_spec_config = check.opt_str_param(
+            pod_template_spec_config, 'pod_template_spec_config', {}
+        )
+        pod_spec_config = check.opt_str_param(pod_spec_config, 'pod_spec_config', {})
+        job_config = check.opt_str_param(job_config, 'job_config', {})
+        job_spec_config = check.opt_str_param(job_spec_config, 'job_spec_config', {})
+
+        # Additional checks
+        if 'spec' in pod_template_spec_config:
+            raise DagsterInvariantViolationError("...")
+
+        if 'spec' in job_config:
+            raise DagsterInvariantViolationError("...")
+
+        return super(DagsterK8sJobConfig, cls).__new__(
+            cls,
+            container_config=check.opt_str_param(container_config, 'container_config'),
+            pod_template_spec_config=check.opt_str_param(
+                pod_template_spec_config, 'pod_template_spec_config'
+            ),
+            pod_spec_config=check.opt_str_param(pod_spec_config, 'pod_spec_config'),
+            job_config=check.opt_str_param(job_config, 'job_config'),
+            job_spec_config=check.opt_str_param(job_spec_config, 'job_spec_config'),
+        )
+
+
 def construct_dagster_k8s_job(
     job_config,
     command,
     args,
     job_name,
-    resources=None,
+    k8s_config=None,
     pod_name=None,
     component=None,
     env_vars=None,
@@ -285,7 +325,7 @@ def construct_dagster_k8s_job(
     command = check.list_param(command, 'command', of_type=str)
     check.list_param(args, 'args', of_type=str)
     check.str_param(job_name, 'job_name')
-    check.opt_dict_param(resources, 'resources', key_type=str, value_type=dict)
+    check.opt_inst_param(k8s_config, 'k8s_config', DagsterK8sConfig)
     pod_name = check.opt_str_param(pod_name, 'pod_name', default=job_name + '-pod')
     check.opt_str_param(component, 'component')
     check.opt_dict_param(env_vars, 'env_vars', key_type=str, value_type=str)
