@@ -35,26 +35,6 @@ DAGSTER_PG_PASSWORD_SECRET_KEY = 'postgresql-password'
 # Kubernetes Job object names cannot be longer than 63 characters
 MAX_K8S_NAME_LEN = 63
 
-K8S_RESOURCE_REQUIREMENTS_KEY = 'dagster-k8s/resource_requirements'
-K8S_RESOURCE_REQUIREMENTS_SCHEMA = Shape({'limits': Permissive(), 'requests': Permissive()})
-
-
-def get_k8s_resource_requirements(tags):
-    check.inst_param(tags, 'tags', frozentags)
-
-    if not K8S_RESOURCE_REQUIREMENTS_KEY in tags:
-        return None
-
-    resource_requirements = json.loads(tags[K8S_RESOURCE_REQUIREMENTS_KEY])
-    result = validate_config(K8S_RESOURCE_REQUIREMENTS_SCHEMA, resource_requirements)
-
-    if not result.success:
-        raise DagsterInvalidConfigError(
-            'Error in tags for {}'.format(K8S_RESOURCE_REQUIREMENTS_KEY), result.errors, result,
-        )
-
-    return result.value
-
 
 def get_job_name_from_run_id(run_id):
     return 'dagster-run-{}'.format(run_id)
