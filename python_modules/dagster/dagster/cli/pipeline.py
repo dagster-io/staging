@@ -545,7 +545,7 @@ def pipeline_launch_command(**kwargs):
 
 @telemetry_wrapper
 def execute_launch_command(instance, kwargs):
-    preset = kwargs.get('preset')
+    preset = kwargs.get('preset', None)
     mode = kwargs.get('mode')
     check.inst_param(instance, 'instance', DagsterInstance)
     config = list(check.opt_tuple_param(kwargs.get('config'), 'config', default=(), of_type=str))
@@ -565,13 +565,8 @@ def execute_launch_command(instance, kwargs):
         source='pipeline_launch_command',
     )
 
-    if preset:
-        if config:
-            raise click.UsageError('Can not use --preset with --config.')
-
-        preset = external_pipeline.get_preset(preset)
-    else:
-        preset = None
+    if preset and config:
+        raise click.UsageError('Can not use --preset with --config.')
 
     run_tags = get_tags_from_args(kwargs)
 
