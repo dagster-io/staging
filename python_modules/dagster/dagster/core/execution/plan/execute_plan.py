@@ -93,9 +93,23 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
             yield hook_event
 
 
+def _get_hook_defs(step_context):
+    '''Gather all of hooks at hook invocation time.
+
+    A hook can be attached to any of the following objects
+    * PipelineDefinition
+    * Solid (solid invocation)
+    '''
+    hook_defs = set()
+    hook_defs = hook_defs.union(step_context.solid.hook_defs)
+    hook_defs = hook_defs.union(step_context.pipeline_def.hook_defs)
+
+    return hook_defs
+
+
 def _trigger_hook(step_context, step_event_list):
     '''Trigger hooks and record hook's operatonal events'''
-    hook_defs = step_context.solid.hook_defs
+    hook_defs = _get_hook_defs(step_context)
     # when the solid doesn't have a hook configured
     if hook_defs is None:
         return
