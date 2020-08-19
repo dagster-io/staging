@@ -1,3 +1,5 @@
+import time
+
 from dagster_graphql.implementation.utils import UserFacingGraphQLError
 from dagster_graphql.schema.errors import DauphinInvalidSubsetError
 from dagster_graphql.schema.pipelines import DauphinPipeline
@@ -156,11 +158,27 @@ class DagsterGraphQLContext:
             instance=self.instance, external_pipeline=external_pipeline, pipeline_run=pipeline_run
         )
 
-    def drain_outstanding_executions(self):
+    def drain_outstanding_executions(self, timeout=20):
         '''
         This ensures that any outstanding executions of runs are waited on.
         Useful for tests contexts when you want to ensure a started run
         has ended in order to verify its results.
         '''
-        if self.instance.run_launcher:
-            self.instance.run_launcher.join()
+
+        self.instance.run_launcher.join()
+
+        total_time = 0
+        interval = 0.01
+
+        while True:
+            active_runs = [run for run in self.instance.get_runs() if not run.is_finished]
+
+            if len(active_runs) == 0:
+                return
+
+            if total_time >= timeout:
+                raise Exception('Timed out')
+
+            total_time += interval
+            time.sleep(interval)
+            interval = interval * 2
