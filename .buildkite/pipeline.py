@@ -200,6 +200,20 @@ def legacy_examples_extra_cmds_fn(_):
     ]
 
 
+def dbt_extra_cmds_fn(_):
+    return [
+        "pushd python_modules/libraries/dagster-dbt/dagster_dbt_tests",
+        "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit,
+        # Can't use host networking on buildkite and communicate via localhost
+        # between these sibling containers, so pass along the ip.
+        network_buildkite_container('postgres'),
+        connect_sibling_docker_container(
+            'postgres', 'test-postgres-db-dbt', 'POSTGRES_TEST_DB_DBT_HOST'
+        ),
+        "popd",
+    ]
+
+
 def k8s_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
@@ -252,150 +266,155 @@ def graphql_pg_extra_cmds_fn(_):
 # Some Dagster packages have more involved test configs or support only certain Python version;
 # special-case those here
 DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
-    # Examples: Airline Demo
-    ModuleBuildSpec(
-        'examples/airline_demo',
-        supported_pythons=SupportedPython3s,
-        extra_cmds_fn=airline_demo_extra_cmds_fn,
-        buildkite_label='airline-demo',
-    ),
-    # Examples: Events Demo
-    # TODO: https://github.com/dagster-io/dagster/issues/2617
+    # # Examples: Airline Demo
     # ModuleBuildSpec(
-    #     'examples',
+    #     'examples/airline_demo',
+    #     supported_pythons=SupportedPython3s,
+    #     extra_cmds_fn=airline_demo_extra_cmds_fn,
+    #     buildkite_label='airline-demo',
+    # ),
+    # # Examples: Events Demo
+    # # TODO: https://github.com/dagster-io/dagster/issues/2617
+    # # ModuleBuildSpec(
+    # #     'examples',
+    # #     env_vars=['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_DEFAULT_REGION'],
+    # #     supported_pythons=SupportedPython3s,
+    # #     tox_file='tox_events.ini',
+    # #     buildkite_label='events-demo',
+    # # ),
+    # # Examples
+    # ModuleBuildSpec(
+    #     'examples/legacy_examples',
+    #     supported_pythons=SupportedPython3s,
+    #     extra_cmds_fn=legacy_examples_extra_cmds_fn,
+    # ),
+    # ModuleBuildSpec(
+    #     'examples/docs_snippets',
+    #     extra_cmds_fn=legacy_examples_extra_cmds_fn,
+    #     upload_coverage=False,
+    #     supported_pythons=SupportedPython3s,
+    # ),
+    # ModuleBuildSpec('python_modules/dagit', extra_cmds_fn=dagit_extra_cmds_fn),
+    # ModuleBuildSpec('python_modules/automation', supported_pythons=SupportedPython3s),
+    # ModuleBuildSpec(
+    #     'python_modules/dagster',
+    #     extra_cmds_fn=dagster_extra_cmds_fn,
+    #     env_vars=['AWS_ACCOUNT_ID'],
+    #     depends_on_fn=test_image_depends_fn,
+    #     tox_env_suffixes=[
+    #         '-api_tests',
+    #         '-cli_tests',
+    #         '-cli_command_cli_api_tests',
+    #         '-cli_command_grpc_tests',
+    #         '-core_tests',
+    #         '-general_tests',
+    #     ],
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/dagster-graphql',
+    #     tox_env_suffixes=[
+    #         '-in_memory_instance_hosted_user_process_env',
+    #         '-in_memory_instance_out_of_process_env',
+    #         '-in_memory_instance_multi_location',
+    #         '-in_memory_instance_grpc_env',
+    #         '-sqlite_instance_hosted_user_process_env',
+    #         '-sqlite_instance_out_of_process_env',
+    #         '-sqlite_instance_multi_location',
+    #         '-sqlite_instance_grpc_env',
+    #         '-sqlite_instance_external_grpc_server_env',
+    #     ],
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/dagster-graphql',
+    #     extra_cmds_fn=graphql_pg_extra_cmds_fn,
+    #     tox_file='tox_postgres.ini',
+    #     buildkite_label='dagster-graphql-postgres',
+    #     tox_env_suffixes=[
+    #         '-not_graphql_context_test_suite',
+    #         '-postgres_instance_hosted_user_process_env',
+    #         '-postgres_instance_out_of_process_env',
+    #         '-postgres_instance_multi_location',
+    #         '-postgres_instance_grpc_env',
+    #     ],
+    # ),
+    ModuleBuildSpec(
+        'python_modules/libraries/dagster-dbt',
+        supported_pythons=[SupportedPython.V3_8],
+        extra_cmds_fn=dbt_extra_cmds_fn,
+    ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-airflow',
+    #     env_vars=[
+    #         'AIRFLOW_HOME',
+    #         'AWS_ACCOUNT_ID',
+    #         'AWS_ACCESS_KEY_ID',
+    #         'AWS_SECRET_ACCESS_KEY',
+    #         'BUILDKITE_SECRETS_BUCKET',
+    #         'GOOGLE_APPLICATION_CREDENTIALS',
+    #     ],
+    #     extra_cmds_fn=airflow_extra_cmds_fn,
+    #     depends_on_fn=test_image_depends_fn,
+    #     tox_env_suffixes=['-default', '-requiresairflowdb'],
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-aws',
+    #     env_vars=['AWS_DEFAULT_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-azure', env_vars=['AZURE_STORAGE_ACCOUNT_KEY'],
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-celery',
+    #     env_vars=['AWS_ACCOUNT_ID', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+    #     extra_cmds_fn=celery_extra_cmds_fn,
+    #     depends_on_fn=test_image_depends_fn,
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-celery-docker',
+    #     env_vars=['AWS_ACCOUNT_ID', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
+    #     extra_cmds_fn=celery_extra_cmds_fn,
+    #     depends_on_fn=test_image_depends_fn,
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-dask',
     #     env_vars=['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_DEFAULT_REGION'],
     #     supported_pythons=SupportedPython3s,
-    #     tox_file='tox_events.ini',
-    #     buildkite_label='events-demo',
     # ),
-    # Examples
-    ModuleBuildSpec(
-        'examples/legacy_examples',
-        supported_pythons=SupportedPython3s,
-        extra_cmds_fn=legacy_examples_extra_cmds_fn,
-    ),
-    ModuleBuildSpec(
-        'examples/docs_snippets',
-        extra_cmds_fn=legacy_examples_extra_cmds_fn,
-        upload_coverage=False,
-        supported_pythons=SupportedPython3s,
-    ),
-    ModuleBuildSpec('python_modules/dagit', extra_cmds_fn=dagit_extra_cmds_fn),
-    ModuleBuildSpec('python_modules/automation', supported_pythons=SupportedPython3s),
-    ModuleBuildSpec(
-        'python_modules/dagster',
-        extra_cmds_fn=dagster_extra_cmds_fn,
-        env_vars=['AWS_ACCOUNT_ID'],
-        depends_on_fn=test_image_depends_fn,
-        tox_env_suffixes=[
-            '-api_tests',
-            '-cli_tests',
-            '-cli_command_cli_api_tests',
-            '-cli_command_grpc_tests',
-            '-core_tests',
-            '-general_tests',
-        ],
-    ),
-    ModuleBuildSpec(
-        'python_modules/dagster-graphql',
-        tox_env_suffixes=[
-            '-in_memory_instance_hosted_user_process_env',
-            '-in_memory_instance_out_of_process_env',
-            '-in_memory_instance_multi_location',
-            '-in_memory_instance_grpc_env',
-            '-sqlite_instance_hosted_user_process_env',
-            '-sqlite_instance_out_of_process_env',
-            '-sqlite_instance_multi_location',
-            '-sqlite_instance_grpc_env',
-            '-sqlite_instance_external_grpc_server_env',
-        ],
-    ),
-    ModuleBuildSpec(
-        'python_modules/dagster-graphql',
-        extra_cmds_fn=graphql_pg_extra_cmds_fn,
-        tox_file='tox_postgres.ini',
-        buildkite_label='dagster-graphql-postgres',
-        tox_env_suffixes=[
-            '-not_graphql_context_test_suite',
-            '-postgres_instance_hosted_user_process_env',
-            '-postgres_instance_out_of_process_env',
-            '-postgres_instance_multi_location',
-            '-postgres_instance_grpc_env',
-        ],
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-airflow',
-        env_vars=[
-            'AIRFLOW_HOME',
-            'AWS_ACCOUNT_ID',
-            'AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY',
-            'BUILDKITE_SECRETS_BUCKET',
-            'GOOGLE_APPLICATION_CREDENTIALS',
-        ],
-        extra_cmds_fn=airflow_extra_cmds_fn,
-        depends_on_fn=test_image_depends_fn,
-        tox_env_suffixes=['-default', '-requiresairflowdb'],
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-aws',
-        env_vars=['AWS_DEFAULT_REGION', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-azure', env_vars=['AZURE_STORAGE_ACCOUNT_KEY'],
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-celery',
-        env_vars=['AWS_ACCOUNT_ID', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
-        extra_cmds_fn=celery_extra_cmds_fn,
-        depends_on_fn=test_image_depends_fn,
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-celery-docker',
-        env_vars=['AWS_ACCOUNT_ID', 'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY'],
-        extra_cmds_fn=celery_extra_cmds_fn,
-        depends_on_fn=test_image_depends_fn,
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-dask',
-        env_vars=['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_DEFAULT_REGION'],
-        supported_pythons=SupportedPython3s,
-    ),
-    ModuleBuildSpec('python_modules/libraries/dagster-flyte', supported_pythons=SupportedPython3s),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-gcp',
-        env_vars=[
-            'AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY',
-            'BUILDKITE_SECRETS_BUCKET',
-            'GCP_PROJECT_ID',
-        ],
-        extra_cmds_fn=gcp_extra_cmds_fn,
-        # Remove once https://github.com/dagster-io/dagster/issues/2511 is resolved
-        retries=2,
-    ),
-    ModuleBuildSpec('python_modules/libraries/dagster-ge', supported_pythons=SupportedPython3s),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-k8s',
-        env_vars=[
-            'AWS_ACCOUNT_ID',
-            'AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY',
-            'BUILDKITE_SECRETS_BUCKET',
-        ],
-        extra_cmds_fn=k8s_extra_cmds_fn,
-        depends_on_fn=test_image_depends_fn,
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-postgres', extra_cmds_fn=postgres_extra_cmds_fn
-    ),
-    ModuleBuildSpec(
-        'python_modules/libraries/dagster-twilio',
-        env_vars=['TWILIO_TEST_ACCOUNT_SID', 'TWILIO_TEST_AUTH_TOKEN'],
-        # Remove once https://github.com/dagster-io/dagster/issues/2511 is resolved
-        retries=2,
-    ),
-    ModuleBuildSpec('python_modules/libraries/lakehouse', supported_pythons=SupportedPython3s),
+    # ModuleBuildSpec('python_modules/libraries/dagster-flyte', supported_pythons=SupportedPython3s),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-gcp',
+    #     env_vars=[
+    #         'AWS_ACCESS_KEY_ID',
+    #         'AWS_SECRET_ACCESS_KEY',
+    #         'BUILDKITE_SECRETS_BUCKET',
+    #         'GCP_PROJECT_ID',
+    #     ],
+    #     extra_cmds_fn=gcp_extra_cmds_fn,
+    #     # Remove once https://github.com/dagster-io/dagster/issues/2511 is resolved
+    #     retries=2,
+    # ),
+    # ModuleBuildSpec('python_modules/libraries/dagster-ge', supported_pythons=SupportedPython3s),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-k8s',
+    #     env_vars=[
+    #         'AWS_ACCOUNT_ID',
+    #         'AWS_ACCESS_KEY_ID',
+    #         'AWS_SECRET_ACCESS_KEY',
+    #         'BUILDKITE_SECRETS_BUCKET',
+    #     ],
+    #     extra_cmds_fn=k8s_extra_cmds_fn,
+    #     depends_on_fn=test_image_depends_fn,
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-postgres', extra_cmds_fn=postgres_extra_cmds_fn
+    # ),
+    # ModuleBuildSpec(
+    #     'python_modules/libraries/dagster-twilio',
+    #     env_vars=['TWILIO_TEST_ACCOUNT_SID', 'TWILIO_TEST_AUTH_TOKEN'],
+    #     # Remove once https://github.com/dagster-io/dagster/issues/2511 is resolved
+    #     retries=2,
+    # ),
+    # ModuleBuildSpec('python_modules/libraries/lakehouse', supported_pythons=SupportedPython3s),
 ]
 
 
@@ -596,12 +615,12 @@ if __name__ == "__main__":
     steps = []
     steps += publish_test_images()
 
-    steps += [
-        StepBuilder("dagster-flyte build example")
-        .run("cd python_modules/libraries/dagster-flyte/examples", "make docker_build")
-        .on_integration_image(SupportedPython.V3_6)
-        .build()
-    ]
+    # steps += [
+    #     StepBuilder("dagster-flyte build example")
+    #     .run("cd python_modules/libraries/dagster-flyte/examples", "make docker_build")
+    #     .on_integration_image(SupportedPython.V3_6)
+    #     .build()
+    # ]
 
     steps += pylint_steps()
     steps += [
@@ -665,17 +684,17 @@ if __name__ == "__main__":
     for m in DAGSTER_PACKAGES_WITH_CUSTOM_TESTS:
         steps += m.get_tox_build_steps()
 
-    steps += extra_library_tests()
+    # steps += extra_library_tests()
 
-    # https://github.com/dagster-io/dagster/issues/2785
-    steps += pipenv_smoke_tests()
-    steps += version_equality_checks()
-    steps += next_docs_build_tests()
-    steps += examples_tests()
-    steps += integration_tests()
+    # # https://github.com/dagster-io/dagster/issues/2785
+    # steps += pipenv_smoke_tests()
+    # steps += version_equality_checks()
+    # steps += next_docs_build_tests()
+    # steps += examples_tests()
+    # steps += integration_tests()
 
-    if DO_COVERAGE:
-        steps += [wait_step(), coverage_step()]
+    # if DO_COVERAGE:
+    #     steps += [wait_step(), coverage_step()]
 
     print(  # pylint: disable=print-call
         yaml.dump(

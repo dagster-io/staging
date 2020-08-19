@@ -1,0 +1,2 @@
+dbt==0.17.2
+-e ../dagster-postgres
