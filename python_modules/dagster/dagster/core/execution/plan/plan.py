@@ -10,7 +10,7 @@ from dagster.core.definitions import (
     SolidHandle,
     SolidOutputHandle,
 )
-from dagster.core.definitions.dependency import DependencyStructure
+from dagster.core.definitions.dependency import DependencyStructure, SpecialSolidOutputHandle
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
 from dagster.core.system_config.objects import (
     EmptyIntermediateStoreBackcompatConfig,
@@ -20,7 +20,17 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
 from .compute import create_compute_step
-from .objects import ExecutionStep, StepInput, StepInputSourceType, StepOutputHandle
+from .objects import (
+    ExecutionStep,
+    SpecialStepInput,
+    SpecialStepOutputHandle,
+    StepInput,
+    StepInputSourceType,
+    StepOutputHandle,
+    UnresolvedExecutionStep,
+    UnresolvedStepInput,
+    UnresolvedStepOutputHandle,
+)
 
 
 class _PlanBuilder(object):
@@ -48,7 +58,10 @@ class _PlanBuilder(object):
             else pipeline.get_definition().get_default_mode()
         )
         self._steps = OrderedDict()
+        self._unresolved_steps = OrderedDict()
+
         self.step_output_map = dict()
+        self.step_special_map = dict()
         self._seen_keys = set()
 
     @property
@@ -73,15 +86,19 @@ class _PlanBuilder(object):
 
     def get_step_by_handle(self, handle):
         check.inst_param(handle, 'handle', SolidHandle)
-        return self._steps[handle.to_string()]
+        handle_str = handle.to_string()
+        if handle_str in self._unresolved_steps:
+            return self._unresolved_steps[handle_str]
+        else:
+            return self._steps[handle_str]
 
     def get_output_handle(self, key):
-        check.inst_param(key, 'key', SolidOutputHandle)
+        # check.inst_param(key, 'key', SolidOutputHandle)
         return self.step_output_map[key]
 
     def set_output_handle(self, key, val):
-        check.inst_param(key, 'key', SolidOutputHandle)
-        check.inst_param(val, 'val', StepOutputHandle)
+        # check.inst_param(key, 'key', SolidOutputHandle)
+        # check.inst_param(val, 'val', StepOutputHandle)
         self.step_output_map[key] = val
 
     def build(self):
@@ -143,21 +160,34 @@ class _PlanBuilder(object):
                     parent_step_inputs,
                 )
 
-                # If an input with dagster_type "Nothing" doesnt have a value
+                # If an input with dagster_type "Nothing" doesn't have a value
                 # we don't create a StepInput
                 if step_input is None:
                     continue
 
-                check.inst_param(step_input, 'step_input', StepInput)
+                check.inst_param(
+                    step_input, 'step_input', (StepInput, SpecialStepInput, UnresolvedStepInput)
+                )
                 step_inputs.append(step_input)
 
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
             if isinstance(solid.definition, SolidDefinition):
-                solid_compute_step = create_compute_step(
-                    self.pipeline_name, self.environment_config, solid, step_inputs, handle
-                )
-                self.add_step(solid_compute_step)
+
+                if all([isinstance(step_input, StepInput) for step_input in step_inputs]):
+                    solid_compute_step = create_compute_step(
+                        self.pipeline_name, self.environment_config, solid, step_inputs, handle
+                    )
+                    self.add_step(solid_compute_step)
+                else:
+                    step = UnresolvedExecutionStep(
+                        pipeline_name=self.pipeline_name,
+                        # env config in future,
+                        solid=solid,
+                        step_inputs=step_inputs,
+                        solid_handle=handle,
+                    )
+                    self.add_step(step)
 
             ### 2b. RECURSE
             # Recurse over the solids contained in an instance of CompositeSolidDefinition
@@ -187,11 +217,32 @@ class _PlanBuilder(object):
                 resolved_output_def, resolved_handle = solid.definition.resolve_output_to_origin(
                     output_def.name, handle
                 )
+
                 compute_step = self.get_step_by_handle(resolved_handle)
-                self.set_output_handle(
-                    output_handle,
-                    StepOutputHandle.from_step(compute_step, resolved_output_def.name),
-                )
+
+                if isinstance(compute_step, ExecutionStep):
+                    # the source step is resolved
+                    if isinstance(output_handle, SpecialSolidOutputHandle):
+                        step_handle = SpecialStepOutputHandle(
+                            compute_step.key, resolved_output_def.name
+                        )
+                    else:
+                        step_handle = StepOutputHandle.from_step(
+                            compute_step, resolved_output_def.name
+                        )
+
+                    self.set_output_handle(output_handle, step_handle)
+                else:
+                    # the source step is unresolved
+                    unresolved_step = compute_step
+                    self.set_output_handle(
+                        output_handle,
+                        UnresolvedStepOutputHandle(
+                            unresolved_key=unresolved_step.key,
+                            output_name=resolved_output_def.name,
+                            special_upstream=unresolved_step.get_special_upstream(),
+                        ),
+                    )
 
 
 def get_step_input(
@@ -215,14 +266,29 @@ def get_step_input(
         )
 
     input_handle = solid.input_handle(input_name)
-    if dependency_structure.has_singular_dep(input_handle):
-        solid_output_handle = dependency_structure.get_singular_dep(input_handle)
-        return StepInput(
+
+    if dependency_structure.has_special_dep(input_handle):
+        special_output_handle = dependency_structure.get_special_dep(input_handle)
+        return SpecialStepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source_type=StepInputSourceType.SINGLE_OUTPUT,
-            source_handles=[plan_builder.get_output_handle(solid_output_handle)],
+            special_handles=[plan_builder.get_output_handle(special_output_handle)],
         )
+
+    if dependency_structure.has_singular_dep(input_handle):
+        solid_output_handle = dependency_structure.get_singular_dep(input_handle)
+        step_handle = plan_builder.get_output_handle(solid_output_handle)
+        if isinstance(step_handle, StepOutputHandle):
+            return StepInput(
+                name=input_name,
+                dagster_type=input_def.dagster_type,
+                source_type=StepInputSourceType.SINGLE_OUTPUT,
+                source_handles=[step_handle],
+            )
+        else:
+            return UnresolvedStepInput(
+                name=input_name, dagster_type=input_def.dagster_type, source_handle=step_handle
+            )
 
     if dependency_structure.has_multi_deps(input_handle):
         solid_output_handles = dependency_structure.get_multi_deps(input_handle)
@@ -296,7 +362,10 @@ class ExecutionPlan(
             cls,
             pipeline=check.inst_param(pipeline, 'pipeline', ExecutablePipeline),
             step_dict=check.dict_param(
-                step_dict, 'step_dict', key_type=str, value_type=ExecutionStep
+                step_dict,
+                'step_dict',
+                key_type=str,
+                value_type=(ExecutionStep, UnresolvedExecutionStep),
             ),
             deps=check.dict_param(deps, 'deps', key_type=str, value_type=set),
             steps=list(step_dict.values()),
@@ -348,14 +417,26 @@ class ExecutionPlan(
         deps = OrderedDict()
 
         for key in self.step_keys_to_execute:
-            deps[key] = set()
-
-        for key in self.step_keys_to_execute:
             step = self.step_dict[key]
-            for step_input in step.step_inputs:
-                deps[step.key].update(
-                    step_input.dependency_keys.intersection(self.step_keys_to_execute)
-                )
+
+            if isinstance(step, ExecutionStep):
+                deps[key] = set()
+
+                for step_input in step.step_inputs:
+                    deps[step.key].update(
+                        step_input.dependency_keys.intersection(self.step_keys_to_execute)
+                    )
+
+        return deps
+
+    def resolution_deps(self):
+        deps = OrderedDict()
+
+        for step in self.steps:
+            if isinstance(step, UnresolvedExecutionStep):
+                handles = step.get_special_upstream()
+                deps[step.key] = set([handle.step_key for handle in handles])
+
         return deps
 
     def build_subset_plan(self, step_keys_to_execute):
