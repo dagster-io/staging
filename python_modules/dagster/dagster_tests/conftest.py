@@ -1,3 +1,4 @@
+import faulthandler
 import os
 import subprocess
 import time
@@ -16,6 +17,11 @@ from dagster.utils import file_relative_path
 
 IS_BUILDKITE = os.getenv('BUILDKITE') is not None
 HARDCODED_PORT = 8090
+
+
+@pytest.fixture(scope="session", autouse=True)
+def do_something(request):
+    faulthandler.enable()
 
 
 @pytest.fixture(scope='session')

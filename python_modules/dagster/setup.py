@@ -48,6 +48,7 @@ if __name__ == '__main__':
         install_requires=[
             # standard python 2/3 compatability things
             'enum34; python_version < "3.4"',
+            'faulthandler; python_version <"3"',
             'future',
             'funcsigs',
             'functools32; python_version<"3"',
