@@ -44,7 +44,14 @@ const LaunchBackfillButton: React.FunctionComponent<{
   onError?: () => void;
 }> = ({ partitionSetName, partitionNames, reexecutionSteps, fromFailure, onSuccess, onError }) => {
   const repositorySelector = useRepositorySelector();
+  const mounted = React.useRef(true);
   const [launchBackfill] = useMutation(LAUNCH_PARTITION_BACKFILL_MUTATION);
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, [onSuccess]);
   const onLaunch = async () => {
     const { data } = await launchBackfill({
       variables: {
@@ -59,6 +66,10 @@ const LaunchBackfillButton: React.FunctionComponent<{
         }
       }
     });
+
+    if (!mounted.current) {
+      return;
+    }
 
     if (data && data.launchPartitionBackfill.__typename === "PartitionBackfillSuccess") {
       onSuccess?.(data.launchPartitionBackfill.backfillId);
@@ -100,9 +111,17 @@ const LaunchBackfillButton: React.FunctionComponent<{
 export const PartitionsBackfill: React.FunctionComponent<{
   partitionSetName: string;
   showLoader: boolean;
-}> = ({ partitionSetName, showLoader }) => {
+  onLaunch?: (backfillId: string) => void;
+}> = ({ partitionSetName, showLoader, onLaunch }) => {
   const repositorySelector = useRepositorySelector();
+  const mounted = React.useRef(true);
   const [backfillType, setType] = React.useState<string>("");
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, [onLaunch]);
   const { loading, data } = useQuery<PartitionsNameQuery>(PARTITIONS_NAME_QUERY, {
     variables: { repositorySelector, partitionSetName },
     fetchPolicy: "network-only"
@@ -145,11 +164,12 @@ export const PartitionsBackfill: React.FunctionComponent<{
 
   const partitionNames = partitionSetOrError.partitionsOrError.results.map(x => x.name);
   const onSuccess = (backfillId: string) => {
-    setType("");
     SharedToaster.show({
       message: `Created backfill job "${backfillId}"`,
       intent: Intent.SUCCESS
     });
+    setType("");
+    onLaunch?.(backfillId);
   };
   return (
     <div

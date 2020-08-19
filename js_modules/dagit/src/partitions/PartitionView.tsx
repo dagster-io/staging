@@ -13,7 +13,6 @@ import styled from "styled-components/macro";
 import { Divider, Button, ButtonGroup, Spinner } from "@blueprintjs/core";
 import { IconNames } from "@blueprintjs/icons";
 import Loading from "../Loading";
-import { PartitionTable } from "./PartitionTable";
 import { PartitionGraph, PIPELINE_LABEL } from "./PartitionGraph";
 import { PartitionRunMatrix } from "./PartitionRunMatrix";
 import { colorHash } from "../Util";
@@ -33,6 +32,7 @@ interface PartitionViewProps {
   cursor: string | undefined;
   setCursor: (cursor: string | undefined) => void;
   onLoaded?: () => void;
+  runTags?: { [key: string]: string };
 }
 
 export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
@@ -40,7 +40,8 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
   partitionSetName,
   cursor,
   setCursor,
-  onLoaded
+  onLoaded,
+  runTags
 }) => {
   const [cursorStack, setCursorStack] = React.useState<string[]>([]);
   const [pageSize, setPageSize] = React.useState<number | undefined>(30);
@@ -66,7 +67,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
         reverse: true
       }}
       fetchPolicy="cache-and-network"
-      pollInterval={15 * 1000}
+      pollInterval={5 * 1000}
       partialRefetch={true}
     >
       {(queryResult: QueryResult<PartitionLongitudinalQuery, any>) => (
@@ -108,7 +109,11 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
                   setCursor={setCursor}
                 />
                 <div style={{ position: "relative" }}>
-                  <PartitionRunMatrix pipelineName={pipelineName} partitions={partitions} />
+                  <PartitionRunMatrix
+                    pipelineName={pipelineName}
+                    partitions={partitions}
+                    runTags={runTags}
+                  />
                   <PartitionContent
                     partitions={partitions}
                     allStepKeys={Object.keys(allStepKeys)}

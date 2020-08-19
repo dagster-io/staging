@@ -1,7 +1,7 @@
 import * as React from "react";
 import moment from "moment";
 import { uniq } from "lodash";
-import { Colors, Checkbox, NonIdealState, MultiSlider, Intent } from "@blueprintjs/core";
+import { Colors, Checkbox, MultiSlider, Intent } from "@blueprintjs/core";
 import styled from "styled-components/macro";
 
 import {
@@ -137,6 +137,7 @@ function buildMatrixData(
 interface PartitionRunMatrixProps {
   pipelineName: string;
   partitions: Partition[];
+  runTags?: { [key: string]: string };
 }
 
 interface MatrixDataInputs {
@@ -189,9 +190,18 @@ const useMatrixData = (inputs: MatrixDataInputs) => {
   return result;
 };
 
+const tagsToTokenFieldValues = (runTags?: { [key: string]: string }) => {
+  if (!runTags) {
+    return [];
+  }
+  return Object.keys(runTags).map(key => ({ token: "tag", value: `${key}=${runTags[key]}` }));
+};
+
 export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps> = props => {
   const { viewport, containerProps } = useViewport();
-  const [runsFilter, setRunsFilter] = React.useState<TokenizingFieldValue[]>([]);
+  const [runsFilter, setRunsFilter] = React.useState<TokenizingFieldValue[]>(
+    tagsToTokenFieldValues(props.runTags)
+  );
   const [focusedPartitionName, setFocusedPartitionName] = React.useState<string>("");
   const [hoveredStepName, setHoveredStepName] = React.useState<string>("");
   const [stepQuery, setStepQuery] = React.useState<string>("");
@@ -201,6 +211,9 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
     showSucessful: true,
     colorizeByAge: false
   });
+  React.useEffect(() => {
+    setRunsFilter(tagsToTokenFieldValues(props.runTags));
+  }, [props.runTags]);
 
   // Retrieve the pipeline's structure
   const repositorySelector = useRepositorySelector();

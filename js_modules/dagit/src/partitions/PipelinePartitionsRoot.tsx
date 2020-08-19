@@ -35,6 +35,7 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
 
   const [selected, setSelected] = React.useState<PartitionSet | undefined>();
   const [showLoader, setShowLoader] = React.useState<boolean>(false);
+  const [runTags, setRunTags] = React.useState<{ [key: string]: string }>({});
 
   return (
     <Loading queryResult={queryResult}>
@@ -79,13 +80,18 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
               partitionSets={partitionSetsOrError.results}
               onSelect={setSelected}
             />
-            <PartitionsBackfill partitionSetName={partitionSet.name} showLoader={showLoader} />
+            <PartitionsBackfill
+              partitionSetName={partitionSet.name}
+              showLoader={showLoader}
+              onLaunch={(backfillId: string) => setRunTags({ "dagster/backfill": backfillId })}
+            />
             <PartitionView
               pipelineName={pipelineName}
               partitionSetName={partitionSet.name}
               cursor={cursor}
               setCursor={setCursor}
               onLoaded={() => setShowLoader(true)}
+              runTags={runTags}
             />
           </div>
         );
