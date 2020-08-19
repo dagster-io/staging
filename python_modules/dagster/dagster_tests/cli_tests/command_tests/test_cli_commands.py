@@ -10,6 +10,7 @@ from click.testing import CliRunner
 
 from dagster import (
     PartitionSetDefinition,
+    PresetDefinition,
     ScheduleDefinition,
     Shape,
     check,
@@ -45,7 +46,9 @@ def do_input(x):
     return x
 
 
-@pipeline(name='foo')
+@pipeline(
+    name='foo', preset_defs=[PresetDefinition(name="test", tags={'foo': 'bar'}),],
+)
 def foo_pipeline():
     do_input(do_something())
 
@@ -456,6 +459,16 @@ def valid_pipeline_python_origin_target_cli_args():
             os.path.dirname(__file__),
             '-a',
             'define_foo_pipeline',
+        ],
+        [
+            '-f',
+            file_relative_path(__file__, 'test_cli_commands.py'),
+            '-d',
+            os.path.dirname(__file__),
+            '-a',
+            'define_foo_pipeline',
+            '--preset',
+            'test',
         ],
     ]
 
