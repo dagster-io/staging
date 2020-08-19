@@ -146,7 +146,7 @@ class TestReexecution(ExecutingGraphQLContextTestMatrix):
         assert result.data['launchPipelineExecution']['__typename'] == 'LaunchPipelineRunSuccess'
         assert result.data['launchPipelineExecution']['run']['status'] == 'NOT_STARTED'
 
-        instance.run_launcher.join()
+        graphql_context.drain_outstanding_executions()
 
         result = execute_dagster_graphql(
             context=graphql_context, query=RUN_QUERY, variables={'runId': run_id}
@@ -174,7 +174,7 @@ class TestReexecution(ExecutingGraphQLContextTestMatrix):
         )
         assert result.data['launchPipelineReexecution']['__typename'] == 'LaunchPipelineRunSuccess'
 
-        instance.run_launcher.join()
+        graphql_context.drain_outstanding_executions()
 
         result = execute_dagster_graphql(
             context=graphql_context, query=RUN_QUERY, variables={'runId': new_run_id}
