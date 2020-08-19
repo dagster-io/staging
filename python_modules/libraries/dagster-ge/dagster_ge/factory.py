@@ -34,8 +34,8 @@ def ge_validation_solid_factory(datasource_name, suite_name, validation_operator
     Args:
         datasource_name (str): the name of your pandas DataSource, see your great_expectations.yml
         suite_name (str): the name of your expectation suite, see your great_expectations.yml
-        save_to_file (Optional[str]): what validation operator to run  -- defaults to None, which generates an
-                                      ephemeral validator.
+        validation_operator_name (Optional[str]): what validation operator to run  -- defaults to None,
+                    which generates an ephemeral validator.
 
     Returns:
         A solid that takes in an in-memory dataframe and yields both an expectation with relevant metadata
