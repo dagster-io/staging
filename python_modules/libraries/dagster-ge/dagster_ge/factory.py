@@ -28,13 +28,14 @@ def ge_data_context(context):
         yield ge.data_context.DataContext(context_root_dir=context.resource_config['ge_root_dir'])
 
 
-def ge_validation_solid_factory(datasource_name, suite_name, save_to_file=False):
+def ge_validation_solid_factory(datasource_name, suite_name, validation_operator_name=None):
     """
         Generates solids for interacting with GE, currently only works on pandas dataframes
     Args:
         datasource_name (str): the name of your pandas DataSource, see your great_expectations.yml
         suite_name (str): the name of your expectation suite, see your great_expectations.yml
-        save_to_file (Optional[bool]): whether to save validation results and data docs to file.
+        save_to_file (Optional[str]): what validation operator to run  -- defaults to None, which generates an
+                                      ephemeral validator.
 
     Returns:
         A solid that takes in an in-memory dataframe and yields both an expectation with relevant metadata
@@ -60,14 +61,14 @@ def ge_validation_solid_factory(datasource_name, suite_name, save_to_file=False)
     )
     def ge_validation_solid(context, pandas_df):
         data_context = context.resources.ge_data_context
-        if save_to_file:
-            validation_operator = 'action_list_operator'
+        if validation_operator_name is not None:
+            validation_operator = validation_operator_name
         else:
-            validation_operator = 'ephemeral_validation'
             data_context.add_validation_operator(
                 'ephemeral_validation',
                 {'class_name': 'ActionListValidationOperator', 'action_list': []},
             )
+            validation_operator = 'ephemeral_validation'
         suite = data_context.get_expectation_suite(suite_name)
         batch_kwargs = {
             "dataset": pandas_df,
