@@ -565,11 +565,8 @@ def execute_launch_command(instance, kwargs):
         source='pipeline_launch_command',
     )
 
-    if preset:
-        if config:
-            raise click.UsageError('Can not use --preset with --config.')
-
-        preset = external_pipeline.get_preset(preset)
+    if preset and config:
+        raise click.UsageError('Can not use --preset with --config.')
     else:
         preset = None
 
