@@ -200,6 +200,20 @@ def legacy_examples_extra_cmds_fn(_):
     ]
 
 
+def dbt_extra_cmds_fn(_):
+    return [
+        "pushd python_modules/libraries/dagster-dbt/dagster_dbt_tests",
+        "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit,
+        # Can't use host networking on buildkite and communicate via localhost
+        # between these sibling containers, so pass along the ip.
+        network_buildkite_container('postgres'),
+        connect_sibling_docker_container(
+            'postgres', 'test-postgres-db-dbt', 'POSTGRES_TEST_DB_DBT_HOST'
+        ),
+        "popd",
+    ]
+
+
 def k8s_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
@@ -252,23 +266,23 @@ def graphql_pg_extra_cmds_fn(_):
 # Some Dagster packages have more involved test configs or support only certain Python version;
 # special-case those here
 DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
-    # Examples: Airline Demo
-    ModuleBuildSpec(
-        'examples/airline_demo',
-        supported_pythons=SupportedPython3s,
-        extra_cmds_fn=airline_demo_extra_cmds_fn,
-        buildkite_label='airline-demo',
-    ),
-    # Examples: Events Demo
-    # TODO: https://github.com/dagster-io/dagster/issues/2617
+    # # Examples: Airline Demo
     # ModuleBuildSpec(
-    #     'examples',
-    #     env_vars=['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_DEFAULT_REGION'],
+    #     'examples/airline_demo',
     #     supported_pythons=SupportedPython3s,
-    #     tox_file='tox_events.ini',
-    #     buildkite_label='events-demo',
+    #     extra_cmds_fn=airline_demo_extra_cmds_fn,
+    #     buildkite_label='airline-demo',
     # ),
-    # Examples
+    # # Examples: Events Demo
+    # # TODO: https://github.com/dagster-io/dagster/issues/2617
+    # # ModuleBuildSpec(
+    # #     'examples',
+    # #     env_vars=['AWS_SECRET_ACCESS_KEY', 'AWS_ACCESS_KEY_ID', 'AWS_DEFAULT_REGION'],
+    # #     supported_pythons=SupportedPython3s,
+    # #     tox_file='tox_events.ini',
+    # #     buildkite_label='events-demo',
+    # # ),
+    # # Examples
     ModuleBuildSpec(
         'examples/legacy_examples',
         supported_pythons=SupportedPython3s,
@@ -322,6 +336,11 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
             '-postgres_instance_multi_location',
             '-postgres_instance_grpc_env',
         ],
+    ),
+    ModuleBuildSpec(
+        'python_modules/libraries/dagster-dbt',
+        supported_pythons=[SupportedPython.V3_8],
+        extra_cmds_fn=dbt_extra_cmds_fn,
     ),
     ModuleBuildSpec(
         'python_modules/libraries/dagster-airflow',
