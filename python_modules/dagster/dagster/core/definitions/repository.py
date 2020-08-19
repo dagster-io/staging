@@ -426,7 +426,11 @@ class RepositoryData(object):
                     solid_defs[solid_def.name] = solid_def
                     solid_to_pipeline[solid_def.name] = pipeline.name
 
-                if not solid_defs[solid_def.name] is solid_def:
+                if (
+                    not solid_defs[solid_def.name] is solid_def
+                    # skip the check if solid_def is a copy created by the Dagster machinery
+                    and solid_def.is_copy is False
+                ):
                     first_name, second_name = sorted(
                         [solid_to_pipeline[solid_def.name], pipeline.name]
                     )
