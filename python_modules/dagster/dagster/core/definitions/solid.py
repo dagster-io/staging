@@ -12,6 +12,7 @@ from dagster.utils import frozendict, frozenlist
 from dagster.utils.backcompat import rename_warning
 
 from .dependency import SolidHandle
+from .hook import HookDefinition
 from .input import InputDefinition, InputMapping
 from .output import OutputDefinition, OutputMapping
 from .solid_container import IContainSolids, create_execution_structure, validate_dependency_dict
@@ -161,10 +162,9 @@ class ISolidDefinition(six.with_metaclass(ABCMeta)):
 
         return CallableSolidNode(self, tags=validate_tags(tags))
 
+    @abstractmethod
     def with_hooks(self, hook_defs):
-        from .composition import CallableSolidNode
-
-        return CallableSolidNode(self, hook_defs=hook_defs)
+        raise NotImplementedError()
 
 
 class SolidDefinition(ISolidDefinition, IConfigMappable):
@@ -309,6 +309,11 @@ class SolidDefinition(ISolidDefinition, IConfigMappable):
             _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
+    def with_hooks(self, hook_defs):
+        from .composition import CallableSolidNode
+
+        return CallableSolidNode(self, hook_defs=hook_defs)
+
 
 class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
     '''The core unit of composition and abstraction, composite solids allow you to
@@ -376,6 +381,7 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         description=None,
         tags=None,
         positional_inputs=None,
+        _hook_defs=None,
     ):
         check.str_param(name, 'name')
         self._solid_defs = check.list_param(solid_defs, 'solid_defs', of_type=ISolidDefinition)
@@ -397,6 +403,8 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         self._config_mapping = check.opt_inst_param(config_mapping, 'config_mapping', ConfigMapping)
         self._solid_dict = solid_dict
         self._dependency_structure = dependency_structure
+
+        self._hook_defs = check.opt_set_param(_hook_defs, '_hook_defs', of_type=HookDefinition)
 
         # eager computation to detect cycles
         self.solids_in_topological_order = self._solids_in_topological_order()
@@ -566,6 +574,34 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         for solid_def in self._solid_defs:
             for ttype in solid_def.all_dagster_types():
                 yield ttype
+
+    @property
+    def hook_defs(self):
+        return self._hook_defs
+
+    def with_hooks(self, hook_defs):
+        raise DagsterInvalidDefinitionError('Hook not yet supported on composite solids directly.')
+
+        # from .composition import CallableSolidNode
+
+        # hook_defs = check.set_param(hook_defs, 'hook_defs', of_type=HookDefinition)
+
+        # # simliar to pipeline definition
+        # return CallableSolidNode(
+        #     CompositeSolidDefinition(
+        #         name=self.name,  # TODO: the name of a composite solid def has to be unique
+        #         solid_defs=self._solid_defs,
+        #         input_mappings=self.input_mappings,
+        #         output_mappings=self.output_mappings,
+        #         config_mapping=self.config_mapping,
+        #         dependencies=self.dependencies,
+        #         description=self.description,
+        #         tags=self.tags,
+        #         positional_inputs=self.positional_inputs,
+        #         _hook_defs=hook_defs.union(self.hook_defs),
+        #     ),
+        #     hook_defs=hook_defs,
+        # )
 
 
 def _validate_in_mappings(input_mappings, solid_dict, name):
