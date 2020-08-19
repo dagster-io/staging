@@ -87,3 +87,8 @@ class OutputMapping(namedtuple('_OutputMapping', 'definition solid_name output_n
             check.str_param(solid_name, 'solid_name'),
             check.opt_str_param(output_name, 'output_name', DEFAULT_OUTPUT),
         )
+
+
+class SpecialOutputDefinition(OutputDefinition):
+    def __init__(self):
+        super(SpecialOutputDefinition, self).__init__()

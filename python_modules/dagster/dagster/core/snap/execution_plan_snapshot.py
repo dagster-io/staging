@@ -143,9 +143,11 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
 
     return ExecutionPlanSnapshot(
         steps=sorted(
-            list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
+            # list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
+            # skipping this for now
+            []
         ),
         artifacts_persisted=execution_plan.artifacts_persisted,
         pipeline_snapshot_id=pipeline_snapshot_id,
-        step_keys_to_execute=execution_plan.step_keys_to_execute,
+        step_keys_to_execute=[],  # execution_plan.step_keys_to_execute,
     )
