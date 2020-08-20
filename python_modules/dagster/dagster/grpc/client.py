@@ -382,9 +382,6 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
     def __exit__(self, _exception_type, _exception_value, _traceback):
         self.cleanup_server()
 
-    def __del__(self):
-        self.cleanup_server()
-
 
 @contextmanager
 def ephemeral_grpc_api_client(
