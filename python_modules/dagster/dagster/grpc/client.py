@@ -32,6 +32,7 @@ CLIENT_HEARTBEAT_INTERVAL = 1
 
 
 def client_heartbeat_thread(client):
+
     while True:
         time.sleep(CLIENT_HEARTBEAT_INTERVAL)
         try:
