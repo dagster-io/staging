@@ -63,6 +63,12 @@ class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
     def create_reloaded_handle(self):
         pass
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        pass
+
     @staticmethod
     def create_in_process_location(pointer):
         check.inst_param(pointer, 'pointer', CodePointer)
@@ -333,6 +339,9 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(
         return RepositoryLocationHandle.create_process_bound_grpc_server_location(
             self.loadable_target_origin, self.location_name,
         )
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        self.client.__exit__(exception_type, exception_value, traceback)
 
 
 class InProcessRepositoryLocationHandle(
