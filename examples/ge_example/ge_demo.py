@@ -23,7 +23,9 @@ def postprocess_payroll(_, numrows, expectation):
         raise ValueError
 
 
-payroll_expectations = ge_validation_solid_factory("getest", "basic.warning")
+payroll_expectations = ge_validation_solid_factory(
+    datasource_name="getest", suite_name="basic.warning"
+)
 
 
 @pipeline(
