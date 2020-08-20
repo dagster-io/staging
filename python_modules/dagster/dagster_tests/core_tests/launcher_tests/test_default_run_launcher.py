@@ -6,7 +6,10 @@ import pytest
 
 from dagster import DefaultRunLauncher, file_relative_path, pipeline, repository, solid
 from dagster.core.definitions.reconstructable import ReconstructableRepository
-from dagster.core.host_representation.handle import RepositoryLocationHandle
+from dagster.core.host_representation.handle import (
+    ManagedGrpcPythonEnvRepositoryLocationHandle,
+    RepositoryLocationHandle,
+)
 from dagster.core.host_representation.repository_location import (
     GrpcServerRepositoryLocation,
     InProcessRepositoryLocation,
@@ -156,7 +159,7 @@ def get_external_pipeline_from_grpc_server_repository(pipeline_name):
 @contextmanager
 def get_external_pipeline_from_managed_grpc_python_env_repository(pipeline_name):
 
-    repository_location_handle = RepositoryLocationHandle.create_process_bound_grpc_server_location(
+    repository_location_handle = ManagedGrpcPythonEnvRepositoryLocationHandle(
         loadable_target_origin=LoadableTargetOrigin(
             attribute='nope',
             python_file=file_relative_path(__file__, 'test_cli_api_run_launcher.py'),
