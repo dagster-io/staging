@@ -1,7 +1,6 @@
 import os
 import subprocess
 import sys
-import time
 from contextlib import contextmanager
 
 import grpc
@@ -31,9 +30,8 @@ from .types import (
 CLIENT_HEARTBEAT_INTERVAL = 1
 
 
-def client_heartbeat_thread(client):
-    while True:
-        time.sleep(CLIENT_HEARTBEAT_INTERVAL)
+def client_heartbeat_thread(client, stop_event):
+    while not stop_event.wait(CLIENT_HEARTBEAT_INTERVAL):
         try:
             client.heartbeat('ping')
         except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
