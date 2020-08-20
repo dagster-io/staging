@@ -290,9 +290,6 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
             self.grpc_server_process.wait()
             self.grpc_server_process = None
 
-    def __del__(self):
-        self.cleanup()
-
     @property
     def repository_names(self):
         return set(self.repository_code_pointer_dict.keys())
