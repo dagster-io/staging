@@ -1026,7 +1026,7 @@ class GrpcServerProcess(object):
         max_retries=10,
         max_workers=1,
         heartbeat=False,
-        heartbeat_timeout=30,
+        heartbeat_timeout=10,
     ):
         self.port = None
         self.socket = None
