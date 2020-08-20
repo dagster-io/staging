@@ -5,44 +5,20 @@ import six
 
 from dagster.check import CheckError
 from dagster.core.errors import DagsterInvalidDefinitionError
-from dagster.seven import funcsigs, is_module_available
+from dagster.seven import funcsigs
 
 from .input import InputDefinition
 from .output import OutputDefinition
 
 
-def _infer_input_description_from_docstring(fn):
-    if not is_module_available("docstring_parser"):
-        return {}
-
-    from docstring_parser import parse
-
-    docstring = parse(fn.__doc__)
-    return {p.arg_name: p.description for p in docstring.params}
-
-
-def _infer_output_description_from_docstring(fn):
-    if not is_module_available("docstring_parser"):
-        return
-    from docstring_parser import parse
-
-    docstring = parse(fn.__doc__)
-    if docstring.returns is None:
-        return
-
-    return docstring.returns.description
-
-
 def infer_output_definitions(decorator_name, solid_name, fn):
     signature = funcsigs.signature(fn)
     try:
-        description = _infer_output_description_from_docstring(fn)
         return [
             OutputDefinition()
             if signature.return_annotation is funcsigs.Signature.empty
-            else OutputDefinition(signature.return_annotation, description=description)
+            else OutputDefinition(signature.return_annotation)
         ]
-
     except CheckError as type_error:
         six.raise_from(
             DagsterInvalidDefinitionError(
@@ -72,29 +48,20 @@ def _input_param_type(type_annotation):
 def infer_input_definitions_for_lambda_solid(solid_name, fn):
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
-    descriptions = _infer_input_description_from_docstring(fn)
-    defs = _infer_inputs_from_params(params, '@lambda_solid', solid_name, descriptions=descriptions)
-    return defs
+
+    return _infer_inputs_from_params(params, '@lambda_solid', solid_name)
 
 
-def _infer_inputs_from_params(params, decorator_name, solid_name, descriptions=None):
-    descriptions = descriptions or {}
+def _infer_inputs_from_params(params, decorator_name, solid_name):
     input_defs = []
     for param in params:
         try:
             if param.default is not funcsigs.Parameter.empty:
                 input_def = InputDefinition(
-                    param.name,
-                    _input_param_type(param.annotation),
-                    default_value=param.default,
-                    description=descriptions.get(param.name),
+                    param.name, _input_param_type(param.annotation), default_value=param.default
                 )
             else:
-                input_def = InputDefinition(
-                    param.name,
-                    _input_param_type(param.annotation),
-                    description=descriptions.get(param.name),
-                )
+                input_def = InputDefinition(param.name, _input_param_type(param.annotation))
 
             input_defs.append(input_def)
 
@@ -119,16 +86,12 @@ def _infer_inputs_from_params(params, decorator_name, solid_name, descriptions=N
 def infer_input_definitions_for_composite_solid(solid_name, fn):
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
-    descriptions = _infer_input_description_from_docstring(fn)
-    defs = _infer_inputs_from_params(
-        params, '@composite_solid', solid_name, descriptions=descriptions
-    )
-    return defs
+
+    return _infer_inputs_from_params(params, '@composite_solid', solid_name)
 
 
 def infer_input_definitions_for_solid(solid_name, fn):
     signature = funcsigs.signature(fn)
     params = list(signature.parameters.values())
-    descriptions = _infer_input_description_from_docstring(fn)
-    defs = _infer_inputs_from_params(params[1:], '@solid', solid_name, descriptions=descriptions)
-    return defs
+
+    return _infer_inputs_from_params(params[1:], '@solid', solid_name)
