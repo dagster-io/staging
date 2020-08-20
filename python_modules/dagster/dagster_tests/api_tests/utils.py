@@ -1,4 +1,5 @@
 import sys
+from contextlib import contextmanager
 
 from dagster import file_relative_path
 from dagster.core.definitions.reconstructable import ReconstructableRepository
@@ -39,20 +40,20 @@ def get_bar_repo_handle():
     )
 
 
+@contextmanager
 def get_bar_grpc_repo_handle():
-    return (
-        GrpcServerRepositoryLocation(get_bar_repo_grpc_repository_location_handle())
-        .get_repository('bar_repo')
-        .handle
-    )
+    with get_bar_repo_grpc_repository_location_handle() as handle:
+        yield GrpcServerRepositoryLocation(handle).get_repository('bar_repo').handle
 
 
 def get_foo_pipeline_handle():
     return PipelineHandle('foo', get_bar_repo_handle())
 
 
+@contextmanager
 def get_foo_grpc_pipeline_handle():
-    return PipelineHandle('foo', get_bar_grpc_repo_handle())
+    with get_bar_grpc_repo_handle() as repo_handle:
+        yield PipelineHandle('foo', repo_handle)
 
 
 def legacy_get_bar_repo_handle():
