@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.3
+
+**New**
+
+* Added an experimental mode that speeds up pipeline runs in dagit by spinning up a gRPC server for each repository location in your workspace. To enable it, add the following to your `dagster.yaml`:
+
+```yaml
+opt_in:
+  local_servers: true
+```
+
 ## 0.9.2
 
 **Breaking Changes**

@@ -105,3 +105,23 @@ local_artifact_storage:
   class: LocalArtifactStorage
   config:
     base_dir: "/var/shared/dagster"
+
+# ==================================================================================================
+# Opt-Ins
+# ==================================================================================================
+# Enable experimental Dagster features. Currently available features:
+#
+# Setting local_servers to true will create a gRPC server for each of the Python repository
+# locations in your workspace and use them for execution. This makes pipeline runs faster since
+# Dagster no longer has to launch a new Python process for each run. The servers will automaticall
+# shut down along with Dagster once they have finished any pipelines they are executing.
+opt_in:
+  local_servers: true
+
+# ==================================================================================================
+# Telemetry
+# ==================================================================================================
+# Allows opting out of Dagster collecting usage statistics. See
+# https://docs.dagster.io/install#telemetry for more details.
+telemetry:
+  enabled: false
