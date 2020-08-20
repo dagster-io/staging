@@ -298,13 +298,14 @@ class EnvironmentManagers:
                 recon_repo.get_origin()
             )
 
-            yield [
-                GrpcServerRepositoryLocation(
-                    RepositoryLocationHandle.create_process_bound_grpc_server_location(
-                        loadable_target_origin=loadable_target_origin, location_name='test',
-                    )
-                )
-            ]
+            handle = RepositoryLocationHandle.create_process_bound_grpc_server_location(
+                loadable_target_origin=loadable_target_origin, location_name='test',
+            )
+
+            try:
+                yield [GrpcServerRepositoryLocation(handle)]
+            finally:
+                handle.cleanup()
 
         return MarkedManager(_mgr_fn, [Marks.managed_grpc_env])
 

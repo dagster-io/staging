@@ -130,29 +130,8 @@ class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
 
     @staticmethod
     def create_process_bound_grpc_server_location(loadable_target_origin, location_name):
-        from dagster.grpc.client import client_heartbeat_thread
-        from dagster.grpc.server import GrpcServerProcess
-
-        server = GrpcServerProcess(
-            loadable_target_origin=loadable_target_origin, max_workers=2, heartbeat=True
-        )
-        client = server.create_ephemeral_client()
-        heartbeat_thread = threading.Thread(target=client_heartbeat_thread, args=(client,))
-        heartbeat_thread.daemon = True
-        heartbeat_thread.start()
-        list_repositories_response = sync_list_repositories_grpc(client)
-
-        code_pointer_dict = list_repositories_response.repository_code_pointer_dict
-
         return ManagedGrpcPythonEnvRepositoryLocationHandle(
-            loadable_target_origin=loadable_target_origin,
-            executable_path=list_repositories_response.executable_path,
-            location_name=location_name
-            if location_name
-            else _assign_python_env_location_name(code_pointer_dict),
-            repository_code_pointer_dict=code_pointer_dict,
-            client=client,
-            grpc_server_process=server,
+            loadable_target_origin=loadable_target_origin, location_name=location_name
         )
 
     @staticmethod
@@ -273,45 +252,52 @@ class PythonEnvRepositoryLocationHandle(
         )
 
 
-class ManagedGrpcPythonEnvRepositoryLocationHandle(
-    namedtuple(
-        '_ManagedGrpcPythonEnvRepositoryLocationHandle',
-        'loadable_target_origin executable_path location_name repository_code_pointer_dict grpc_server_process client',
-    ),
-    RepositoryLocationHandle,
-):
+class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
     '''
     A Python environment for which Dagster is managing a gRPC server.
     '''
 
-    def __new__(
-        cls,
-        loadable_target_origin,
-        executable_path,
-        location_name,
-        repository_code_pointer_dict,
-        grpc_server_process,
-        client,
-    ):
-        from dagster.grpc.client import DagsterGrpcClient
+    def __init__(self, loadable_target_origin, location_name):
+        from dagster.grpc.client import client_heartbeat_thread
         from dagster.grpc.server import GrpcServerProcess
 
-        return super(ManagedGrpcPythonEnvRepositoryLocationHandle, cls).__new__(
-            cls,
-            check.inst_param(
-                loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin
-            ),
-            check.str_param(executable_path, 'executable_path'),
-            check.str_param(location_name, 'location_name'),
-            check.dict_param(
-                repository_code_pointer_dict,
-                'repository_code_pointer_dict',
-                key_type=str,
-                value_type=CodePointer,
-            ),
-            check.inst_param(grpc_server_process, 'grpc_server_process', GrpcServerProcess),
-            check.inst_param(client, 'client', DagsterGrpcClient),
+        self.loadable_target_origin = check.inst_param(
+            loadable_target_origin, 'loadable_target_origin', LoadableTargetOrigin
         )
+        check.opt_str_param(location_name, 'location_name')
+
+        self.grpc_server_process = GrpcServerProcess(
+            loadable_target_origin=loadable_target_origin, max_workers=2, heartbeat=True
+        )
+        self.client = self.grpc_server_process.create_ephemeral_client()
+
+        self.heartbeat_thread = threading.Thread(
+            target=client_heartbeat_thread, args=(self.client,)
+        )
+        self.heartbeat_thread.daemon = True
+        self.heartbeat_thread.start()
+        list_repositories_response = sync_list_repositories_grpc(self.client)
+
+        self.executable_path = list_repositories_response.executable_path
+
+        self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
+
+        self.location_name = (
+            location_name
+            if location_name
+            else _assign_python_env_location_name(self.repository_code_pointer_dict)
+        )
+
+    def cleanup(self):
+        if self.client:
+            self.client.cleanup_server()
+            self.client = None
+        if self.grpc_server_process:
+            self.grpc_server_process.wait()
+            self.grpc_server_process = None
+
+    def __del__(self):
+        self.cleanup()
 
     @property
     def repository_names(self):
