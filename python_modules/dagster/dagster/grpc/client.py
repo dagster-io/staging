@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import time
+import warnings
 from contextlib import contextmanager
 
 import grpc
@@ -31,8 +32,8 @@ from .types import (
 CLIENT_HEARTBEAT_INTERVAL = 1
 
 
-def client_heartbeat_thread(client):
-    while True:
+def client_heartbeat_thread(client, shutdown_event):
+    while not shutdown_event.is_set():
         time.sleep(CLIENT_HEARTBEAT_INTERVAL)
         try:
             client.heartbeat('ping')
@@ -363,7 +364,8 @@ class DagsterGrpcClient(object):
 
 
 class EphemeralDagsterGrpcClient(DagsterGrpcClient):
-    '''A client that tells the server process that created it to shut down once it is destroyed or leaves a context manager.'''
+    '''A client that tells the server process that created it to shut down once it leaves a
+    context manager.'''
 
     def __init__(
         self, server_process=None, *args, **kwargs
@@ -383,7 +385,12 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
         self.cleanup_server()
 
     def __del__(self):
-        self.cleanup_server()
+        if self._server_process:
+            warnings.warn(
+                'Managed gRPC client is being destroyed without signalling to server that '
+                'it should shutdown. This may result in server processes living longer than '
+                'they need to. To fix this, wrap the client in a contextmanager.'
+            )
 
 
 @contextmanager
