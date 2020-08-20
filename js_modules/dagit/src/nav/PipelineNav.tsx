@@ -20,6 +20,11 @@ const PIPELINE_TABS: {
     title: "Runs",
     pathComponent: "runs",
     icon: "history"
+  },
+  {
+    title: "Partitions",
+    pathComponent: "partitions",
+    icon: "multi-select"
   }
 ];
 

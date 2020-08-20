@@ -39,7 +39,7 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
 
   return (
     <Loading queryResult={queryResult}>
-      {({ partitionSetsOrError }) => {
+      {({ partitionSetsOrError, instance }) => {
         if (partitionSetsOrError.__typename !== "PartitionSets") {
           return (
             <Wrapper>
@@ -74,17 +74,19 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
           selectionHasMatch && selected ? selected : partitionSetsOrError.results[0];
 
         return (
-          <div style={{ margin: 30 }}>
+          <PartitionRootContainer>
             <PartitionSetSelector
               selected={partitionSet}
               partitionSets={partitionSetsOrError.results}
               onSelect={setSelected}
             />
-            <PartitionsBackfill
-              partitionSetName={partitionSet.name}
-              showLoader={showLoader}
-              onLaunch={(backfillId: string) => setRunTags({ "dagster/backfill": backfillId })}
-            />
+            {instance.runLauncher && instance.runLauncher.name !== "DefaultRunLauncher" ? (
+              <PartitionsBackfill
+                partitionSetName={partitionSet.name}
+                showLoader={showLoader}
+                onLaunch={(backfillId: string) => setRunTags({ "dagster/backfill": backfillId })}
+              />
+            ) : null}
             <PartitionView
               pipelineName={pipelineName}
               partitionSetName={partitionSet.name}
@@ -93,7 +95,7 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
               onLoaded={() => setShowLoader(true)}
               runTags={runTags}
             />
-          </div>
+          </PartitionRootContainer>
         );
       }}
     </Loading>
@@ -153,6 +155,11 @@ const PIPELINE_PARTITIONS_ROOT_QUERY = gql`
         }
       }
     }
+    instance {
+      runLauncher {
+        name
+      }
+    }
   }
 `;
 
@@ -164,4 +171,10 @@ const Wrapper = styled.div`
   height: 100%;
   min-width: 0;
   overflow: auto;
+`;
+
+const PartitionRootContainer = styled.div`
+  padding: 30px;
+  overflow-y: auto;
+  min-height: calc(100vh - 45px);
 `;
