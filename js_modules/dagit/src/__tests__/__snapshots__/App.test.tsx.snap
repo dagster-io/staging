@@ -599,6 +599,36 @@ exports[`renders execution 1`] = `
         Runs
       </div>
       <div
+        className="PipelineNav__PipelineTabContainer-sc-17q1pb-2 dVGOJK"
+        onClick={[Function]}
+      >
+        <span
+          className="bp3-icon bp3-icon-multi-select"
+          icon="multi-select"
+          style={
+            Object {
+              "paddingRight": 8,
+            }
+          }
+        >
+          <svg
+            data-icon="multi-select"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+          >
+            <desc>
+              multi-select
+            </desc>
+            <path
+              d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </span>
+        Partitions
+      </div>
+      <div
         style={
           Object {
             "flex": 1,
@@ -1326,6 +1356,36 @@ exports[`renders pipeline page 1`] = `
           </svg>
         </span>
         Runs
+      </div>
+      <div
+        className="PipelineNav__PipelineTabContainer-sc-17q1pb-2 dVGOJK"
+        onClick={[Function]}
+      >
+        <span
+          className="bp3-icon bp3-icon-multi-select"
+          icon="multi-select"
+          style={
+            Object {
+              "paddingRight": 8,
+            }
+          }
+        >
+          <svg
+            data-icon="multi-select"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+          >
+            <desc>
+              multi-select
+            </desc>
+            <path
+              d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </span>
+        Partitions
       </div>
       <div
         style={
@@ -6005,6 +6065,36 @@ exports[`renders pipeline solid page 1`] = `
           </svg>
         </span>
         Runs
+      </div>
+      <div
+        className="PipelineNav__PipelineTabContainer-sc-17q1pb-2 dVGOJK"
+        onClick={[Function]}
+      >
+        <span
+          className="bp3-icon bp3-icon-multi-select"
+          icon="multi-select"
+          style={
+            Object {
+              "paddingRight": 8,
+            }
+          }
+        >
+          <svg
+            data-icon="multi-select"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+          >
+            <desc>
+              multi-select
+            </desc>
+            <path
+              d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </span>
+        Partitions
       </div>
       <div
         style={
@@ -12491,6 +12581,36 @@ exports[`renders type page 1`] = `
         Runs
       </div>
       <div
+        className="PipelineNav__PipelineTabContainer-sc-17q1pb-2 dVGOJK"
+        onClick={[Function]}
+      >
+        <span
+          className="bp3-icon bp3-icon-multi-select"
+          icon="multi-select"
+          style={
+            Object {
+              "paddingRight": 8,
+            }
+          }
+        >
+          <svg
+            data-icon="multi-select"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+          >
+            <desc>
+              multi-select
+            </desc>
+            <path
+              d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </span>
+        Partitions
+      </div>
+      <div
         style={
           Object {
             "flex": 1,
@@ -17170,6 +17290,36 @@ exports[`renders type page 2`] = `
         Runs
       </div>
       <div
+        className="PipelineNav__PipelineTabContainer-sc-17q1pb-2 dVGOJK"
+        onClick={[Function]}
+      >
+        <span
+          className="bp3-icon bp3-icon-multi-select"
+          icon="multi-select"
+          style={
+            Object {
+              "paddingRight": 8,
+            }
+          }
+        >
+          <svg
+            data-icon="multi-select"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+          >
+            <desc>
+              multi-select
+            </desc>
+            <path
+              d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </span>
+        Partitions
+      </div>
+      <div
         style={
           Object {
             "flex": 1,
@@ -21847,6 +21997,36 @@ exports[`renders without error 1`] = `
           </svg>
         </span>
         Runs
+      </div>
+      <div
+        className="PipelineNav__PipelineTabContainer-sc-17q1pb-2 dVGOJK"
+        onClick={[Function]}
+      >
+        <span
+          className="bp3-icon bp3-icon-multi-select"
+          icon="multi-select"
+          style={
+            Object {
+              "paddingRight": 8,
+            }
+          }
+        >
+          <svg
+            data-icon="multi-select"
+            height={16}
+            viewBox="0 0 16 16"
+            width={16}
+          >
+            <desc>
+              multi-select
+            </desc>
+            <path
+              d="M12 3.98H4c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm3-3H7c-.55 0-1 .45-1 1v1h8v5h1c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-6 6H1c-.55 0-1 .45-1 1v5c0 .55.45 1 1 1h8c.55 0 1-.45 1-1v-5c0-.55-.45-1-1-1zm-1 5H2v-3h6v3z"
+              fillRule="evenodd"
+            />
+          </svg>
+        </span>
+        Partitions
       </div>
       <div
         style={
