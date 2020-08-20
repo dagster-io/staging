@@ -74,6 +74,11 @@ class CouldNotBindGrpcServerToAddress(Exception):
     pass
 
 
+class WTFHearbeat:
+    def __init__(self, last_heartbeat_time):
+        self.last_heartbeat_time = last_heartbeat_time
+
+
 class LazyRepositorySymbolsAndCodePointers:
     '''Enables lazily loading user code at RPC-time so that it doesn't interrupt startup and
     we can gracefully handle user code errors.'''
@@ -125,6 +130,15 @@ def load_loadable_repository_symbols(loadable_target_origin):
         ]
     else:
         return []
+
+
+def heartbeat_thread(heartbeat_timeout, wtf, shutdown_event):
+    while True:
+        time.sleep(heartbeat_timeout)
+        last_heartbeat_time = wtf.last_heartbeat_time
+        if last_heartbeat_time < time.time() - heartbeat_timeout:
+            shutdown_event.set()
+            break
 
 
 def build_code_pointers_by_repo_name(loadable_target_origin, loadable_repository_symbols):
@@ -185,10 +199,12 @@ class DagsterApiServer(DagsterApiServicer):
             loadable_target_origin
         )
 
-        self.__last_heartbeat_time = time.time()
+        self.__wtf = WTFHearbeat(time.time())
+
         if heartbeat:
             self.__heartbeat_thread = threading.Thread(
-                target=self._heartbeat_thread, args=(heartbeat_timeout,),
+                target=heartbeat_thread,
+                args=(heartbeat_timeout, self.__wtf, self._shutdown_server_event),
             )
             self.__heartbeat_thread.daemon = True
             self.__heartbeat_thread.start()
@@ -206,12 +222,6 @@ class DagsterApiServer(DagsterApiServicer):
         )
         instance.report_engine_event(message, run, cls=self.__class__)
         instance.report_run_failed(run)
-
-    def _heartbeat_thread(self, heartbeat_timeout):
-        while True:
-            time.sleep(heartbeat_timeout)
-            if self.__last_heartbeat_time < time.time() - heartbeat_timeout:
-                self._shutdown_server_event.set()
 
     def _cleanup_thread(self):
         while True:
@@ -265,7 +275,7 @@ class DagsterApiServer(DagsterApiServicer):
             yield api_pb2.StreamingPingEvent(sequence_number=sequence_number, echo=echo)
 
     def Heartbeat(self, request, _context):
-        self.__last_heartbeat_time = time.time()
+        self.__wtf.last_heartbeat_time = time.time()
         echo = request.echo
         return api_pb2.PingReply(echo=echo)
 
