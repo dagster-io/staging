@@ -36,6 +36,8 @@ def ge_validation_solid_factory(datasource_name, suite_name, validation_operator
         suite_name (str): the name of your expectation suite, see your great_expectations.yml
         validation_operator_name (Optional[str]): what validation operator to run  -- defaults to None,
                     which generates an ephemeral validator.
+                    If you want to save data docs, use 'action_list_operator'.
+                    See https://docs.greatexpectations.io/en/latest/reference/core_concepts/validation_operators_and_actions.html
 
     Returns:
         A solid that takes in an in-memory dataframe and yields both an expectation with relevant metadata
