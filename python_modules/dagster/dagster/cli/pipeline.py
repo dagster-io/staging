@@ -515,6 +515,11 @@ def do_execute_command(
     ),
 )
 @click.option(
+    '--config-json',
+    type=click.STRING,
+    help='JSON string of run config to use for this pipeline run. Cannot be used with -c / --config.',
+)
+@click.option(
     '--preset',
     type=click.STRING,
     help='Specify a preset to use for this pipeline. Presets are defined on pipelines under '
@@ -548,7 +553,8 @@ def execute_launch_command(instance, kwargs):
     preset = kwargs.get('preset')
     mode = kwargs.get('mode')
     check.inst_param(instance, 'instance', DagsterInstance)
-    config = list(check.opt_tuple_param(kwargs.get('config'), 'config', default=(), of_type=str))
+
+    config = get_config_from_args(kwargs)
 
     repo_location = get_repository_location_from_kwargs(kwargs, instance)
     external_repo = get_external_repository_from_repo_location(
@@ -577,7 +583,7 @@ def execute_launch_command(instance, kwargs):
         repo_location=repo_location,
         external_repo=external_repo,
         external_pipeline=external_pipeline,
-        run_config=get_run_config_from_file_list(config),
+        run_config=config,
         mode=mode,
         preset=preset,
         tags=run_tags,
@@ -647,6 +653,27 @@ def gen_partition_names_from_args(partition_names, kwargs):
     end = validate_partition_slice(partition_names, 'to', kwargs.get('to'))
 
     return partition_names[start:end]
+
+
+def get_config_from_args(kwargs):
+    try:
+        if kwargs.get('config'):
+            config_file_list = list(
+                check.opt_tuple_param(kwargs.get('config'), 'config', default=(), of_type=str)
+            )
+            return get_run_config_from_file_list(config_file_list)
+        elif kwargs.get('config_json'):
+            return json.loads(kwargs.get('config_json'))
+        else:
+            return {}
+
+    except JSONDecodeError:
+        raise click.UsageError(
+            'Invalid JSON-string given for `--config_json`: {}\n\n{}'.format(
+                kwargs.get('config_json'),
+                serializable_error_info_from_exc_info(sys.exc_info()).to_string(),
+            )
+        )
 
 
 def get_tags_from_args(kwargs):
