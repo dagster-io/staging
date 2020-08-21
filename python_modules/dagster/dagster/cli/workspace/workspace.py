@@ -27,6 +27,13 @@ class Workspace:
         check.str_param(location_name, 'location_name')
         return self._location_handle_dict[location_name]
 
+    def reload_repository_location(self, location_name):
+        existing_handle = self.get_repository_location_handle(location_name)
+        reloaded_handle = existing_handle.create_reloaded_handle()
+        existing_handle.__exit__(None, None, None)
+        self._location_handle_dict[location_name] = reloaded_handle
+        return reloaded_handle
+
     def __enter__(self):
         return self
 
