@@ -31,19 +31,8 @@ export interface PipelinePartitionsRootQuery_partitionSetsOrError_PartitionSets 
 
 export type PipelinePartitionsRootQuery_partitionSetsOrError = PipelinePartitionsRootQuery_partitionSetsOrError_PipelineNotFoundError | PipelinePartitionsRootQuery_partitionSetsOrError_PythonError | PipelinePartitionsRootQuery_partitionSetsOrError_PartitionSets;
 
-export interface PipelinePartitionsRootQuery_instance_runLauncher {
-  __typename: "RunLauncher";
-  name: string;
-}
-
-export interface PipelinePartitionsRootQuery_instance {
-  __typename: "Instance";
-  runLauncher: PipelinePartitionsRootQuery_instance_runLauncher | null;
-}
-
 export interface PipelinePartitionsRootQuery {
   partitionSetsOrError: PipelinePartitionsRootQuery_partitionSetsOrError;
-  instance: PipelinePartitionsRootQuery_instance;
 }
 
 export interface PipelinePartitionsRootQueryVariables {

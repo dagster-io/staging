@@ -39,7 +39,7 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
 
   return (
     <Loading queryResult={queryResult}>
-      {({ partitionSetsOrError, instance }) => {
+      {({ partitionSetsOrError }) => {
         if (partitionSetsOrError.__typename !== "PartitionSets") {
           return (
             <Wrapper>
@@ -80,13 +80,12 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
               partitionSets={partitionSetsOrError.results}
               onSelect={setSelected}
             />
-            {instance.runLauncher && instance.runLauncher.name !== "DefaultRunLauncher" ? (
-              <PartitionsBackfill
-                partitionSetName={partitionSet.name}
-                showLoader={showLoader}
-                onLaunch={(backfillId: string) => setRunTags({ "dagster/backfill": backfillId })}
-              />
-            ) : null}
+            <PartitionsBackfill
+              pipelineName={pipelineName}
+              partitionSetName={partitionSet.name}
+              showLoader={showLoader}
+              onLaunch={(backfillId: string) => setRunTags({ "dagster/backfill": backfillId })}
+            />
             <PartitionView
               pipelineName={pipelineName}
               partitionSetName={partitionSet.name}
@@ -153,11 +152,6 @@ const PIPELINE_PARTITIONS_ROOT_QUERY = gql`
         results {
           name
         }
-      }
-    }
-    instance {
-      runLauncher {
-        name
       }
     }
   }
