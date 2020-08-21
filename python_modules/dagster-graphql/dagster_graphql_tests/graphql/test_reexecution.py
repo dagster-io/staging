@@ -99,6 +99,8 @@ class TestReexecution(ExecutingGraphQLContextTestMatrix):
             'runConfigYaml'
         ] = '<runConfigYaml dummy value>'
 
+        print("OUTPUT: " + repr(result_one.data))
+
         snapshot.assert_match(result_one.data)
 
         # reexecution
