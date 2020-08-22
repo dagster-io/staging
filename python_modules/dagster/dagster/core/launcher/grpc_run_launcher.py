@@ -115,11 +115,13 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
 
         run = self._instance.get_run_by_id(run_id)
         if not run or run.is_finished:
+            print("NO RUN OR NOT RUN IS FINISHED")
             return None
 
         tags = run.tags
 
         if GRPC_INFO_TAG not in tags:
+            print("NO TAGS")
             return None
 
         grpc_info = seven.json.loads(tags.get(GRPC_INFO_TAG))
@@ -133,9 +135,12 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
 
         client = self._get_grpc_client_for_termination(run_id)
         if not client:
+            print("NO CLIENT")
             return False
 
         res = client.can_cancel_execution(CanCancelExecutionRequest(run_id=run_id))
+
+        print("CAN CANCEL? " + res.can_cancel)
 
         return res.can_cancel
 
