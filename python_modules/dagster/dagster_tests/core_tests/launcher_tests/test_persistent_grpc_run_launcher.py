@@ -196,6 +196,9 @@ def get_external_pipeline_from_managed_grpc_python_env_repository(pipeline_name)
         get_external_pipeline_from_managed_grpc_python_env_repository,
     ],
 )
+@pytest.mark.skip(
+    reason="Flaky in Buildkite, see https://github.com/dagster-io/dagster/issues/2846"
+)
 def test_successful_run(get_external_pipeline):  # pylint: disable=redefined-outer-name
     with grpc_instance() as instance:
         pipeline_run = instance.create_run_for_pipeline(pipeline_def=noop_pipeline, run_config=None)
