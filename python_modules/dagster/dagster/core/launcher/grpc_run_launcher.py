@@ -1,3 +1,4 @@
+import sys
 import time
 import weakref
 
@@ -115,11 +116,13 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
 
         run = self._instance.get_run_by_id(run_id)
         if not run or run.is_finished:
+            sys.stderr.write("NO RUN OR NOT RUN IS FINISHED\n")
             return None
 
         tags = run.tags
 
         if GRPC_INFO_TAG not in tags:
+            sys.stderr.write("NO TAGS\n")
             return None
 
         grpc_info = seven.json.loads(tags.get(GRPC_INFO_TAG))
@@ -133,9 +136,12 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
 
         client = self._get_grpc_client_for_termination(run_id)
         if not client:
+            sys.stderr.write("NO CLIENT\n")
             return False
 
         res = client.can_cancel_execution(CanCancelExecutionRequest(run_id=run_id))
+
+        sys.stderr.write("CAN CANCEL? " + res.can_cancel + "\n")
 
         return res.can_cancel
 
