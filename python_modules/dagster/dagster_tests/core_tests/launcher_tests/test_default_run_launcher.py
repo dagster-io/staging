@@ -184,18 +184,8 @@ def get_external_pipeline_from_in_process_location(pipeline_name):
     "get_external_pipeline",
     [
         get_external_pipeline_from_grpc_server_repository,
-        pytest.param(
-            get_external_pipeline_from_managed_grpc_python_env_repository,
-            marks=pytest.mark.skip(
-                reason="Flaky in Buildkite, see https://github.com/dagster-io/dagster/issues/2846"
-            ),
-        ),
-        pytest.param(
-            get_external_pipeline_from_in_process_location,
-            marks=pytest.mark.skip(
-                reason="Flaky in Buildkite, see https://github.com/dagster-io/dagster/issues/2846"
-            ),
-        ),
+        get_external_pipeline_from_managed_grpc_python_env_repository,
+        get_external_pipeline_from_in_process_location,
     ],
 )
 def test_successful_run(get_external_pipeline):  # pylint: disable=redefined-outer-name
