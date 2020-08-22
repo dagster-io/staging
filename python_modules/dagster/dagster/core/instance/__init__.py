@@ -928,6 +928,13 @@ class DagsterInstance:
         from dagster.core.events import DagsterEvent, DagsterEventType
         from dagster.core.events.log import DagsterEventRecord
 
+        sys.stderr.write("REPORTING RUN FAILED!!!!\n\n")
+        import traceback
+
+        traceback.print_stack()
+
+        sys.stderr.write("END OF STACK TRACE")
+
         check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
         message = "This pipeline run has been marked as failed from outside the execution context"
 
