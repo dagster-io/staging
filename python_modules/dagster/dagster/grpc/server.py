@@ -233,7 +233,7 @@ class DagsterApiServer(DagsterApiServicer):
                     self._generate_synthetic_error_from_crash(run, instance)
 
                 for run_id in runs_to_clear:
-                    sys.stderr.write("RUN IS FINISHED SO CLEANING UP " + run_id + "\n")
+                    #                    sys.stderr.write("RUN IS FINISHED SO CLEANING UP " + run_id + "\n")
 
                     del self._executions[run_id]
                     del self._termination_events[run_id]
@@ -566,7 +566,7 @@ class DagsterApiServer(DagsterApiServicer):
         )
         with self._execution_lock:
             execution_process.start()
-            sys.stderr.write("ADDING EXECUTIO FOR " + run_id + "\n")
+            #            sys.stderr.write("ADDING EXECUTIO FOR " + run_id + "\n")
             self._executions[run_id] = (
                 execution_process,
                 DagsterInstance.from_ref(execute_run_args.instance_ref),
@@ -611,7 +611,7 @@ class DagsterApiServer(DagsterApiServicer):
                     )
 
         with self._execution_lock:
-            sys.stderr.write("DELLING EXECUTION AT END FOR " + run_id + "\n")
+            #            sys.stderr.write("DELLING EXECUTION AT END FOR " + run_id + "\n")
             if run_id in self._executions:
                 del self._executions[run_id]
             if run_id in self._termination_events:
@@ -647,9 +647,9 @@ class DagsterApiServer(DagsterApiServicer):
                 CancelExecutionRequest,
             )
             with self._execution_lock:
-                sys.stderr.write(
-                    "CANCELLING EXECUTION FOR " + cancel_execution_request.run_id + "\n"
-                )
+                #                sys.stderr.write(
+                #                    "CANCELLING EXECUTION FOR " + cancel_execution_request.run_id + "\n"
+                #                )
                 if cancel_execution_request.run_id in self._executions:
                     self._termination_events[cancel_execution_request.run_id].set()
                     success = True
@@ -672,8 +672,8 @@ class DagsterApiServer(DagsterApiServicer):
             deserialize_json_to_dagster_namedtuple(request.serialized_can_cancel_execution_request),
             CanCancelExecutionRequest,
         )
-        sys.stderr.write("CHECKING CAN CANCEL! STATE OF EXECUTIONS: \n")
-        sys.stderr.write(repr(self._executions) + "\n")
+        #        sys.stderr.write("CHECKING CAN CANCEL! STATE OF EXECUTIONS: \n")
+        #        sys.stderr.write(repr(self._executions) + "\n")
         with self._execution_lock:
             can_cancel = can_cancel_execution_request.run_id in self._executions
 
@@ -725,7 +725,7 @@ class DagsterApiServer(DagsterApiServicer):
         )
         with self._execution_lock:
             execution_process.start()
-            sys.stderr.write("ADDING LAUNCH RUN EXECUTION FOR " + run_id + "\n")
+            #            sys.stderr.write("ADDING LAUNCH RUN EXECUTION FOR " + run_id + "\n")
 
             self._executions[run_id] = (
                 execution_process,
