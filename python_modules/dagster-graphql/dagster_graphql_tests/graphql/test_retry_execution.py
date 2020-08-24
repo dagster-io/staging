@@ -621,11 +621,20 @@ class TestRetryExecutionAsyncOnlyBehavior(
                 }
             },
         )
+
+        total_time = 0
+
         # Wait until the first step succeeded
         while instance.get_run_stats(run_id).steps_succeeded < 1:
             sleep(0.1)
+            total_time += 0.1
+            if total_time > 10:
+                raise Exception("Timed out")
+
         # Terminate the current pipeline run at the second step
-        graphql_context.instance.run_launcher.terminate(run_id)
+        assert graphql_context.instance.run_launcher.terminate(run_id)
+
+        print("TERMINATED!!!")  # pylint: disable=print-call
 
         records = instance.all_logs(run_id)
 
@@ -674,3 +683,5 @@ class TestRetryExecutionAsyncOnlyBehavior(
         assert step_did_succeed_in_records(retry_records, "get_input_one.compute")
         assert step_did_succeed_in_records(retry_records, "get_input_two.compute")
         assert step_did_succeed_in_records(retry_records, "sum_inputs.compute")
+
+        print("SUCCEEDED, TIME TO TEAR DOWN, OH BOY!!")  # pylint: disable=print-call

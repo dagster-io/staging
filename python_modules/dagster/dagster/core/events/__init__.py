@@ -1,6 +1,7 @@
 """Structured representations of system events."""
 import logging
 import os
+import sys
 from collections import namedtuple
 from enum import Enum
 
@@ -587,6 +588,7 @@ class DagsterEvent(
 
     @staticmethod
     def pipeline_failure(pipeline_context):
+        sys.stderr.write("PIPELINE FAAAAILURE")
         return DagsterEvent.from_pipeline(
             DagsterEventType.PIPELINE_FAILURE,
             pipeline_context,

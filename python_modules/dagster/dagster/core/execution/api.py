@@ -1,3 +1,5 @@
+import sys
+
 from dagster import check
 from dagster.core.definitions import ExecutablePipeline, PipelineDefinition, SystemStorageData
 from dagster.core.definitions.executable import InMemoryExecutablePipeline
@@ -587,7 +589,8 @@ def _core_execution_iterator(pipeline_context, execution_plan, steps_started, pi
             if event.is_step_failure:
                 pipeline_success_ref.value = False
             yield event
-    except (Exception, KeyboardInterrupt):
+    except (Exception, KeyboardInterrupt) as e:
+        sys.stderr.write("CAUGHT A BAD THING: " + repr(e) + "\n")
         pipeline_success_ref.value = False
         raise  # finally block will run before this is re-raised
 
