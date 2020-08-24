@@ -1,6 +1,7 @@
 import datetime
 import logging
 import os
+import sys
 import time
 from abc import ABCMeta
 from collections import defaultdict, namedtuple
@@ -927,6 +928,8 @@ class DagsterInstance:
     def report_run_failed(self, pipeline_run):
         from dagster.core.events import DagsterEvent, DagsterEventType
         from dagster.core.events.log import DagsterEventRecord
+
+        sys.stderr.write("REPORTING RUN FAILED\n")
 
         check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
         message = "This pipeline run has been marked as failed from outside the execution context"

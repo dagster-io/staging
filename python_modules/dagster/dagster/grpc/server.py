@@ -222,7 +222,10 @@ class DagsterApiServer(DagsterApiServicer):
         with self._execution_lock:
             runs_to_clear = []
             for run_id, (process, instance) in self._executions.items():
+
+                sys.stderr.write("CHECKING " + str(process.pid) + " for run " + str(run_id) + "\n")
                 if process.is_alive():
+                    sys.stderr.write("IT IS ALIVE\n")
                     continue
 
                 run = instance.get_run_by_id(run_id)
@@ -230,8 +233,10 @@ class DagsterApiServer(DagsterApiServicer):
                 runs_to_clear.append(run_id)
 
                 if run.is_finished:
+                    sys.stderr.write("IT IS FINISHED \n")
                     continue
 
+                sys.stderr.write("INFORMING THE SYSTEM \n")
                 # the process died in an unexpected manner. inform the system
                 self._generate_synthetic_error_from_crash(run, instance)
 
