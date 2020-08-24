@@ -153,9 +153,13 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
         return res.success
 
     def join(self):
+        # If this hasn't been initialized at all, we can just do a noop
+        if not self._instance:
+            return
+
         total_time = 0
         interval = 0.01
-        timeout = 60
+        timeout = 15
 
         while True:
             active_run_ids = [
