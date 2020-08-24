@@ -1,6 +1,5 @@
 from time import sleep
 
-import pytest
 from dagster_graphql.client.query import (
     LAUNCH_PIPELINE_EXECUTION_MUTATION,
     LAUNCH_PIPELINE_REEXECUTION_MUTATION,
@@ -598,9 +597,6 @@ class TestRetryExecutionAsyncOnlyBehavior(
 
         assert reexecution_run.is_failure
 
-    @pytest.mark.skip(
-        reason="Termination hanging in Buildkite, See https://github.com/dagster-io/dagster/issues/2768",
-    )
     def test_retry_early_terminate(self, graphql_context):
         instance = graphql_context.instance
         selector = infer_pipeline_selector(
@@ -625,11 +621,19 @@ class TestRetryExecutionAsyncOnlyBehavior(
                 }
             },
         )
+
+        total_time = 0
+
         # Wait until the first step succeeded
         while instance.get_run_stats(run_id).steps_succeeded < 1:
             sleep(0.1)
+            total_time += 0.1
+            if total_time > 10:
+                raise Exception("Timed out")
+
         # Terminate the current pipeline run at the second step
-        graphql_context.instance.run_launcher.terminate(run_id)
+        assert graphql_context.instance.run_launcher.can_terminate(run_id)
+        assert graphql_context.instance.run_launcher.terminate(run_id)
 
         records = instance.all_logs(run_id)
 
