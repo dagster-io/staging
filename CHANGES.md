@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.4
+
+** Breaking Changes **
+
+* Run launchers no longer return the passed-in PipelineRun from the `launch_run` method.
+
 ## 0.9.3
 
 **Breaking Changes**
@@ -21,14 +27,14 @@
 **Bugfixes**
 
 * Databricks now checks intermediate storage instead of system storage
-* Fixes a bug where applying hooks on a pipeline with composite solids would flatten the top-level solids. Now applying hooks on pipelines or composite solids means attaching hooks to every single solid instance within the pipeline or the composite solid. 
-* Fixes the GraphQL playground hosted by dagit 
+* Fixes a bug where applying hooks on a pipeline with composite solids would flatten the top-level solids. Now applying hooks on pipelines or composite solids means attaching hooks to every single solid instance within the pipeline or the composite solid.
+* Fixes the GraphQL playground hosted by dagit
 * Fixes a bug where K8s CronJobs were stopped unnecessarily during schedule reconciliation
 
 **Experimental**
 
-* New `dagster-k8s/config` tag that lets users pass in custom configuration to the Kubernetes `Job`, `Job` metadata, `JobSpec`, `PodSpec`, and `PodTemplateSpec` metadata. 
-  * This allows users to specify settings like eviction policy annotations and node affinities. 
+* New `dagster-k8s/config` tag that lets users pass in custom configuration to the Kubernetes `Job`, `Job` metadata, `JobSpec`, `PodSpec`, and `PodTemplateSpec` metadata.
+  * This allows users to specify settings like eviction policy annotations and node affinities.
   * Example:
   <code><pre>
     @solid(

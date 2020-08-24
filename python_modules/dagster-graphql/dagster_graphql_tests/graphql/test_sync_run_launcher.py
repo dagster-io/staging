@@ -37,7 +37,7 @@ def test_sync_run_launcher_run():
 
         run = create_run_for_test(instance=instance, pipeline_name=external_pipeline.name)
 
-        run = instance.run_launcher.launch_run(
+        instance.run_launcher.launch_run(
             instance=instance, run=run, external_pipeline=external_pipeline
         )
 

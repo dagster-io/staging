@@ -108,8 +108,6 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
 
         self._run_id_to_repository_location_handle_cache[run.run_id] = repository_location_handle
 
-        return run
-
     def _get_grpc_client_for_termination(self, run_id):
         if not self._instance:
             return None

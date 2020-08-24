@@ -671,7 +671,7 @@ def _launch_scheduled_execution(
         return
 
     try:
-        launched_run = instance.launch_run(possibly_invalid_pipeline_run.run_id, external_pipeline)
+        instance.launch_run(possibly_invalid_pipeline_run.run_id, external_pipeline)
     except DagsterLaunchFailedError:
         error = serializable_error_info_from_exc_info(sys.exc_info())
         instance.report_engine_event(
@@ -683,7 +683,7 @@ def _launch_scheduled_execution(
         )
         return
 
-    stream.send(ScheduledExecutionSuccess(run_id=launched_run.run_id))
+    stream.send(ScheduledExecutionSuccess(run_id=possibly_invalid_pipeline_run.run_id))
     return
 
 

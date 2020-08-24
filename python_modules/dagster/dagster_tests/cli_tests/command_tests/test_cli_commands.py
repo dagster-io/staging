@@ -129,7 +129,6 @@ class InMemoryRunLauncher(RunLauncher, ConfigurableClass):
         check.inst_param(run, "run", PipelineRun)
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
         self._queue.append(run)
-        return run
 
     def queue(self):
         return self._queue

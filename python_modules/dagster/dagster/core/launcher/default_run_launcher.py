@@ -40,9 +40,9 @@ class DefaultRunLauncher(RunLauncher, ConfigurableClass):
     def launch_run(self, instance, run, external_pipeline):
         repository_location_handle = external_pipeline.repository_handle.repository_location_handle
         if isinstance(repository_location_handle, GRPC_REPOSITORY_LOCATION_HANDLE_TYPES,):
-            return self._grpc_run_launcher.launch_run(instance, run, external_pipeline)
+            self._grpc_run_launcher.launch_run(instance, run, external_pipeline)
         else:
-            return self._cli_api_run_launcher.launch_run(instance, run, external_pipeline)
+            self._cli_api_run_launcher.launch_run(instance, run, external_pipeline)
 
     def can_terminate(self, run_id):
         return self._cli_api_run_launcher.can_terminate(

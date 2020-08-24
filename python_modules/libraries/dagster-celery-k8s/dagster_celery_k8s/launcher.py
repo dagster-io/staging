@@ -256,7 +256,6 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
             ),
             cls=CeleryK8sRunLauncher,
         )
-        return run
 
     # https://github.com/dagster-io/dagster/issues/2741
     def can_terminate(self, run_id):

@@ -167,14 +167,14 @@ def _execute_in_launcher(instance, pipeline_def, run_config, solid_selection=Non
         pipeline_def=pipeline_def, run_config=run_config
     )
 
-    run = instance.launch_run(
+    instance.launch_run(
         created_pipeline_run.run_id,
         _external_pipeline_from_def(pipeline_def, solid_selection=solid_selection),
     )
 
     instance.run_launcher.join()
 
-    return run
+    return created_pipeline_run
 
 
 def test_running():
@@ -320,7 +320,7 @@ def test_has_run_query_and_terminate():
                 pipeline_def=infinite_loop_pipeline, run_config=run_config,
             )
 
-            pipeline_run = instance.launch_run(
+            instance.launch_run(
                 created_pipeline_run.run_id, _external_pipeline_from_def(infinite_loop_pipeline)
             )
 
@@ -331,11 +331,11 @@ def test_has_run_query_and_terminate():
 
             run_launcher = instance.run_launcher
 
-            assert run_launcher.can_terminate(pipeline_run.run_id)
-            assert run_launcher.terminate(pipeline_run.run_id)
-            assert instance.get_run_by_id(pipeline_run.run_id).is_finished
-            assert not run_launcher.can_terminate(pipeline_run.run_id)
-            assert not run_launcher.terminate(pipeline_run.run_id)
+            assert run_launcher.can_terminate(created_pipeline_run.run_id)
+            assert run_launcher.terminate(created_pipeline_run.run_id)
+            assert instance.get_run_by_id(created_pipeline_run.run_id).is_finished
+            assert not run_launcher.can_terminate(created_pipeline_run.run_id)
+            assert not run_launcher.terminate(created_pipeline_run.run_id)
 
         assert not os.path.exists(path)
 

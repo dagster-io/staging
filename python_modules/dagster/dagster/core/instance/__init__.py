@@ -975,7 +975,7 @@ class DagsterInstance:
             run_id (str): The id of the run the launch.
         """
         run = self.get_run_by_id(run_id)
-        return self._run_launcher.launch_run(self, run, external_pipeline=external_pipeline)
+        self._run_launcher.launch_run(self, run, external_pipeline=external_pipeline)
 
     # Scheduler
 

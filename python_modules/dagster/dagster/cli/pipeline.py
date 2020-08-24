@@ -538,7 +538,7 @@ def do_execute_command(
     ),
 )
 def pipeline_launch_command(**kwargs):
-    return execute_launch_command(DagsterInstance.get(), kwargs)
+    execute_launch_command(DagsterInstance.get(), kwargs)
 
 
 @telemetry_wrapper
@@ -582,7 +582,7 @@ def execute_launch_command(instance, kwargs):
             solid_selection=solid_selection,
         )
 
-        return instance.launch_run(pipeline_run.run_id, external_pipeline)
+        instance.launch_run(pipeline_run.run_id, external_pipeline)
 
 
 @click.command(
