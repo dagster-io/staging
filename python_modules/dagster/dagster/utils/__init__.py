@@ -305,6 +305,7 @@ def _kill_on_event(termination_event):
         # interrupt things like sleep()
         thread.interrupt_main()
     else:
+        sys.stderr.write("KILLING THE PROCESS\n")
         # If on unix send an os level signal to interrupt any situation we may be stuck in
         os.kill(os.getpid(), signal.SIGINT)
 

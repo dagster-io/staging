@@ -1,6 +1,5 @@
 from time import sleep
 
-import pytest
 from dagster_graphql.client.query import (
     LAUNCH_PIPELINE_EXECUTION_MUTATION,
     LAUNCH_PIPELINE_REEXECUTION_MUTATION,
@@ -598,9 +597,6 @@ class TestRetryExecutionAsyncOnlyBehavior(
 
         assert reexecution_run.is_failure
 
-    @pytest.mark.skip(
-        reason="Termination hanging in Buildkite, See https://github.com/dagster-io/dagster/issues/2768",
-    )
     def test_retry_early_terminate(self, graphql_context):
         instance = graphql_context.instance
         selector = infer_pipeline_selector(
@@ -625,11 +621,24 @@ class TestRetryExecutionAsyncOnlyBehavior(
                 }
             },
         )
+
+        total_time = 0
+
         # Wait until the first step succeeded
         while instance.get_run_stats(run_id).steps_succeeded < 1:
             sleep(0.1)
+            total_time += 0.1
+            if total_time > 10:
+                raise Exception("Timed out")
+
         # Terminate the current pipeline run at the second step
-        graphql_context.instance.run_launcher.terminate(run_id)
+        assert graphql_context.instance.run_launcher.can_terminate(run_id)
+
+        print("ABOUT TO TERMINATE")  # pylint: disable=print-call
+
+        assert graphql_context.instance.run_launcher.terminate(run_id)
+
+        print("TERMINATED!!!")  # pylint: disable=print-call
 
         records = instance.all_logs(run_id)
 
@@ -644,6 +653,8 @@ class TestRetryExecutionAsyncOnlyBehavior(
         )
         assert step_did_not_run_in_records(records, "get_input_two.compute")
         assert step_did_not_run_in_records(records, "sum_inputs.compute")
+
+        instance.run_launcher.join()
 
         # Start retry
         new_run_id = make_new_run_id()
@@ -678,3 +689,5 @@ class TestRetryExecutionAsyncOnlyBehavior(
         assert step_did_succeed_in_records(retry_records, "get_input_one.compute")
         assert step_did_succeed_in_records(retry_records, "get_input_two.compute")
         assert step_did_succeed_in_records(retry_records, "sum_inputs.compute")
+
+        print("SUCCEEDED, TIME TO TEAR DOWN, OH BOY!!")  # pylint: disable=print-call

@@ -69,6 +69,9 @@ def _core_execute_run(recon_pipeline, pipeline_run, instance):
         for event in execute_run_iterator(recon_pipeline, pipeline_run, instance):
             yield event
     except DagsterSubprocessError as err:
+
+        sys.stderr.write("DagsterSubprocessError IN core_execute_run: " + repr(err) + "\n")
+
         if not all(
             [err_info.cls_name == "KeyboardInterrupt" for err_info in err.subprocess_error_infos]
         ):
@@ -79,7 +82,9 @@ def _core_execute_run(recon_pipeline, pipeline_run, instance):
                 EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
             )
             instance.report_run_failed(pipeline_run)
-    except Exception:  # pylint: disable=broad-except
+    except Exception as e:  # pylint: disable=broad-except
+        sys.stderr.write("Exception IN core_execute_run: " + repr(e) + "\n")
+
         yield instance.report_engine_event(
             "An exception was thrown during execution that is likely a framework error, "
             "rather than an error in user code.",
