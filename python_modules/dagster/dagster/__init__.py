@@ -39,6 +39,8 @@ from dagster.core.definitions import (
     SystemStorageData,
     SystemStorageDefinition,
     TextMetadataEntryData,
+    TriggeredExecutionContext,
+    TriggeredExecutionDefinition,
     TypeCheck,
     UrlMetadataEntryData,
     composite_solid,
@@ -61,6 +63,7 @@ from dagster.core.definitions import (
     solid,
     success_hook,
     system_storage,
+    triggered_execution,
     weekly_schedule,
 )
 from dagster.core.definitions.config_mappable import configured
@@ -182,6 +185,8 @@ __all__ = [
     "SolidInvocation",
     "SystemStorageDefinition",
     "TextMetadataEntryData",
+    "TriggeredExecutionContext",
+    "TriggeredExecutionDefinition",
     "UrlMetadataEntryData",
     # Decorators
     "composite_solid",
@@ -196,6 +201,7 @@ __all__ = [
     "solid",
     "system_storage",
     "success_hook",
+    "triggered_execution",
     "failure_hook",
     # Execution
     "CompositeSolidExecutionResult",
