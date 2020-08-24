@@ -598,9 +598,6 @@ class TestRetryExecutionAsyncOnlyBehavior(
 
         assert reexecution_run.is_failure
 
-    @pytest.mark.skip(
-        reason="Termination hanging in Buildkite, See https://github.com/dagster-io/dagster/issues/2768",
-    )
     def test_retry_early_terminate(self, graphql_context):
         instance = graphql_context.instance
         selector = infer_pipeline_selector(
