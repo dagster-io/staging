@@ -1,6 +1,5 @@
 import os
 import threading
-import time
 import weakref
 
 from dagster import check, seven
@@ -38,8 +37,8 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
         self._living_process_by_run_id = {}
         self._output_files_by_run_id = {}
         self._processes_lock = threading.Lock()
-        self._stopping = False
-        self._thread = None
+        self._cleanup_stop_event = threading.Event()
+        self._cleanup_thread = None
         self._inst_data = inst_data
 
     @property
@@ -65,9 +64,9 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
         # Store a weakref to avoid a circular reference / enable GC
         self._instance_ref = weakref.ref(instance)
 
-        self._thread = threading.Thread(target=self._clock, args=())
-        self._thread.daemon = True
-        self._thread.start()
+        self._cleanup_thread = threading.Thread(target=self._clock, args=())
+        self._cleanup_thread.daemon = True
+        self._cleanup_thread.start()
 
     def _generate_synthetic_error_from_crash(self, run):
         message = "Pipeline execution process for {run_id} unexpectedly exited.".format(
@@ -86,10 +85,11 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
         by this manager instance. On every tick (every 0.5 seconds currently) it checks for zombie
         processes
         """
-        while not self._stopping:
+        while True:
+            self._cleanup_stop_event.wait(SUBPROCESS_TICK)
+            if self._cleanup_stop_event.is_set():
+                break
             self._check_for_zombies()
-
-            time.sleep(SUBPROCESS_TICK)
 
     def _check_for_zombies(self):
         """
@@ -154,20 +154,20 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
 
         return run
 
-    def join(self):
-        # If this hasn't been initialize at all, we can just do a noop
+    def join(self, timeout=15):
+        # If this hasn't been initialized at all, we can just do a noop
         if not self._instance:
             return
 
         # Stop the watcher tread
-        self._stopping = True
-        self._thread.join()
+        self._cleanup_stop_event.set()
+        self._cleanup_thread.join()
 
         # Wrap up all open executions
         with self._processes_lock:
             for run_id, process in self._living_process_by_run_id.items():
                 if _is_alive(process):
-                    seven.wait_for_process(process, timeout=60)
+                    seven.wait_for_process(process, timeout=timeout)
 
                 run = self._instance.get_run_by_id(run_id)
 
