@@ -244,7 +244,7 @@ def define_schedules():
                 "DAGSTER_K8S_INSTANCE_CONFIG_MAP",
                 "DAGSTER_K8S_PG_PASSWORD_SECRET",
                 "DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP",
-                "DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY",
+                "DAGSTER_K8S_CELERY_WORKER_IMAGE_PULL_POLICY",
                 "KUBERNETES_SERVICE_HOST",
                 "KUBERNETES_SERVICE_PORT",
             ]
@@ -268,12 +268,12 @@ def define_schedules():
                 "DAGSTER_PG_PASSWORD",
                 "DAGSTER_K8S_CELERY_BROKER",
                 "DAGSTER_K8S_CELERY_BACKEND",
-                "DAGSTER_K8S_PIPELINE_RUN_IMAGE",
+                "DAGSTER_K8S_CELERY_WORKER_IMAGE",
                 "DAGSTER_K8S_PIPELINE_RUN_NAMESPACE",
                 "DAGSTER_K8S_INSTANCE_CONFIG_MAP",
                 "DAGSTER_K8S_PG_PASSWORD_SECRET",
                 "DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP",
-                "DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY",
+                "DAGSTER_K8S_CELERY_WORKER_IMAGE_PULL_POLICY",
                 "KUBERNETES_SERVICE_HOST",
                 "KUBERNETES_SERVICE_PORT",
             ]
