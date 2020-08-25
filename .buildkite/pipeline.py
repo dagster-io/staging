@@ -255,7 +255,6 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
     ModuleBuildSpec(
         "python_modules/dagster-graphql",
         tox_env_suffixes=[
-            "-in_memory_instance_managed_grpc_env",
             "-sqlite_instance_managed_grpc_env",
             "-sqlite_instance_deployed_grpc_env",
         ],

@@ -175,6 +175,10 @@ class InstanceManagers:
                             "config": {"base_dir": temp_dir},
                         },
                         "run_launcher": {"module": "dagster", "class": "DefaultRunLauncher",},
+                        "compute_logs": {
+                            "module": "dagster.core.storage.noop_compute_log_manager",
+                            "class": "NoOpComputeLogManager",
+                        },
                     },
                 ) as instance:
                     yield instance

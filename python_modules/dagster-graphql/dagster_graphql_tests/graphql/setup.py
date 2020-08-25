@@ -2,6 +2,7 @@ import csv
 import datetime
 import logging
 import os
+import sys
 import time
 from collections import OrderedDict
 from copy import deepcopy
@@ -763,9 +764,15 @@ def retry_multi_input_early_terminate_pipeline():
         output_defs=[OutputDefinition(Int)],
     )
     def get_input_one(context, one):
+        counter = 0
         if context.solid_config["wait_to_terminate"]:
             while True:
-                time.sleep(0.1)
+                time.sleep(0.00001)
+                counter = counter + 1
+
+                if counter % 10 == 0:
+                    sys.stderr.write("HELLO FROM EX 1\n")
+                    counter = 0
         return one
 
     @solid(
@@ -774,9 +781,15 @@ def retry_multi_input_early_terminate_pipeline():
         output_defs=[OutputDefinition(Int)],
     )
     def get_input_two(context, one):
+        counter = 0
         if context.solid_config["wait_to_terminate"]:
             while True:
-                time.sleep(0.1)
+                time.sleep(0.00001)
+                counter = counter + 1
+
+                if counter % 10 == 0:
+                    sys.stderr.write("HELLO FROM EX 2\n")
+                    counter = 0
         return one
 
     @lambda_solid(
