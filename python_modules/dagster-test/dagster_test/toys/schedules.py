@@ -179,3 +179,13 @@ def get_toys_schedules():
             },
         ),
     ]
+
+
+def get_toy_triggers():
+    from dagster import triggered_execution
+
+    @triggered_execution(pipeline_name="log_spew")
+    def triggered_log_spew(_):
+        return {}
+
+    return [triggered_log_spew]

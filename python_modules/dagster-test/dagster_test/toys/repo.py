@@ -9,18 +9,22 @@ from dagster_test.toys.sleepy import sleepy_pipeline
 
 from dagster import repository
 
-from .schedules import get_toys_schedules
+from .schedules import get_toys_schedules, get_toy_triggers
 
 
 @repository
 def toys_repository():
-    return [
-        composition,
-        error_monster,
-        hammer_pipeline,
-        fan_in_fan_out_pipeline,
-        log_spew,
-        longitudinal_pipeline,
-        many_events,
-        sleepy_pipeline,
-    ] + get_toys_schedules()
+    return (
+        [
+            composition,
+            error_monster,
+            hammer_pipeline,
+            fan_in_fan_out_pipeline,
+            log_spew,
+            longitudinal_pipeline,
+            many_events,
+            sleepy_pipeline,
+        ]
+        + get_toys_schedules()
+        + get_toy_triggers()
+    )
