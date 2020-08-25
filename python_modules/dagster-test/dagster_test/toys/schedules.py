@@ -179,3 +179,29 @@ def get_toys_schedules():
             },
         ),
     ]
+
+
+def get_toy_triggers():
+    from dagster.core.definitions.decorators import triggered_execution
+    from .longitudinal import longitudinal_config
+
+    @triggered_execution(pipeline_name="log_spew")
+    def triggered_log_spew(_):
+        return {}
+
+    # class TriggerSelector(namedtuple("_TriggerSelector", "location_name repository_name trigger_name")):
+    #     def __new__(cls, location_name, repository_name, trigger_name):
+    class FakePartition(object):
+        def __init__(self, name):
+            self._name = name
+
+        @property
+        def name(self):
+            return self._name
+
+    @triggered_execution(pipeline_name="longitudinal_pipeline")
+    def triggered_longitudinal(_):
+        partition = FakePartition('2020-08-21')
+        return longitudinal_config(partition)
+
+    return [triggered_log_spew, triggered_longitudinal]
