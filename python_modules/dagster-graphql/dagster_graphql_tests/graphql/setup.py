@@ -765,7 +765,7 @@ def retry_multi_input_early_terminate_pipeline():
     def get_input_one(context, one):
         if context.solid_config["wait_to_terminate"]:
             while True:
-                time.sleep(0.1)
+                time.sleep(0.00001)
         return one
 
     @solid(
@@ -776,7 +776,7 @@ def retry_multi_input_early_terminate_pipeline():
     def get_input_two(context, one):
         if context.solid_config["wait_to_terminate"]:
             while True:
-                time.sleep(0.1)
+                time.sleep(0.00001)
         return one
 
     @lambda_solid(
