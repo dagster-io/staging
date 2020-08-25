@@ -31,9 +31,9 @@ def test_get_validated_celery_k8s_executor_config():
 
     with environ(
         {
-            "DAGSTER_K8S_PIPELINE_RUN_IMAGE": "foo",
+            "DAGSTER_K8S_CELERY_WORKER_IMAGE": "foo",
             "DAGSTER_K8S_PIPELINE_RUN_NAMESPACE": "default",
-            "DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY": "Always",
+            "DAGSTER_K8S_CELERY_WORKER_IMAGE_PULL_POLICY": "Always",
             "DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP": "config-pipeline-env",
         }
     ):
