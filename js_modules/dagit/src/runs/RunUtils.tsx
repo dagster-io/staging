@@ -1,5 +1,6 @@
 import * as React from "react";
 import * as yaml from "yaml";
+import moment from "moment-timezone";
 
 import { LaunchPipelineExecution } from "./types/LaunchPipelineExecution";
 import { LaunchPipelineReexecution } from "./types/LaunchPipelineReexecution";
@@ -9,7 +10,7 @@ import { RunTableRunFragment } from "./types/RunTableRunFragment";
 import { RunFragment } from "./types/RunFragment";
 import { RunActionMenuFragment } from "./types/RunActionMenuFragment";
 import { RunTimeFragment } from "./types/RunTimeFragment";
-import { unixTimestampToString } from "../Util";
+import { Timestamp, TimezoneContext } from "../TimeComponents";
 import PythonErrorInfo from "../PythonErrorInfo";
 
 import { Popover, Icon } from "@blueprintjs/core";
@@ -294,6 +295,8 @@ interface RunTimeProps {
   size?: "standard" | "minimal";
 }
 export const RunTime: React.FunctionComponent<RunTimeProps> = ({ run, size }) => {
+  const [timezone] = React.useContext(TimezoneContext);
+
   if (run.stats.__typename !== "PipelineRunStatsSnapshot") {
     return (
       <Popover content={<PythonErrorInfo error={run.stats} />}>
@@ -304,11 +307,13 @@ export const RunTime: React.FunctionComponent<RunTimeProps> = ({ run, size }) =>
     );
   }
 
-  let format = "MMM DD, H:mm A";
+  let format = undefined;
   if (
     size === "minimal" &&
-    unixTimestampToString(run.stats.startTime, "MMM DD") ===
-      unixTimestampToString(Date.now() / 1000, "MMM DD")
+    moment
+      .unix(run.stats.startTime || 0)
+      .tz(timezone)
+      .format("MMM DD") === moment().format("MMM DD")
   ) {
     format = "H:mm A";
   }
@@ -316,7 +321,7 @@ export const RunTime: React.FunctionComponent<RunTimeProps> = ({ run, size }) =>
   return (
     <div>
       {run.stats.startTime ? (
-        unixTimestampToString(run.stats.startTime, format)
+        <Timestamp unix={run.stats.startTime} format={format} />
       ) : run.status === "FAILURE" ? (
         <>Failed to start</>
       ) : (
