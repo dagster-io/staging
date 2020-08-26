@@ -6,7 +6,7 @@ from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation.repository_location import InProcessRepositoryLocation
 from dagster.core.launcher import CliApiRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRunStatus
-from dagster.core.test_utils import instance_for_test
+from dagster.core.test_utils import instance_for_test, poll_for_run, poll_for_step_start
 
 
 @solid
@@ -83,38 +83,6 @@ def get_full_external_pipeline(repo_yaml, pipeline_name):
         .get_repository("nope")
         .get_full_external_pipeline(pipeline_name)
     )
-
-
-def poll_for_run(instance, run_id, timeout=5):
-    total_time = 0
-    backoff = 0.01
-
-    while True:
-        run = instance.get_run_by_id(run_id)
-        if run.is_finished:
-            return run
-        else:
-            time.sleep(backoff)
-            total_time += backoff
-            backoff = backoff * 2
-            if total_time > timeout:
-                raise Exception("Timed out")
-
-
-def poll_for_step_start(instance, run_id, timeout=5):
-    total_time = 0
-    backoff = 0.01
-
-    while True:
-        logs = instance.all_logs(run_id)
-        if "STEP_START" in (log_record.dagster_event.event_type_value for log_record in logs):
-            return
-        else:
-            time.sleep(backoff)
-            total_time += backoff
-            backoff = backoff * 2
-            if total_time > timeout:
-                raise Exception("Timed out")
 
 
 def test_successful_run():
