@@ -1,6 +1,7 @@
 """Structured representations of system events."""
 import logging
 import os
+import sys
 from collections import namedtuple
 from enum import Enum
 
@@ -441,6 +442,14 @@ class DagsterEvent(
 
     @staticmethod
     def step_failure_event(step_context, step_failure_data):
+
+        sys.stdout.write("LOGGING STEP FAILURE EVENT ! " + step_context.step.key + "\n")
+        import traceback
+
+        traceback.print_stack()
+
+        sys.stdout.write("LOGGED STEP FAILURE EVENT!\n")
+
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_FAILURE,
             step_context=step_context,
@@ -505,6 +514,14 @@ class DagsterEvent(
 
     @staticmethod
     def step_success_event(step_context, success):
+
+        sys.stdout.write("LOGGING STEP SUCCESS EVENT ! " + step_context.step.key + "\n")
+        import traceback
+
+        traceback.print_stack()
+
+        sys.stdout.write("LOGGED STEP SUCCESS EVENT!\n")
+
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_SUCCESS,
             step_context=step_context,
