@@ -129,6 +129,12 @@ export interface ScheduleSelector {
   scheduleName: string;
 }
 
+export interface TriggerSelector {
+  repositoryName: string;
+  repositoryLocationName: string;
+  triggerName: string;
+}
+
 //==============================================================
 // END Enums and Input Objects
 //==============================================================
