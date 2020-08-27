@@ -605,6 +605,8 @@ def _pipeline_execution_iterator(pipeline_context, execution_plan):
 
     yield DagsterEvent.pipeline_start(pipeline_context)
 
+    print("MADE IT TO PIPELINE EXECUTION ITERATOR")
+
     steps_started = set([])
     pipeline_success_ref = BoolRef(True)
     generator_closed = False
