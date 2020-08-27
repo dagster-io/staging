@@ -742,3 +742,18 @@ class DauphinRepositoryOrError(dauphin.Union):
     class Meta(object):
         name = "RepositoryOrError"
         types = (DauphinPythonError, "Repository", DauphinRepositoryNotFoundError)
+
+
+class DauphinTriggerDefinitionNotFoundError(dauphin.ObjectType):
+    class Meta(object):
+        name = "TriggerDefinitionNotFoundError"
+        interfaces = (DauphinError,)
+
+    trigger_name = dauphin.NonNull(dauphin.String)
+
+    def __init__(self, trigger_name):
+        super(DauphinTriggerDefinitionNotFoundError, self).__init__()
+        self.trigger_name = check.str_param(trigger_name, "trigger_name")
+        self.message = "Triggered execution {trigger_name} could not be found.".format(
+            trigger_name=self.trigger_name
+        )

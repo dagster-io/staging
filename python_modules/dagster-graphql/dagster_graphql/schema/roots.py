@@ -46,6 +46,10 @@ from dagster_graphql.implementation.fetch_schedules import (
     get_schedule_states_or_error,
     get_scheduler_or_error,
 )
+from dagster_graphql.implementation.fetch_triggers import (
+    get_trigger_definition_or_error,
+    get_trigger_definitions_or_error,
+)
 from dagster_graphql.implementation.run_config_schema import (
     resolve_is_run_config_valid,
     resolve_run_config_schema_or_error,
@@ -127,6 +131,17 @@ class DauphinQuery(dauphin.ObjectType):
         dauphin.NonNull("PartitionSetOrError"),
         repositorySelector=dauphin.NonNull("RepositorySelector"),
         partitionSetName=dauphin.String(),
+    )
+
+    triggerDefinitionsOrError = dauphin.Field(
+        dauphin.NonNull("TriggerDefinitionsOrError"),
+        repositorySelector=dauphin.NonNull("RepositorySelector"),
+    )
+
+    triggerDefinitionOrError = dauphin.Field(
+        dauphin.NonNull("TriggerDefinitionOrError"),
+        repositorySelector=dauphin.NonNull("RepositorySelector"),
+        triggerName=dauphin.NonNull(dauphin.String),
     )
 
     pipelineRunsOrError = dauphin.Field(
@@ -283,6 +298,18 @@ class DauphinQuery(dauphin.ObjectType):
             graphene_info,
             RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
             kwargs.get("partitionSetName"),
+        )
+
+    def resolve_triggerDefinitionsOrError(self, graphene_info, **kwargs):
+        return get_trigger_definitions_or_error(
+            graphene_info, RepositorySelector.from_graphql_input(kwargs.get("repositorySelector"))
+        )
+
+    def resolve_triggerDefinitionOrError(self, graphene_info, **kwargs):
+        return get_trigger_definition_or_error(
+            graphene_info,
+            RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
+            kwargs.get('triggerName'),
         )
 
     def resolve_pipelineRunTags(self, graphene_info):

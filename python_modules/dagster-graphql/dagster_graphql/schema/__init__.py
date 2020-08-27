@@ -19,6 +19,7 @@ def create_schema():
         roots,
         runs,
         schedules,
+        triggers,
     )
 
     return dauphin.create_schema()
