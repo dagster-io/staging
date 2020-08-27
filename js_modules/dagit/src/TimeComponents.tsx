@@ -3,28 +3,25 @@ import React from "react";
 import { Button, Menu } from "@blueprintjs/core";
 import { Select } from "@blueprintjs/select";
 
-// This helper is here so that we can swap out Moment in the future as needed and
-// encourage use of the same default format string across the app.
-export function unixTimestampToString(unix: number | null, format = "MMM DD, H:mm A") {
-  if (!unix) {
-    return null;
-  }
-  return moment(unix * 1000).format(format);
-}
-
 type TimestampProps = ({ ms: number } | { unix: number }) & {
   format?: string;
 };
 
-export const Timestamp: React.FunctionComponent<TimestampProps> = props => {
-  const [timezone] = React.useContext(TimezoneContext);
-  let m = "ms" in props ? moment(props.ms) : moment.unix(props.unix);
+// This helper is here so that we can swap out Moment in the future as needed and
+// encourage use of the same default format string across the app.
+export function timestampToString(time: TimestampProps, timezone: string) {
+  let m = "ms" in time ? moment(time.ms) : moment.unix(time.unix);
   if (timezone !== "Automatic") {
     m = m.tz(timezone);
   }
   const defaultFormat = timezone === "UTC" ? "YYYY-MM-DD HH:mm" : "MMM DD, h:mm A";
 
-  return <>{m.format(props.format || defaultFormat)}</>;
+  return m.format(time.format || defaultFormat);
+}
+
+export const Timestamp: React.FunctionComponent<TimestampProps> = props => {
+  const [timezone] = React.useContext(TimezoneContext);
+  return <>{timestampToString(props, timezone)}</>;
 };
 
 const TimezoneStorageKey = "TimezonePreference";
