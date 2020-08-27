@@ -1,7 +1,10 @@
 """Structured representations of system events."""
 import logging
 import os
+import signal
+import sys
 from collections import namedtuple
+from contextlib import contextmanager
 from enum import Enum
 
 from dagster import check
@@ -88,6 +91,35 @@ HOOK_EVENTS = {
     DagsterEventType.HOOK_ERRORED,
     DagsterEventType.HOOK_SKIPPED,
 }
+
+
+class DelayedKeyboardInterrupt(Exception):
+    pass
+
+
+@contextmanager
+def delay_interrupts():
+    original_signal_handler = signal.getsignal(signal.SIGINT)
+
+    print("HELLO SINGAL" + repr(original_signal_handler))
+
+    received_interrupt = False
+
+    def _new_signal_handler(signo, _):
+        print("HELL YEAH")
+        check.invariant(signo == signal.SIGINT)
+        received_interrupt = True
+
+    # Install the new SIGINT handler
+    signal.signal(signal.SIGINT, _new_signal_handler)
+
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, original_signal_handler)
+        if received_interrupt:
+            print("SENDING DLEAYED INTERRUPT")
+            raise DelayedKeyboardInterrupt
 
 
 def _assert_type(method, expected_type, actual_type):
@@ -441,6 +473,14 @@ class DagsterEvent(
 
     @staticmethod
     def step_failure_event(step_context, step_failure_data):
+
+        sys.stdout.write("LOGGING STEP FAILURE EVENT ! " + step_context.step.key + "\n")
+        import traceback
+
+        traceback.print_stack()
+
+        sys.stdout.write("LOGGED STEP FAILURE EVENT!\n")
+
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_FAILURE,
             step_context=step_context,
@@ -505,6 +545,14 @@ class DagsterEvent(
 
     @staticmethod
     def step_success_event(step_context, success):
+
+        sys.stdout.write("LOGGING STEP SUCCESS EVENT ! " + step_context.step.key + "\n")
+        import traceback
+
+        traceback.print_stack()
+
+        sys.stdout.write("LOGGED STEP SUCCESS EVENT!\n")
+
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_SUCCESS,
             step_context=step_context,
