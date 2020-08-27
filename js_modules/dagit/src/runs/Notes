@@ -1,5 +1,0 @@
-Updates based on disussions with Nick
-
-- The primary button now says "Re-execute MODE" eg: "Re-execute Step Selection (*)" instead of just saying "Launch Re-execution"
-
-- There are now two separate options for "Full Pipeline" and "Step Selection: *". The former re-runs the entire pipeline and the latter re-executes the steps you have selected, $
