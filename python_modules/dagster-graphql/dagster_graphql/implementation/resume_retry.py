@@ -1,3 +1,5 @@
+import sys
+
 from graphql.execution.base import ResolveInfo
 
 from dagster import check
@@ -26,15 +28,20 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
     interrupted_steps_in_parent_run_logs = set([])
     skipped_steps_in_parent_run_logs = set([])
 
+    print("FIGURING OUT WHAT HAPPENED IN THE PARENT RUN")
+
     for record in parent_run_logs:
         if record.dagster_event and record.dagster_event.step_key:
             all_steps_in_parent_run_logs.add(record.dagster_event.step_key)
             if record.dagster_event_type == DagsterEventType.STEP_FAILURE:
                 failed_steps_in_parent_run_logs.add(record.dagster_event.step_key)
+                print("FAILED: " + record.dagster_event.step_key)
             if record.dagster_event_type == DagsterEventType.STEP_SUCCESS:
                 successful_steps_in_parent_run_logs.add(record.dagster_event.step_key)
+                print("SUCCEEDED: " + record.dagster_event.step_key)
             if record.dagster_event_type == DagsterEventType.STEP_SKIPPED:
                 skipped_steps_in_parent_run_logs.add(record.dagster_event.step_key)
+                print("SKIPPED: " + record.dagster_event.step_key)
 
     for step_key in all_steps_in_parent_run_logs:
         if (
@@ -42,6 +49,7 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
             and step_key not in successful_steps_in_parent_run_logs
             and step_key not in skipped_steps_in_parent_run_logs
         ):
+            print("INTERRUPTED: " + step_key)
             interrupted_steps_in_parent_run_logs.add(step_key)
 
     to_retry = []
@@ -67,6 +75,8 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
             # this step is downstream of a step we are about to retry
             to_retry.append(step.key)
 
+    print("FINAL RESULTS: " + repr(to_retry))
+
     return to_retry
 
 
@@ -86,9 +96,13 @@ def compute_step_keys_to_execute(graphene_info, external_pipeline, execution_par
             run_config=execution_params.run_config,
             step_keys_to_execute=None,
         )
-        return get_retry_steps_from_execution_plan(
+
+        step_keys = get_retry_steps_from_execution_plan(
             instance, external_execution_plan, execution_params.execution_metadata.parent_run_id
         )
+
+        print("STEP KEYS: " + repr(step_keys))
+        return step_keys
     else:
         return execution_params.step_keys
 
