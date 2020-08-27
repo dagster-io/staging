@@ -9,7 +9,7 @@ from dagster.core.errors import (
     HookExecutionError,
     user_code_error_boundary,
 )
-from dagster.core.events import DagsterEvent
+from dagster.core.events import DagsterEvent, DelayedKeyboardInterrupt
 from dagster.core.execution.context.system import SystemExecutionContext, SystemStepExecutionContext
 from dagster.core.execution.memoization import copy_required_intermediates_for_execution
 from dagster.core.execution.plan.execute_step import core_dagster_event_sequence_for_step
@@ -275,6 +275,11 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
         if step_context.raise_on_error:
             raise dagster_error
+
+    except DelayedKeyboardInterrupt:
+        # Indicates an interrupt came in at after the success step finished.
+        # Don't log a failure event and bubble up the interrupt
+        raise KeyboardInterrupt
 
     # case (5) in top comment
     except (Exception, KeyboardInterrupt) as unexpected_exception:  # pylint: disable=broad-except

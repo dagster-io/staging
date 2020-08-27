@@ -72,6 +72,8 @@ def _cli_api_execute_run_process(input_file, output_file, instance, pipeline_ori
         engine_event_data=EngineEventData(marker_start="cli_api_subprocess_init"),
     )
 
+    print("OPENING IPC SUBPROCESS")
+
     return open_ipc_subprocess(parts)
 
 
