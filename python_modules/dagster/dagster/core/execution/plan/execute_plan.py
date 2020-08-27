@@ -9,7 +9,7 @@ from dagster.core.errors import (
     HookExecutionError,
     user_code_error_boundary,
 )
-from dagster.core.events import DagsterEvent
+from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.execution.context.system import SystemExecutionContext, SystemStepExecutionContext
 from dagster.core.execution.memoization import copy_required_intermediates_for_execution
 from dagster.core.execution.plan.execute_step import core_dagster_event_sequence_for_step
@@ -81,6 +81,9 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
                     yield step_event
                     active_execution.handle_event(step_event)
 
+                print("DONE EXECUTING STEPS")
+
+            print("VERIFYING COMPLETE")
             active_execution.verify_complete(pipeline_context, step.key)
 
         # process skips from failures or uncovered inputs
@@ -200,6 +203,9 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
     check.inst_param(retries, "retries", Retries)
+
+    succeeded = False
+
     try:
         prior_attempt_count = retries.get_attempt_count(step_context.step.key)
         if step_context.step_launcher:
@@ -209,6 +215,9 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
         for step_event in check.generator(step_events):
             yield step_event
+            if step_event.event_type == DagsterEventType.STEP_SUCCESS:
+                print("SUCCEEEDED!!!!\n")
+                succeeded = True
 
     # case (1) in top comment
     except RetryRequested as retry_request:
@@ -276,10 +285,19 @@ def _dagster_event_sequence_for_step(step_context, retries):
         if step_context.raise_on_error:
             raise dagster_error
 
-    # case (5) in top comment
-    except (Exception, KeyboardInterrupt) as unexpected_exception:  # pylint: disable=broad-except
-        yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
+    except KeyboardInterrupt as interrupt_exception:
+        # Log a step failure if the step hadn't succeeded yet
+        if not succeeded:
+            print("GOT AN INTERRUPT AND NO SUCCESS, SO RAISING FAILURE EVENT")
+            yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
 
+        print("RE-RAISING KEYBOARD INTERRUPT WITH NO YIELD SINCE WE SUCCEEDED")
+        raise interrupt_exception
+
+    # case (5) in top comment
+    except Exception as unexpected_exception:  # pylint: disable=broad-except
+        print("UNEXPECTED EXCEPTION!!!!  " + repr(unexpected_exception))
+        yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
         raise unexpected_exception
 
 
