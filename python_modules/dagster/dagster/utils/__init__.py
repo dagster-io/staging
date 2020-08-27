@@ -327,6 +327,28 @@ def start_termination_thread(termination_event):
     int_thread.start()
 
 
+# Wraps code that we don't want a SIGINT to interrupt (but throw a KeyboardInterrupt if a
+# SIGINT was received while it ran)
+@contextlib.contextmanager
+def delay_interrupts():
+    original_signal_handler = signal.getsignal(signal.SIGINT)
+
+    received_interrupt = False
+
+    def _new_signal_handler(signo, _):
+        check.invariant(signo == signal.SIGINT)
+        received_interrupt = True
+
+    signal.signal(signal.SIGINT, _new_signal_handler)
+
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGINT, original_signal_handler)
+        if received_interrupt:
+            raise KeyboardInterrupt
+
+
 def datetime_as_float(dt):
     check.inst_param(dt, "dt", datetime.datetime)
     return float((dt - EPOCH).total_seconds())
