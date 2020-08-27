@@ -85,7 +85,7 @@ def get_partition_config(graphene_info, repository_handle, partition_set_name, p
     )
 
     if isinstance(result, ExternalPartitionConfigData):
-        return graphene_info.schema.type_named("PartitionRunConfig")(
+        return graphene_info.schema.type_named("RunConfig")(
             yaml=yaml.safe_dump(result.run_config, default_flow_style=False)
         )
     else:
@@ -102,7 +102,7 @@ def get_partition_tags(graphene_info, repository_handle, partition_set_name, par
     )
 
     if isinstance(result, ExternalPartitionTagsData):
-        return graphene_info.schema.type_named("PartitionTags")(
+        return graphene_info.schema.type_named("TagsList")(
             results=[
                 graphene_info.schema.type_named("PipelineTag")(key=key, value=value)
                 for key, value in result.tags.items()
