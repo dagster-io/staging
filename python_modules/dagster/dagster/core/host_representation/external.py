@@ -433,3 +433,7 @@ class ExternalTriggeredExecution:
     @property
     def mode(self):
         return self._external_triggered_execution_data.mode
+
+    @property
+    def handle(self):
+        return self._handle

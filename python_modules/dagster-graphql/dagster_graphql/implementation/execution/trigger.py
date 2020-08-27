@@ -8,6 +8,8 @@ from dagster.core.host_representation.external_data import (
     ExternalExecutionParamsErrorData,
 )
 from dagster.core.host_representation.selector import PipelineSelector, TriggerSelector
+from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.utils import merge_dicts
 
 from ..utils import ExecutionMetadata, ExecutionParams, capture_dauphin_error
 from .run_lifecycle import create_valid_pipeline_run
@@ -19,6 +21,8 @@ def trigger_execution(graphene_info, trigger_selector):
     check.inst_param(trigger_selector, "trigger_selector", TriggerSelector)
     location = graphene_info.context.get_repository_location(trigger_selector.location_name)
     repository = location.get_repository(trigger_selector.repository_name)
+
+    trigger_tags = PipelineRun.tags_for_trigger(trigger_selector.trigger_name)
 
     matches = [
         triggered_execution
@@ -37,7 +41,8 @@ def trigger_execution(graphene_info, trigger_selector):
         if isinstance(result, ExternalExecutionParamsErrorData):
             continue
 
-        assert isinstance(result, ExternalExecutionParamsData)
+        check.invariant(isinstance(result, ExternalExecutionParamsData))
+        tags = merge_dicts(result.tags, trigger_tags)
 
         pipeline_selector = PipelineSelector(
             location_name=location.name,
@@ -49,7 +54,7 @@ def trigger_execution(graphene_info, trigger_selector):
             selector=pipeline_selector,
             run_config=result.run_config,
             mode=external_triggered_execution.mode,
-            execution_metadata=ExecutionMetadata(run_id=None, tags=result.tags),
+            execution_metadata=ExecutionMetadata(run_id=None, tags=tags),
             step_keys=None,
         )
         pipeline_run = create_valid_pipeline_run(graphene_info, external_pipeline, execution_params)
