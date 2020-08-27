@@ -717,8 +717,8 @@ type Partition {
   partitionSetName: String!
   solidSelection: [String!]
   mode: String!
-  runConfigOrError: PartitionRunConfigOrError!
-  tagsOrError: PartitionTagsOrError!
+  runConfigOrError: RunConfigOrError!
+  tagsOrError: TagsListOrError!
   runs(filter: PipelineRunsFilter, cursor: String, limit: Int): [PipelineRun!]!
 }
 
@@ -735,12 +735,6 @@ type PartitionBackfillSuccess {
   backfillId: String!
   launchedRunIds: [String!]!
 }
-
-type PartitionRunConfig {
-  yaml: String!
-}
-
-union PartitionRunConfigOrError = PartitionRunConfig | PythonError
 
 type Partitions {
   results: [Partition!]!
@@ -774,12 +768,6 @@ input PartitionSetSelector {
 union PartitionSetsOrError = PartitionSets | PipelineNotFoundError | PythonError
 
 union PartitionsOrError = Partitions | PythonError
-
-type PartitionTags {
-  results: [PipelineTag!]!
-}
-
-union PartitionTagsOrError = PartitionTags | PythonError
 
 type Pipeline implements SolidContainer & IPipelineSnapshot {
   solids: [Solid!]!
@@ -1041,6 +1029,8 @@ type Query {
   scheduleStatesOrError(repositorySelector: RepositorySelector, withNoScheduleDefinition: Boolean): ScheduleStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
+  triggerDefinitionsOrError(repositorySelector: RepositorySelector!): TriggerDefinitionsOrError!
+  triggerDefinitionOrError(repositorySelector: RepositorySelector!, triggerName: String!): TriggerDefinitionOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
   pipelineRunOrError(runId: ID!): PipelineRunOrError!
   pipelineRunTags: [PipelineTagAndValues!]!
@@ -1152,7 +1142,13 @@ input RetriesPreviousAttempts {
   count: Int
 }
 
+type RunConfig {
+  yaml: String!
+}
+
 scalar RunConfigData
+
+union RunConfigOrError = RunConfig | PythonError
 
 type RunConfigSchema {
   rootConfigType: ConfigType!
@@ -1403,6 +1399,12 @@ type Subscription {
   computeLogs(runId: ID!, stepKey: String!, ioType: ComputeIOType!, cursor: String): ComputeLogFile!
 }
 
+type TagsList {
+  results: [PipelineTag!]!
+}
+
+union TagsListOrError = TagsList | PythonError
+
 type TerminatePipelineExecutionFailure {
   run: PipelineRun!
   message: String!
@@ -1413,6 +1415,29 @@ union TerminatePipelineExecutionResult = TerminatePipelineExecutionSuccess | Ter
 type TerminatePipelineExecutionSuccess {
   run: PipelineRun!
 }
+
+type TriggerDefinition {
+  name: String!
+  pipelineName: String!
+  solidSelection: [String]
+  mode: String!
+  runConfigOrError: RunConfigOrError
+  tagsOrError: TagsListOrError!
+  runs(filter: PipelineRunsFilter, cursor: String, limit: Int): [PipelineRun!]!
+}
+
+type TriggerDefinitionNotFoundError implements Error {
+  message: String!
+  triggerName: String!
+}
+
+union TriggerDefinitionOrError = TriggerDefinition | RepositoryNotFoundError | TriggerDefinitionNotFoundError | PythonError
+
+type TriggerDefinitions {
+  results: [TriggerDefinition!]!
+}
+
+union TriggerDefinitionsOrError = TriggerDefinitions | RepositoryNotFoundError | PythonError
 
 type TriggerExecutionSuccess {
   launchedRunIds: [String!]!

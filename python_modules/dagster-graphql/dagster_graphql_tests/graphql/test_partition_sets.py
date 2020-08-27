@@ -56,7 +56,7 @@ GET_PARTITION_SET_QUERY = """
                                 __typename
                             }
                             runConfigOrError {
-                                ... on PartitionRunConfig {
+                                ... on RunConfig {
                                     yaml
                                 }
                             }
@@ -76,7 +76,7 @@ GET_PARTITION_SET_TAGS_QUERY = """
                     ... on Partitions {
                         results {
                             tagsOrError {
-                                ... on PartitionTags {
+                                ... on TagsList {
                                     results {
                                         key
                                         value

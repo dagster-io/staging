@@ -8,6 +8,8 @@ from dagster.core.host_representation.external_data import (
     ExternalExecutionParamsErrorData,
 )
 from dagster.core.host_representation.selector import PipelineSelector, TriggerSelector
+from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.utils import merge_dicts
 
 from ..utils import ExecutionMetadata, ExecutionParams, capture_dauphin_error
 from .run_lifecycle import create_valid_pipeline_run
@@ -20,42 +22,51 @@ def trigger_execution(graphene_info, trigger_selector):
     location = graphene_info.context.get_repository_location(trigger_selector.location_name)
     repository = location.get_repository(trigger_selector.repository_name)
 
+    trigger_tags = PipelineRun.tags_for_trigger(trigger_selector.trigger_name)
+
     matches = [
         triggered_execution
         for triggered_execution in repository.get_external_triggered_executions()
         if triggered_execution.name == trigger_selector.trigger_name
     ]
 
-    launched_run_ids = []
-    for external_triggered_execution in matches:
-        external_pipeline = repository.get_full_external_pipeline(
-            external_triggered_execution.pipeline_name
-        )
-        result = graphene_info.context.get_external_triggered_execution_param_data(
-            repository.handle, external_triggered_execution.name
-        )
-        if isinstance(result, ExternalExecutionParamsErrorData):
-            continue
+    if not matches:
+        return graphene_info.schema.type_named("TriggerExecutionSuccess")(launched_run_ids=[])
 
-        assert isinstance(result, ExternalExecutionParamsData)
+    check.invariant(
+        len(matches) == 1,
+        'Found more than one trigger named "{name}"'.format(name=trigger_selector.trigger_name),
+    )
 
-        pipeline_selector = PipelineSelector(
-            location_name=location.name,
-            repository_name=repository.name,
-            pipeline_name=external_pipeline.name,
-            solid_selection=external_triggered_execution.solid_selection,
-        )
-        execution_params = ExecutionParams(
-            selector=pipeline_selector,
-            run_config=result.run_config,
-            mode=external_triggered_execution.mode,
-            execution_metadata=ExecutionMetadata(run_id=None, tags=result.tags),
-            step_keys=None,
-        )
-        pipeline_run = create_valid_pipeline_run(graphene_info, external_pipeline, execution_params)
-        graphene_info.context.instance.launch_run(pipeline_run.run_id, external_pipeline)
-        launched_run_ids.append(pipeline_run.run_id)
+    external_triggered_execution = matches[0]
+    external_pipeline = repository.get_full_external_pipeline(
+        external_triggered_execution.pipeline_name
+    )
+    result = graphene_info.context.get_external_triggered_execution_param_data(
+        repository.handle, external_triggered_execution.name
+    )
+    if isinstance(result, ExternalExecutionParamsErrorData):
+        return graphene_info.schema.type_named("TriggerExecutionSuccess")(launched_run_ids=[])
+
+    check.invariant(isinstance(result, ExternalExecutionParamsData))
+    tags = merge_dicts(result.tags, trigger_tags)
+
+    pipeline_selector = PipelineSelector(
+        location_name=location.name,
+        repository_name=repository.name,
+        pipeline_name=external_pipeline.name,
+        solid_selection=external_triggered_execution.solid_selection,
+    )
+    execution_params = ExecutionParams(
+        selector=pipeline_selector,
+        run_config=result.run_config,
+        mode=external_triggered_execution.mode,
+        execution_metadata=ExecutionMetadata(run_id=None, tags=tags),
+        step_keys=None,
+    )
+    pipeline_run = create_valid_pipeline_run(graphene_info, external_pipeline, execution_params)
+    graphene_info.context.instance.launch_run(pipeline_run.run_id, external_pipeline)
 
     return graphene_info.schema.type_named("TriggerExecutionSuccess")(
-        launched_run_ids=launched_run_ids
+        launched_run_ids=[pipeline_run.run_id]
     )

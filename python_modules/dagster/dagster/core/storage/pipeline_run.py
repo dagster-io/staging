@@ -13,6 +13,7 @@ from .tags import (
     PARTITION_SET_TAG,
     RESUME_RETRY_TAG,
     SCHEDULE_NAME_TAG,
+    TRIGGER_TAG,
 )
 
 
@@ -285,6 +286,10 @@ class PipelineRun(
     @staticmethod
     def tags_for_partition_set(partition_set, partition):
         return {PARTITION_NAME_TAG: partition.name, PARTITION_SET_TAG: partition_set.name}
+
+    @staticmethod
+    def tags_for_trigger(trigger_name):
+        return {TRIGGER_TAG: trigger_name}
 
 
 @whitelist_for_serdes

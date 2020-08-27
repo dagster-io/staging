@@ -493,7 +493,7 @@ const CONFIG_PARTITION_SELECTION_QUERY = gql`
           name
           solidSelection
           runConfigOrError {
-            ... on PartitionRunConfig {
+            ... on RunConfig {
               yaml
             }
             ... on PythonError {
@@ -502,7 +502,7 @@ const CONFIG_PARTITION_SELECTION_QUERY = gql`
           }
           mode
           tagsOrError {
-            ... on PartitionTags {
+            ... on TagsList {
               results {
                 key
                 value

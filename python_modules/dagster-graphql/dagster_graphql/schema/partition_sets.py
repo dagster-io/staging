@@ -15,6 +15,7 @@ from dagster_graphql.schema.errors import (
 from dagster import check
 from dagster.core.host_representation import ExternalPartitionSet, RepositoryHandle
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
+from dagster.core.storage.tags import PARTITION_NAME_TAG, PARTITION_SET_TAG
 from dagster.utils import merge_dicts
 
 
@@ -26,8 +27,8 @@ class DauphinPartition(dauphin.ObjectType):
     partition_set_name = dauphin.NonNull(dauphin.String)
     solid_selection = dauphin.List(dauphin.NonNull(dauphin.String))
     mode = dauphin.NonNull(dauphin.String)
-    runConfigOrError = dauphin.NonNull("PartitionRunConfigOrError")
-    tagsOrError = dauphin.NonNull("PartitionTagsOrError")
+    runConfigOrError = dauphin.NonNull("RunConfigOrError")
+    tagsOrError = dauphin.NonNull("TagsListOrError")
     runs = dauphin.Field(
         dauphin.non_null_list("PipelineRun"),
         filter=dauphin.Argument("PipelineRunsFilter"),
@@ -70,8 +71,8 @@ class DauphinPartition(dauphin.ObjectType):
     def resolve_runs(self, graphene_info, **kwargs):
         filters = kwargs.get("filter")
         partition_tags = {
-            "dagster/partition_set": self._external_partition_set.name,
-            "dagster/partition": self._partition_name,
+            PARTITION_SET_TAG: self._external_partition_set.name,
+            PARTITION_NAME_TAG: self._partition_name,
         }
         if filters is not None:
             filters = filters.to_selector()
@@ -159,16 +160,16 @@ class DauphinPartitionSets(dauphin.ObjectType):
     results = dauphin.non_null_list("PartitionSet")
 
 
-class DauphinPartitionTags(dauphin.ObjectType):
+class DauphinTagsList(dauphin.ObjectType):
     class Meta(object):
-        name = "PartitionTags"
+        name = "TagsList"
 
     results = dauphin.non_null_list("PipelineTag")
 
 
-class DauphinPartitionRunConfig(dauphin.ObjectType):
+class DauphinRunConfig(dauphin.ObjectType):
     class Meta(object):
-        name = "PartitionRunConfig"
+        name = "RunConfig"
 
     yaml = dauphin.NonNull(dauphin.String)
 
@@ -185,13 +186,13 @@ class DauphinPartitionsOrError(dauphin.Union):
         types = (DauphinPartitions, DauphinPythonError)
 
 
-class DauphinPartitionTagsOrError(dauphin.Union):
+class DauphinTagsListOrError(dauphin.Union):
     class Meta(object):
-        name = "PartitionTagsOrError"
-        types = (DauphinPartitionTags, DauphinPythonError)
+        name = "TagsListOrError"
+        types = (DauphinTagsList, DauphinPythonError)
 
 
-class DauphinPartitionRunConfigOrError(dauphin.Union):
+class DauphinRunConfigOrError(dauphin.Union):
     class Meta(object):
-        name = "PartitionRunConfigOrError"
-        types = (DauphinPartitionRunConfig, DauphinPythonError)
+        name = "RunConfigOrError"
+        types = (DauphinRunConfig, DauphinPythonError)
