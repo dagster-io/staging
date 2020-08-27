@@ -60,6 +60,10 @@ def graphql_postgres_instance(overrides):
                             "class": "PostgresScheduleStorage",
                             "config": {"postgres_url": pg_conn_string},
                         },
+                        "compute_logs": {
+                            "module": "dagster.core.storage.noop_compute_log_manager",
+                            "class": "NoOpComputeLogManager",
+                        },
                     },
                     overrides if overrides else {},
                 ),
