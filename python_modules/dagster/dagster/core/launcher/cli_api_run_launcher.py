@@ -221,8 +221,14 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
 
         # Pipeline execution machinery is set up to gracefully
         # terminate and report to instance on KeyboardInterrupt
+
+        print("INTERRUPTING IPC SUBPROCESS")
         interrupt_ipc_subprocess(process)
-        process.wait()
+
+        print("WAITING FOR IT TO DIE")
+        seven.wait_for_process(process)
+        print("MADE IT OUT")
+
         return True
 
     def get_active_run_count(self):

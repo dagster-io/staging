@@ -222,12 +222,18 @@ class DagsterApiServer(DagsterApiServicer):
         with self._execution_lock:
             runs_to_clear = []
             for run_id, (process, instance) in self._executions.items():
+
+                sys.stderr.write("CONSIDERING " + run_id + "\n")
+
                 if process.is_alive():
                     if not self._termination_events[run_id].is_set() or (
                         time.time() - self._termination_times[run_id]
                         < GRACE_PERIOD_AFTER_PROCESS_TERMINATION
                     ):
+                        sys.stderr.write("IT IS ALIVE AND HASNT TERMINATED\n")
                         continue
+
+                    sys.stderr.write("KILLING PROCESS IT IS PAST THE GRACE PERIOD\n")
 
                     # the process failed to handle the KeyboardInterrupt cleanly after termination.
                     # Inform the system and mark the run as failed.
@@ -248,11 +254,16 @@ class DagsterApiServer(DagsterApiServicer):
                     instance.report_run_failed(run)
 
                 else:
+
+                    sys.stderr.write("IT IS DEAD SO I WILL REMOVE IT\n")
+
                     run = instance.get_run_by_id(run_id)
                     runs_to_clear.append(run_id)
 
                     if run.is_finished:
                         continue
+
+                    sys.stderr.write("IT DIED UNEXPECTEDLY SO I WILL NOTIFY\n")
 
                     # the process died in an unexpected manner. inform the system
                     message = "Pipeline execution process for {run_id} unexpectedly exited.".format(
@@ -264,7 +275,8 @@ class DagsterApiServer(DagsterApiServicer):
             for run_id in runs_to_clear:
                 del self._executions[run_id]
                 del self._termination_events[run_id]
-                del self._termination_times[run_id]
+                if run_id in self._termination_times:
+                    del self._termination_times[run_id]
 
     def _recon_repository_from_origin(self, repository_origin):
         check.inst_param(
