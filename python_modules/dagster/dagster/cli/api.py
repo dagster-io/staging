@@ -309,6 +309,9 @@ def execute_run_command(input_file, output_file):
     recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
     instance = DagsterInstance.from_ref(args.instance_ref)
 
+    sys.stdout.write("HELLO FROM THE EXECUTE RUN SUBPROCESS STDOUT!!!\n")
+    sys.stderr.write("HELLO FROM THE EXECUTE RUN SUBPROCESS STDERR!!!\n")
+
     with ipc_write_stream(output_file) as ipc_stream:
 
         def send_to_stream(event):

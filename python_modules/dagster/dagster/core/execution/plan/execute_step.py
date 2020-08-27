@@ -1,3 +1,6 @@
+import os
+import signal
+
 from dagster import check
 from dagster.core.definitions import (
     AssetMaterialization,
@@ -18,7 +21,7 @@ from dagster.core.errors import (
     DagsterTypeMaterializationError,
     user_code_error_boundary,
 )
-from dagster.core.events import DagsterEvent
+from dagster.core.events import DagsterEvent, delay_interrupts
 from dagster.core.execution.context.system import SystemStepExecutionContext
 from dagster.core.execution.plan.objects import (
     StepInputData,
@@ -283,9 +286,13 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
                     )
                 )
 
-    yield DagsterEvent.step_success_event(
-        step_context, StepSuccessData(duration_ms=timer_result.millis)
-    )
+    # We only want to log exactly one step success event or failure event if possible,
+    # so wait to handle any interrupts (that normally log a failure event) until the success
+    # event has finished
+    with delay_interrupts():
+        yield DagsterEvent.step_success_event(
+            step_context, StepSuccessData(duration_ms=timer_result.millis)
+        )
 
 
 def _create_step_events_for_output(step_context, output):
