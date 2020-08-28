@@ -7,7 +7,7 @@ from .graphql_context_test_suite import (
 )
 
 GET_TRIGGERED_EXECUTIONS_QUERY = """
-    query PartitionSetsQuery($repositorySelector: RepositorySelector!) {
+    query TriggeredExecutionsQuery($repositorySelector: RepositorySelector!) {
         triggerDefinitionsOrError(repositorySelector: $repositorySelector) {
             __typename
             ... on TriggerDefinitions {
@@ -27,7 +27,7 @@ GET_TRIGGERED_EXECUTIONS_QUERY = """
 """
 
 GET_TRIGGERED_EXECUTION_QUERY = """
-    query PartitionSetsQuery($repositorySelector: RepositorySelector!, $triggerName: String!) {
+    query TriggeredExecutionQuery($repositorySelector: RepositorySelector!, $triggerName: String!) {
         triggerDefinitionOrError(repositorySelector: $repositorySelector, triggerName: $triggerName) {
             __typename
             ... on TriggerDefinition {

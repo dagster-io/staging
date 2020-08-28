@@ -35,23 +35,22 @@ def get_trigger_definition_or_error(graphene_info, repository_selector, trigger_
     repository = location.get_repository(repository_selector.repository_name)
     external_triggers = repository.get_external_triggered_executions()
 
-    results = [
-        graphene_info.schema.type_named("TriggerDefinition")(external_trigger)
+    matched = [
+        external_trigger
         for external_trigger in external_triggers
         if external_trigger.name == trigger_name
     ]
 
-    if not results:
+    if not matched:
         return graphene_info.schema.type_named("TriggerDefinitionNotFoundError")(trigger_name)
 
-    return graphene_info.schema.type_named("TriggerDefinition")(results[0])
+    return graphene_info.schema.type_named("TriggerDefinition")(matched[0])
 
 
 @capture_dauphin_error
 def get_trigger_execution_config(graphene_info, external_triggered_execution):
-    handle = external_triggered_execution.handle.repository_handle
     result = graphene_info.context.get_external_triggered_execution_param_data(
-        handle, external_triggered_execution.name
+        external_triggered_execution.handle, external_triggered_execution.name
     )
     if isinstance(result, ExternalExecutionParamsData):
         run_config_yaml = yaml.safe_dump(result.run_config, default_flow_style=False)
