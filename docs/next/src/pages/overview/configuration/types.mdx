@@ -1,0 +1,20 @@
+import PyObject from 'components/PyObject';
+import { DynamicMetaTags } from 'components/MetaTags';
+
+<DynamicMetaTags
+  title="Configuration Schema | Dagster"
+  description="Several dimensions of pipeline execution can be determined at execution time through configuration.
+  Dagster call this set of chosen values run config."
+/>
+
+# Configuration Types
+
+Dagster includes a collection of useful config types to use when declaring config schema. The api docs for these are [found here](/_apidocs/config).
+
+## Selector
+
+```python literalinclude
+file:/docs_snippets/docs_snippets_tests/overview_tests/configuration_tests/test_config_types.py
+startBefore: start_selector
+endAfter: end_selector
+```
