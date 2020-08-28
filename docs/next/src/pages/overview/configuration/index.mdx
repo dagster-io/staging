@@ -36,11 +36,17 @@ The Dagster library includes a system for defining the schema that configuration
 The most common objects to specify <PyObject module="dagster" object="ConfigSchema" /> for
 are <PyObject module="dagster" object="SolidDefinition" /> and <PyObject module="dagster" object="ResourceDefinition" />.
 
-The following example shows how **config_schema** can be used on a solid to control its behavior:
+The following simple example shows how **config_schema** can be used on a solid to control its behavior:
 
 ```python literalinclude
 file:/docs_snippets/docs_snippets/overview/configuration/example.py
 ```
+
+While the example above uses simple scalar config values, the config system supports strucutred types allowing for
+complex configuration. One notable example is <PyObject module="dagster" object="Selector" /> which is used
+extensively within dagster to choose an option from a well defined set and provide additional configuration for it.
+
+You can see the full list of supported types in the <PyObject module="dagster" object="ConfigSchema" /> API docs.
 
 ## Configured
 
