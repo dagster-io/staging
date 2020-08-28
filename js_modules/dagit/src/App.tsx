@@ -32,6 +32,7 @@ import { CustomTooltipProvider } from "./CustomTooltipProvider";
 import { TimezoneProvider } from "./TimeComponents";
 import { APP_PATH_PREFIX } from "./DomUtils";
 import { CustomConfirmationProvider } from "./CustomConfirmationProvider";
+import { TriggersRoot } from "./TriggersRoot";
 
 const AppRoutes = () => (
   <Switch>
@@ -42,6 +43,8 @@ const AppRoutes = () => (
     <Route path="/scheduler" component={SchedulerRoot} exact={true} />
     <Route path="/schedules/:scheduleName" component={ScheduleRoot} />
     <Route path="/schedules" component={SchedulesRoot} />
+    <Route path="/triggers/:triggerName" component={TriggersRoot} />
+    <Route path="/triggers" component={TriggersRoot} />
     <Route path="/assets" component={AssetsRoot} exact={true} />
     <Route path="/assets/(/?.*)" component={AssetsRoot} />
     <Route path="/instance" component={InstanceDetailsRoot} />

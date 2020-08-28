@@ -14,6 +14,7 @@ import navBarImage from "../images/nav-logo-icon.png";
 import navTitleImage from "../images/nav-title.png";
 import { DagsterRepoOption } from "../DagsterRepositoryContext";
 import { SchedulesList } from "./SchedulesList";
+import { TriggersList } from "./TriggersList";
 
 const KEYCODE_FOR_1 = 49;
 
@@ -101,6 +102,7 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({ options, repo, 
             <RepositoryContentList {...match?.params} repo={repo} />
             <ItemHeader>Schedules:</ItemHeader>
             <SchedulesList {...match?.params} repo={repo} />
+            <TriggersList {...match?.params} repo={repo} />
           </div>
         )}
       </div>

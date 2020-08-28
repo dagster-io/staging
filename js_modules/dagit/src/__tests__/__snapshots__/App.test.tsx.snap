@@ -459,6 +459,95 @@ exports[`renders execution 1`] = `
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
           />
         </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
+          />
+        </div>
       </div>
     </div>
     <div
@@ -1244,6 +1333,95 @@ exports[`renders pipeline page 1`] = `
           </div>
           <div
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
+          />
+        </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
           />
         </div>
       </div>
@@ -5983,6 +6161,95 @@ exports[`renders pipeline solid page 1`] = `
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
           />
         </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
+          />
+        </div>
       </div>
     </div>
     <div
@@ -10720,6 +10987,95 @@ exports[`renders solids explorer 1`] = `
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
           />
         </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
+          />
+        </div>
       </div>
     </div>
     <div
@@ -12581,6 +12937,95 @@ exports[`renders type page 1`] = `
           </div>
           <div
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
+          />
+        </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
           />
         </div>
       </div>
@@ -17320,6 +17765,95 @@ exports[`renders type page 2`] = `
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
           />
         </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
+          />
+        </div>
       </div>
     </div>
     <div
@@ -22055,6 +22589,95 @@ exports[`renders without error 1`] = `
           </div>
           <div
             className="SchedulesList__Items-iq7kk9-2 iTvrIE"
+          />
+        </div>
+        <div
+          className="TriggersList__ItemHeader-sc-6b00qo-3 dWssVe"
+        >
+          Triggers:
+        </div>
+        <div
+          style={
+            Object {
+              "borderTop": "1px solid #30404D",
+              "display": "flex",
+              "flex": 1,
+              "flexDirection": "column",
+            }
+          }
+        >
+          <div
+            className="TriggersList__Header-sc-6b00qo-0 inXGLL"
+          >
+            <div
+              className="bp3-input-group bp3-small"
+            >
+              <input
+                className="bp3-input"
+                onChange={[Function]}
+                onKeyDown={[Function]}
+                placeholder="Search triggers..."
+                style={
+                  Object {
+                    "background": "#30404D",
+                    "border": "1px solid #394B59",
+                    "paddingRight": 10,
+                  }
+                }
+                type="text"
+                value=""
+              />
+            </div>
+            <div
+              style={
+                Object {
+                  "width": 4,
+                }
+              }
+            />
+            <div
+              className="bp3-button-group"
+            >
+              <a
+                href="/triggers"
+              >
+                <button
+                  className="bp3-button bp3-small"
+                  onKeyDown={[Function]}
+                  onKeyUp={[Function]}
+                  type="button"
+                >
+                  <span
+                    className="bp3-icon bp3-icon-diagram-tree"
+                    icon="diagram-tree"
+                  >
+                    <svg
+                      data-icon="diagram-tree"
+                      height={13}
+                      viewBox="0 0 16 16"
+                      width={13}
+                    >
+                      <desc>
+                        diagram-tree
+                      </desc>
+                      <path
+                        d="M15 8v3h-2V9H9v2H7V9H3v2H1V8a1 1 0 011-1h5V5h2v2h5a1 1 0 011 1zM1 12h2a1 1 0 011 1v2a1 1 0 01-1 1H1a1 1 0 01-1-1v-2a1 1 0 011-1zm12 0h2a1 1 0 011 1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2a1 1 0 011-1zm-6 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1v-2a1 1 0 011-1zM7 0h2a1 1 0 011 1v2a1 1 0 01-1 1H7a1 1 0 01-1-1V1a1 1 0 011-1z"
+                        fillRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    className="bp3-button-text"
+                  >
+                    View All
+                     
+                  </span>
+                </button>
+              </a>
+            </div>
+          </div>
+          <div
+            className="TriggersList__Items-sc-6b00qo-1 bvvWMs"
           />
         </div>
       </div>
