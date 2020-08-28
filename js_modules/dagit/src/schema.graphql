@@ -1030,6 +1030,7 @@ type Query {
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   triggerDefinitionsOrError(repositorySelector: RepositorySelector!): TriggerDefinitionsOrError!
+  triggerDefinitionOrError(repositorySelector: RepositorySelector!, triggerName: String!): TriggerDefinitionOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
   pipelineRunOrError(runId: ID!): PipelineRunOrError!
   pipelineRunTags: [PipelineTagAndValues!]!
@@ -1422,7 +1423,15 @@ type TriggerDefinition {
   mode: String!
   runConfigOrError: RunConfigOrError
   tagsOrError: TagsListOrError!
+  runs(filter: PipelineRunsFilter, cursor: String, limit: Int): [PipelineRun!]!
 }
+
+type TriggerDefinitionNotFoundError implements Error {
+  message: String!
+  triggerName: String!
+}
+
+union TriggerDefinitionOrError = TriggerDefinition | RepositoryNotFoundError | TriggerDefinitionNotFoundError | PythonError
 
 type TriggerDefinitions {
   results: [TriggerDefinition!]!
