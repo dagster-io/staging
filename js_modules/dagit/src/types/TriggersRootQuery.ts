@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { RepositorySelector, PipelineRunStatus } from "./globalTypes";
+import { RepositorySelector, PipelineRunStatus, StepEventStatus } from "./globalTypes";
 
 // ====================================================
 // GraphQL query operation: TriggersRootQuery
@@ -19,10 +19,30 @@ export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_
   value: string;
 }
 
+export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stepStats_materializations {
+  __typename: "Materialization";
+}
+
+export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stepStats_expectationResults {
+  __typename: "ExpectationResult";
+  success: boolean;
+}
+
+export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stepStats {
+  __typename: "PipelineRunStepStats";
+  stepKey: string;
+  startTime: number | null;
+  endTime: number | null;
+  status: StepEventStatus | null;
+  materializations: TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stepStats_materializations[];
+  expectationResults: TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stepStats_expectationResults[];
+}
+
 export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stats_PipelineRunStatsSnapshot {
   __typename: "PipelineRunStatsSnapshot";
   startTime: number | null;
   endTime: number | null;
+  materializations: number;
 }
 
 export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stats_PythonError_cause {
@@ -46,6 +66,7 @@ export interface TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_
   tags: TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_tags[];
   pipelineName: string;
   status: PipelineRunStatus;
+  stepStats: TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results_runs_stepStats[];
   stepKeysToExecute: string[] | null;
   canTerminate: boolean;
   mode: string;
