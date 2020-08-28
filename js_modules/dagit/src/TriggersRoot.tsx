@@ -22,6 +22,7 @@ import { showCustomAlert } from "./CustomAlertProvider";
 import { RunStatus } from "./runs/RunStatusDots";
 import { HighlightedCodeBlock } from "./HighlightedCodeBlock";
 import { RunTable } from "./runs/RunTable";
+import { TriggerGraphs, TRIGGER_GRAPHS_RUN_FRAGMENT } from "./TriggerGraphs";
 
 type Trigger = TriggersRootQuery_triggerDefinitionsOrError_TriggerDefinitions_results;
 
@@ -79,20 +80,32 @@ export const TriggersRoot: React.FunctionComponent<RouteComponentProps> = ({ mat
           );
         }
 
+        const allStepKeys = {};
+        if (triggerName) {
+          matching[0].runs.forEach(run => {
+            run.stepStats.forEach(stat => {
+              allStepKeys[stat.stepKey] = true;
+            });
+          });
+        }
+
         return (
           <>
             <ScrollContainer>
               <Header>{triggerName || "Triggers"}</Header>
               <TriggersTable triggers={matching} />
               <div style={{ marginTop: 30 }}>
-                {triggerName && matching[0].runs ? (
+                {/* {triggerName && matching[0].runs ? (
                   <RunTable
                     runs={matching[0].runs || []}
                     onSetFilter={() => {}}
                     nonIdealState={<div />}
                   />
-                ) : null}
+                ) : null} */}
               </div>
+              {triggerName && matching[0].runs ? (
+                <TriggerGraphs runs={matching[0].runs} stepKeys={Object.keys(allStepKeys)} />
+              ) : null}
             </ScrollContainer>
           </>
         );
@@ -264,7 +277,7 @@ const TRIGGERS_ROOT_QUERY = gql`
           pipelineName
           solidSelection
           mode
-          runs(limit: 10) {
+          runs {
             runId
             tags {
               key
@@ -272,7 +285,11 @@ const TRIGGERS_ROOT_QUERY = gql`
             }
             pipelineName
             status
+            stepStats {
+              stepKey
+            }
             ...RunTableRunFragment
+            ...TriggerGraphsRunFragment
           }
         }
       }
@@ -283,6 +300,7 @@ const TRIGGERS_ROOT_QUERY = gql`
   }
   ${PythonErrorInfo.fragments.PythonErrorFragment}
   ${RunTable.fragments.RunTableRunFragment}
+  ${TRIGGER_GRAPHS_RUN_FRAGMENT}
 `;
 
 const FETCH_TRIGGER_CONFIG = gql`

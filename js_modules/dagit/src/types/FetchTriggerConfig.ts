@@ -10,7 +10,7 @@ import { RepositorySelector } from "./globalTypes";
 // ====================================================
 
 export interface FetchTriggerConfig_triggerDefinitionOrError_RepositoryNotFoundError {
-  __typename: "RepositoryNotFoundError" | "TriggerDefinitionNotFoundError" | "PythonError";
+  __typename: "RepositoryNotFoundError" | "TriggerDefinitionNotFoundError";
 }
 
 export interface FetchTriggerConfig_triggerDefinitionOrError_TriggerDefinition_runConfigOrError_RunConfig {
@@ -38,7 +38,20 @@ export interface FetchTriggerConfig_triggerDefinitionOrError_TriggerDefinition {
   runConfigOrError: FetchTriggerConfig_triggerDefinitionOrError_TriggerDefinition_runConfigOrError | null;
 }
 
-export type FetchTriggerConfig_triggerDefinitionOrError = FetchTriggerConfig_triggerDefinitionOrError_RepositoryNotFoundError | FetchTriggerConfig_triggerDefinitionOrError_TriggerDefinition;
+export interface FetchTriggerConfig_triggerDefinitionOrError_PythonError_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface FetchTriggerConfig_triggerDefinitionOrError_PythonError {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: FetchTriggerConfig_triggerDefinitionOrError_PythonError_cause | null;
+}
+
+export type FetchTriggerConfig_triggerDefinitionOrError = FetchTriggerConfig_triggerDefinitionOrError_RepositoryNotFoundError | FetchTriggerConfig_triggerDefinitionOrError_TriggerDefinition | FetchTriggerConfig_triggerDefinitionOrError_PythonError;
 
 export interface FetchTriggerConfig {
   triggerDefinitionOrError: FetchTriggerConfig_triggerDefinitionOrError;
