@@ -173,7 +173,7 @@ scheduler:
 #
 # https://github.com/kubernetes/charts/blob/master/stable/postgresql/README.md
 #
-# A PostgreSQL database is required to run Dagster on Kubernetes. If postgresql.enabled is marked as
+# A PostgreSQL database is required to run Dagster on Kubernetes. If postgresql.deployInK8s is marked as
 # false, the PG credentials specified here will still be used, and should point to an external PG
 # database that is accessible from this chart.
 ####################################################################################################
@@ -183,9 +183,9 @@ postgresql:
     repository: "postgres"
     tag: "9.6.16"
     pullPolicy: IfNotPresent
-  # set postgresql.enabled to be false to disable deploy of a PostgreSQL database and use an
+  # set postgresql.deployInK8s to be false to disable deploy of a PostgreSQL database and use an
   # existing external PostgreSQL database
-  enabled: true
+  deployInK8s: true
   # set this PostgreSQL hostname when using an external PostgreSQL database
   postgresqlHost: ""
   postgresqlUsername: test
