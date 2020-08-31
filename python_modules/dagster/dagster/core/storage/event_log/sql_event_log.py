@@ -450,3 +450,26 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
 
             except seven.JSONDecodeError:
                 logging.warning("Could not parse asset event record id `{}`.".format(row_id))
+
+    def get_addresses_for_content_ids(self, content_ids):
+        """
+        For each content id, finds whether an asset materialization exists with the
+        given content id, and returns it if it does.
+
+        Args:
+            content_ids (List[str]): The content ids to search for.
+
+        Returns:
+            Dict[str, Optional[str]]: For each content id, an address if there is one and
+                None otherwise.
+        """
+        c = SqlEventLogStorageTable.c
+        query = (
+            db.select(columns=[c.content_id, c.address], distinct=[c.address])
+            .where(c.content_id.in_(content_ids))
+            .order_by([c.content_id, c.timestamp.desc()])
+        )
+
+        with self.connect() as conn:
+            results = conn.execute(query).fetchall()
+            return {content_id: address for content_id, address in results}

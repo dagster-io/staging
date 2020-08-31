@@ -12,6 +12,8 @@ SqlEventLogStorageTable = db.Table(
     db.Column("timestamp", db.types.TIMESTAMP),
     db.Column("step_key", db.String),
     db.Column("asset_key", db.String),
+    db.Column("address", db.String),
+    db.Column("content_id", db.String),
 )
 
 db.Index("idx_run_id", SqlEventLogStorageTable.c.run_id)
