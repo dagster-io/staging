@@ -2,6 +2,7 @@ from collections import OrderedDict, defaultdict
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
+from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventRecord
 from dagster.serdes import ConfigurableClass
 
@@ -141,3 +142,46 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
                     updated_record = record._replace(dagster_event=updated_dagster_event)
                     updated_records.append(updated_record)
             self._logs[run_id] = updated_records
+
+    def get_addresses_for_step_output_versions(self, step_output_versions):
+        """
+        For each given step output, finds whether an output exists with the given
+        version, and returns its address if it does.
+
+        Args:
+            step_output_versions (Dict[StepOutputHandle, str]): Step output handle -> version.
+
+        Returns:
+            Dict[str, str]: For each step output, an address if there is one and
+                None otherwise.
+        """
+        step_output_records = (
+            record
+            for records in self._logs.values()
+            for record in records
+            if record.is_dagster_event
+            and record.dagster_event.event_type == DagsterEventType.STEP_OUTPUT
+        )
+
+        # if multiple output events wrote to the same address, only the latest one is relevant
+        latest_version_by_address = {}
+        for record in step_output_records:
+            step_output_data = record.dagster_event.event_specific_data
+            address = step_output_data.address
+            version = step_output_data.version
+            step_output = step_output_data.step_output_handle
+            timestamp = record.timestamp
+
+            if address and (
+                address not in latest_version_by_address
+                or latest_version_by_address[address][2] < timestamp
+            ):
+                latest_version_by_address[address] = (step_output, version, timestamp)
+
+        address_by_output = {
+            step_output: address
+            for address, (step_output, version, _) in latest_version_by_address.items()
+            if (step_output, version) in set(step_output_versions.items())
+        }
+
+        return address_by_output

@@ -1082,3 +1082,16 @@ class DagsterInstance:
 
     def logs_path_for_schedule(self, schedule_origin_id):
         return self._scheduler.get_logs_path(self, schedule_origin_id)
+
+    def get_addresses_for_step_output_versions(self, step_output_versions):
+        """
+        For each given step output, finds whether an output exists with the given
+        version, and returns its address if it does.
+
+        Args:
+            step_output_versions (Dict[StepOutputHandle, str]): Step output handle -> version.
+
+        Returns:
+            Dict[str, str]: For each step output, an address if there is one.
+        """
+        return self._event_storage.get_addresses_for_step_output_versions(step_output_versions)
