@@ -204,6 +204,7 @@ class SolidDefinition(ISolidDefinition):
             differs from the order of the input definitions.
         _configured_config_mapping_fn: This argument is for internal use only. Users should not
             specify this field. To preconfigure a resource, use the :py:func:`configured` API.
+        version (str): The version of
 
 
     Examples:
