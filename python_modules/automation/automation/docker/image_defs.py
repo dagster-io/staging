@@ -67,18 +67,40 @@ def k8s_example_cm(cwd):
         yield
 
 
+def get_core_k8s_dirs():
+    return [
+        "python_modules/dagster",
+        "python_modules/libraries/dagster-postgres",
+        "python_modules/libraries/dagster-cron",
+        "python_modules/libraries/dagster-celery",
+        "python_modules/libraries/dagster-k8s",
+        "python_modules/libraries/dagster-celery-k8s",
+    ]
+
+
 @contextlib.contextmanager
-def k8s_celery_worker_editable(cwd):
+def k8s_example_editable_cm(cwd):
     with copy_directories(
-        [
-            "python_modules/dagster",
-            "python_modules/libraries/dagster-celery",
-            "python_modules/libraries/dagster-cron",
-            "python_modules/libraries/dagster-k8s",
-            "python_modules/libraries/dagster-celery-k8s",
-            "python_modules/libraries/dagster-postgres",
-        ],
+        get_core_k8s_dirs()
+        + ["examples/deploy_k8s/example_project", "python_modules/libraries/dagster-aws",],
         cwd,
+    ):
+        yield
+
+
+@contextlib.contextmanager
+def k8s_dagit_editable_cm(cwd):
+    print("!!!!! WARNING: You must call `make rebuild_dagit` after making changes to Dagit !!!!\n")
+    with copy_directories(
+        get_core_k8s_dirs() + ["python_modules/dagster-graphql", "python_modules/dagit",], cwd,
+    ):
+        yield
+
+
+@contextlib.contextmanager
+def k8s_celery_worker_editable_cm(cwd):
+    with copy_directories(
+        get_core_k8s_dirs(), cwd,
     ):
         yield
 
@@ -87,7 +109,9 @@ def k8s_celery_worker_editable(cwd):
 CUSTOM_BUILD_CONTEXTMANAGERS = {
     "buildkite-integration-base": buildkite_integration_cm,
     "k8s-example": k8s_example_cm,
-    "k8s-celery-worker-editable": k8s_celery_worker_editable,
+    "k8s-example-editable": k8s_example_editable_cm,
+    "k8s-dagit-editable": k8s_dagit_editable_cm,
+    "k8s-celery-worker-editable": k8s_celery_worker_editable_cm,
 }
 
 
