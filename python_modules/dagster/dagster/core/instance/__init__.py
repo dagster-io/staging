@@ -22,6 +22,7 @@ from dagster.core.errors import (
 )
 from dagster.core.storage.migration.utils import upgrading_instance
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.utils import str_format_list
 from dagster.serdes import ConfigurableClass, whitelist_for_serdes
 from dagster.seven import get_current_datetime_in_utc
@@ -514,6 +515,22 @@ class DagsterInstance:
                     solids_to_execute=solids_to_execute
                 )
 
+        if tags.get(MEMOIZED_RUN_TAG) == "true":
+            step_keys_to_execute = []
+
+            execution_plan_speculative = create_execution_plan(
+                pipeline_def,
+                run_config=run_config,
+                mode=mode,
+                step_keys_to_execute=step_keys_to_execute,
+            )
+
+            for step in execution_plan_speculative.topological_steps():
+                # if step's version is up to date, then it does not need to be re-executed
+                version = step.version
+                if not self._is_version_cached(version):
+                    step_keys_to_execute.append(step.key)
+
         if execution_plan is None:
             execution_plan = create_execution_plan(
                 pipeline_def,
@@ -540,6 +557,9 @@ class DagsterInstance:
             ),
             parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
         )
+
+    def _is_version_cached(self, version):
+        return False
 
     def _construct_run_with_snapshots(
         self,
