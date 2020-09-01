@@ -10,7 +10,6 @@ from dagster import (
     PipelineDefinition,
     SolidDefinition,
     composite_solid,
-    configured,
     execute_pipeline,
     lambda_solid,
     pipeline,
@@ -525,6 +524,38 @@ def test_calling_solid_outside_fn():
     with pytest.raises(DagsterInvariantViolationError, match="outside of a composition function"):
 
         return_one()
+
+
+@lambda_solid
+def single_input_solid():
+    return
+
+
+def test_alias_not_invoked():
+
+    with pytest.warns(None) as record:
+
+        @pipeline
+        def _():
+            return [single_input_solid.alias("foo")(), single_input_solid.alias("bar")()]
+
+    assert len(record) == 0
+
+    with pytest.warns(UserWarning, match=r'\s*Received an uninvoked solid \s*'):
+
+        @pipeline
+        def _():
+            return [single_input_solid.alias("foo"), single_input_solid.alias("bar")]
+
+
+def test_tag_not_invoked():
+    with pytest.warns(None) as record:
+
+        @pipeline
+        def _():
+            return [single_input_solid.tag({})(), single_input_solid.tag({})()]
+
+    assert len(record) == 0
 
 
 def test_compose_nothing():
