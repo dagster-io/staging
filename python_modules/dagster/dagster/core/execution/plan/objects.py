@@ -246,6 +246,10 @@ class ExecutionStep(
     def solid_name(self):
         return self.solid_handle.name
 
+    @property
+    def version(self):
+        return None
+
     def has_step_output(self, name):
         check.str_param(name, "name")
         return name in self.step_output_dict
