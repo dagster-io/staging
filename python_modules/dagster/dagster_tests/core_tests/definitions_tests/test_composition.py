@@ -10,13 +10,13 @@ from dagster import (
     PipelineDefinition,
     SolidDefinition,
     composite_solid,
-    configured,
     execute_pipeline,
     lambda_solid,
     pipeline,
     repository,
     solid,
 )
+from dagster.core.definitions import composition
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 
 
@@ -525,6 +525,79 @@ def test_calling_solid_outside_fn():
     with pytest.raises(DagsterInvariantViolationError, match="outside of a composition function"):
 
         return_one()
+
+
+@lambda_solid
+def single_input_solid():
+    return
+
+
+def flush_old_invocations():
+    composition._pending_invocations_stack = []  # pylint: disable=W0212
+
+
+def test_alias_invoked(recwarn):
+    flush_old_invocations()
+
+    @pipeline
+    def _():
+        return [single_input_solid.alias("foo")(), single_input_solid.alias("bar")()]
+
+    assert len(recwarn) == 0
+
+
+def test_alias_not_invoked():
+    flush_old_invocations()
+
+    with pytest.warns(UserWarning, match=r"\s*Received an uninvoked solid \s*"):
+
+        @pipeline
+        def _():
+            return [single_input_solid.alias("foo"), single_input_solid.alias("bar")]
+
+
+def test_tag_invoked():
+    flush_old_invocations()
+
+    with pytest.warns(None) as record:
+
+        @pipeline
+        def _():
+            return [single_input_solid.tag({})(), single_input_solid.tag({})()]
+
+    assert len(record) == 0
+
+
+def test_tag_not_invoked():
+    flush_old_invocations()
+
+    with pytest.warns(UserWarning, match=r"\s*Received an uninvoked solid \s*"):
+
+        @pipeline
+        def _():
+            return [single_input_solid.tag({}), single_input_solid.tag({})]
+
+
+def test_with_hooks_invoked():
+    flush_old_invocations()
+
+    with pytest.warns(None) as record:
+
+        @pipeline
+        def _():
+            return [single_input_solid.with_hooks(set())(), single_input_solid.with_hooks(set())()]
+
+    assert len(record) == 0
+
+
+def test_with_hooks_not_invoked():
+    flush_old_invocations()
+
+    with pytest.warns(UserWarning, match=r"\s*Received an uninvoked solid \s*"):
+
+        @pipeline
+        def _():
+            return [single_input_solid.with_hooks(set()), single_input_solid.with_hooks(set())]
 
 
 def test_compose_nothing():
