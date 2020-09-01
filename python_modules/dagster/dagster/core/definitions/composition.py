@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple
 
 from dagster import check
@@ -42,8 +43,14 @@ class InProgressCompositionContext(object):
     def __init__(self, name, source):
         self.name = check.str_param(name, "name")
         self.source = check.str_param(source, "source")
+        self._definitions = set()
         self._invocations = {}
         self._collisions = {}
+
+    def observe_definition(self, solid_name):
+        self._definitions.add(solid_name)
+
+        return solid_name
 
     def observe_invocation(
         self, given_alias, solid_def, input_bindings, input_mappings, tags=None, hook_defs=None
@@ -74,7 +81,7 @@ class InProgressCompositionContext(object):
 
     def complete(self, output):
         return CompleteCompositionContext(
-            self.name, self._invocations, check.opt_dict_param(output, "output")
+            self.name, self._definitions, self._invocations, check.opt_dict_param(output, "output")
         )
 
 
@@ -86,11 +93,15 @@ class CompleteCompositionContext(
     """The processed information from capturing solid invocations during a composition function.
     """
 
-    def __new__(cls, name, invocations, output_mapping_dict):
+    def __new__(cls, name, definitions, invocations, output_mapping_dict):
 
         dep_dict = {}
         solid_def_dict = {}
         input_mappings = []
+
+        for def_name in definitions:
+            if def_name not in invocations:
+                warnings.warn('Solid "{name}" defined but not invoked.'.format(name=def_name))
 
         for invocation in invocations.values():
             def_name = invocation.solid_def.name
@@ -142,6 +153,10 @@ class CallableSolidNode(object):
         self.given_alias = check.opt_str_param(given_alias, "given_alias")
         self.tags = check.opt_inst_param(tags, "tags", frozentags)
         self.hook_defs = check.opt_set_param(hook_defs, "hook_defs", HookDefinition)
+
+        solid_name = self.given_alias if self.given_alias else self.solid_def.name
+        assert_in_composition(solid_name)
+        current_context().observe_definition(solid_name)
 
     def __call__(self, *args, **kwargs):
         solid_name = self.given_alias if self.given_alias else self.solid_def.name
