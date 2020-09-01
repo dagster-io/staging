@@ -1,3 +1,4 @@
+import warnings
 from collections import namedtuple
 
 from dagster import check
@@ -11,6 +12,7 @@ from .solid import ISolidDefinition
 from .utils import validate_tags
 
 _composition_stack = []
+_pending_invocations_stack = []
 
 
 def enter_composition(name, source):
@@ -32,6 +34,11 @@ def assert_in_composition(solid_name):
             "Calling solids is only valid in a function decorated with "
             "@pipeline or @composite_solid.".format(solid_name=solid_name)
         )
+
+
+def add_pending_invocation(solid):
+    solid = check.opt_inst_param(solid, "solid", CallableSolidNode)
+    _pending_invocations_stack.append(solid)
 
 
 class InProgressCompositionContext(object):
@@ -92,6 +99,20 @@ class CompleteCompositionContext(
         solid_def_dict = {}
         input_mappings = []
 
+        while _pending_invocations_stack:
+            solid = _pending_invocations_stack.pop()
+            solid_name = solid.given_alias if solid.given_alias else solid.solid_def.name
+            if solid_name not in invocations:
+                warnings.warn(
+                    'Received an uninvoked solid "{solid_name}". '
+                    "Did you forgot parentheses?\n"
+                    "Alias: {solid_name} \n"
+                    "Tags: {tags} \n"
+                    "Hook Definitions: {hooks}".format(
+                        solid_name=solid_name, tags=solid.tags, hooks=solid.hook_defs,
+                    )
+                )
+
         for invocation in invocations.values():
             def_name = invocation.solid_def.name
             if def_name in solid_def_dict and solid_def_dict[def_name] is not invocation.solid_def:
@@ -142,6 +163,8 @@ class CallableSolidNode(object):
         self.given_alias = check.opt_str_param(given_alias, "given_alias")
         self.tags = check.opt_inst_param(tags, "tags", frozentags)
         self.hook_defs = check.opt_set_param(hook_defs, "hook_defs", HookDefinition)
+
+        add_pending_invocation(self)
 
     def __call__(self, *args, **kwargs):
         solid_name = self.given_alias if self.given_alias else self.solid_def.name
