@@ -527,6 +527,20 @@ def test_calling_solid_outside_fn():
         return_one()
 
 
+def test_solid_not_invoked_pipeline():
+    with pytest.warns(UserWarning, match=r'Solid ".*" defined but not invoked.'):
+
+        @lambda_solid
+        def single_input_solid():
+            return
+
+        @pipeline
+        def single_input_solid_pipeline():
+            return [single_input_solid.alias("foo"), single_input_solid.alias("bar")]
+
+        execute_pipeline(single_input_solid_pipeline)
+
+
 def test_compose_nothing():
     @lambda_solid(input_defs=[InputDefinition("start", Nothing)])
     def go():
