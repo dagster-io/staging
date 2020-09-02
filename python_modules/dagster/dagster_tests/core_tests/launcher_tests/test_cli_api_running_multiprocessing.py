@@ -224,11 +224,18 @@ def test_execution_crash():
         pipeline_run = _execute_in_launcher(instance, crashy_pipeline, run_config)
 
         assert instance.get_run_by_id(pipeline_run.run_id).status == PipelineRunStatus.FAILURE
-        crash_log = instance.all_logs(pipeline_run.run_id)[
-            -2
-        ]  # last message is pipeline failure, second to last is...
+        logs = instance.all_logs(pipeline_run.run_id)
 
-        assert crash_log.message.startswith(
+        # last message is pipeline failure, second to last is solid failure, third to last is
+        # pipeline crash log
+        solid_crash_log = logs[-2]
+        assert (
+            solid_crash_log.message == "Pipeline execution process exited without completing step"
+        )
+        assert solid_crash_log.step_key == "crashy_solid.compute"
+
+        pipeline_crash_log = logs[-3]
+        assert pipeline_crash_log.message.startswith(
             "[CliApiRunLauncher] Pipeline execution process for {run_id} unexpectedly exited".format(
                 run_id=pipeline_run.run_id
             )
