@@ -1,12 +1,23 @@
 import os
 import time
 
-from dagster import file_relative_path, pipeline, repository, solid
+from dagster import (
+    Bool,
+    Field,
+    InputDefinition,
+    Int,
+    OutputDefinition,
+    file_relative_path,
+    pipeline,
+    repository,
+    solid,
+)
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation.repository_location import InProcessRepositoryLocation
 from dagster.core.launcher import CliApiRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import instance_for_test, poll_for_finished_run, poll_for_step_start
+from dagster.utils import segfault
 
 
 @solid
@@ -27,6 +38,24 @@ def crashy_solid(_):
 @pipeline
 def crashy_pipeline():
     crashy_solid()
+
+
+@pipeline
+def hard_failer():
+    @solid(
+        config_schema={"fail": Field(Bool, is_required=False, default_value=False)},
+        output_defs=[OutputDefinition(Int)],
+    )
+    def hard_fail_or_0(context):
+        if context.solid_config["fail"]:
+            segfault()
+        return 0
+
+    @solid(input_defs=[InputDefinition("n", Int)],)
+    def increment(_, n):
+        return n + 1
+
+    increment(hard_fail_or_0())
 
 
 @solid
@@ -68,7 +97,7 @@ def math_diamond():
 
 @repository
 def nope():
-    return [noop_pipeline, crashy_pipeline, sleepy_pipeline, math_diamond]
+    return [noop_pipeline, crashy_pipeline, hard_failer, sleepy_pipeline, math_diamond]
 
 
 def test_repo_construction():
@@ -198,6 +227,17 @@ def _get_successful_step_keys(event_records):
     return step_keys
 
 
+def _get_failed_step_keys(event_records):
+
+    step_keys = set()
+
+    for er in event_records:
+        if er.dagster_event and er.dagster_event.is_step_failure:
+            step_keys.add(er.dagster_event.step_key)
+
+    return step_keys
+
+
 def _message_exists(event_records, message_text):
     for event_record in event_records:
         if message_text in event_record.message:
@@ -309,3 +349,30 @@ def test_not_initialized():
     assert run_launcher.terminate(run_id) is False
     assert run_launcher.get_active_run_count() == 0
     assert run_launcher.is_active(run_id) is False
+
+
+def test_hard_failure():
+    with instance_for_test() as instance:
+        repo_yaml = file_relative_path(__file__, "repo.yaml")
+
+        run_config = {"solids": {"hard_fail_or_0": {"config": {"fail": True}}}}
+        pipeline_run = instance.create_run_for_pipeline(
+            pipeline_def=hard_failer, run_config=run_config
+        )
+        run_id = pipeline_run.run_id
+
+        assert instance.get_run_by_id(run_id).status == PipelineRunStatus.NOT_STARTED
+
+        external_pipeline = get_full_external_pipeline(repo_yaml, pipeline_run.pipeline_name)
+        launcher = instance.run_launcher
+        launcher.launch_run(instance, pipeline_run, external_pipeline)
+        launcher.join()
+
+        finished_pipeline_run = instance.get_run_by_id(run_id)
+
+        assert finished_pipeline_run
+        assert finished_pipeline_run.run_id == run_id
+        assert finished_pipeline_run.status == PipelineRunStatus.FAILURE
+        event_records = instance.all_logs(run_id)
+
+        assert _get_failed_step_keys(event_records) == {"hard_fail_or_0.compute"}
