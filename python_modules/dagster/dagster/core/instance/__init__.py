@@ -924,6 +924,39 @@ class DagsterInstance:
         self.handle_new_event(event_record)
         return dagster_event
 
+    # This should be used when the step failed from outside the pipeline context.
+    def report_synthetic_step_failed(self, pipeline_run, step_key, error_message):
+        from dagster.core.events import DagsterEvent, DagsterEventType
+        from dagster.core.events.log import DagsterEventRecord
+        from dagster.core.execution.plan.objects import StepFailureData
+
+        from dagster.utils.error import SerializableErrorInfo
+        from dagster.core.execution.plan.objects import UserFailureData
+
+        step_failure_event = DagsterEvent(
+            event_type_value=DagsterEventType.STEP_FAILURE.value,
+            pipeline_name=pipeline_run.pipeline_name,
+            step_key=step_key,
+            event_specific_data=StepFailureData(
+                error=SerializableErrorInfo(message="message", stack="stack", cls_name="cls_name"),
+                user_failure_data=UserFailureData(label="label"),
+            ),
+        )
+        event_record = DagsterEventRecord(
+            message=error_message,
+            user_message=error_message,
+            level=logging.ERROR,
+            pipeline_name=pipeline_run.pipeline_name,
+            run_id=pipeline_run.run_id,
+            error_info=None,
+            step_key=step_key,
+            timestamp=time.time(),
+            dagster_event=step_failure_event,
+        )
+
+        self.handle_new_event(event_record)
+        return step_failure_event
+
     def report_run_failed(self, pipeline_run):
         from dagster.core.events import DagsterEvent, DagsterEventType
         from dagster.core.events.log import DagsterEventRecord
