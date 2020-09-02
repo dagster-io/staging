@@ -12,6 +12,37 @@ from dagster.serdes import whitelist_for_serdes
 from dagster.utils import datetime_as_float
 
 
+def find_orphaned_step_start_events(records):
+    try:
+        iter(records)
+    except TypeError as exc:
+        six.raise_from(
+            check.ParameterCheckError(
+                "Invariant violation for parameter 'records'. Description: Expected iterable."
+            ),
+            from_value=exc,
+        )
+    for i, record in enumerate(records):
+        check.inst_param(record, "records[{i}]".format(i=i), EventRecord)
+
+    step_start = set()
+    steps_succeeded = set()
+    steps_failed = set()
+
+    for event in records:
+        if not event.is_dagster_event:
+            continue
+
+        if event.dagster_event.event_type == DagsterEventType.STEP_START:
+            step_start.add(event.dagster_event.step_key)
+        if event.dagster_event.event_type == DagsterEventType.STEP_FAILURE:
+            steps_failed.add(event.dagster_event.step_key)
+        if event.dagster_event.event_type == DagsterEventType.STEP_SUCCESS:
+            steps_succeeded.add(event.dagster_event.step_key)
+
+    return step_start.difference(steps_succeeded.union(steps_failed))
+
+
 def build_run_stats_from_events(run_id, records):
     try:
         iter(records)
