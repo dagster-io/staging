@@ -4,6 +4,7 @@ import weakref
 
 from dagster import check, seven
 from dagster.api.execute_run import cli_api_launch_run
+from dagster.core.execution.stats import find_orphaned_step_start_events
 from dagster.core.host_representation import ExternalPipeline
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -69,6 +70,17 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
             run_id=run.run_id
         )
         self._instance.report_engine_event(message, run, cls=self.__class__)
+
+        events = self._instance.all_logs(run.run_id)
+        orphans = find_orphaned_step_start_events(events)
+
+        for orphan in orphans:
+            error_message = "Pipeline execution process exited without completing step"
+
+            self._instance.report_synthetic_step_failed(
+                pipeline_run=run, step_key=orphan, error_message=error_message
+            )
+
         self._instance.report_run_failed(run)
 
     def _living_process_snapshot(self):
