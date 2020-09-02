@@ -46,6 +46,18 @@ GET_ASSET_RUNS = """
     }
 """
 
+GET_ASSET_RUNS_INDEXED = """
+    query AssetRunsQuery($assetKey: AssetKeyInput!, $cursor: String!, $limit: Int!) {
+        assetOrError(assetKey: $assetKey) {
+            ... on Asset {
+                runs(cursor: $cursor, limit: $limit) {
+                    runId
+                }
+            }
+        }
+    }
+"""
+
 
 class TestAssetAwareEventLog(
     make_graphql_context_test_suite(
@@ -92,6 +104,14 @@ class TestAssetAwareEventLog(
     def test_get_asset_runs(self, graphql_context):
         single_selector = infer_pipeline_selector(graphql_context, "single_asset_pipeline")
         multi_selector = infer_pipeline_selector(graphql_context, "multi_asset_pipeline")
+
+        result = execute_dagster_graphql(
+            graphql_context, GET_ASSET_RUNS, variables={"assetKey": {"path": ["a"]}}
+        )
+        assert result.data
+        fetched_runs = [run["runId"] for run in result.data["assetOrError"]["runs"]]
+        assert len(fetched_runs) == 0
+
         result = execute_dagster_graphql(
             graphql_context,
             LAUNCH_PIPELINE_EXECUTION_MUTATION,
@@ -116,3 +136,29 @@ class TestAssetAwareEventLog(
         assert len(fetched_runs) == 2
         assert multi_run_id in fetched_runs
         assert single_run_id in fetched_runs
+
+    def test_get_asset_runs_indexed(self, graphql_context):
+        selector = infer_pipeline_selector(graphql_context, "single_asset_pipeline")
+
+        run_ids = []
+        for _ in range(3):
+            result = execute_dagster_graphql(
+                graphql_context,
+                LAUNCH_PIPELINE_EXECUTION_MUTATION,
+                variables={"executionParams": {"selector": selector, "mode": "default"}},
+            )
+            assert (
+                result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
+            )
+            run_ids.append(result.data["launchPipelineExecution"]["run"]["runId"])
+
+        assert len(run_ids) == 3
+        result = execute_dagster_graphql(
+            graphql_context,
+            GET_ASSET_RUNS_INDEXED,
+            variables={"assetKey": {"path": ["a"]}, "cursor": run_ids[1], "limit": 1},
+        )
+        assert result.data
+        fetched_runs = [run["runId"] for run in result.data["assetOrError"]["runs"]]
+        assert len(fetched_runs) == 1
+        assert run_ids[1] in fetched_runs
