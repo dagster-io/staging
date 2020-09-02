@@ -27,12 +27,16 @@ function isValidationError(e: ValidationErrorOrNode): e is ValidationError {
 
 const stateToHint = {
   invalid: {
-    title: `You need to fix this configuration section.`,
+    title: `You need to fix the solid configuration section.`,
     intent: Intent.DANGER
   },
   missing: {
     title: `You need to add this configuration section.`,
     intent: Intent.DANGER
+  },
+  extra: {
+    title: `You need to remove this configuration section.`,
+    intent: Intent.WARNING
   },
   present: {
     title: `This section is present and valid.`,
@@ -84,6 +88,12 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
               fields {
                 name
               }
+            }
+            ... on FieldNotDefinedConfigError {
+              fieldName
+            }
+            ... on FieldsNotDefinedConfigError {
+              fieldNames
             }
           }
         }
@@ -138,6 +148,7 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
     const { actions, document, validation, onHighlightPath } = this.props;
     const { errorsOnly } = this.state;
 
+    const extraNodes: string[] = [];
     const missingNodes: string[] = [];
     const errorsAndPaths: {
       pathKey: string;
@@ -153,6 +164,14 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
         } else if (e.__typename === "MissingFieldsConfigError") {
           for (const field of e.fields) {
             missingNodes.push([...path, field.name].join("."));
+          }
+        } else if (e.__typename === "FieldNotDefinedConfigError") {
+          extraNodes.push([...path, e.fieldName].join("."));
+          errorsAndPaths.push({ pathKey: path.join("."), error: e });
+        } else if (e.__typename === "FieldsNotDefinedConfigError") {
+          for (const fieldName of e.fieldNames) {
+            extraNodes.push([...path, fieldName].join("."));
+            errorsAndPaths.push({ pathKey: path.join("."), error: e });
           }
         } else {
           errorsAndPaths.push({ pathKey: path.join("."), error: e });
@@ -183,7 +202,24 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
       const parentsKey = parents.join(".");
       const parentErrors = errorsAndPaths.filter(e => e.pathKey === parentsKey);
 
-      const boxes = names
+      // let extraNamesFromParent = [];
+      // console.log(parentErrors);
+      // for (const parentError of parentErrors) {
+      //   console.log(parentError);
+      //   const { error } = parentError;
+      //   if (error === "FieldNotDefinedConfigError") {
+      //     console.log(error);
+      //     // extraNamesFromParent.push(error.fieldName);
+      //   } else if (error === "FieldsNotDefinedConfigError") {
+      //     console.log(error);
+      //     // extraNamesFromParent = error.fieldNames;
+      //   }
+      // }
+      const extraNodeNames = extraNodes
+        .map(e => e.split(".").pop())
+        .filter((i): i is string => typeof i === "string");
+
+      const boxes = [...names, ...extraNodeNames]
         .map(name => {
           const path = [...parents, name];
           const pathKey = path.join(".");
@@ -197,16 +233,24 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
             missingNodes.includes(path.slice(0, idx + 1).join("."))
           );
 
+          const isExtra = path.some((_, idx) => {
+            return extraNodes.includes(path.slice(0, idx + 1).join("."));
+          });
+
           if (errorsOnly && !isInvalid) {
             return false;
           }
           const state = isMissing
             ? "missing"
+            : isExtra
+            ? "extra"
             : isInvalid
             ? "invalid"
             : isPresent
             ? "present"
             : "none";
+
+          console.log(name, state, isMissing, isInvalid, isPresent, isExtra);
 
           return (
             <Tooltip
@@ -333,12 +377,14 @@ const ItemBorder = {
   invalid: `1px solid #CE1126`,
   missing: `1px solid #CE1126`,
   present: `1px solid #AFCCE1`,
+  extra: `1px solid ${Colors.ORANGE1}`,
   none: `1px solid ${Colors.LIGHT_GRAY2}`
 };
 
 const ItemBackground = {
   invalid: Colors.RED5,
   missing: Colors.RED5,
+  extra: Colors.ORANGE3,
   present: "#C8E1F4",
   none: Colors.LIGHT_GRAY4
 };
@@ -347,6 +393,7 @@ const ItemBackgroundHover = {
   invalid: "#E15858",
   missing: "#E15858",
   present: "#AFCCE1",
+  extra: Colors.ORANGE2,
   none: Colors.LIGHT_GRAY4
 };
 
@@ -354,11 +401,12 @@ const ItemColor = {
   invalid: Colors.WHITE,
   missing: Colors.WHITE,
   present: Colors.BLACK,
+  extra: Colors.WHITE,
   none: Colors.BLACK
 };
 
 const Item = styled.div<{
-  state: "present" | "missing" | "invalid" | "none";
+  state: "present" | "missing" | "invalid" | "extra" | "none";
 }>`
   white-space: nowrap;
   font-size: 13px;
