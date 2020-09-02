@@ -193,7 +193,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None):
 
                     except Exception as exc:  # pylint: disable=broad-except
                         try:
-                            with open(executed_notebook_path, "r") as fd:
+                            with open(executed_notebook_path, "rb") as fd:
                                 executed_notebook_file_handle = compute_context.file_manager.write(
                                     fd, mode="w", ext="ipynb"
                                 )
@@ -224,7 +224,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None):
             )
 
             try:
-                with open(executed_notebook_path, "r") as fd:
+                with open(executed_notebook_path, "rb") as fd:
                     executed_notebook_file_handle = compute_context.file_manager.write(
                         fd, mode="w", ext="ipynb"
                     )
