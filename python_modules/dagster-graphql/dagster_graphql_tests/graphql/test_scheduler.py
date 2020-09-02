@@ -18,11 +18,25 @@ query ScheduleStateQuery($repositorySelector: RepositorySelector!) {
     }
     ... on ScheduleStates {
       results {
+        repositoryOriginId
+        ticks {
+          status
+          tickSpecificData {
+            __typename
+          }
+        }
+        ticksCount
         runs {
             runId
         }
         runsCount
         status
+        stats {
+          ticksStarted
+          ticksSucceeded
+          ticksSkipped
+          ticksFailed
+        }
       }
     }
   }
@@ -252,7 +266,9 @@ def test_get_schedule_states_for_repository_after_reconcile(graphql_context):
         assert schedule_state["status"] == ScheduleStatus.STOPPED.value
 
 
-def test_get_schedule_states_for_repository_after_reconcile_using_mutation(graphql_context):
+def test_get_schedule_states_for_repository_after_reconcile_using_mutation(
+    graphql_context, snapshot
+):
     selector = infer_repository_selector(graphql_context)
 
     external_repository = graphql_context.get_repository_location(
@@ -282,6 +298,8 @@ def test_get_schedule_states_for_repository_after_reconcile_using_mutation(graph
 
     for schedule_state in results:
         assert schedule_state["status"] == ScheduleStatus.STOPPED.value
+
+    snapshot.assert_match(result.data)
 
 
 def test_get_schedule_states_for_repository_with_removed_schedule_definitions(graphql_context):
