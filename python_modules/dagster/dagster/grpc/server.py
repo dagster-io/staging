@@ -15,6 +15,7 @@ from dagster.core.definitions.reconstructable import (
     repository_def_from_target_def,
 )
 from dagster.core.errors import PartitionExecutionError, user_code_error_boundary
+from dagster.core.execution.stats import find_orphaned_step_start_events
 from dagster.core.host_representation.external_data import (
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
@@ -155,7 +156,7 @@ def build_code_pointers_by_repo_name(loadable_target_origin, loadable_repository
 
 
 class DagsterApiServer(DagsterApiServicer):
-    # The loadable_target_origin is currently Noneable to support instaniating a server.
+    # The loadable_target_origin is currently Noneable to support instantiating a server.
     # This helps us test the ping methods, and incrementally migrate each method to
     # the target passed in here instead of passing in a target in the argument.
     def __init__(
@@ -258,14 +259,31 @@ class DagsterApiServer(DagsterApiServicer):
                     message = "Pipeline execution process for {run_id} unexpectedly exited.".format(
                         run_id=run.run_id
                     )
-                    instance.report_engine_event(message, run, cls=self.__class__)
-                    instance.report_run_failed(run)
+                    self._generate_synthetic_error_from_crash(instance, run)
 
             for run_id in runs_to_clear:
                 del self._executions[run_id]
                 del self._termination_events[run_id]
                 if run_id in self._termination_times:
                     del self._termination_times[run_id]
+
+    def _generate_synthetic_error_from_crash(self, instance, run):
+        message = "Pipeline execution process for {run_id} unexpectedly exited.".format(
+            run_id=run.run_id
+        )
+        instance.report_engine_event(message, run, cls=self.__class__)
+
+        events = instance.all_logs(run.run_id)
+        orphans = find_orphaned_step_start_events(events)
+
+        for orphan in orphans:
+            error_message = 'Pipeline execution process exited without completing step'
+
+            instance.report_synthetic_step_failed(
+                pipeline_run=run, step_key=orphan, error_message=error_message
+            )
+
+        instance.report_run_failed(run)
 
     def _recon_repository_from_origin(self, repository_origin):
         check.inst_param(

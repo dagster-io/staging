@@ -497,7 +497,7 @@ class TestHardFailures(OutOfProcessExecutingGraphQLContextTestMatrix):
         ]["messages"]
 
         assert step_started(logs, "hard_fail_or_0.compute")
-        assert step_did_not_run(logs, "hard_fail_or_0.compute")
+        assert step_did_fail(logs, "hard_fail_or_0.compute")
         assert step_did_not_run(logs, "increment.compute")
 
         retry = execute_dagster_graphql_and_finish_runs(
