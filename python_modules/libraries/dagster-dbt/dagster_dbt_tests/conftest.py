@@ -7,7 +7,7 @@ from distutils import spawn
 
 import pytest
 import responses
-from dagster_dbt.resources import DbtRpcClient
+from dagster_dbt import DbtRpcClient
 from six.moves.urllib import request
 from six.moves.urllib.error import URLError
 

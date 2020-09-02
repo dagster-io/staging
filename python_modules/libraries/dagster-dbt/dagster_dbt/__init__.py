@@ -1,7 +1,14 @@
 from dagster.core.utils import check_dagster_package_version
 
-from .resources import dbt_rpc_resource, local_dbt_rpc_resource
-from .solids import (
+from .cli.solids import dbt_cli_run
+from .errors import (
+    DagsterDbtCliRuntimeError,
+    DagsterDbtError,
+    DagsterDbtFatalCliRuntimeError,
+    DagsterDbtHandledCliRuntimeError,
+)
+from .rpc.resources import DbtRpcClient, dbt_rpc_resource, local_dbt_rpc_resource
+from .rpc.solids import (
     create_dbt_rpc_run_sql_solid,
     dbt_rpc_compile_sql,
     dbt_rpc_run,
@@ -15,13 +22,19 @@ from .solids import (
     dbt_rpc_test,
     dbt_rpc_test_and_wait,
 )
-from .types import DbtRpcPollResult
+from .rpc.types import DbtRpcPollResult
 from .version import __version__
 
 check_dagster_package_version("dagster-dbt", __version__)
 
 __all__ = [
+    "DagsterDbtCliRuntimeError",
+    "DagsterDbtError",
+    "DagsterDbtFatalCliRuntimeError",
+    "DagsterDbtHandledCliRuntimeError",
+    "DbtRpcClient",
     "DbtRpcPollResult",
+    "dbt_cli_run",
     "dbt_rpc_resource",
     "dbt_rpc_run",
     "dbt_rpc_run_and_wait",
