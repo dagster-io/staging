@@ -9,11 +9,13 @@ from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterat
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import Retries
 from dagster.core.instance import DagsterInstance
+from dagster.core.selector import parse_step_selection
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.telemetry import log_repo_stats, telemetry_wrapper
 from dagster.core.utils import str_format_set
 from dagster.utils import merge_dicts
+from dagster.utils.backcompat import canonicalize_backcompat_args
 
 from .context_creation_pipeline import (
     ExecutionContextManager,
@@ -355,12 +357,13 @@ def reexecute_pipeline(
     pipeline,
     parent_run_id,
     run_config=None,
-    step_keys_to_execute=None,
+    step_selection=None,
     mode=None,
     preset=None,
     tags=None,
     instance=None,
     raise_on_error=True,
+    step_keys_to_execute=None,
 ):
     """Reexecute an existing pipeline run.
 
@@ -373,7 +376,16 @@ def reexecute_pipeline(
             instance.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
             as a dict.
-        step_keys_to_execute (Optional[List[str]]): Keys of the steps to execute.
+        step_selection (Optional[List[str]]): A list of step selection queries (including single
+            step keys) to execute. For example:
+            - ['some_solid.compute']: select the execution step "some_solid.compute" itself.
+            - ['*some_solid.compute']: select the step "some_solid.compute" and all its ancestors
+                (upstream dependencies).
+            - ['*some_solid.compute+++']: select the step "some_solid.compute", all its ancestors,
+                and its descendants (downstream dependencies) within 3 levels down.
+            - ['*some_solid.compute', 'other_solid_a.compute', 'other_solid_b.compute+']: select
+                "some_solid.compute" and all its ancestors, "other_solid_a.compute" itself, and
+                "other_solid_b.compute" and its direct child execution steps.
         mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``
             and ``preset``.
         preset (Optional[str]): The name of the pipeline preset to use. You may not set both
@@ -390,6 +402,12 @@ def reexecute_pipeline(
 
     For the asynchronous version, see :py:func:`reexecute_pipeline_iterator`.
     """
+
+    step_selection = canonicalize_backcompat_args(
+        step_selection, "step_selection", step_keys_to_execute, "step_keys_to_execute", "0.10.0",
+    )
+    check.opt_list_param(step_selection, "step_selection", of_type=str)
+
     check.str_param(parent_run_id, "parent_run_id")
 
     (pipeline, run_config, instance, mode, tags, _, _) = _check_execute_pipeline_args(
@@ -409,6 +427,17 @@ def reexecute_pipeline(
         ),
     )
 
+    # resolve step selection DSL queries using parent execution plan snapshot
+    if step_selection:
+        parent_execution_plan_snapshot = instance.get_execution_plan_snapshot(
+            parent_pipeline_run.execution_plan_snapshot_id
+        )
+        step_keys_to_execute = parse_step_selection(
+            parent_execution_plan_snapshot.step_deps, step_selection
+        )
+    else:
+        step_keys_to_execute = None
+
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline.get_definition(),
         run_config=run_config,
@@ -416,7 +445,8 @@ def reexecute_pipeline(
         tags=tags,
         solid_selection=parent_pipeline_run.solid_selection,
         solids_to_execute=parent_pipeline_run.solids_to_execute,
-        step_keys_to_execute=step_keys_to_execute,
+        # TODO: frozenset
+        step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
         root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
         parent_run_id=parent_pipeline_run.run_id,
     )
@@ -428,11 +458,12 @@ def reexecute_pipeline_iterator(
     pipeline,
     parent_run_id,
     run_config=None,
-    step_keys_to_execute=None,
+    step_selection=None,
     mode=None,
     preset=None,
     tags=None,
     instance=None,
+    step_keys_to_execute=None,
 ):
     """Reexecute a pipeline iteratively.
 
@@ -449,7 +480,16 @@ def reexecute_pipeline_iterator(
             instance.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
             as a dict.
-        step_keys_to_execute (Optional[List[str]]): Keys of the steps to execute.
+        step_selection (Optional[List[str]]): A list of step selection queries (including single
+            step keys) to execute. For example:
+            - ['some_solid.compute']: select the execution step "some_solid.compute" itself.
+            - ['*some_solid.compute']: select the step "some_solid.compute" and all its ancestors
+                (upstream dependencies).
+            - ['*some_solid.compute+++']: select the step "some_solid.compute", all its ancestors,
+                and its descendants (downstream dependencies) within 3 levels down.
+            - ['*some_solid.compute', 'other_solid_a.compute', 'other_solid_b.compute+']: select
+                "some_solid.compute" and all its ancestors, "other_solid_a.compute" itself, and
+                "other_solid_b.compute" and its direct child execution steps.
         mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``
             and ``preset``.
         preset (Optional[str]): The name of the pipeline preset to use. You may not set both
@@ -462,6 +502,12 @@ def reexecute_pipeline_iterator(
     Returns:
       Iterator[DagsterEvent]: The stream of events resulting from pipeline reexecution.
     """
+
+    step_selection = canonicalize_backcompat_args(
+        step_selection, "step_selection", step_keys_to_execute, "step_keys_to_execute", "0.10.0",
+    )
+    check.opt_list_param(step_selection, "step_selection", of_type=str)
+
     check.str_param(parent_run_id, "parent_run_id")
 
     (pipeline, run_config, instance, mode, tags, _, _) = _check_execute_pipeline_args(
@@ -481,6 +527,17 @@ def reexecute_pipeline_iterator(
         ),
     )
 
+    # resolve step selection DSL queries using parent execution plan snapshot
+    if step_selection:
+        parent_execution_plan_snapshot = instance.get_execution_plan_snapshot(
+            parent_pipeline_run.execution_plan_snapshot_id
+        )
+        step_keys_to_execute = parse_step_selection(
+            parent_execution_plan_snapshot.step_deps, step_selection
+        )
+    else:
+        step_keys_to_execute = None
+
     pipeline_run = instance.create_run_for_pipeline(
         pipeline_def=pipeline.get_definition(),
         run_config=run_config,
@@ -488,7 +545,8 @@ def reexecute_pipeline_iterator(
         tags=tags,
         solid_selection=parent_pipeline_run.solid_selection,
         solids_to_execute=parent_pipeline_run.solids_to_execute,
-        step_keys_to_execute=step_keys_to_execute,
+        # TODO: frozenset
+        step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
         root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
         parent_run_id=parent_pipeline_run.run_id,
     )
