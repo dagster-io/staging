@@ -242,6 +242,9 @@ class ActiveExecution(object):
                     key=step_key
                 )
             )
+            # step = self.get_step_by_key(step_key)
+            # step_context = pipeline_context.for_step(step)
+            # yield DagsterEvent.step_failed_event(step_context)
             self.mark_failed(step_key)
 
     @property
