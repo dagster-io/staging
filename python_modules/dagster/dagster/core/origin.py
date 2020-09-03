@@ -61,6 +61,9 @@ class RepositoryGrpcServerOrigin(
                 host=self.host, socket=self.socket, repository_name=self.repository_name,
             )
 
+    def get_load_target(self):
+        return GrpcServerTarget(port=self.port, socket=self.socket, host=self.host,)
+
 
 @whitelist_for_serdes
 class RepositoryPythonOrigin(
@@ -80,6 +83,9 @@ class RepositoryPythonOrigin(
 
     def get_cli_args(self):
         return self.code_pointer.get_cli_args()
+
+    def get_load_target(self):
+        return LoadableTargetOrigin.from_python_origin(self).get_load_target()
 
     def get_pipeline_origin(self, pipeline_name):
         check.str_param(pipeline_name, "pipeline_name")
@@ -152,6 +158,10 @@ class ScheduleOrigin(six.with_metaclass(ABCMeta)):
     def get_repo_cli_args(self):
         pass
 
+    @abstractmethod
+    def get_repo_load_target(self):
+        pass
+
     @abstractproperty
     def executable_path(self):
         pass
@@ -175,6 +185,9 @@ class SchedulePythonOrigin(
     def get_repo_cli_args(self):
         return self.repository_origin.get_cli_args()
 
+    def get_repo_load_target(self):
+        return self.repository_origin.get_load_target()
+
     def get_repo_pointer(self):
         return self.repository_origin.code_pointer
 
@@ -192,6 +205,9 @@ class ScheduleGrpcServerOrigin(
 
     def get_repo_cli_args(self):
         return self.repository_origin.get_cli_args()
+
+    def get_repo_load_target(self):
+        return self.repository_origin.get_load_target()
 
     @property
     def executable_path(self):

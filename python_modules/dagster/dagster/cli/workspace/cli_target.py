@@ -164,7 +164,7 @@ def created_workspace_load_target(kwargs):
     check.failed("invalid")
 
 
-def workspace_from_load_target(load_target, instance):
+def location_handle_from_load_target(load_target, instance):
     check.inst_param(load_target, "load_target", WorkspaceLoadTarget)
     check.inst_param(instance, "instance", DagsterInstance)
 
@@ -174,42 +174,38 @@ def workspace_from_load_target(load_target, instance):
         if (opt_in_settings and opt_in_settings["local_servers"])
         else UserProcessApi.CLI
     )
+    if isinstance(load_target, PythonFileTarget):
+        return location_handle_from_python_file(
+            python_file=load_target.python_file,
+            attribute=load_target.attribute,
+            working_directory=load_target.working_directory,
+            user_process_api=python_user_process_api,
+        )
+    elif isinstance(load_target, ModuleTarget):
+        return location_handle_from_module_name(
+            load_target.module_name,
+            load_target.attribute,
+            user_process_api=python_user_process_api,
+        )
+    elif isinstance(load_target, GrpcServerTarget):
+        return RepositoryLocationHandle.create_grpc_server_location(
+            port=load_target.port, socket=load_target.socket, host=load_target.host,
+        )
+    elif isinstance(load_target, EmptyWorkspaceTarget):
+        return None
+    else:
+        check.not_implemented("Unsupported: {}".format(load_target))
+
+
+def workspace_from_load_target(load_target, instance):
+    check.inst_param(load_target, "load_target", WorkspaceLoadTarget)
+    check.inst_param(instance, "instance", DagsterInstance)
 
     if isinstance(load_target, WorkspaceFileTarget):
         return load_workspace_from_yaml_paths(load_target.paths, python_user_process_api)
-    elif isinstance(load_target, PythonFileTarget):
-        return Workspace(
-            [
-                location_handle_from_python_file(
-                    python_file=load_target.python_file,
-                    attribute=load_target.attribute,
-                    working_directory=load_target.working_directory,
-                    user_process_api=python_user_process_api,
-                )
-            ]
-        )
-    elif isinstance(load_target, ModuleTarget):
-        return Workspace(
-            [
-                location_handle_from_module_name(
-                    load_target.module_name,
-                    load_target.attribute,
-                    user_process_api=python_user_process_api,
-                )
-            ]
-        )
-    elif isinstance(load_target, GrpcServerTarget):
-        return Workspace(
-            [
-                RepositoryLocationHandle.create_grpc_server_location(
-                    port=load_target.port, socket=load_target.socket, host=load_target.host,
-                )
-            ]
-        )
-    elif isinstance(load_target, EmptyWorkspaceTarget):
-        return Workspace([])
     else:
-        check.not_implemented("Unsupported: {}".format(load_target))
+        location_handle = location_handle_from_load_target(load_target, instance)
+        return Workspace([location_handle] if location_handle else [])
 
 
 def get_workspace_from_kwargs(kwargs, instance):
