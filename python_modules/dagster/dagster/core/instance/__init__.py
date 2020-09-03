@@ -946,6 +946,8 @@ class DagsterInstance:
             timestamp=time.time(),
             dagster_event=dagster_event,
         )
+
+        ## could mark steps as failed here, i think each executor should manage by itself
         self.handle_new_event(event_record)
         return dagster_event
 
