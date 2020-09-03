@@ -9,6 +9,7 @@ from dagster.core.definitions import (
     SolidHandle,
 )
 from dagster.core.definitions.events import EventMetadataEntry
+from dagster.core.definitions.dependency import Solid
 from dagster.core.types.dagster_type import DagsterType
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import frozentags, merge_dicts
@@ -16,19 +17,24 @@ from dagster.utils.error import SerializableErrorInfo
 
 
 @whitelist_for_serdes
-class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name")):
+class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name step_version")):
     @staticmethod
     def from_step(step, output_name="result"):
         check.inst_param(step, "step", ExecutionStep)
 
         return StepOutputHandle(step.key, output_name)
 
-    def __new__(cls, step_key, output_name="result"):
+    def __new__(cls, step_key, output_name="result", step_version=None):
         return super(StepOutputHandle, cls).__new__(
             cls,
             step_key=check.str_param(step_key, "step_key"),
             output_name=check.str_param(output_name, "output_name"),
+            step_version=step_version,
         )
+
+    @property
+    def version(cls):
+        return cls.step_version
 
 
 @whitelist_for_serdes
@@ -151,6 +157,16 @@ class StepInput(
         )
 
     @property
+    def version(self):
+        if self.is_from_config:
+            return None  # replace with versioning for DagsterTypeLoader
+        else:
+            version = None
+            for item in self.source_handles:
+                pass  # replace with combining versions of all outputs routed to this input
+            return version
+
+    @property
     def is_from_output(self):
         return (
             self.source_type == StepInputSourceType.SINGLE_OUTPUT
@@ -196,7 +212,7 @@ class ExecutionStep(
         "_ExecutionStep",
         (
             "pipeline_name key_suffix step_inputs step_input_dict step_outputs step_output_dict "
-            "compute_fn kind solid_handle logging_tags tags hook_defs"
+            "compute_fn kind solid_handle solid logging_tags tags hook_defs"
         ),
     )
 ):
@@ -225,6 +241,7 @@ class ExecutionStep(
             compute_fn=check.callable_param(compute_fn, "compute_fn"),
             kind=check.inst_param(kind, "kind", StepKind),
             solid_handle=check.inst_param(solid_handle, "solid_handle", SolidHandle),
+            solid=check.inst_param(solid, "solid", Solid),
             logging_tags=merge_dicts(
                 {
                     "step_key": str(solid_handle) + "." + key_suffix,
@@ -245,6 +262,14 @@ class ExecutionStep(
     @property
     def solid_name(self):
         return self.solid_handle.name
+
+    @property
+    def version(self):
+        version = None
+        for step_input in self.step_inputs:
+            step_input.version  # replace this with some way of accumulating version into this version (xor most likely)
+        # replace with code to utilize solid's version once that has been implemented
+        return version
 
     def has_step_output(self, name):
         check.str_param(name, "name")
