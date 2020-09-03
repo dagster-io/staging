@@ -490,7 +490,8 @@ def construct_dagster_k8s_job(
         ),
         spec=kubernetes.client.V1JobSpec(
             template=template,
-            backoff_limit=K8S_JOB_BACKOFF_LIMIT,
+            # backoff_limit=K8S_JOB_BACKOFF_LIMIT,
+            backoff_limit=0,
             ttl_seconds_after_finished=K8S_JOB_TTL_SECONDS_AFTER_FINISHED,
             **user_defined_k8s_config.job_spec_config
         ),

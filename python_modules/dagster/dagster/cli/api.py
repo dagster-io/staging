@@ -375,14 +375,14 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
             [err_info.cls_name == "KeyboardInterrupt" for err_info in err.subprocess_error_infos]
         ):
             instance.report_engine_event(
-                "An exception was thrown during execution that is likely a framework error, "
+                "A An exception was thrown during execution that is likely a framework error, "
                 "rather than an error in user code.",
                 pipeline_run,
                 EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
             )
     except Exception:  # pylint: disable=broad-except
         instance.report_engine_event(
-            "An exception was thrown during execution that is likely a framework error, "
+            "B An exception was thrown during execution that is likely a framework error, "
             "rather than an error in user code.",
             pipeline_run,
             EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
