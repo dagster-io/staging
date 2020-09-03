@@ -265,6 +265,7 @@ class FileCodePointer(
         else:
             return "{self.python_file}::{self.fn_name}".format(self=self)
 
+
     def get_cli_args(self):
         if self.working_directory:
             return "-f {python_file} -a {fn_name} -d {directory}".format(
