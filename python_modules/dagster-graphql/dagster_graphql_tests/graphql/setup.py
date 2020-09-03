@@ -6,6 +6,7 @@ import time
 from collections import OrderedDict
 from copy import deepcopy
 
+from dagster_aws.s3 import s3_plus_default_storage_defs, s3_resource
 from dagster_graphql.implementation.context import DagsterGraphQLContext
 from dagster_graphql.test.utils import (
     define_context_for_file,
@@ -41,6 +42,7 @@ from dagster import (
     dagster_type_loader,
     dagster_type_materializer,
     daily_schedule,
+    default_executors,
     hourly_schedule,
     lambda_solid,
     logger,
@@ -653,7 +655,21 @@ def eventually_successful():
     reset(fail(fail(fail(spawn()))))
 
 
-@pipeline
+
+def celery_mode_defs(resources=None):
+    from dagster_celery import celery_executor
+    from dagster_celery_k8s import celery_k8s_job_executor
+
+    return [
+        ModeDefinition(
+            system_storage_defs=s3_plus_default_storage_defs,
+            resource_defs=resources if resources else {"s3": s3_resource},
+            executor_defs=default_executors + [celery_executor, celery_k8s_job_executor],
+        )
+    ]
+
+
+@pipeline(mode_defs=celery_mode_defs())
 def hard_failer():
     @solid(
         config_schema={"fail": Field(Bool, is_required=False, default_value=False)},
