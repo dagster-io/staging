@@ -61,3 +61,13 @@ class LoadableTargetOrigin(
                     code_pointer_name=type(code_pointer).__name__
                 )
             )
+
+    def get_load_target(self):
+        if self.python_file:
+            return PythonFileTarget(
+                python_file=self.python_file,
+                attribute=self.attribute,
+                working_directory=self.working_directory,
+            )
+        else:
+            return ModuleTarget(module_name=self.module_name, atttribute=self.attribute)
