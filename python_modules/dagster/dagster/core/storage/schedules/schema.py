@@ -20,6 +20,7 @@ ScheduleTickTable = db.Table(
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
     db.Column("schedule_origin_id", db.String(255), index=True),
     db.Column("status", db.String(63)),
+    # utc timezone - make an index as a breaking change for 0.10.0
     db.Column("timestamp", db.types.TIMESTAMP),
     db.Column("tick_body", db.String),
     # The create and update timestamps are not used in framework code, are are simply
