@@ -946,6 +946,7 @@ class DagsterInstance:
             timestamp=time.time(),
             dagster_event=dagster_event,
         )
+
         self.handle_new_event(event_record)
         return dagster_event
 
