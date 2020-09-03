@@ -61,3 +61,18 @@ class LoadableTargetOrigin(
                     code_pointer_name=type(code_pointer).__name__
                 )
             )
+
+    def get_load_target(self):
+        if self.python_file:
+            from dagster.cli.workspace.cli_target import PythonFileTarget
+
+            return PythonFileTarget(
+                python_file=self.python_file,
+                attribute=self.attribute,
+                working_directory=self.working_directory,
+            )
+        else:
+
+            from dagster.cli.workspace.cli_target import ModuleTarget
+
+            return ModuleTarget(module_name=self.module_name, atttribute=self.attribute)
