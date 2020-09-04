@@ -53,9 +53,11 @@ from dagster import (
     weekly_schedule,
 )
 from dagster.cli.workspace import Workspace
+from dagster.core.definitions.decorators.cross_dag import launch_pipeline_run_resource
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import InProcessRepositoryLocation, RepositoryLocationHandle
+from dagster.core.host_representation.selector import PipelineSelector
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.core.storage.tags import RESUME_RETRY_TAG
 from dagster.utils import file_relative_path, segfault
@@ -1025,6 +1027,66 @@ def chained_failure_pipeline():
     return after_failure(conditionally_fail(always_succeed()))
 
 
+@resource
+def noop(_):
+    return
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            name="default",
+            resource_defs={"launch_pipeline_run_resource": launch_pipeline_run_resource},
+        ),
+        ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop}),
+    ],
+    tags={'kind': 'cross_pipeline', 'dependent_pipeline': 'csv_hello_world'},
+)
+def cross_pipeline():
+    def selector_fn():
+        return PipelineSelector(
+            location_name='<<in_process>>',
+            repository_name='test_repo',
+            pipeline_name='csv_hello_world',
+            solid_selection=None,
+        ).to_graphql_input()
+
+    def workspace_fn():
+        return Workspace(
+            [RepositoryLocationHandle.create_in_process_location(create_main_recon_repo().pointer)]
+        )
+
+    @solid(required_resource_keys={'launch_pipeline_run_resource'})
+    def launch_new_pipeline_solid(context):
+
+        result = context.resources.launch_pipeline_run_resource(
+            instance=context.instance,
+            run_id=context.run_id,
+            should_execute_pipeline_fn=lambda: True,
+            selector_fn=selector_fn,
+            run_config_data_fn=csv_hello_world_solids_config,
+            workspace_fn=workspace_fn,
+        )
+
+        if not result:
+            context.log.info(
+                "should_execute_pipeline_fn {} returned False. Did not launch pipeline run.".format(
+                    selector_fn.__name__
+                )
+            )
+            return
+
+        if result.errors:
+            raise Exception("{}".format(result.errors))
+
+        context.log.info(
+            'Launched pipeline run with run id: '
+            + result.data["launchPipelineExecution"]["run"]["runId"]
+        )
+
+    launch_new_pipeline_solid()
+
+
 @repository
 def empty_repo():
     return []
@@ -1035,6 +1097,7 @@ def test_repo():
     return (
         [
             composites_pipeline,
+            cross_pipeline,
             csv_hello_world_df_input,
             csv_hello_world_two,
             csv_hello_world_with_expectations,
