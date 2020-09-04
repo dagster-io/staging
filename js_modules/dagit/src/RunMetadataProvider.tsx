@@ -10,7 +10,8 @@ export enum IStepState {
   RUNNING = "running",
   SUCCEEDED = "succeeded",
   SKIPPED = "skipped",
-  FAILED = "failed"
+  FAILED = "failed",
+  UNKNOWN = "unknown"
 }
 
 export const BOX_EXIT_STATES = [
@@ -226,6 +227,11 @@ export function extractMetadataFromLogs(
     }
     if (log.__typename === "PipelineFailureEvent" || log.__typename === "PipelineSuccessEvent") {
       metadata.exitedAt = timestamp;
+      for (const step of Object.values(metadata.steps)) {
+        if (step.state === IStepState.RUNNING) {
+          upsertState(step, timestamp, IStepState.UNKNOWN);
+        }
+      }
     }
 
     if (log.__typename === "EngineEvent" && !log.stepKey) {
