@@ -671,6 +671,34 @@ def hard_failer():
     increment(hard_fail_or_0())
 
 
+@lambda_solid(output_def=OutputDefinition(Int))
+def return_one():
+    return 1
+
+
+@pipeline
+def branching_hard_failer():
+    @solid(
+        config_schema={"fail": Field(Bool, is_required=False, default_value=False)},
+        input_defs=[InputDefinition("n", Int)],
+        output_defs=[OutputDefinition(Int)],
+    )
+    def hard_fail_or_0_with_input(context, n):
+        if context.solid_config["fail"]:
+            segfault()
+        context.log.info('n is ', n)
+        return 0
+
+    @solid(input_defs=[InputDefinition("n", Int)],)
+    def increment_with_sleep(_, n):
+        time.sleep(30)
+        return n + 1
+
+    one = return_one()
+    increment_with_sleep(one)
+    hard_fail_or_0_with_input(one)
+
+
 @resource
 def resource_a(_):
     return "A"
@@ -753,10 +781,6 @@ def tagged_pipeline():
 
 @pipeline
 def retry_multi_input_early_terminate_pipeline():
-    @lambda_solid(output_def=OutputDefinition(Int))
-    def return_one():
-        return 1
-
     @solid(
         config_schema={"wait_to_terminate": bool},
         input_defs=[InputDefinition("one", Int)],
@@ -1041,6 +1065,7 @@ def test_repo():
             csv_hello_world,
             eventually_successful,
             hard_failer,
+            branching_hard_failer,
             hello_world_with_tags,
             infinite_loop_pipeline,
             materialization_pipeline,
