@@ -6,6 +6,7 @@ import sys
 import pytest
 import yaml
 from dagster_cron import SystemCronScheduler
+from freezegun import freeze_time
 
 from dagster import ScheduleDefinition
 from dagster.core.definitions import lambda_solid, pipeline, repository
@@ -26,7 +27,7 @@ from dagster.core.storage.runs import InMemoryRunStorage
 from dagster.core.storage.schedules import SqliteScheduleStorage
 from dagster.core.test_utils import environ
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
-from dagster.seven import TemporaryDirectory
+from dagster.seven import TemporaryDirectory, get_current_datetime_in_utc
 
 
 @pytest.fixture(scope="function")
@@ -158,10 +159,13 @@ def test_init(restore_cron_tab):  # pylint:disable=unused-argument,redefined-out
         assert instance.all_stored_schedule_state()
 
 
+@freeze_time("2019-02-27")
 def test_re_init(restore_cron_tab):  # pylint:disable=unused-argument,redefined-outer-name
     with TemporaryDirectory() as tempdir:
         instance = define_scheduler_instance(tempdir)
         external_repo = get_test_external_repo()
+
+        now = get_current_datetime_in_utc()
 
         # Initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
@@ -170,6 +174,8 @@ def test_re_init(restore_cron_tab):  # pylint:disable=unused-argument,redefined-
         schedule_state = instance.start_schedule_and_update_storage_state(
             external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
         )
+
+        assert schedule_state.start_timestamp == now.timestamp()
 
         # Re-initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
