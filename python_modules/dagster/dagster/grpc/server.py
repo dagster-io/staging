@@ -221,13 +221,24 @@ class DagsterApiServer(DagsterApiServicer):
     def _check_for_orphaned_runs(self):
         with self._execution_lock:
             runs_to_clear = []
+            sys.stderr.write(
+                "CHECKING FOR ORPHANED RUNS, THERE ARE " + str(len(self._executions)) + "\n"
+            )
             for run_id, (process, instance) in self._executions.items():
+
+                sys.stderr.write("RUN ID: " + run_id + "\n")
+
                 if process.is_alive():
                     if not self._termination_events[run_id].is_set() or (
                         time.time() - self._termination_times[run_id]
                         < GRACE_PERIOD_AFTER_PROCESS_TERMINATION
                     ):
+                        sys.stderr.write(
+                            "PROCESS IS ALIVE AND NOT TERMINATED OR GRACE PERIOD HAS NOT PASSED YET \n"
+                        )
                         continue
+
+                    sys.stderr.write("GRACE PERIOD IS OVER, TERMINATING \n")
 
                     # the process failed to handle the KeyboardInterrupt cleanly after termination.
                     # Inform the system and mark the run as failed.
@@ -248,6 +259,8 @@ class DagsterApiServer(DagsterApiServicer):
                     instance.report_run_failed(run)
 
                 else:
+                    sys.stderr.write("PROCESS IS DEAD, TIME TO CLEAN UP \n")
+
                     run = instance.get_run_by_id(run_id)
                     runs_to_clear.append(run_id)
 
@@ -858,8 +871,10 @@ SERVER_FAILED_TO_BIND_TOKEN_BYTES = b"dagster_grpc_server_failed_to_bind"
 def server_termination_target(termination_event, server):
     while not termination_event.is_set():
         time.sleep(0.1)
+    sys.stderr.write("TERMINATION EVENT HAPPENED, STOPPING SERVER \n")
     # We could make this grace period configurable if we set it in the ShutdownServer handler
     server.stop(grace=5)
+    sys.stderr.write("STOP CALLED IT SHOULD ALL BE ENDING NOW \n")
 
 
 class DagsterGrpcServer(object):
@@ -1126,6 +1141,7 @@ class GrpcServerProcess(object):
 
     def wait(self, timeout=30):
         if self.server_process.poll() is None:
+            sys.stderr.write("WAITING FOR SERVER PROCESS TO DIE \n")
             seven.wait_for_process(self.server_process, timeout=timeout)
 
     def create_ephemeral_client(self):

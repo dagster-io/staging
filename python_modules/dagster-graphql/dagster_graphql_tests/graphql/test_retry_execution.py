@@ -1,3 +1,4 @@
+import sys
 from time import sleep
 
 from dagster_graphql.client.query import (
@@ -668,6 +669,8 @@ class TestRetryExecutionAsyncOnlyBehavior(
                 }
             },
         )
+
+        sys.stderr.write("ALL RUNS ARE FINISHED!!\n")
 
         retry_records = instance.all_logs(new_run_id)
         # The first step should not run and the other three steps should succeed in retry
