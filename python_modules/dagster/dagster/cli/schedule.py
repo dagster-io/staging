@@ -3,7 +3,6 @@ from __future__ import print_function
 import os
 import sys
 from contextlib import contextmanager
-from datetime import datetime, timezone
 
 import click
 import six
@@ -35,6 +34,7 @@ from dagster.core.scheduler import (
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import check_tags
 from dagster.grpc.types import ScheduleExecutionDataMode
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.merger import merge_dicts
 
@@ -266,7 +266,7 @@ def scheduler_command():
 
         # Double-check this still works when start_time_utc matches a cron time exactly
         for schedule_time_utc in croniter_range(
-            start_time_utc, datetime.now(timezone.utc), schedule_state.cron_schedule
+            start_time_utc, get_current_datetime_in_utc(), schedule_state.cron_schedule
         ):
             _schedule_run_at_time(
                 instance,
