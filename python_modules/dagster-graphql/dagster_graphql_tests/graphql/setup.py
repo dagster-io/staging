@@ -53,6 +53,8 @@ from dagster import (
     weekly_schedule,
 )
 from dagster.cli.workspace import Workspace
+from dagster.cli.workspace.cli_target import PythonFileTarget, workspace_from_load_target
+from dagster.core.definitions.decorators.cross_dag import cross_dag_resource_factory
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import InProcessRepositoryLocation, RepositoryLocationHandle
@@ -1025,6 +1027,45 @@ def chained_failure_pipeline():
     return after_failure(conditionally_fail(always_succeed()))
 
 
+
+
+def workspace_fn():
+    instance = DagsterInstance.get()
+    return Workspace(
+        [RepositoryLocationHandle.create_in_process_location(create_main_recon_repo().pointer)]
+    )
+    # return workspace_from_load_target(
+    #     PythonFileTarget(
+    #         file_relative_path(__file__, "sleepy.py"), "sleepy_pipeline", working_directory=None
+    #     ),
+    #     instance,
+    # )
+
+
+cross_dag_resource = cross_dag_resource_factory(
+    should_execute_pipeline_fn=lambda: True,
+    run_config_data_fn=csv_hello_world_solids_config,
+    workspace_fn=workspace_fn,
+)
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition(name="default", resource_defs={"cross_dag_resource": cross_dag_resource})
+    ]
+)
+def cross_dag_pipeline():
+    @solid(required_resource_keys={'cross_dag_resource'})
+    def trigger_other_pipeline(context):
+        # workspace_from_load_target
+        result = context.resources.cross_dag_resource
+        context.log.info('cross_dag_resource result.errors' + str(result.errors))
+        context.log.info('cross_dag_resource result.errors' + str(result.data))
+        context.log.info('in trigger_other_pipeline')
+
+    trigger_other_pipeline()
+
+
 @repository
 def empty_repo():
     return []
@@ -1035,6 +1076,7 @@ def test_repo():
     return (
         [
             composites_pipeline,
+            cross_dag_pipeline,
             csv_hello_world_df_input,
             csv_hello_world_two,
             csv_hello_world_with_expectations,
