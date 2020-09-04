@@ -11,6 +11,7 @@ export enum IStepState {
   SUCCEEDED = 'succeeded',
   SKIPPED = 'skipped',
   FAILED = 'failed',
+  UNKNOWN = 'unknown',
 }
 
 export const BOX_EXIT_STATES = [
@@ -195,7 +196,7 @@ export function extractMetadataFromLogs(
 
   // Returns the most recent marker with the given `key` without an end time
   const upsertMarker = (set: IMarker[], key: string) => {
-    let marker = set.find((f) => f.key === key && !f.end);
+    let marker = set.find(f => f.key === key && !f.end);
     if (!marker) {
       marker = {key};
       set.unshift(marker);
@@ -209,7 +210,7 @@ export function extractMetadataFromLogs(
     step.attempts = [];
   };
 
-  logs.forEach((log) => {
+  logs.forEach(log => {
     const timestamp = Number.parseInt(log.timestamp, 10);
 
     metadata.firstLogAt = metadata.firstLogAt
@@ -226,6 +227,11 @@ export function extractMetadataFromLogs(
     }
     if (log.__typename === 'PipelineFailureEvent' || log.__typename === 'PipelineSuccessEvent') {
       metadata.exitedAt = timestamp;
+      for (const step of Object.values(metadata.steps)) {
+        if (step.state === IStepState.RUNNING) {
+          upsertState(step, timestamp, IStepState.UNKNOWN);
+        }
+      }
     }
 
     if (log.__typename === 'EngineEvent' && !log.stepKey) {

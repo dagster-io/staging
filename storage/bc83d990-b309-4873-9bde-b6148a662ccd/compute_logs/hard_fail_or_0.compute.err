@@ -1,0 +1,9 @@
+[32m2020-09-15 22:24:34[0m - dagster - [34mDEBUG[0m - hard_failer - bc83d990-b309-4873-9bde-b6148a662ccd - STEP_START - Started execution of step "hard_fail_or_0.compute".
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "ac9bd2e9-1a28-487a-9429-5cd28ebe583e"
+ dagster/root_run_id = "ac9bd2e9-1a28-487a-9429-5cd28ebe583e"
+dagster/solid_selection = "*increment"
+                 pid = 44267
+               solid = "hard_fail_or_0"
+    solid_definition = "hard_fail_or_0"
+            step_key = "hard_fail_or_0.compute"
