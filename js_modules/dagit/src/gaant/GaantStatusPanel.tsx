@@ -30,8 +30,8 @@ export const GaantStatusPanel: React.FunctionComponent<GaantStatusPanelProps> = 
   const preparing = Object.keys(metadata.steps).filter(
     key => metadata.steps[key].state === IStepState.PREPARING
   );
-  const executing = Object.keys(metadata.steps).filter(
-    key => metadata.steps[key].state === IStepState.RUNNING
+  const executing = Object.keys(metadata.steps).filter(key =>
+    [IStepState.RUNNING, IStepState.UNKNOWN].includes(metadata.steps[key].state)
   );
   const errored = Object.keys(metadata.steps).filter(
     key => metadata.steps[key].state === IStepState.FAILED
@@ -86,6 +86,8 @@ const StepItem: React.FunctionComponent<{
     >
       {step.state === IStepState.RUNNING ? (
         <Spinner size={15} />
+      ) : step.state === IStepState.UNKNOWN ? (
+        "?"
       ) : (
         <StepStatusDot
           style={{
