@@ -10,7 +10,7 @@ from contextlib import contextmanager
 
 from dagster.core.execution import poll_compute_logs, watch_orphans
 from dagster.seven import IS_WINDOWS
-from dagster.utils import ensure_file
+from dagster.utils import delay_interrupts, ensure_file
 
 WIN_PY36_COMPUTE_LOG_DISABLED_MSG = """\u001b[33mWARNING: Compute log capture is disabled for the current environment. Set the environment variable `PYTHONLEGACYWINDOWSSTDIO` to enable.\n\u001b[0m"""
 
@@ -89,11 +89,14 @@ def execute_windows_tail(path, stream):
     # pid so that the poll process kills itself if it becomes orphaned
     poll_file = os.path.abspath(poll_compute_logs.__file__)
     stream = stream if _fileno(stream) else None
-    tail_process = subprocess.Popen(
-        [sys.executable, poll_file, path, str(os.getpid())], stdout=stream
-    )
 
     try:
+        # A thrown interrupt while opening the subprocess can leave us in an unrecoverable state,
+        # wait until we have a process we can terminate before raising the KeyboardInterrupt
+        with delay_interrupts():
+            tail_process = subprocess.Popen(
+                [sys.executable, poll_file, path, str(os.getpid())], stdout=stream
+            )
         yield (tail_process.pid, None)
     finally:
         if tail_process:
