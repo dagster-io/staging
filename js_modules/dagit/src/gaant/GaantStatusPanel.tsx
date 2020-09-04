@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styled from 'styled-components/macro';
 import {IRunMetadataDict, IStepState} from '../RunMetadataProvider';
-import {Spinner, Colors} from '@blueprintjs/core';
+import {Spinner, Colors, Tooltip, Position} from '@blueprintjs/core';
 import {GaantChartMode} from './Constants';
 import {boxStyleFor} from './GaantChartLayout';
 import {formatElapsedTime} from '../Util';
@@ -28,13 +28,13 @@ export const GaantStatusPanel: React.FunctionComponent<GaantStatusPanelProps> = 
   onHighlightStep,
 }) => {
   const preparing = Object.keys(metadata.steps).filter(
-    (key) => metadata.steps[key].state === IStepState.PREPARING,
+    key => metadata.steps[key].state === IStepState.PREPARING,
   );
-  const executing = Object.keys(metadata.steps).filter(
-    (key) => metadata.steps[key].state === IStepState.RUNNING,
+  const executing = Object.keys(metadata.steps).filter(key =>
+    [IStepState.RUNNING, IStepState.UNKNOWN].includes(metadata.steps[key].state),
   );
   const errored = Object.keys(metadata.steps).filter(
-    (key) => metadata.steps[key].state === IStepState.FAILED,
+    key => metadata.steps[key].state === IStepState.FAILED,
   );
   const renderStepItem = (stepName: string) => (
     <StepItem
@@ -86,6 +86,20 @@ const StepItem: React.FunctionComponent<{
     >
       {step.state === IStepState.RUNNING ? (
         <Spinner size={15} />
+      ) : step.state === IStepState.UNKNOWN ? (
+        <Tooltip
+          // Modifiers are to prevent flickering: https://github.com/palantir/blueprint/issues/4019
+          modifiers={{
+            preventOverflow: {enabled: false},
+            flip: {enabled: false},
+          }}
+          position={Position.BOTTOM}
+          content={
+            'Unknown step state. Pipeline execution completed without step execution completion.'
+          }
+        >
+          {'?'}
+        </Tooltip>
       ) : (
         <StepStatusDot
           style={{
