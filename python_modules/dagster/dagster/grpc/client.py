@@ -399,15 +399,17 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
         if self._server_process:
             if self._server_process.poll() is None:
                 try:
+                    sys.stderr.write("SHUTTING DOWN SERVER\n")
                     self.shutdown_server()
                 except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
-                    pass
+                    sys.stderr.write("GOT INACTIVE RPC ERROR\n")
             self._server_process = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, _exception_type, _exception_value, _traceback):
+        sys.stderr.write("CLEANING UP SERVER \n")
         self.cleanup_server()
 
     def __del__(self):
