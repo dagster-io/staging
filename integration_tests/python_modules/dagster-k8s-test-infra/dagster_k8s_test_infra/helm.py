@@ -15,10 +15,8 @@ from dagster_test.test_project import test_project_docker_image
 from dagster import check
 from dagster.utils import git_repository_root
 
-from .integration_utils import IS_BUILDKITE, check_output, get_test_namespace, image_pull_policy
-
-TEST_CONFIGMAP_NAME = 'test-env-configmap'
-TEST_SECRET_NAME = 'test-env-secret'
+from .helm_values import TEST_CONFIGMAP_NAME, TEST_SECRET_NAME, create_helm_config
+from .integration_utils import IS_BUILDKITE, check_output, get_test_namespace
 
 
 def _helm_namespace_helper(helm_chart_fn, request):
@@ -54,14 +52,24 @@ def _helm_namespace_helper(helm_chart_fn, request):
 def helm_namespace_for_user_deployments(
     cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    yield _helm_namespace_helper(helm_chart_for_user_deployments, request)
+    yield _helm_namespace_helper(helm_chart_provider(user_deployments=True), request)
 
 
 @pytest.fixture(scope='session')
 def helm_namespace(
     cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    yield _helm_namespace_helper(helm_chart, request)
+    yield _helm_namespace_helper(helm_chart_provider(), request)
+
+
+@pytest.fixture(scope='session')
+def helm_namespace_provider(
+    cluster_provider, request
+):  # pylint: disable=unused-argument, redefined-outer-name
+    def _helm_namespace(**kwargs):
+        yield _helm_namespace_helper(helm_chart_provider(**kwargs), request)
+
+    yield _helm_namespace
 
 
 @contextmanager
@@ -212,155 +220,16 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config):
             )
 
 
-@contextmanager
-def helm_chart(namespace, docker_image, should_cleanup=True):
-    check.str_param(namespace, 'namespace')
-    check.str_param(docker_image, 'docker_image')
-    check.bool_param(should_cleanup, 'should_cleanup')
+def helm_chart_provider(**kwargs):
+    @contextmanager
+    def _helm_chart(namespace, docker_image, should_cleanup=True):
+        check.str_param(namespace, 'namespace')
+        check.str_param(docker_image, 'docker_image')
+        check.bool_param(should_cleanup, 'should_cleanup')
 
-    repository, tag = docker_image.split(':')
-    pull_policy = image_pull_policy()
-    helm_config = {
-        'dagit': {
-            'image': {'repository': repository, 'tag': tag, 'pullPolicy': pull_policy},
-            'env': {'TEST_SET_ENV_VAR': 'test_dagit_env_var'},
-            'env_config_maps': [TEST_CONFIGMAP_NAME],
-            'env_secrets': [TEST_SECRET_NAME],
-            'livenessProbe': {
-                'tcpSocket': {'port': 'http'},
-                'periodSeconds': 20,
-                'failureThreshold': 3,
-            },
-            'startupProbe': {
-                'tcpSocket': {'port': 'http'},
-                'failureThreshold': 6,
-                'periodSeconds': 10,
-            },
-        },
-        'flower': {
-            'livenessProbe': {
-                'tcpSocket': {'port': 'flower'},
-                'periodSeconds': 20,
-                'failureThreshold': 3,
-            },
-            'startupProbe': {
-                'tcpSocket': {'port': 'flower'},
-                'failureThreshold': 6,
-                'periodSeconds': 10,
-            },
-        },
-        'celery': {
-            'image': {'repository': repository, 'tag': tag, 'pullPolicy': pull_policy},
-            # https://github.com/dagster-io/dagster/issues/2671
-            # 'extraWorkerQueues': [{'name': 'extra-queue-1', 'replicaCount': 1},],
-            'livenessProbe': {
-                'exec': {
-                    'command': [
-                        '/bin/sh',
-                        '-c',
-                        'celery status -A dagster_celery_k8s.app -b {broker_url} | grep "{HOSTNAME}:.*OK"'.format(
-                            broker_url='some_broker_url', HOSTNAME='some_hostname',
-                        ),
-                    ]
-                },
-                'initialDelaySeconds': 15,
-                'periodSeconds': 10,
-                'timeoutSeconds': 10,
-                'successThreshold': 1,
-                'failureThreshold': 3,
-            },
-        },
-        'scheduler': {'k8sEnabled': 'true', 'schedulerNamespace': namespace},
-        'serviceAccount': {'name': 'dagit-admin'},
-        'postgresqlPassword': 'test',
-        'postgresqlDatabase': 'test',
-        'postgresqlUser': 'test',
-    }
+        helm_config = create_helm_config(namespace, docker_image, **kwargs)
 
-    with _helm_chart_helper(namespace, should_cleanup, helm_config):
-        yield
+        with _helm_chart_helper(namespace, should_cleanup, helm_config):
+            yield
 
-
-@contextmanager
-def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True):
-    check.str_param(namespace, 'namespace')
-    check.str_param(docker_image, 'docker_image')
-    check.bool_param(should_cleanup, 'should_cleanup')
-
-    repository, tag = docker_image.split(':')
-    pull_policy = image_pull_policy()
-    helm_config = {
-        'userDeployments': {
-            'enabled': True,
-            'deployments': [
-                {
-                    'name': 'user-code-deployment-1',
-                    'image': {'repository': repository, 'tag': tag, 'pullPolicy': pull_policy},
-                    'dagsterApiGrpcArgs': [
-                        '-m',
-                        'dagster_test.test_project.test_pipelines.repo',
-                        '-a',
-                        'define_demo_execution_repo',
-                    ],
-                    'port': 3030,
-                }
-            ],
-        },
-        'dagit': {
-            'image': {'repository': repository, 'tag': tag, 'pullPolicy': pull_policy},
-            'env': {'TEST_SET_ENV_VAR': 'test_dagit_env_var'},
-            'env_config_maps': [TEST_CONFIGMAP_NAME],
-            'env_secrets': [TEST_SECRET_NAME],
-            'livenessProbe': {
-                'tcpSocket': {'port': 'http'},
-                'periodSeconds': 20,
-                'failureThreshold': 3,
-            },
-            'startupProbe': {
-                'tcpSocket': {'port': 'http'},
-                'failureThreshold': 6,
-                'periodSeconds': 10,
-            },
-        },
-        'flower': {
-            'livenessProbe': {
-                'tcpSocket': {'port': 'flower'},
-                'periodSeconds': 20,
-                'failureThreshold': 3,
-            },
-            'startupProbe': {
-                'tcpSocket': {'port': 'flower'},
-                'failureThreshold': 6,
-                'periodSeconds': 10,
-            },
-        },
-        'celery': {
-            'image': {'repository': repository, 'tag': tag, 'pullPolicy': pull_policy},
-            # https://github.com/dagster-io/dagster/issues/2671
-            # 'extraWorkerQueues': [{'name': 'extra-queue-1', 'replicaCount': 1},],
-            'livenessProbe': {
-                'exec': {
-                    'command': [
-                        '/bin/sh',
-                        '-c',
-                        'celery status -A dagster_celery_k8s.app -b {broker_url} | grep "{HOSTNAME}:.*OK"'.format(
-                            broker_url='some_broker_url', HOSTNAME='some_hostname',
-                        ),
-                    ]
-                },
-                'initialDelaySeconds': 15,
-                'periodSeconds': 10,
-                'timeoutSeconds': 10,
-                'successThreshold': 1,
-                'failureThreshold': 3,
-            },
-        },
-        'scheduler': {'k8sEnabled': 'true', 'schedulerNamespace': namespace},
-        'serviceAccount': {'name': 'dagit-admin'},
-        'postgresqlPassword': 'test',
-        'postgresqlDatabase': 'test',
-        'postgresqlUser': 'test',
-    }
-
-    with _helm_chart_helper(namespace, should_cleanup, helm_config):
-        yield
+    return _helm_chart
