@@ -30,6 +30,7 @@ def wait_for_job_success(
     wait_timeout=DEFAULT_WAIT_TIMEOUT,
     wait_time_between_attempts=DEFAULT_WAIT_BETWEEN_ATTEMPTS,
     num_pods_to_wait_for=DEFAULT_JOB_POD_COUNT,
+    step_job=True,
 ):
     return DagsterKubernetesClient.production_client().wait_for_job_success(
         job_name,
@@ -39,6 +40,7 @@ def wait_for_job_success(
         wait_timeout,
         wait_time_between_attempts,
         num_pods_to_wait_for,
+        step_job,
     )
 
 

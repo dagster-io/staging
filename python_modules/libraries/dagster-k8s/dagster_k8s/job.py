@@ -55,6 +55,7 @@ USER_DEFINED_K8S_CONFIG_SCHEMA = Shape(
 )
 
 
+@whitelist_for_serdes
 class UserDefinedDagsterK8sConfig(
     namedtuple(
         "_UserDefinedDagsterK8sConfig",
