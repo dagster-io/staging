@@ -1,0 +1,712 @@
+{
+    "kind": "EventList",
+    "apiVersion": "v1",
+    "metadata": {
+        "selfLink": "/api/v1/namespaces/default/events",
+        "resourceVersion": "606"
+    },
+    "items": [
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d760357ec0",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d760357ec0",
+                "uid": "ab43f79d-8476-4e2e-8027-8758762dcf64",
+                "resourceVersion": "216",
+                "creationTimestamp": "2020-09-18T15:19:13Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:13Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "Starting",
+            "message": "Starting kubelet.",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:13Z",
+            "lastTimestamp": "2020-09-18T15:19:13Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d7675cf69c",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d7675cf69c",
+                "uid": "d82a4b5a-f09e-4bb1-83a6-a72c45847fcc",
+                "resourceVersion": "219",
+                "creationTimestamp": "2020-09-18T15:19:13Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:13Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeHasSufficientMemory",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeHasSufficientMemory",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:13Z",
+            "lastTimestamp": "2020-09-18T15:19:13Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d7675da920",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d7675da920",
+                "uid": "97857865-c8ab-45a9-8538-8a4cbc9a9645",
+                "resourceVersion": "220",
+                "creationTimestamp": "2020-09-18T15:19:13Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:13Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeHasNoDiskPressure",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeHasNoDiskPressure",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:13Z",
+            "lastTimestamp": "2020-09-18T15:19:13Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d7675e6824",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d7675e6824",
+                "uid": "c0128f7b-9066-498f-9e71-6da1e436055d",
+                "resourceVersion": "221",
+                "creationTimestamp": "2020-09-18T15:19:13Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:13Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeHasSufficientPID",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeHasSufficientPID",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:13Z",
+            "lastTimestamp": "2020-09-18T15:19:13Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d76fcc1b3c",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d76fcc1b3c",
+                "uid": "d85af472-157e-4719-a0cf-e874ed394033",
+                "resourceVersion": "224",
+                "creationTimestamp": "2020-09-18T15:19:14Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:14Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeAllocatableEnforced",
+            "message": "Updated Node Allocatable limit across pods",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:14Z",
+            "lastTimestamp": "2020-09-18T15:19:14Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d81bca1da8",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d81bca1da8",
+                "uid": "aec735e2-00dc-4bd8-835e-f8279f44f446",
+                "resourceVersion": "252",
+                "creationTimestamp": "2020-09-18T15:19:16Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:16Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "Starting",
+            "message": "Starting kubelet.",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:16Z",
+            "lastTimestamp": "2020-09-18T15:19:16Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d822bfffc4",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d822bfffc4",
+                "uid": "00ffa6c5-4189-4f7f-af46-ab517b81d92b",
+                "resourceVersion": "255",
+                "creationTimestamp": "2020-09-18T15:19:17Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:17Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeHasSufficientMemory",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeHasSufficientMemory",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:17Z",
+            "lastTimestamp": "2020-09-18T15:19:17Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d822c0e128",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d822c0e128",
+                "uid": "60075cf2-d37a-4817-9783-3ac89cb58698",
+                "resourceVersion": "256",
+                "creationTimestamp": "2020-09-18T15:19:17Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:17Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeHasNoDiskPressure",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeHasNoDiskPressure",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:17Z",
+            "lastTimestamp": "2020-09-18T15:19:17Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d822c18920",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d822c18920",
+                "uid": "7f3c390c-66bb-430a-81e6-8a3cd43289ae",
+                "resourceVersion": "257",
+                "creationTimestamp": "2020-09-18T15:19:17Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:17Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeHasSufficientPID",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeHasSufficientPID",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:17Z",
+            "lastTimestamp": "2020-09-18T15:19:17Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d826eb39ec",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9d826eb39ec",
+                "uid": "acf1d67f-0777-49df-9ae9-06444eca532e",
+                "resourceVersion": "259",
+                "creationTimestamp": "2020-09-18T15:19:17Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:17Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeAllocatableEnforced",
+            "message": "Updated Node Allocatable limit across pods",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:17Z",
+            "lastTimestamp": "2020-09-18T15:19:17Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9dace3ecc34",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9dace3ecc34",
+                "uid": "7d392b91-efa0-4609-832c-77944f6f1589",
+                "resourceVersion": "390",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "0538ea2c-f1d6-48b6-bc48-540d23c10c30",
+                "apiVersion": "v1"
+            },
+            "reason": "RegisteredNode",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane event: Registered Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane in Controller",
+            "source": {
+                "component": "node-controller"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9db274035d4",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9db274035d4",
+                "uid": "c44764c0-63dd-4c8e-b306-54199e514a63",
+                "resourceVersion": "443",
+                "creationTimestamp": "2020-09-18T15:19:30Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-proxy",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:30Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "Starting",
+            "message": "Starting kube-proxy.",
+            "source": {
+                "component": "kube-proxy",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:30Z",
+            "lastTimestamp": "2020-09-18T15:19:30Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9dccdfaebac",
+                "namespace": "default",
+                "selfLink": "/api/v1/namespaces/default/events/cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane.1635e9dccdfaebac",
+                "uid": "1c42e903-38f9-434a-bf1c-70b64d924aab",
+                "resourceVersion": "467",
+                "creationTimestamp": "2020-09-18T15:19:37Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:37Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Node",
+                "name": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+                "uid": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "reason": "NodeReady",
+            "message": "Node cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane status is now: NodeReady",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:37Z",
+            "lastTimestamp": "2020-09-18T15:19:37Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        }
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "kind": "ReplicaSetList",
+    "apiVersion": "apps/v1",
+    "metadata": {
+        "selfLink": "/apis/apps/v1/namespaces/kube-public/replicasets",
+        "resourceVersion": "606"
+    },
+    "items": []
+}

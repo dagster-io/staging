@@ -332,9 +332,7 @@ def execute_run_with_structured_logs_command(input_json):
     args = check.inst(deserialize_json_to_dagster_namedtuple(input_json), ExecuteRunArgs)
     recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
 
-    with (
-        DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
-    ) as instance:
+    with (DagsterInstance.get()) as instance:
         buffer = []
 
         def send_to_buffer(event):
