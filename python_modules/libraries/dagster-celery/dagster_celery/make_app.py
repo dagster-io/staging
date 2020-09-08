@@ -1,6 +1,5 @@
 from celery import Celery
 from celery.utils.collections import force_mapping
-from kombu import Queue
 
 from dagster.seven import is_module_available
 
@@ -24,10 +23,6 @@ def make_app_with_task_routes(task_routes, app_args=None):
             app_.conf.update(obj)
 
     app_.loader.import_module("celery.contrib.testing.tasks")
-
-    app_.conf.task_queues = [
-        Queue("dagster", routing_key="dagster.#", queue_arguments={"x-max-priority": 10})
-    ]
     app_.conf.task_routes = task_routes
     app_.conf.task_queue_max_priority = 10
     app_.conf.task_default_priority = 5

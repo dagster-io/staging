@@ -266,6 +266,14 @@ celery:
     successThreshold: 1
     failureThreshold: 3
 
+  # [Experimental] Configure run coordinators to launch from Celery workers
+  runQueuing:
+    enabled: False
+    defaultQueue: null
+      # If not set, by default runs will launch without queuing. Can be overriden per pipeline
+      # run using pipeline tags, see python_modules/libraries/dagster-celery/dagster_celery/tags.py.
+      # Any specified queue will also need workers created under `extraWorkerQueues`.
+
 ####################################################################################################
 # RabbitMQ: Configuration values for rabbitmq. Only one of RabbitMQ / Redis should be enabled.
 ####################################################################################################
