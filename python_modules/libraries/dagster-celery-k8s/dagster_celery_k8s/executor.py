@@ -229,8 +229,8 @@ def _submit_task_k8s_job(app, pipeline_context, step, queue, priority):
     )
 
     return task_signature.apply_async(
-        priority=priority,
         queue=queue,
+        priority=priority,
         routing_key="{queue}.execute_step_k8s_job".format(queue=queue),
     )
 
@@ -394,7 +394,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             kubernetes.client.BatchV1Api().create_namespaced_job(body=job, namespace=job_namespace)
         except kubernetes.client.rest.ApiException as e:
             if e.reason == "Conflict":
-                # There is an existing job with the same name so do not procede.
+                # There is an existing job with the same name so do not proceed.
                 instance.report_engine_event(
                     "Did not create Kubernetes job {} for step {} since job name already "
                     "exists, exiting.".format(job_name, step_key),
