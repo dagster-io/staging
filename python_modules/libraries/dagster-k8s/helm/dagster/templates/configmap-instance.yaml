@@ -73,6 +73,7 @@ data:
           {{- if .Values.celery.configSource }}
           {{ toYaml .Values.celery.configSource | indent 10 }}
           {{- end }}
+        queued: True
 
     run_storage:
       module: dagster_postgres.run_storage
