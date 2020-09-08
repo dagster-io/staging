@@ -215,8 +215,8 @@ def _submit_task_k8s_job(app, pipeline_context, step, queue, priority):
     )
 
     return task_signature.apply_async(
-        priority=priority,
         queue=queue,
+        priority=priority,
         routing_key="{queue}.execute_step_k8s_job".format(queue=queue),
     )
 
