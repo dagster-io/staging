@@ -127,6 +127,7 @@ class DagsterKubernetesClient:
         wait_timeout=DEFAULT_WAIT_TIMEOUT,
         wait_time_between_attempts=DEFAULT_WAIT_BETWEEN_ATTEMPTS,
         num_pods_to_wait_for=DEFAULT_JOB_POD_COUNT,
+        check_pipeline_run_started=True,
     ):
         """Poll a job for successful completion.
 
@@ -195,7 +196,8 @@ class DagsterKubernetesClient:
             if status.succeeded == num_pods_to_wait_for:
                 break
 
-            if instance and run_id:
+            # for step jobs, run should have started. It will not have started for run coordinators
+            if check_pipeline_run_started and instance and run_id:
                 pipeline_run_status = instance.get_run_by_id(run_id).status
                 if pipeline_run_status != PipelineRunStatus.STARTED:
                     raise DagsterK8sPipelineStatusException()

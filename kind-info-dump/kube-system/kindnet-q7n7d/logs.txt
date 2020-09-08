@@ -1,0 +1,9 @@
+==== START logs for container kindnet-cni of pod kube-system/kindnet-q7n7d ====
+I0918 15:19:30.260097       1 main.go:64] hostIP = 172.18.0.2
+podIP = 172.18.0.2
+I0918 15:19:30.760113       1 main.go:150] handling current node
+I0918 15:19:40.767304       1 main.go:150] handling current node
+I0918 15:19:50.736649       1 main.go:150] handling current node
+I0918 15:20:00.742315       1 main.go:150] handling current node
+I0918 15:20:10.752711       1 main.go:150] handling current node
+==== END logs for container kindnet-cni of pod kube-system/kindnet-q7n7d ====
