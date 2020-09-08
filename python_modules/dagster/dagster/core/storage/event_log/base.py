@@ -1,17 +1,11 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 
-import pyrsistent
 import six
 
-from dagster.core.events.log import EventRecord
 from dagster.core.execution.stats import (
     build_run_stats_from_events,
     build_run_step_stats_from_events,
 )
-
-
-class EventLogSequence(pyrsistent.CheckedPVector):
-    __type__ = EventRecord
 
 
 class EventLogStorage(six.with_metaclass(ABCMeta)):
