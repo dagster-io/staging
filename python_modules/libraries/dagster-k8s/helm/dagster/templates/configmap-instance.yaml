@@ -59,7 +59,7 @@ data:
 
     run_launcher:
       module: dagster_celery_k8s
-      class: CeleryK8sRunLauncher
+      class: CeleryK8sQueuedRunLauncher
       config:
         dagster_home:
           env: DAGSTER_HOME
