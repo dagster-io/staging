@@ -195,6 +195,11 @@ class DagsterApiServer(DagsterApiServicer):
             self.__heartbeat_thread = threading.Thread(
                 target=self._heartbeat_thread, args=(heartbeat_timeout,),
             )
+
+            sys.stderr.write(
+                "SERVER HEARTBEAT THREAD  IS CALLED " + self.__heartbeat_thread.name + "\n"
+            )
+
             self.__heartbeat_thread.daemon = True
             self.__heartbeat_thread.start()
         else:
@@ -205,10 +210,18 @@ class DagsterApiServer(DagsterApiServicer):
 
         self.__cleanup_thread.start()
 
+        sys.stderr.write("SERVER CLEANUP THREAD  IS CALLED " + self.__cleanup_thread.name + "\n")
+
     def cleanup(self):
+        sys.stderr.write("CLEANING UP !!! \n")
         if self.__heartbeat_thread:
+            sys.stderr.write("JOINING HEARTBEAT THREAD\n")
             self.__heartbeat_thread.join()
+            sys.stderr.write("JOINED HEARTBEAT!!")
+
+        sys.stderr.write("JOINING CLEANING THREAD!! \n")
         self.__cleanup_thread.join()
+        sys.stderr.write("JOINED CLEANING! \n")
 
     def _heartbeat_thread(self, heartbeat_timeout):
         while True:
@@ -973,9 +986,17 @@ class DagsterGrpcServer(object):
 
         server_termination_thread.start()
 
+        sys.stderr.write(
+            "SERVER TERMINATION THREAD  IS CALLED " + server_termination_thread.name + "\n"
+        )
+
         self.server.wait_for_termination()
 
+        sys.stderr.write("TERMINATION HAPPENED, JOINING SERVER TERMINATION THREAD \n")
+
         server_termination_thread.join()
+
+        sys.stderr.write("TERMINATION THREAD JOINED, CLEANING UP\n")
 
         self._servicer.cleanup()
 

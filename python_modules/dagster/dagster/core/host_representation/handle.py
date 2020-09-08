@@ -148,6 +148,9 @@ class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
         )
         heartbeat_thread.daemon = True
         heartbeat_thread.start()
+
+        sys.stderr.write("CLIENT HEARTBEAT THREAD IS CALLED " + heartbeat_thread.name + "\n")
+
         list_repositories_response = sync_list_repositories_grpc(client)
 
         code_pointer_dict = list_repositories_response.repository_code_pointer_dict
