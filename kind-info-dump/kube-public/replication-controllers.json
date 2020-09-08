@@ -1,0 +1,9 @@
+{
+    "kind": "ReplicationControllerList",
+    "apiVersion": "v1",
+    "metadata": {
+        "selfLink": "/api/v1/namespaces/kube-public/replicationcontrollers",
+        "resourceVersion": "606"
+    },
+    "items": []
+}

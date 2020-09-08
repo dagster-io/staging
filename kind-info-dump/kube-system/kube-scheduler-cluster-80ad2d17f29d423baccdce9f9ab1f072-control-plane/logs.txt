@@ -1,0 +1,39 @@
+==== START logs for container kube-scheduler of pod kube-system/kube-scheduler-cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane ====
+I0918 15:19:05.837991       1 registry.go:150] Registering EvenPodsSpread predicate and priority function
+I0918 15:19:05.838091       1 registry.go:150] Registering EvenPodsSpread predicate and priority function
+I0918 15:19:06.487444       1 serving.go:313] Generated self-signed cert in-memory
+W0918 15:19:10.118464       1 authentication.go:349] Unable to get configmap/extension-apiserver-authentication in kube-system.  Usually fixed by 'kubectl create rolebinding -n kube-system ROLEBINDING_NAME --role=extension-apiserver-authentication-reader --serviceaccount=YOUR_NS:YOUR_SA'
+W0918 15:19:10.119241       1 authentication.go:297] Error looking up in-cluster authentication configuration: configmaps "extension-apiserver-authentication" is forbidden: User "system:kube-scheduler" cannot get resource "configmaps" in API group "" in the namespace "kube-system"
+W0918 15:19:10.119347       1 authentication.go:298] Continuing without authentication configuration. This may treat all requests as anonymous.
+W0918 15:19:10.119611       1 authentication.go:299] To require authentication configuration lookup to succeed, set --authentication-tolerate-lookup-failure=false
+I0918 15:19:10.131149       1 registry.go:150] Registering EvenPodsSpread predicate and priority function
+I0918 15:19:10.131554       1 registry.go:150] Registering EvenPodsSpread predicate and priority function
+W0918 15:19:10.134099       1 authorization.go:47] Authorization is disabled
+W0918 15:19:10.134139       1 authentication.go:40] Authentication is disabled
+I0918 15:19:10.134160       1 deprecated_insecure_serving.go:51] Serving healthz insecurely on [::]:10251
+I0918 15:19:10.135573       1 configmap_cafile_content.go:202] Starting client-ca::kube-system::extension-apiserver-authentication::client-ca-file
+I0918 15:19:10.135640       1 shared_informer.go:223] Waiting for caches to sync for client-ca::kube-system::extension-apiserver-authentication::client-ca-file
+I0918 15:19:10.137583       1 secure_serving.go:178] Serving securely on 127.0.0.1:10259
+I0918 15:19:10.139069       1 tlsconfig.go:240] Starting DynamicServingCertificateController
+E0918 15:19:10.141806       1 reflector.go:178] k8s.io/apiserver/pkg/server/dynamiccertificates/configmap_cafile_content.go:206: Failed to list *v1.ConfigMap: configmaps "extension-apiserver-authentication" is forbidden: User "system:kube-scheduler" cannot list resource "configmaps" in API group "" in the namespace "kube-system"
+E0918 15:19:10.143774       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.CSINode: csinodes.storage.k8s.io is forbidden: User "system:kube-scheduler" cannot list resource "csinodes" in API group "storage.k8s.io" at the cluster scope
+E0918 15:19:10.143789       1 reflector.go:178] k8s.io/kubernetes/cmd/kube-scheduler/app/server.go:233: Failed to list *v1.Pod: pods is forbidden: User "system:kube-scheduler" cannot list resource "pods" in API group "" at the cluster scope
+E0918 15:19:10.144376       1 reflector.go:178] k8s.io/apiserver/pkg/server/dynamiccertificates/configmap_cafile_content.go:206: Failed to list *v1.ConfigMap: configmaps "extension-apiserver-authentication" is forbidden: User "system:kube-scheduler" cannot list resource "configmaps" in API group "" in the namespace "kube-system"
+E0918 15:19:10.144909       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.Node: nodes is forbidden: User "system:kube-scheduler" cannot list resource "nodes" in API group "" at the cluster scope
+E0918 15:19:10.145478       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.StorageClass: storageclasses.storage.k8s.io is forbidden: User "system:kube-scheduler" cannot list resource "storageclasses" in API group "storage.k8s.io" at the cluster scope
+E0918 15:19:10.145483       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.CSINode: csinodes.storage.k8s.io is forbidden: User "system:kube-scheduler" cannot list resource "csinodes" in API group "storage.k8s.io" at the cluster scope
+E0918 15:19:10.145244       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.PersistentVolume: persistentvolumes is forbidden: User "system:kube-scheduler" cannot list resource "persistentvolumes" in API group "" at the cluster scope
+E0918 15:19:10.145295       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1beta1.PodDisruptionBudget: poddisruptionbudgets.policy is forbidden: User "system:kube-scheduler" cannot list resource "poddisruptionbudgets" in API group "policy" at the cluster scope
+E0918 15:19:10.145031       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.Service: services is forbidden: User "system:kube-scheduler" cannot list resource "services" in API group "" at the cluster scope
+E0918 15:19:10.146293       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.PersistentVolumeClaim: persistentvolumeclaims is forbidden: User "system:kube-scheduler" cannot list resource "persistentvolumeclaims" in API group "" at the cluster scope
+E0918 15:19:10.148461       1 reflector.go:178] k8s.io/kubernetes/cmd/kube-scheduler/app/server.go:233: Failed to list *v1.Pod: pods is forbidden: User "system:kube-scheduler" cannot list resource "pods" in API group "" at the cluster scope
+E0918 15:19:10.149467       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.Node: nodes is forbidden: User "system:kube-scheduler" cannot list resource "nodes" in API group "" at the cluster scope
+E0918 15:19:10.153228       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.StorageClass: storageclasses.storage.k8s.io is forbidden: User "system:kube-scheduler" cannot list resource "storageclasses" in API group "storage.k8s.io" at the cluster scope
+E0918 15:19:10.158164       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.PersistentVolume: persistentvolumes is forbidden: User "system:kube-scheduler" cannot list resource "persistentvolumes" in API group "" at the cluster scope
+E0918 15:19:10.159390       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1beta1.PodDisruptionBudget: poddisruptionbudgets.policy is forbidden: User "system:kube-scheduler" cannot list resource "poddisruptionbudgets" in API group "policy" at the cluster scope
+E0918 15:19:10.161140       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.Service: services is forbidden: User "system:kube-scheduler" cannot list resource "services" in API group "" at the cluster scope
+E0918 15:19:10.162297       1 reflector.go:178] k8s.io/client-go/informers/factory.go:135: Failed to list *v1.PersistentVolumeClaim: persistentvolumeclaims is forbidden: User "system:kube-scheduler" cannot list resource "persistentvolumeclaims" in API group "" at the cluster scope
+I0918 15:19:13.036893       1 shared_informer.go:230] Caches are synced for client-ca::kube-system::extension-apiserver-authentication::client-ca-file 
+I0918 15:19:13.239981       1 leaderelection.go:242] attempting to acquire leader lease  kube-system/kube-scheduler...
+I0918 15:19:13.261939       1 leaderelection.go:252] successfully acquired lease kube-system/kube-scheduler
+==== END logs for container kube-scheduler of pod kube-system/kube-scheduler-cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane ====
