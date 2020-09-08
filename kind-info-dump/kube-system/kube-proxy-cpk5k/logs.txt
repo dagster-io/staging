@@ -1,0 +1,16 @@
+==== START logs for container kube-proxy of pod kube-system/kube-proxy-cpk5k ====
+W0918 15:19:30.046135       1 server_others.go:559] Unknown proxy mode "", assuming iptables proxy
+I0918 15:19:30.058524       1 node.go:136] Successfully retrieved node IP: 172.18.0.2
+I0918 15:19:30.058614       1 server_others.go:186] Using iptables Proxier.
+I0918 15:19:30.059614       1 server.go:583] Version: v1.18.2
+I0918 15:19:30.063871       1 conntrack.go:100] Set sysctl 'net/netfilter/nf_conntrack_max' to 196608
+I0918 15:19:30.064084       1 conntrack.go:52] Setting nf_conntrack_max to 196608
+I0918 15:19:30.064412       1 conntrack.go:100] Set sysctl 'net/netfilter/nf_conntrack_tcp_timeout_established' to 86400
+I0918 15:19:30.064545       1 conntrack.go:100] Set sysctl 'net/netfilter/nf_conntrack_tcp_timeout_close_wait' to 3600
+I0918 15:19:30.065525       1 config.go:133] Starting endpoints config controller
+I0918 15:19:30.065549       1 config.go:315] Starting service config controller
+I0918 15:19:30.065598       1 shared_informer.go:223] Waiting for caches to sync for endpoints config
+I0918 15:19:30.065598       1 shared_informer.go:223] Waiting for caches to sync for service config
+I0918 15:19:30.166213       1 shared_informer.go:230] Caches are synced for service config 
+I0918 15:19:30.166334       1 shared_informer.go:230] Caches are synced for endpoints config 
+==== END logs for container kube-proxy of pod kube-system/kube-proxy-cpk5k ====
