@@ -89,12 +89,12 @@ def celery_k8s_job_executor(init_context):
     run_launcher = init_context.instance.run_launcher
     exc_cfg = init_context.executor_config
 
-    check.inst(
-        run_launcher,
-        CeleryK8sRunLauncher,
-        "This engine is only compatible with a CeleryK8sRunLauncher; configure the "
-        "CeleryK8sRunLauncher on your instance to use it.",
-    )
+    # check.inst(
+    #     run_launcher,
+    #     CeleryK8sRunLauncher,
+    #     "This engine is only compatible with a CeleryK8sRunLauncher; configure the "
+    #     "CeleryK8sRunLauncher on your instance to use it.",
+    # )
 
     job_config = DagsterK8sJobConfig(
         dagster_home=run_launcher.dagster_home,
@@ -215,8 +215,8 @@ def _submit_task_k8s_job(app, pipeline_context, step, queue, priority):
     )
 
     return task_signature.apply_async(
-        priority=priority,
         queue=queue,
+        priority=priority,
         routing_key="{queue}.execute_step_k8s_job".format(queue=queue),
     )
 
