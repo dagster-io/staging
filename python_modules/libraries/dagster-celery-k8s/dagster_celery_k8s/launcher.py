@@ -2,13 +2,17 @@ import sys
 import weakref
 
 import kubernetes
+from dagster_celery.core_execution_loop import DELEGATE_MARKER
+from dagster_celery.make_app import make_app
+from dagster_celery.tags import DAGSTER_CELERY_QUEUE_TAG
 from dagster_k8s.job import (
     DagsterK8sJobConfig,
+    UserDefinedDagsterK8sConfig,
     construct_dagster_k8s_job,
     get_job_name_from_run_id,
     get_user_defined_k8s_config,
 )
-from dagster_k8s.utils import delete_job
+from dagster_k8s.utils import delete_job, wait_for_job_success
 
 from dagster import DagsterInvariantViolationError, EventMetadataEntry, Field, Noneable, check
 from dagster.config.field import resolve_to_config_type
@@ -17,11 +21,17 @@ from dagster.core.events import EngineEventData
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation import ExternalPipeline
 from dagster.core.host_representation.handle import GrpcServerRepositoryLocationHandle
-from dagster.core.instance import DagsterInstance
+from dagster.core.instance import DagsterInstance, InstanceRef
 from dagster.core.launcher import RunLauncher
 from dagster.core.origin import PipelineGrpcServerOrigin, PipelinePythonOrigin
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
-from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
+from dagster.serdes import (
+    ConfigurableClass,
+    ConfigurableClassData,
+    pack_value,
+    serialize_dagster_namedtuple,
+    unpack_value,
+)
 from dagster.utils import frozentags, merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
@@ -82,6 +92,11 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         include (List[str]): List of includes for the Celery workers
         config_source: (Optional[dict]): Additional settings for the Celery app.
         retries: (Optional[dict]): Default retry configuration for Celery tasks.
+        enable_run_coordinator_queue: (Optional[bool]): (Experimental) Set this value to launch runs via a Celery
+            queue, enabling limits on concurrent runs
+        default_run_coordinator_queue: (Optional[str]): (Experimental) The Celery queue for run coordinator
+            tasks. Can be overriden using `DAGSTER_CELERY_QUEUE_TAG` on the pipeline. Defaults to
+            None, meaning run coordinators won't be queued and will be sent directly to K8s.
     """
 
     def __init__(
@@ -97,18 +112,22 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         config_source=None,
         retries=None,
         inst_data=None,
+        enable_run_coordinator_queue=False,
+        default_run_coordinator_queue=None,
     ):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
+        self.load_incluster_config = check.bool_param(
+            load_incluster_config, "load_incluster_config"
+        )
+        self.kubeconfig_file = check.opt_str_param(kubeconfig_file, "kubeconfig_file")
         if load_incluster_config:
             check.invariant(
                 kubeconfig_file is None,
                 "`kubeconfig_file` is set but `load_incluster_config` is True.",
             )
-            kubernetes.config.load_incluster_config()
         else:
             check.opt_str_param(kubeconfig_file, "kubeconfig_file")
-            kubernetes.config.load_kube_config(kubeconfig_file)
 
         self.instance_config_map = check.str_param(instance_config_map, "instance_config_map")
         self.dagster_home = check.str_param(dagster_home, "dagster_home")
@@ -124,6 +143,18 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         self.retries = Retries.from_config(retries)
         self._instance_ref = None
 
+        self.enable_run_coordinator_queue = check.bool_param(
+            enable_run_coordinator_queue, "enable_run_coordinator_queue"
+        )
+        if not self.enable_run_coordinator_queue:
+            check.invariant(
+                default_run_coordinator_queue is None,
+                "`default_run_coordinator_queue` is set but `enable_run_coordinator_queue` is not true",
+            )
+        self.default_run_coordinator_queue = check.opt_str_param(
+            default_run_coordinator_queue, "default_run_coordinator_queue"
+        )
+
     @classmethod
     def config_type(cls):
         """Include all arguments required for DagsterK8sJobConfig along with additional arguments
@@ -136,6 +167,10 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         run_launcher_extra_cfg = {
             "load_incluster_config": Field(bool, is_required=False, default_value=True),
             "kubeconfig_file": Field(Noneable(str), is_required=False, default_value=None),
+            "enable_run_coordinator_queue": Field(bool, is_required=False, default_value=False),
+            "defaulte_run_coordinator_queue": Field(
+                Noneable(str), is_required=False, default_value=None
+            ),
         }
 
         res = merge_dicts(job_cfg, run_launcher_extra_cfg)
@@ -232,35 +267,59 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
             )
         )
 
-        job = construct_dagster_k8s_job(
-            job_config,
-            command=["dagster"],
-            args=["api", "execute_run_with_structured_logs", input_json],
-            job_name=job_name,
-            pod_name=pod_name,
-            component="run_coordinator",
-            user_defined_k8s_config=user_defined_k8s_config,
-            env_vars=env_vars,
-        )
-
         job_namespace = exc_config.get("job_namespace")
 
-        api = kubernetes.client.BatchV1Api()
-        api.create_namespaced_job(body=job, namespace=job_namespace)
+        job_queue = self.get_run_coordinator_queue(run.tags)
+        if not job_queue:
+            _submit_run_coordinator_job(
+                instance,
+                job_config,
+                input_json,
+                job_name,
+                pod_name,
+                user_defined_k8s_config,
+                env_vars,
+                job_namespace,
+                run,
+                self.load_incluster_config,
+                self.kubeconfig_file,
+                wait_for_job_to_succeed=False,
+            )
+        else:
+            # Create celery task
+            self._instance.report_engine_event(
+                "Sending run coordinator task to Celery", run, cls=CeleryK8sRunLauncher,
+            )
 
-        self._instance.report_engine_event(
-            "Kubernetes run_coordinator job launched",
-            run,
-            EngineEventData(
-                [
-                    EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                    EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
-                    EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
-                    EventMetadataEntry.text(run.run_id, "Run ID"),
-                ]
-            ),
-            cls=self.__class__,
-        )
+            app = make_app(
+                app_args={
+                    "broker": self.broker,
+                    "backend": self.backend,
+                    "include": self.include,
+                    "config_source": self.config_source,
+                    "retries": self.retries,
+                }
+            )
+            task = create_k8s_run_coordinator_job_task(app)
+            task_signature = task.si(
+                instance_ref_dict=instance.get_ref().to_dict(),
+                dagster_k8s_job_config_packed=pack_value(job_config),
+                input_json=input_json,
+                job_name=job_name,
+                pod_name=pod_name,
+                user_defined_k8s_config_packed=pack_value(user_defined_k8s_config),
+                env_vars=env_vars,
+                job_namespace=job_namespace,
+                pipeline_run_packed=pack_value(run),
+                load_incluster_config=self.load_incluster_config,
+                kubeconfig_file=self.kubeconfig_file,
+            )
+            res = task_signature.apply_async(
+                queue=job_queue,
+                routing_key="{queue}.execute_run_coordinator_k8s_job".format(queue=job_queue),
+            )
+            res.forget()
+
         return run
 
     # https://github.com/dagster-io/dagster/issues/2741
@@ -337,6 +396,13 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         executor_config = _get_validated_celery_k8s_executor_config(run_config)
         return executor_config.get("job_namespace")
 
+    def get_run_coordinator_queue(self, tags):
+        check.opt_dict_param(tags, "tags", key_type=str, value_type=str)
+
+        if not self.enable_run_coordinator_queue:
+            return None
+        return tags.get(DAGSTER_CELERY_QUEUE_TAG, self.default_run_coordinator_queue)
+
 
 def _get_validated_celery_k8s_executor_config(run_config):
     check.dict_param(run_config, "run_config")
@@ -356,3 +422,176 @@ def _get_validated_celery_k8s_executor_config(run_config):
     )
 
     return res.value
+
+
+def _submit_run_coordinator_job(
+    instance,
+    dagster_k8s_job_config,
+    input_json,
+    job_name,
+    pod_name,
+    user_defined_k8s_config,
+    env_vars,
+    job_namespace,
+    pipeline_run,
+    load_incluster_config,
+    kubeconfig_file,
+    wait_for_job_to_succeed=False,
+):
+    check.inst_param(instance, "instance", DagsterInstance)
+    check.inst_param(dagster_k8s_job_config, "dagster_k8s_job_config", DagsterK8sJobConfig)
+    check.str_param(input_json, "input_json")
+    check.str_param(job_name, "job_name")
+    check.str_param(pod_name, "pod_name")
+    check.inst_param(
+        user_defined_k8s_config, "user_defined_k8s_config", UserDefinedDagsterK8sConfig
+    )
+    check.opt_dict_param(env_vars, "env_vars")
+    check.str_param(job_namespace, "job_namespace")
+    check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
+    check.bool_param(load_incluster_config, "load_incluster_config")
+    check.opt_str_param(kubeconfig_file, "kubeconfig_file")
+    check.bool_param(wait_for_job_to_succeed, "wait_for_job_to_succeed")
+
+    job = construct_dagster_k8s_job(
+        dagster_k8s_job_config,
+        command=["dagster"],
+        args=["api", "execute_run_with_structured_logs", input_json],
+        job_name=job_name,
+        pod_name=pod_name,
+        component="run_coordinator",
+        user_defined_k8s_config=user_defined_k8s_config,
+        env_vars=env_vars,
+    )
+
+    # For when launched via DinD or running the cluster
+    if load_incluster_config:
+        kubernetes.config.load_incluster_config()
+    else:
+        kubernetes.config.load_kube_config(kubeconfig_file)
+
+    try:
+        api = kubernetes.client.BatchV1Api()
+        api.create_namespaced_job(body=job, namespace=job_namespace)
+    except kubernetes.client.rest.ApiException as e:
+        if e.reason == "Conflict":
+            # There is an existing job with the same name so do not proceed.
+            instance.report_engine_event(
+                "Did not create Kubernetes job {} for run coordinator since job name already "
+                "exists, exiting.".format(job_name),
+                pipeline_run,
+                EngineEventData(
+                    [
+                        EventMetadataEntry.text(job_name, "Kubernetes Job name"),
+                        EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
+                        EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
+                    ],
+                    marker_end=DELEGATE_MARKER,
+                ),
+                CeleryK8sRunLauncher,
+            )
+        else:
+            instance.report_engine_event(
+                "Encountered unexpected error while creating Kubernetes job {} for "
+                "run coordinator, exiting.".format(job_name),
+                pipeline_run,
+                EngineEventData(
+                    [
+                        EventMetadataEntry.text(str(e), "Error"),
+                        EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
+                    ]
+                ),
+                CeleryK8sRunLauncher,
+            )
+        return
+
+    instance.report_engine_event(
+        "Kubernetes run_coordinator job launched",
+        pipeline_run,
+        EngineEventData(
+            [
+                EventMetadataEntry.text(job_name, "Kubernetes Job name"),
+                EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
+                EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
+                EventMetadataEntry.text(pipeline_run.run_id, "Run ID"),
+            ]
+        ),
+        cls=CeleryK8sRunLauncher,
+    )
+
+    if wait_for_job_to_succeed:
+        wait_for_job_success(
+            job_name=job_name,
+            namespace=job_namespace,
+            instance=instance,
+            run_id=pipeline_run.run_id,
+            check_pipeline_run_started=False,
+        )
+
+
+def create_k8s_run_coordinator_job_task(celery_app, **task_kwargs):
+    @celery_app.task(bind=True, name="execute_run_coordinator_k8s_job", **task_kwargs)
+    def _execute_run_coordinator_k8s_job(
+        _self,
+        instance_ref_dict,
+        dagster_k8s_job_config_packed,
+        input_json,
+        job_name,
+        pod_name,
+        user_defined_k8s_config_packed,
+        env_vars,
+        job_namespace,
+        pipeline_run_packed,
+        load_incluster_config,
+        kubeconfig_file,
+    ):
+        check.dict_param(instance_ref_dict, "instance_ref_dict")
+        dagster_k8s_job_config = check.inst(
+            unpack_value(
+                check.dict_param(dagster_k8s_job_config_packed, "dagster_k8s_job_config_packed")
+            ),
+            DagsterK8sJobConfig,
+        )
+        check.str_param(input_json, "input_json")
+        check.str_param(job_name, "job_name")
+        check.str_param(pod_name, "pod_name")
+        user_defined_k8s_config = check.inst(
+            unpack_value(
+                check.dict_param(user_defined_k8s_config_packed, "user_defined_k8s_config_packed")
+            ),
+            UserDefinedDagsterK8sConfig,
+        )
+        check.opt_dict_param(env_vars, "env_vars")
+        check.str_param(job_namespace, "job_namespace")
+        pipeline_run = check.inst(
+            unpack_value(check.dict_param(pipeline_run_packed, "pipeline_run_packed")), PipelineRun,
+        )
+        check.bool_param(load_incluster_config, "load_incluster_config")
+        check.opt_str_param(kubeconfig_file, "kubeconfig_file")
+
+        instance_ref = InstanceRef.from_dict(instance_ref_dict)
+        instance = DagsterInstance.from_ref(instance_ref)
+
+        _submit_run_coordinator_job(
+            instance,
+            dagster_k8s_job_config,
+            input_json,
+            job_name,
+            pod_name,
+            user_defined_k8s_config,
+            env_vars,
+            job_namespace,
+            pipeline_run,
+            load_incluster_config,
+            kubeconfig_file,
+            wait_for_job_to_succeed=True,
+        )
+
+        instance.report_engine_event(
+            "Run coordinator finished, Celery exiting",
+            pipeline_run,
+            EngineEventData([]),
+            cls=CeleryK8sRunLauncher,
+        )
+
+    return _execute_run_coordinator_k8s_job
