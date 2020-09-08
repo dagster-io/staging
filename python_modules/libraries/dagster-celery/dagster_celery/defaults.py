@@ -10,7 +10,8 @@ result_backend = backend
 
 task_default_priority = 5
 
-task_default_queue = "dagster"
+task_default_queue = "dagster-step-jobs"
+run_coordinator_queue = "dagster-run-coordinators"
 
 worker_prefetch_multiplier = 4
 
