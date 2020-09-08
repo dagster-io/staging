@@ -1,9 +1,13 @@
 import pytest
+from dagster_celery.tags import DAGSTER_CELERY_QUEUE_TAG
 from dagster_celery_k8s.config import get_celery_engine_config
 from dagster_celery_k8s.executor import CELERY_K8S_CONFIG_KEY
-from dagster_celery_k8s.launcher import _get_validated_celery_k8s_executor_config
+from dagster_celery_k8s.launcher import (
+    CeleryK8sRunLauncher,
+    _get_validated_celery_k8s_executor_config,
+)
 
-from dagster import check
+from dagster import check, pipeline
 from dagster.core.test_utils import environ
 
 
@@ -113,3 +117,38 @@ def test_get_validated_celery_k8s_executor_config():
             "env_config_maps": ["config-pipeline-env"],
             "env_secrets": ["config-secret-env"],
         }
+
+
+def test_get_run_coordinator_queue():
+    @pipeline
+    def test_pipeline():
+        pass
+
+    @pipeline(tags={DAGSTER_CELERY_QUEUE_TAG: "foobar"})
+    def test_pipeline_foobar_queue():
+        pass
+
+    non_queued_launcher = CeleryK8sRunLauncher(
+        instance_config_map="", dagster_home="", postgres_password_secret=""
+    )
+    queued_launcher = CeleryK8sRunLauncher(
+        instance_config_map="", dagster_home="", postgres_password_secret="", queued=True
+    )
+    default_queued_launcher = CeleryK8sRunLauncher(
+        instance_config_map="",
+        dagster_home="",
+        postgres_password_secret="",
+        queue_runs=True,
+        default_run_queue="zipzap",
+    )
+
+    assert non_queued_launcher.get_run_coordinator_queue(test_pipeline.tags) == None
+    assert queued_launcher.get_run_coordinator_queue(test_pipeline.tags) == None
+    assert default_queued_launcher.get_run_coordinator_queue(test_pipeline.tags) == "zipzap"
+
+    assert non_queued_launcher.get_run_coordinator_queue(test_pipeline_foobar_queue.tags) == None
+    assert queued_launcher.get_run_coordinator_queue(test_pipeline_foobar_queue.tags) == "foobar"
+    assert (
+        default_queued_launcher.get_run_coordinator_queue(test_pipeline_foobar_queue.tags)
+        == "foobar"
+    )
