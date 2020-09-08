@@ -323,8 +323,11 @@ def start_termination_thread(termination_event):
     int_thread = threading.Thread(
         target=_kill_on_event, args=(termination_event,), name="kill-on-event"
     )
+
     int_thread.daemon = True
     int_thread.start()
+
+    sys.stderr.write("INTERRUPT THREAD  IS CALLED " + int_thread.name + "\n")
 
 
 # Wraps code that we don't want a SIGINT to interrupt (but throw a KeyboardInterrupt if a

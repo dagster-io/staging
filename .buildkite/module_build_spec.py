@@ -5,7 +5,7 @@ from collections import namedtuple
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 sys.path.append(SCRIPT_PATH)
-from defines import SupportedPython, SupportedPythons, TOX_MAP  # isort:skip
+from defines import SupportedPythons, TOX_MAP  # isort:skip
 from step_builder import StepBuilder  # isort:skip
 
 
@@ -125,10 +125,4 @@ class ModuleBuildSpec(
 
         # We expect the tox file to define a pylint testenv, and we'll construct a separate
         # buildkite build step for the pylint testenv.
-        tests.append(
-            StepBuilder("%s pylint" % package)
-            .run("cd {directory}".format(directory=self.directory), "tox -vv -e pylint")
-            .on_integration_image(SupportedPython.V3_7)
-            .build()
-        )
         return tests
