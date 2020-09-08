@@ -4,7 +4,11 @@ import os
 import docker
 import pytest
 from dagster_celery_k8s.launcher import CeleryK8sRunLauncher
-from dagster_k8s_test_infra.helm import helm_namespace, helm_namespace_for_user_deployments
+from dagster_k8s_test_infra.helm import (
+    helm_namespace,
+    helm_namespace_for_user_deployments,
+    helm_namespace_provider,
+)
 from dagster_k8s_test_infra.integration_utils import image_pull_policy
 from dagster_test.test_project import build_and_tag_test_image, test_project_docker_image
 
