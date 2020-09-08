@@ -207,6 +207,9 @@ celery:
     tag: "latest"
     pullPolicy: Always
 
+  # If true, run coordinators can be configured to launch from Celery tasks
+  run_queueing: false
+
   enabled: true
   # support overriding the name of Celery workers
   workers:
