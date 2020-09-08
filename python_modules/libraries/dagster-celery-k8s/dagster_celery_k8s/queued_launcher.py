@@ -2,8 +2,10 @@ import weakref
 
 import kubernetes
 from dagster_celery.core_execution_loop import DELEGATE_MARKER
+from dagster_celery.make_app import make_app
 from dagster_k8s.job import (
     DagsterK8sJobConfig,
+    UserDefinedDagsterK8sConfig,
     construct_dagster_k8s_job,
     get_job_name_from_run_id,
     get_user_defined_k8s_config,
@@ -21,13 +23,21 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
 from dagster.core.origin import PipelineGrpcServerOrigin, PipelinePythonOrigin
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
-from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
+from dagster.serdes import (
+    ConfigurableClass,
+    ConfigurableClassData,
+    pack_value,
+    serialize_dagster_namedtuple,
+    unpack_value,
+)
 from dagster.utils import frozentags, merge_dicts
 
 from .config import CELERY_K8S_CONFIG_KEY, celery_k8s_config
 
+# from .app import app
 
-class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
+
+class CeleryK8sQueuedRunLauncher(RunLauncher, ConfigurableClass):
     """In contrast to the :py:class:`K8sRunLauncher`, which launches pipeline runs as single K8s
     Jobs, this run launcher is intended for use in concert with
     :py:func:`dagster_celery_k8s.celery_k8s_job_executor`.
@@ -96,12 +106,11 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         config_source=None,
         retries=None,
         inst_data=None,
-        queued=False,
     ):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
         self.load_incluster_config = check.bool_param(
-            load_incluster_config, 'load_incluster_config'
+            load_incluster_config, "load_incluster_config"
         )
         self.kubeconfig_file = check.opt_str_param(kubeconfig_file, "kubeconfig_file")
         if load_incluster_config:
@@ -109,8 +118,6 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
                 kubeconfig_file is None,
                 "`kubeconfig_file` is set but `load_incluster_config` is True.",
             )
-        else:
-            check.opt_str_param(kubeconfig_file, "kubeconfig_file")
 
         self.instance_config_map = check.str_param(instance_config_map, "instance_config_map")
         self.dagster_home = check.str_param(dagster_home, "dagster_home")
@@ -126,8 +133,6 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         self.retries = Retries.from_config(retries)
         self._instance_ref = None
 
-        self.queued = check.bool_param(queued, "queued")
-
     @classmethod
     def config_type(cls):
         """Include all arguments required for DagsterK8sJobConfig along with additional arguments
@@ -140,7 +145,6 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         run_launcher_extra_cfg = {
             "load_incluster_config": Field(bool, is_required=False, default_value=True),
             "kubeconfig_file": Field(Noneable(str), is_required=False, default_value=None),
-            "queued": Field(bool, is_required=False, default_value=False),
         }
 
         res = merge_dicts(job_cfg, run_launcher_extra_cfg)
@@ -239,19 +243,43 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
 
         job_namespace = exc_config.get("job_namespace")
 
-        _launch_run_coordinator_job(
-            job_config,
-            input_json,
-            job_name,
-            pod_name,
-            user_defined_k8s_config,
-            env_vars,
-            job_namespace,
+        # Create celery task
+        self._instance.report_engine_event(
+            "Sending run coordinator task to Celery",
             run,
-            self.load_incluster_config,
-            self.kubeconfig_file,
-            self.queued,
+            EngineEventData([]),
+            cls=CeleryK8sQueuedRunLauncher,
         )
+
+        app = make_app(
+            app_args={
+                "broker": self.broker,
+                "backend": self.backend,
+                "include": self.include,
+                "config_source": self.config_source,
+                "retries": self.retries,
+            }
+        )
+        task = create_k8s_run_coordinator_job_task(app)
+        task_signature = task.si(
+            dagster_k8s_job_config_packed=pack_value(job_config),
+            input_json=input_json,
+            job_name=job_name,
+            pod_name=pod_name,
+            user_defined_k8s_config_packed=pack_value(user_defined_k8s_config),
+            env_vars=env_vars,
+            job_namespace=job_namespace,
+            pipeline_run_packed=pack_value(run),
+            load_incluster_config=self.load_incluster_config,
+            kubeconfig_file=self.kubeconfig_file,
+        )
+        res = task_signature.apply_async(
+            queue="dagster-run-coordinators",
+            routing_key="{queue}.execute_run_coordinator_k8s_job".format(
+                queue="dagster-run-coordinators"
+            ),
+        )
+        res.forget()
 
         return run
 
@@ -309,88 +337,111 @@ def _get_validated_celery_k8s_executor_config(run_config):
     return res.value
 
 
-def _launch_run_coordinator_job(
-    dagster_k8s_job_config,
-    input_json,
-    job_name,
-    pod_name,
-    user_defined_k8s_config,
-    env_vars,
-    job_namespace,
-    pipeline_run,
-    load_incluster_config,
-    kubeconfig_file,
-    queued,
-):
-    instance = DagsterInstance.get()
+def create_k8s_run_coordinator_job_task(celery_app, **task_kwargs):
+    @celery_app.task(bind=True, name="execute_run_coordinator_k8s_job", **task_kwargs)
+    def _execute_run_coordinator_k8s_job(
+        _self,
+        dagster_k8s_job_config_packed,
+        input_json,
+        job_name,
+        pod_name,
+        user_defined_k8s_config_packed,
+        env_vars,
+        job_namespace,
+        pipeline_run_packed,
+        load_incluster_config,
+        kubeconfig_file,
+    ):
+        dagster_k8s_job_config = check.inst(
+            unpack_value(
+                check.dict_param(dagster_k8s_job_config_packed, "dagster_k8s_job_config_packed")
+            ),
+            DagsterK8sJobConfig,
+        )
+        check.is_str(input_json)
+        check.is_str(job_name)
+        check.is_str(pod_name)
+        user_defined_k8s_config = check.inst(
+            unpack_value(
+                check.dict_param(user_defined_k8s_config_packed, "user_defined_k8s_config_packed")
+            ),
+            UserDefinedDagsterK8sConfig,
+        )
+        check.dict_param(env_vars, "env_vars")
+        check.is_str(job_namespace)
+        pipeline_run = check.inst(
+            unpack_value(check.dict_param(pipeline_run_packed, "pipeline_run_packed")), PipelineRun,
+        )
+        check.bool_param(load_incluster_config, "load_incluster_config")
 
-    job = construct_dagster_k8s_job(
-        dagster_k8s_job_config,
-        command=["dagster"],
-        args=["api", "execute_run_with_structured_logs", input_json],
-        job_name=job_name,
-        pod_name=pod_name,
-        component="run_coordinator",
-        user_defined_k8s_config=user_defined_k8s_config,
-        env_vars=env_vars,
-    )
+        instance = DagsterInstance.get()
 
-    # For when launched via DinD or running the cluster
-    if load_incluster_config:
-        kubernetes.config.load_incluster_config()
-    else:
-        kubernetes.config.load_kube_config(kubeconfig_file)
+        job = construct_dagster_k8s_job(
+            dagster_k8s_job_config,
+            command=["dagster"],
+            args=["api", "execute_run_with_structured_logs", input_json],
+            job_name=job_name,
+            pod_name=pod_name,
+            component="run_coordinator",
+            user_defined_k8s_config=user_defined_k8s_config,
+            env_vars=env_vars,
+        )
 
-    try:
-        api = kubernetes.client.BatchV1Api()
-        api.create_namespaced_job(body=job, namespace=job_namespace)
-    except kubernetes.client.rest.ApiException as e:
-        if e.reason == "Conflict":
-            # There is an existing job with the same name so do not procede.
-            instance.report_engine_event(
-                "Did not create Kubernetes job {} for run coordinator since job name already "
-                "exists, exiting.".format(job_name),
-                pipeline_run,
-                EngineEventData(
-                    [
-                        EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                        EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
-                        EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
-                    ],
-                    marker_end=DELEGATE_MARKER,
-                ),
-                CeleryK8sRunLauncher,
-            )
+        # For when launched via DinD or running the cluster
+        if load_incluster_config:
+            kubernetes.config.load_incluster_config()
         else:
-            instance.report_engine_event(
-                "Encountered unexpected error while creating Kubernetes job {} for "
-                "run coordinator, exiting.".format(job_name),
-                pipeline_run,
-                EngineEventData(
-                    [
-                        EventMetadataEntry.text(e, "Error"),
-                        EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
-                    ]
-                ),
-                CeleryK8sRunLauncher,
-            )
-        return
+            kubernetes.config.load_kube_config(kubeconfig_file)
 
-    instance.report_engine_event(
-        "Kubernetes run_coordinator job launched",
-        pipeline_run,
-        EngineEventData(
-            [
-                EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
-                EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
-                EventMetadataEntry.text(pipeline_run.run_id, "Run ID"),
-            ]
-        ),
-        cls=CeleryK8sRunLauncher,
-    )
+        try:
+            api = kubernetes.client.BatchV1Api()
+            api.create_namespaced_job(body=job, namespace=job_namespace)
+        except kubernetes.client.rest.ApiException as e:
+            if e.reason == "Conflict":
+                # There is an existing job with the same name so do not procede.
+                instance.report_engine_event(
+                    "Did not create Kubernetes job {} for run coordinator since job name already "
+                    "exists, exiting.".format(job_name),
+                    pipeline_run,
+                    EngineEventData(
+                        [
+                            EventMetadataEntry.text(job_name, "Kubernetes Job name"),
+                            EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
+                            EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
+                        ],
+                        marker_end=DELEGATE_MARKER,
+                    ),
+                    CeleryK8sQueuedRunLauncher,
+                )
+            else:
+                instance.report_engine_event(
+                    "Encountered unexpected error while creating Kubernetes job {} for "
+                    "run coordinator, exiting.".format(job_name),
+                    pipeline_run,
+                    EngineEventData(
+                        [
+                            EventMetadataEntry.text(e, "Error"),
+                            EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
+                        ]
+                    ),
+                    CeleryK8sQueuedRunLauncher,
+                )
+            return
 
-    if queued:
+        instance.report_engine_event(
+            "Kubernetes run_coordinator job launched from Celery",
+            pipeline_run,
+            EngineEventData(
+                [
+                    EventMetadataEntry.text(job_name, "Kubernetes Job name"),
+                    EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
+                    EventMetadataEntry.text(job_namespace, "Kubernetes Namespace"),
+                    EventMetadataEntry.text(pipeline_run.run_id, "Run ID"),
+                ]
+            ),
+            cls=CeleryK8sQueuedRunLauncher,
+        )
+
         wait_for_job_success(
             job_name=job_name,
             namespace=job_namespace,
@@ -398,3 +449,12 @@ def _launch_run_coordinator_job(
             run_id=pipeline_run.run_id,
             step_job=False,
         )
+
+        instance.report_engine_event(
+            "Run coordinator finished, Celery exiting",
+            pipeline_run,
+            EngineEventData([]),
+            cls=CeleryK8sQueuedRunLauncher,
+        )
+
+    return _execute_run_coordinator_k8s_job
