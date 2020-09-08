@@ -40,35 +40,37 @@ def get_celery_engine_config(dagster_docker_image, job_namespace):
 @pytest.mark.integration
 @pytest.mark.skipif(sys.version_info < (3, 5), reason="Very slow on Python 2")
 def test_execute_on_celery_k8s(  # pylint: disable=redefined-outer-name
-    dagster_docker_image, dagster_instance, helm_namespace
+    dagster_docker_image, dagster_instance, helm_namespace_provider
 ):
-    run_config = merge_dicts(
-        merge_yamls(
-            [
-                os.path.join(test_project_environments_path(), 'env.yaml'),
-                os.path.join(test_project_environments_path(), 'env_s3.yaml'),
-            ]
-        ),
-        get_celery_engine_config(
-            dagster_docker_image=dagster_docker_image, job_namespace=helm_namespace
-        ),
-    )
+    with helm_namespace_provider() as helm_namespace:
 
-    pipeline_name = 'demo_pipeline_celery'
-    run = create_run_for_test(
-        dagster_instance, pipeline_name=pipeline_name, run_config=run_config, mode='default',
-    )
+        run_config = merge_dicts(
+            merge_yamls(
+                [
+                    os.path.join(test_project_environments_path(), 'env.yaml'),
+                    os.path.join(test_project_environments_path(), 'env_s3.yaml'),
+                ]
+            ),
+            get_celery_engine_config(
+                dagster_docker_image=dagster_docker_image, job_namespace=helm_namespace
+            ),
+        )
 
-    dagster_instance.launch_run(
-        run.run_id,
-        ReOriginatedExternalPipelineForTest(get_test_project_external_pipeline(pipeline_name)),
-    )
+        pipeline_name = 'demo_pipeline_celery'
+        run = create_run_for_test(
+            dagster_instance, pipeline_name=pipeline_name, run_config=run_config, mode='default',
+        )
 
-    result = wait_for_job_and_get_raw_logs(
-        job_name='dagster-run-%s' % run.run_id, namespace=helm_namespace
-    )
+        dagster_instance.launch_run(
+            run.run_id,
+            ReOriginatedExternalPipelineForTest(get_test_project_external_pipeline(pipeline_name)),
+        )
 
-    assert 'PIPELINE_SUCCESS' in result, 'no match, result: {}'.format(result)
+        result = wait_for_job_and_get_raw_logs(
+            job_name='dagster-run-%s' % run.run_id, namespace=helm_namespace
+        )
+
+        assert 'PIPELINE_SUCCESS' in result, 'no match, result: {}'.format(result)
 
 
 @pytest.mark.integration
