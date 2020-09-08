@@ -1,0 +1,9 @@
+{
+    "kind": "DeploymentList",
+    "apiVersion": "apps/v1",
+    "metadata": {
+        "selfLink": "/apis/apps/v1/namespaces/kube-node-lease/deployments",
+        "resourceVersion": "606"
+    },
+    "items": []
+}

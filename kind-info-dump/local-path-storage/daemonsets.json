@@ -1,0 +1,9 @@
+{
+    "kind": "DaemonSetList",
+    "apiVersion": "apps/v1",
+    "metadata": {
+        "selfLink": "/apis/apps/v1/namespaces/local-path-storage/daemonsets",
+        "resourceVersion": "611"
+    },
+    "items": []
+}
