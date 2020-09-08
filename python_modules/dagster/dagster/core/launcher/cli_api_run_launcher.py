@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import weakref
 
@@ -133,6 +134,9 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
         if not self._cleanup_thread:
             self._cleanup_stop_event = threading.Event()
             self._cleanup_thread = threading.Thread(target=self._clock, args=())
+
+            sys.stderr.write("CLI CLEANING THREAD  IS CALLED " + self._cleanup_thread.name + "\n")
+
             self._cleanup_thread.daemon = True
             self._cleanup_thread.start()
 

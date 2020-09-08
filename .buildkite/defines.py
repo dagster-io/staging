@@ -8,9 +8,6 @@ class SupportedPython:
 
 SupportedPythons = [
     SupportedPython.V2_7,
-    SupportedPython.V3_6,
-    SupportedPython.V3_7,
-    SupportedPython.V3_8,
 ]
 
 

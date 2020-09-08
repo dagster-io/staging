@@ -1,3 +1,4 @@
+import sys
 import threading
 from collections import namedtuple
 from contextlib import contextmanager
@@ -202,6 +203,8 @@ class PostgresEventWatcher(object):
         )
         self._watcher_thread.daemon = True
         self._watcher_thread.start()
+
+        sys.stderr.write("WATCHER THREAD  IS CALLED " + self._watcher_thread.name + "\n")
 
     def has_run_id(self, run_id):
         with self._dict_lock:
