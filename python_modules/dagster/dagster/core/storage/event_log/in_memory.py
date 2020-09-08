@@ -16,7 +16,7 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
     """
 
     def __init__(self, inst_data=None):
-        self._logs = defaultdict(EventLogSequence)
+        self._logs = defaultdict(list)
         self._handlers = defaultdict(set)
         self._inst_data = inst_data
 
@@ -54,7 +54,7 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
         del self._logs[run_id]
 
     def wipe(self):
-        self._logs = defaultdict(EventLogSequence)
+        self._logs = defaultdict(list)
 
     def watch(self, run_id, _start_cursor, callback):
         self._handlers[run_id].add(callback)
