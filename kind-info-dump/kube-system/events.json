@@ -1,0 +1,1624 @@
+{
+    "kind": "EventList",
+    "apiVersion": "v1",
+    "metadata": {
+        "selfLink": "/api/v1/namespaces/kube-system/events",
+        "resourceVersion": "606"
+    },
+    "items": [
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-5b7gt.1635e9dae84ff134",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-5b7gt.1635e9dae84ff134",
+                "uid": "88b5fd46-c3e5-4bde-8d7c-276e50e76e89",
+                "resourceVersion": "473",
+                "creationTimestamp": "2020-09-18T15:19:29Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:37Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-5b7gt",
+                "uid": "6fd296a4-5515-4ff6-8d8c-839dec60d79f",
+                "apiVersion": "v1",
+                "resourceVersion": "417"
+            },
+            "reason": "FailedScheduling",
+            "message": "0/1 nodes are available: 1 node(s) had taint {node.kubernetes.io/not-ready: }, that the pod didn't tolerate.",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:29Z",
+            "lastTimestamp": "2020-09-18T15:19:37Z",
+            "count": 3,
+            "type": "Warning",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-5b7gt.1635e9ddc7d61ca0",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-5b7gt.1635e9ddc7d61ca0",
+                "uid": "5b86ed93-702f-4829-aaa9-ae7ca7eb3223",
+                "resourceVersion": "494",
+                "creationTimestamp": "2020-09-18T15:19:41Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:41Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-5b7gt",
+                "uid": "6fd296a4-5515-4ff6-8d8c-839dec60d79f",
+                "apiVersion": "v1",
+                "resourceVersion": "427"
+            },
+            "reason": "Scheduled",
+            "message": "Successfully assigned kube-system/coredns-66bff467f8-5b7gt to cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:41Z",
+            "lastTimestamp": "2020-09-18T15:19:41Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-5b7gt.1635e9ddea8b93ec",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-5b7gt.1635e9ddea8b93ec",
+                "uid": "1d251a81-7a28-4913-b9f0-d39c8b832aa1",
+                "resourceVersion": "502",
+                "creationTimestamp": "2020-09-18T15:19:41Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:41Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-5b7gt",
+                "uid": "6fd296a4-5515-4ff6-8d8c-839dec60d79f",
+                "apiVersion": "v1",
+                "resourceVersion": "492",
+                "fieldPath": "spec.containers{coredns}"
+            },
+            "reason": "Pulled",
+            "message": "Container image \"k8s.gcr.io/coredns:1.6.7\" already present on machine",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:41Z",
+            "lastTimestamp": "2020-09-18T15:19:41Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-5b7gt.1635e9de0a1f8628",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-5b7gt.1635e9de0a1f8628",
+                "uid": "21ac3c63-fe00-446e-9c79-1d59e3cfbb3f",
+                "resourceVersion": "505",
+                "creationTimestamp": "2020-09-18T15:19:42Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:42Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-5b7gt",
+                "uid": "6fd296a4-5515-4ff6-8d8c-839dec60d79f",
+                "apiVersion": "v1",
+                "resourceVersion": "492",
+                "fieldPath": "spec.containers{coredns}"
+            },
+            "reason": "Created",
+            "message": "Created container coredns",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:42Z",
+            "lastTimestamp": "2020-09-18T15:19:42Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-5b7gt.1635e9de168aa7f8",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-5b7gt.1635e9de168aa7f8",
+                "uid": "8be5bb8a-7d24-4882-aaca-20d92223d7a5",
+                "resourceVersion": "509",
+                "creationTimestamp": "2020-09-18T15:19:42Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:42Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-5b7gt",
+                "uid": "6fd296a4-5515-4ff6-8d8c-839dec60d79f",
+                "apiVersion": "v1",
+                "resourceVersion": "492",
+                "fieldPath": "spec.containers{coredns}"
+            },
+            "reason": "Started",
+            "message": "Started container coredns",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:42Z",
+            "lastTimestamp": "2020-09-18T15:19:42Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-lk8gl.1635e9dae6196b84",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-lk8gl.1635e9dae6196b84",
+                "uid": "300247c8-bd39-4ab7-aef6-8479eb2f2774",
+                "resourceVersion": "471",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:37Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-lk8gl",
+                "uid": "fdfafcfb-4ed1-43da-b766-4878109756f1",
+                "apiVersion": "v1",
+                "resourceVersion": "412"
+            },
+            "reason": "FailedScheduling",
+            "message": "0/1 nodes are available: 1 node(s) had taint {node.kubernetes.io/not-ready: }, that the pod didn't tolerate.",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:37Z",
+            "count": 3,
+            "type": "Warning",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-lk8gl.1635e9ddc876970c",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-lk8gl.1635e9ddc876970c",
+                "uid": "e26399cb-0db4-4b66-a81a-933fcfa9788c",
+                "resourceVersion": "495",
+                "creationTimestamp": "2020-09-18T15:19:41Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:41Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-lk8gl",
+                "uid": "fdfafcfb-4ed1-43da-b766-4878109756f1",
+                "apiVersion": "v1",
+                "resourceVersion": "420"
+            },
+            "reason": "Scheduled",
+            "message": "Successfully assigned kube-system/coredns-66bff467f8-lk8gl to cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:41Z",
+            "lastTimestamp": "2020-09-18T15:19:41Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-lk8gl.1635e9dde98fd890",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-lk8gl.1635e9dde98fd890",
+                "uid": "75cc3ed9-8669-4cb9-871c-9dbb1fddec79",
+                "resourceVersion": "501",
+                "creationTimestamp": "2020-09-18T15:19:41Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:41Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-lk8gl",
+                "uid": "fdfafcfb-4ed1-43da-b766-4878109756f1",
+                "apiVersion": "v1",
+                "resourceVersion": "493",
+                "fieldPath": "spec.containers{coredns}"
+            },
+            "reason": "Pulled",
+            "message": "Container image \"k8s.gcr.io/coredns:1.6.7\" already present on machine",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:41Z",
+            "lastTimestamp": "2020-09-18T15:19:41Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-lk8gl.1635e9de07ffa878",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-lk8gl.1635e9de07ffa878",
+                "uid": "3fdd0738-6369-44c9-bc96-30750697dc59",
+                "resourceVersion": "504",
+                "creationTimestamp": "2020-09-18T15:19:42Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:42Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-lk8gl",
+                "uid": "fdfafcfb-4ed1-43da-b766-4878109756f1",
+                "apiVersion": "v1",
+                "resourceVersion": "493",
+                "fieldPath": "spec.containers{coredns}"
+            },
+            "reason": "Created",
+            "message": "Created container coredns",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:42Z",
+            "lastTimestamp": "2020-09-18T15:19:42Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8-lk8gl.1635e9de1453307c",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8-lk8gl.1635e9de1453307c",
+                "uid": "e3528149-b22d-4e28-b43e-7cc18452edc5",
+                "resourceVersion": "508",
+                "creationTimestamp": "2020-09-18T15:19:42Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:42Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8-lk8gl",
+                "uid": "fdfafcfb-4ed1-43da-b766-4878109756f1",
+                "apiVersion": "v1",
+                "resourceVersion": "493",
+                "fieldPath": "spec.containers{coredns}"
+            },
+            "reason": "Started",
+            "message": "Started container coredns",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:42Z",
+            "lastTimestamp": "2020-09-18T15:19:42Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8.1635e9dae4f01a3c",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8.1635e9dae4f01a3c",
+                "uid": "602a6049-089a-4e6e-a2ce-d39160b612b8",
+                "resourceVersion": "415",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "ReplicaSet",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8",
+                "uid": "3109f82d-4040-45a8-886a-c0a2cc18af3d",
+                "apiVersion": "apps/v1",
+                "resourceVersion": "408"
+            },
+            "reason": "SuccessfulCreate",
+            "message": "Created pod: coredns-66bff467f8-lk8gl",
+            "source": {
+                "component": "replicaset-controller"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns-66bff467f8.1635e9dae6b0aef4",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns-66bff467f8.1635e9dae6b0aef4",
+                "uid": "f2d54056-6584-47ed-ae14-d49540c80a38",
+                "resourceVersion": "424",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "ReplicaSet",
+                "namespace": "kube-system",
+                "name": "coredns-66bff467f8",
+                "uid": "3109f82d-4040-45a8-886a-c0a2cc18af3d",
+                "apiVersion": "apps/v1",
+                "resourceVersion": "408"
+            },
+            "reason": "SuccessfulCreate",
+            "message": "Created pod: coredns-66bff467f8-5b7gt",
+            "source": {
+                "component": "replicaset-controller"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "coredns.1635e9dae39bb8bc",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/coredns.1635e9dae39bb8bc",
+                "uid": "d9371e2b-973b-44c4-8473-60e40e52db3b",
+                "resourceVersion": "413",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Deployment",
+                "namespace": "kube-system",
+                "name": "coredns",
+                "uid": "58c85288-b41c-44e6-a100-9d18f4f26624",
+                "apiVersion": "apps/v1",
+                "resourceVersion": "205"
+            },
+            "reason": "ScalingReplicaSet",
+            "message": "Scaled up replica set coredns-66bff467f8 to 2",
+            "source": {
+                "component": "deployment-controller"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kindnet-q7n7d.1635e9dad29eec28",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kindnet-q7n7d.1635e9dad29eec28",
+                "uid": "37621960-8514-4676-b2ed-ba3c5341cbaa",
+                "resourceVersion": "402",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kindnet-q7n7d",
+                "uid": "3f001cd5-a8a5-4af0-ac25-4dd8b247708f",
+                "apiVersion": "v1",
+                "resourceVersion": "395"
+            },
+            "reason": "Scheduled",
+            "message": "Successfully assigned kube-system/kindnet-q7n7d to cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kindnet-q7n7d.1635e9daf886de50",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kindnet-q7n7d.1635e9daf886de50",
+                "uid": "87103115-d0dd-4ab1-a9f2-dea930d5ccdf",
+                "resourceVersion": "437",
+                "creationTimestamp": "2020-09-18T15:19:29Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:29Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kindnet-q7n7d",
+                "uid": "3f001cd5-a8a5-4af0-ac25-4dd8b247708f",
+                "apiVersion": "v1",
+                "resourceVersion": "399",
+                "fieldPath": "spec.containers{kindnet-cni}"
+            },
+            "reason": "Pulled",
+            "message": "Container image \"kindest/kindnetd:0.5.4\" already present on machine",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:29Z",
+            "lastTimestamp": "2020-09-18T15:19:29Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kindnet-q7n7d.1635e9db198366b4",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kindnet-q7n7d.1635e9db198366b4",
+                "uid": "917cb35b-78e7-43db-9648-6c5f7357d311",
+                "resourceVersion": "440",
+                "creationTimestamp": "2020-09-18T15:19:29Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:29Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kindnet-q7n7d",
+                "uid": "3f001cd5-a8a5-4af0-ac25-4dd8b247708f",
+                "apiVersion": "v1",
+                "resourceVersion": "399",
+                "fieldPath": "spec.containers{kindnet-cni}"
+            },
+            "reason": "Created",
+            "message": "Created container kindnet-cni",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:29Z",
+            "lastTimestamp": "2020-09-18T15:19:29Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kindnet-q7n7d.1635e9db2ce98abc",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kindnet-q7n7d.1635e9db2ce98abc",
+                "uid": "ca0ea4ba-583a-40b8-bd7c-49f2578f9ce7",
+                "resourceVersion": "446",
+                "creationTimestamp": "2020-09-18T15:19:30Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:30Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kindnet-q7n7d",
+                "uid": "3f001cd5-a8a5-4af0-ac25-4dd8b247708f",
+                "apiVersion": "v1",
+                "resourceVersion": "399",
+                "fieldPath": "spec.containers{kindnet-cni}"
+            },
+            "reason": "Started",
+            "message": "Started container kindnet-cni",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:30Z",
+            "lastTimestamp": "2020-09-18T15:19:30Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kindnet.1635e9dad20de4d0",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kindnet.1635e9dad20de4d0",
+                "uid": "a24b6a1d-6f1e-40c4-aefd-565483a00e58",
+                "resourceVersion": "397",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "DaemonSet",
+                "namespace": "kube-system",
+                "name": "kindnet",
+                "uid": "cc6613d5-8a12-481f-a726-9844858a6ae8",
+                "apiVersion": "apps/v1",
+                "resourceVersion": "234"
+            },
+            "reason": "SuccessfulCreate",
+            "message": "Created pod: kindnet-q7n7d",
+            "source": {
+                "component": "daemonset-controller"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-controller-manager.1635e9d7019945cc",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-controller-manager.1635e9d7019945cc",
+                "uid": "bd771194-22ea-45aa-9766-88a2d4570829",
+                "resourceVersion": "165",
+                "creationTimestamp": "2020-09-18T15:19:12Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:12Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Endpoints",
+                "namespace": "kube-system",
+                "name": "kube-controller-manager",
+                "uid": "e44c3578-ab19-4d1a-b4ed-e106f21e5702",
+                "apiVersion": "v1",
+                "resourceVersion": "163"
+            },
+            "reason": "LeaderElection",
+            "message": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane_171c5869-ad56-45e8-81d9-b71680215d36 became leader",
+            "source": {
+                "component": "kube-controller-manager"
+            },
+            "firstTimestamp": "2020-09-18T15:19:12Z",
+            "lastTimestamp": "2020-09-18T15:19:12Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-controller-manager.1635e9d7019a37fc",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-controller-manager.1635e9d7019a37fc",
+                "uid": "c36170d9-9327-481a-acc8-32fcee919e9f",
+                "resourceVersion": "166",
+                "creationTimestamp": "2020-09-18T15:19:12Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:12Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Lease",
+                "namespace": "kube-system",
+                "name": "kube-controller-manager",
+                "uid": "83b28914-db1f-4472-9b1d-4b840ab4c861",
+                "apiVersion": "coordination.k8s.io/v1",
+                "resourceVersion": "164"
+            },
+            "reason": "LeaderElection",
+            "message": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane_171c5869-ad56-45e8-81d9-b71680215d36 became leader",
+            "source": {
+                "component": "kube-controller-manager"
+            },
+            "firstTimestamp": "2020-09-18T15:19:12Z",
+            "lastTimestamp": "2020-09-18T15:19:12Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-proxy-cpk5k.1635e9dad346e810",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-proxy-cpk5k.1635e9dad346e810",
+                "uid": "c15d6d62-4559-443b-b233-0aeaf0da9ae4",
+                "resourceVersion": "404",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kube-proxy-cpk5k",
+                "uid": "aac30cb2-d60e-46e4-a217-62d67f070b0b",
+                "apiVersion": "v1",
+                "resourceVersion": "396"
+            },
+            "reason": "Scheduled",
+            "message": "Successfully assigned kube-system/kube-proxy-cpk5k to cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-proxy-cpk5k.1635e9daf2272d6c",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-proxy-cpk5k.1635e9daf2272d6c",
+                "uid": "06c0155d-3b69-4206-b2d1-e4bf885ba390",
+                "resourceVersion": "436",
+                "creationTimestamp": "2020-09-18T15:19:29Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:29Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kube-proxy-cpk5k",
+                "uid": "aac30cb2-d60e-46e4-a217-62d67f070b0b",
+                "apiVersion": "v1",
+                "resourceVersion": "400",
+                "fieldPath": "spec.containers{kube-proxy}"
+            },
+            "reason": "Pulled",
+            "message": "Container image \"k8s.gcr.io/kube-proxy:v1.18.2\" already present on machine",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:29Z",
+            "lastTimestamp": "2020-09-18T15:19:29Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-proxy-cpk5k.1635e9db1a69960c",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-proxy-cpk5k.1635e9db1a69960c",
+                "uid": "74a1c7e5-f621-4b55-80ee-0babbe1f7d30",
+                "resourceVersion": "441",
+                "creationTimestamp": "2020-09-18T15:19:29Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:29Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kube-proxy-cpk5k",
+                "uid": "aac30cb2-d60e-46e4-a217-62d67f070b0b",
+                "apiVersion": "v1",
+                "resourceVersion": "400",
+                "fieldPath": "spec.containers{kube-proxy}"
+            },
+            "reason": "Created",
+            "message": "Created container kube-proxy",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:29Z",
+            "lastTimestamp": "2020-09-18T15:19:29Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-proxy-cpk5k.1635e9db2008ae40",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-proxy-cpk5k.1635e9db2008ae40",
+                "uid": "6c2f0c7b-291a-4d77-a326-070d2e17e85f",
+                "resourceVersion": "442",
+                "creationTimestamp": "2020-09-18T15:19:29Z",
+                "managedFields": [
+                    {
+                        "manager": "kubelet",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:29Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:fieldPath": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {},
+                                "f:host": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Pod",
+                "namespace": "kube-system",
+                "name": "kube-proxy-cpk5k",
+                "uid": "aac30cb2-d60e-46e4-a217-62d67f070b0b",
+                "apiVersion": "v1",
+                "resourceVersion": "400",
+                "fieldPath": "spec.containers{kube-proxy}"
+            },
+            "reason": "Started",
+            "message": "Started container kube-proxy",
+            "source": {
+                "component": "kubelet",
+                "host": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane"
+            },
+            "firstTimestamp": "2020-09-18T15:19:29Z",
+            "lastTimestamp": "2020-09-18T15:19:29Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-proxy.1635e9dad28f5524",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-proxy.1635e9dad28f5524",
+                "uid": "c2a5b5f1-1f88-4df2-93a2-481a8d31c917",
+                "resourceVersion": "403",
+                "creationTimestamp": "2020-09-18T15:19:28Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:28Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "DaemonSet",
+                "namespace": "kube-system",
+                "name": "kube-proxy",
+                "uid": "95e69ceb-8f77-4496-979b-5246ce36500c",
+                "apiVersion": "apps/v1",
+                "resourceVersion": "212"
+            },
+            "reason": "SuccessfulCreate",
+            "message": "Created pod: kube-proxy-cpk5k",
+            "source": {
+                "component": "daemonset-controller"
+            },
+            "firstTimestamp": "2020-09-18T15:19:28Z",
+            "lastTimestamp": "2020-09-18T15:19:28Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-scheduler.1635e9d73da9e440",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-scheduler.1635e9d73da9e440",
+                "uid": "1db54ffc-77aa-4f1a-80c6-03bce36ccd45",
+                "resourceVersion": "191",
+                "creationTimestamp": "2020-09-18T15:19:13Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:13Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Endpoints",
+                "namespace": "kube-system",
+                "name": "kube-scheduler",
+                "uid": "932ecc2b-02a9-401a-8b92-0b6508042632",
+                "apiVersion": "v1",
+                "resourceVersion": "187"
+            },
+            "reason": "LeaderElection",
+            "message": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane_99a336e8-06a6-43b8-9df7-ac38feca51ab became leader",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:13Z",
+            "lastTimestamp": "2020-09-18T15:19:13Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        },
+        {
+            "metadata": {
+                "name": "kube-scheduler.1635e9d73daab7f8",
+                "namespace": "kube-system",
+                "selfLink": "/api/v1/namespaces/kube-system/events/kube-scheduler.1635e9d73daab7f8",
+                "uid": "79864a59-da1d-4863-99ac-9dfa14446adf",
+                "resourceVersion": "193",
+                "creationTimestamp": "2020-09-18T15:19:13Z",
+                "managedFields": [
+                    {
+                        "manager": "kube-scheduler",
+                        "operation": "Update",
+                        "apiVersion": "v1",
+                        "time": "2020-09-18T15:19:13Z",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:count": {},
+                            "f:firstTimestamp": {},
+                            "f:involvedObject": {
+                                "f:apiVersion": {},
+                                "f:kind": {},
+                                "f:name": {},
+                                "f:namespace": {},
+                                "f:resourceVersion": {},
+                                "f:uid": {}
+                            },
+                            "f:lastTimestamp": {},
+                            "f:message": {},
+                            "f:reason": {},
+                            "f:source": {
+                                "f:component": {}
+                            },
+                            "f:type": {}
+                        }
+                    }
+                ]
+            },
+            "involvedObject": {
+                "kind": "Lease",
+                "namespace": "kube-system",
+                "name": "kube-scheduler",
+                "uid": "042424fa-0c47-47c4-b951-0b568fbd5d6a",
+                "apiVersion": "coordination.k8s.io/v1",
+                "resourceVersion": "189"
+            },
+            "reason": "LeaderElection",
+            "message": "cluster-80ad2d17f29d423baccdce9f9ab1f072-control-plane_99a336e8-06a6-43b8-9df7-ac38feca51ab became leader",
+            "source": {
+                "component": "default-scheduler"
+            },
+            "firstTimestamp": "2020-09-18T15:19:13Z",
+            "lastTimestamp": "2020-09-18T15:19:13Z",
+            "count": 1,
+            "type": "Normal",
+            "eventTime": null,
+            "reportingComponent": "",
+            "reportingInstance": ""
+        }
+    ]
+}

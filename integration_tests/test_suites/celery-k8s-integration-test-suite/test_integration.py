@@ -40,8 +40,10 @@ def get_celery_engine_config(dagster_docker_image, job_namespace):
 @pytest.mark.integration
 @pytest.mark.skipif(sys.version_info < (3, 5), reason="Very slow on Python 2")
 def test_execute_on_celery_k8s(  # pylint: disable=redefined-outer-name
-    dagster_docker_image, dagster_instance, helm_namespace
+    dagster_docker_image, dagster_instance, helm_namespace_provider
 ):
+    helm_namespace = next(helm_namespace_provider())
+
     run_config = merge_dicts(
         merge_yamls(
             [
