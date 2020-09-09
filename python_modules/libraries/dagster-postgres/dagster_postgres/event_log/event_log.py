@@ -201,21 +201,6 @@ class PostgresEventWatcher(object):
         return _has_run_id
 
     def watch_run(self, run_id, start_cursor, callback):
-        if not self._watcher_thread:
-            self._watcher_thread_exit = threading.Event()
-            self._watcher_thread = threading.Thread(
-                target=watcher_thread,
-                args=(
-                    self._conn_string,
-                    self._run_id_dict,
-                    self._handlers_dict,
-                    self._dict_lock,
-                    self._watcher_thread_exit,
-                ),
-            )
-            self._watcher_thread.daemon = True
-            self._watcher_thread.start()
-
         with self._dict_lock:
             if run_id in self._run_id_dict:
                 self._handlers_dict[run_id].append((start_cursor, callback))
