@@ -40,7 +40,11 @@ def create_task(celery_app, **task_kwargs):
             "Executing steps {} in celery worker".format(step_keys_str),
             pipeline_run,
             EngineEventData(
-                [EventMetadataEntry.text(step_keys_str, "step_keys"),], marker_end=DELEGATE_MARKER,
+                [
+                    EventMetadataEntry.text(step_keys_str, "step_keys"),
+                    EventMetadataEntry.text(_self.request.hostname, "Celery worker"),
+                ],
+                marker_end=DELEGATE_MARKER,
             ),
             CeleryExecutor,
             step_key=execution_plan.step_key_for_single_step_plans(),

@@ -271,6 +271,7 @@ def create_docker_task(celery_app, **task_kwargs):
                 [
                     EventMetadataEntry.text(step_keys_str, "Step keys"),
                     EventMetadataEntry.text(docker_image, "Image"),
+                    EventMetadataEntry.text(_self.request.hostname, "Celery worker"),
                 ],
                 marker_end=DELEGATE_MARKER,
             ),
