@@ -352,6 +352,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                     EventMetadataEntry.text(
                         str(job_config.service_account_name), "Service account name"
                     ),
+                    EventMetadataEntry.text(_self.request.hostname, "Celery worker"),
                 ],
                 marker_end=DELEGATE_MARKER,
             ),
