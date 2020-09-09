@@ -6,6 +6,7 @@ from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
 from .trigger import TriggeredExecutionDefinition
+from .utils import check_valid_name
 
 VALID_REPOSITORY_DATA_DICT_KEYS = {
     "pipelines",
@@ -512,7 +513,7 @@ class RepositoryDefinition(object):
     def __init__(
         self, name, repository_data, description=None,
     ):
-        self._name = check.str_param(name, "name")
+        self._name = check_valid_name(name)
         self._description = check.opt_str_param(description, "description")
         self._repository_data = check.inst_param(repository_data, "repository_data", RepositoryData)
 

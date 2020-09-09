@@ -1,6 +1,7 @@
 import keyword
 import os
 import re
+import warnings
 from glob import glob
 
 import pkg_resources
@@ -53,6 +54,25 @@ def check_valid_name(name):
         raise DagsterInvalidDefinitionError(
             "{name} must be in regex {regex}".format(name=name, regex=VALID_NAME_REGEX_STR)
         )
+
+    check.invariant(is_valid_name(name))
+    return name
+
+
+def is_valid_name(name):
+    check.str_param(name, "name")
+
+    return name not in DISALLOWED_NAMES and has_valid_name_chars(name)
+
+
+def check_for_invalid_name_and_warn(name):
+    check.str_param(name, "name")
+    warnings.warn(
+        'You provided name "{name}" which is invalid. Name must pass regex "{regex}"'.format(
+            name=name, regex=VALID_NAME_REGEX_STR
+        ),
+        stacklevel=2,
+    )
     return name
 
 
