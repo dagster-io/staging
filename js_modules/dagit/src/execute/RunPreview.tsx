@@ -1,7 +1,7 @@
 import * as React from "react";
 import gql from "graphql-tag";
 import styled from "styled-components/macro";
-import { Colors, Icon, Checkbox, Tooltip, Intent, Position } from "@blueprintjs/core";
+import { Colors, Icon, Checkbox, Tooltip, Intent, Position, Button, Code } from "@blueprintjs/core";
 
 import PythonErrorInfo from "../PythonErrorInfo";
 import { showCustomAlert } from "../CustomAlertProvider";
@@ -17,6 +17,7 @@ import {
   RunPreviewValidationFragment,
   RunPreviewValidationFragment_PipelineConfigValidationInvalid_errors
 } from "./types/RunPreviewValidationFragment";
+import { useConfirmation } from "../CustomConfirmationProvider";
 
 type ValidationError = RunPreviewValidationFragment_PipelineConfigValidationInvalid_errors;
 type ValidationErrorOrNode = ValidationError | React.ReactNode;
@@ -41,6 +42,46 @@ const stateToHint = {
   none: { title: `This section is empty and valid.`, intent: Intent.PRIMARY }
 };
 
+const RemoveExtraPathsButton = ({
+  onRemoveExtraPaths,
+  extraNodes
+}: {
+  extraNodes: string[];
+  onRemoveExtraPaths: (paths: string[]) => void;
+}) => {
+  const confirm = useConfirmation();
+
+  return (
+    <div style={{ marginTop: 5 }}>
+      <Button
+        small={true}
+        onClick={async () => {
+          await confirm({
+            title: "Clear Undefined Fields",
+            description: (
+              <div>
+                <p>
+                  This will remove the config at the following paths from your current run config:
+                </p>{" "}
+                <ul>
+                  {extraNodes.map(node => (
+                    <li key={node}>
+                      <Code>{node}</Code>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
+          });
+          onRemoveExtraPaths(extraNodes);
+        }}
+      >
+        Remove Undefined Fields
+      </Button>
+    </div>
+  );
+};
+
 interface RunPreviewProps {
   validation: RunPreviewValidationFragment | null;
   document: object | null;
@@ -48,6 +89,7 @@ interface RunPreviewProps {
   actions?: React.ReactChild;
   runConfigSchema?: ConfigEditorRunConfigSchemaFragment;
   onHighlightPath: (path: string[]) => void;
+  onRemoveExtraPaths: (paths: string[]) => void;
 }
 
 interface RunPreviewState {
@@ -84,6 +126,12 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
               fields {
                 name
               }
+            }
+            ... on FieldNotDefinedConfigError {
+              fieldName
+            }
+            ... on FieldsNotDefinedConfigError {
+              fieldNames
             }
           }
         }
@@ -135,9 +183,10 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
   };
 
   render() {
-    const { actions, document, validation, onHighlightPath } = this.props;
+    const { actions, document, validation, onHighlightPath, onRemoveExtraPaths } = this.props;
     const { errorsOnly } = this.state;
 
+    const extraNodes: string[] = [];
     const missingNodes: string[] = [];
     const errorsAndPaths: {
       pathKey: string;
@@ -155,6 +204,14 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
             missingNodes.push([...path, field.name].join("."));
           }
         } else {
+          if (e.__typename === "FieldNotDefinedConfigError") {
+            extraNodes.push([...path, e.fieldName].join("."));
+          } else if (e.__typename === "FieldsNotDefinedConfigError") {
+            for (const fieldName of e.fieldNames) {
+              extraNodes.push([...path, fieldName].join("."));
+            }
+          }
+
           errorsAndPaths.push({ pathKey: path.join("."), error: e });
         }
       });
@@ -245,6 +302,16 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
                 <ErrorRow key={idx} error={item.error} onHighlight={onHighlightPath} />
               ))}
             </Section>
+
+            {extraNodes.length > 0 && (
+              <Section>
+                <SectionTitle>Auto Fix Errors:</SectionTitle>
+                <RemoveExtraPathsButton
+                  onRemoveExtraPaths={onRemoveExtraPaths}
+                  extraNodes={extraNodes}
+                />
+              </Section>
+            )}
           </ErrorListContainer>
         }
         firstInitialPercent={50}
