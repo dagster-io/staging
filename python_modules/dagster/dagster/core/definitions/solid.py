@@ -410,7 +410,7 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         _configured_config_mapping_fn=None,
         _configured_config_schema=None,
     ):
-        check.str_param(name, "name")
+        check_valid_name(name)
         self._solid_defs = check.list_param(solid_defs, "solid_defs", of_type=ISolidDefinition)
 
         self._dependencies = validate_dependency_dict(dependencies)

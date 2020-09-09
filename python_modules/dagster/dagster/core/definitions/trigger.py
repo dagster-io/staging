@@ -5,6 +5,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.utils.backcompat import experimental_class_warning
 
 from .mode import DEFAULT_MODE_NAME
+from .utils import check_valid_name
 
 
 class TriggeredExecutionContext(namedtuple("TriggeredExecutionContext", "instance")):
@@ -70,7 +71,7 @@ class TriggeredExecutionDefinition(object):
         solid_selection=None,
     ):
         experimental_class_warning("TriggeredExecutionDefinition")
-        self._name = check.str_param(name, "name")
+        self._name = check_valid_name(name)
         self._pipeline_name = check.str_param(pipeline_name, "pipeline_name")
         self._run_config_fn = check.opt_callable_param(
             run_config_fn, "run_config_fn", lambda _context: {}

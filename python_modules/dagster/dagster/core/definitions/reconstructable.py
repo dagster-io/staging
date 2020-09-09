@@ -22,7 +22,7 @@ from .executable import ExecutablePipeline
 
 def get_ephemeral_repository_name(pipeline_name):
     check.str_param(pipeline_name, "pipeline_name")
-    return "<<pipeline:{pipeline_name}>>".format(pipeline_name=pipeline_name)
+    return "pipeline__{pipeline_name}".format(pipeline_name=pipeline_name)
 
 
 @whitelist_for_serdes
