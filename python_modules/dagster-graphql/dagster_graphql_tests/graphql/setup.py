@@ -1028,8 +1028,11 @@ def chained_failure_pipeline():
 
 
 @resource
-def noop(_):
-    return
+def noop_resource(_):
+    def noop(*_args, **_kwargs):
+        return False
+
+    return noop
 
 
 @pipeline(
@@ -1038,7 +1041,7 @@ def noop(_):
             name="default",
             resource_defs={"launch_pipeline_run_resource": launch_pipeline_run_resource},
         ),
-        ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop}),
+        ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop_resource}),
     ],
     tags={'kind': 'cross_pipeline', 'dependent_pipeline': 'csv_hello_world'},
 )
@@ -1056,16 +1059,19 @@ def cross_pipeline():
             [RepositoryLocationHandle.create_in_process_location(create_main_recon_repo().pointer)]
         )
 
+    def execution_params_fn():
+        return {'selector': selector_fn(), 'runConfigData': csv_hello_world_solids_config()}
+
+    def should_execute_pipeline_fn(solid_context):
+        return True if solid_context.pipeline_run.mode == "default" else False
+
     @solid(required_resource_keys={'launch_pipeline_run_resource'})
     def launch_new_pipeline_solid(context):
 
         result = context.resources.launch_pipeline_run_resource(
-            instance=context.instance,
-            mode="default",
-            run_id=context.run_id,
-            should_execute_pipeline_fn=lambda: True,
-            selector_fn=selector_fn,
-            run_config_data_fn=csv_hello_world_solids_config,
+            solid_context=context,
+            should_execute_pipeline_fn=should_execute_pipeline_fn,
+            execution_params_fn=execution_params_fn,
             workspace_fn=workspace_fn,
         )
 
