@@ -8,6 +8,7 @@ from dagster.core.storage.tags import check_tags
 from dagster.utils import merge_dicts
 
 from .mode import DEFAULT_MODE_NAME
+from .utils import check_valid_name
 
 
 class ScheduleExecutionContext(namedtuple("ScheduleExecutionContext", "instance")):
@@ -91,7 +92,7 @@ class ScheduleDefinition(object):
         environment_vars=None,
     ):
 
-        self._name = check.str_param(name, "name")
+        self._name = check_valid_name(name)
         self._cron_schedule = check.str_param(cron_schedule, "cron_schedule")
         self._pipeline_name = check.str_param(pipeline_name, "pipeline_name")
         self._run_config = check.opt_dict_param(run_config, "run_config")
