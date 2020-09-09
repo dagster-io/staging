@@ -17,6 +17,7 @@ from dagster import (
     Any,
     AssetMaterialization,
     Bool,
+    DagsterEventType,
     DagsterInstance,
     Enum,
     EnumValue,
@@ -59,6 +60,7 @@ from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import InProcessRepositoryLocation, RepositoryLocationHandle
 from dagster.core.host_representation.selector import PipelineSelector
 from dagster.core.log_manager import coerce_valid_log_level
+from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster.core.storage.tags import RESUME_RETRY_TAG
 from dagster.utils import file_relative_path, segfault
 
@@ -1028,8 +1030,11 @@ def chained_failure_pipeline():
 
 
 @resource
-def noop(_):
-    return
+def noop_resource(_):
+    def noop(*_args, **_kwargs):
+        return False
+
+    return noop
 
 
 @pipeline(
@@ -1038,7 +1043,7 @@ def noop(_):
             name="default",
             resource_defs={"launch_pipeline_run_resource": launch_pipeline_run_resource},
         ),
-        ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop}),
+        ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop_resource}),
     ],
     tags={'kind': 'cross_pipeline', 'dependent_pipeline': 'csv_hello_world'},
 )
@@ -1056,16 +1061,49 @@ def cross_pipeline():
             [RepositoryLocationHandle.create_in_process_location(create_main_recon_repo().pointer)]
         )
 
+    def execution_params_fn():
+        return {'selector': selector_fn(), 'runConfigData': csv_hello_world_solids_config()}
+
+    # pylint: disable=unused-variable
+    def should_execute_pipeline_fn(solid_context):
+        return True if solid_context.pipeline_run.mode == "default" else False
+
+    def execute_if_not_run_in_last_minute(solid_context):
+        instance = solid_context.instance
+
+        # does this actually return the most recent run?
+        pipeline_runs = instance.get_runs(
+            filters=PipelineRunsFilter(pipeline_name="csv_hello_world"), limit=1
+        )
+        if len(pipeline_runs) == 0:
+            return True
+
+        pipeline_run = pipeline_runs[0]
+        one_minute_ago = datetime.datetime.now() - datetime.timedelta(minutes=1)
+
+        event_records = instance.all_logs(run_id=pipeline_run.run_id)
+        start_time = None
+        for event_record in event_records:
+            if (
+                event_record.dagster_event
+                and event_record.dagster_event.event_type == DagsterEventType.PIPELINE_START
+            ):
+                start_time = event_record.timestamp
+                solid_context.log.info('start_time is ' + str(start_time))
+                break
+
+        if start_time and datetime.datetime.fromtimestamp(start_time) < one_minute_ago:
+            return True
+
+        return False
+
     @solid(required_resource_keys={'launch_pipeline_run_resource'})
     def launch_new_pipeline_solid(context):
 
         result = context.resources.launch_pipeline_run_resource(
-            instance=context.instance,
-            mode="default",
-            run_id=context.run_id,
-            should_execute_pipeline_fn=lambda: True,
-            selector_fn=selector_fn,
-            run_config_data_fn=csv_hello_world_solids_config,
+            solid_context=context,
+            should_execute_pipeline_fn=execute_if_not_run_in_last_minute,
+            execution_params_fn=execution_params_fn,
             workspace_fn=workspace_fn,
         )
 
