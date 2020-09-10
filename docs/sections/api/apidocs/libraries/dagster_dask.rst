@@ -1,6 +1,14 @@
 Dask (dagster_dask)
 -------------------
-See also the `Dask deployment guide <https://docs.dagster.io/deploying/dask/>`_.
+
+The Dagster dask integration serves two separate purposes:
+
+1) Running the orchestration cluster on Dask. This means that the graph of Dagster steps are orchestrated using Dask.
+
+For running dask for the orchestration cluster, see: `Dask deployment guide <https://docs.dagster.io/deploying/dask/>`_.
+
+2) Using Dask as a compute substrate. This does *not* require using Dask for orchestration. One could, for example, use Kubernetes and Celery to run the orchestration cluster and use a Dask cluster to execute your business logic. Use `dask_resource` for this.
+
 
 Python version support
 ^^^^^^^^^^^^^^^^^^^^^^
