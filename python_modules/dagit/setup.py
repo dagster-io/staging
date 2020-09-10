@@ -59,6 +59,7 @@ if __name__ == "__main__":
             "gevent-websocket>=0.10.1",
             "gevent",
             "graphql-ws>=0.3.0",
+            "nbconvert==5.6.1",
             # watchdog
             "watchdog>=0.8.3",
             # notebooks support
