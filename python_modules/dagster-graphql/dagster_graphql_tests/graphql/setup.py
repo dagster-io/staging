@@ -54,7 +54,10 @@ from dagster import (
     weekly_schedule,
 )
 from dagster.cli.workspace import Workspace
-from dagster.core.definitions.decorators.cross_dag import launch_pipeline_run_resource
+from dagster.core.definitions.decorators.cross_dag import (
+    launch_pipeline_run_resource,
+    launch_pipeline_run_resource_factory,
+)
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import InProcessRepositoryLocation, RepositoryLocationHandle
@@ -1037,24 +1040,41 @@ def noop_resource(_):
     return noop
 
 
+def csv_hello_world_graphql_pipeline_selector():
+    return {
+        'location_name': '<<in_process>>',
+        'repository_name': 'test_repo',
+        'pipeline_name': 'csv_hello_world',
+        'solid_selection': None,
+    }
+
+
 @pipeline(
     mode_defs=[
         ModeDefinition(
             name="default",
-            resource_defs={"launch_pipeline_run_resource": launch_pipeline_run_resource},
+            resource_defs={
+                "launch_pipeline_run_resource": launch_pipeline_run_resource_factory(
+                    pipeline_selector_dict=csv_hello_world_graphql_pipeline_selector()
+                )
+            },
         ),
         ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop_resource}),
+        ModeDefinition(
+            name="manual",
+            resource_defs={"launch_pipeline_run_resource": launch_pipeline_run_resource},
+        ),
     ],
     tags={'kind': 'cross_pipeline', 'dependent_pipeline': 'csv_hello_world'},
 )
 def cross_pipeline():
-    def selector_fn():
-        return PipelineSelector(
-            location_name='<<in_process>>',
-            repository_name='test_repo',
-            pipeline_name='csv_hello_world',
-            solid_selection=None,
-        ).to_graphql_input()
+    # def selector_fn():
+    #     return PipelineSelector(
+    #         location_name='<<in_process>>',
+    #         repository_name='test_repo',
+    #         pipeline_name='csv_hello_world',
+    #         solid_selection=None,
+    #     ).to_graphql_input()
 
     def workspace_fn():
         return Workspace(
@@ -1062,7 +1082,7 @@ def cross_pipeline():
         )
 
     def execution_params_fn():
-        return {'selector': selector_fn(), 'runConfigData': csv_hello_world_solids_config()}
+        return {'runConfigData': csv_hello_world_solids_config(), 'mode': 'default'}
 
     # pylint: disable=unused-variable
     def should_execute_pipeline_fn(solid_context):
@@ -1110,7 +1130,7 @@ def cross_pipeline():
         if not result:
             context.log.info(
                 "should_execute_pipeline_fn {} returned False. Did not launch pipeline run.".format(
-                    selector_fn.__name__
+                    execute_if_not_run_in_last_minute.__name__
                 )
             )
             return
