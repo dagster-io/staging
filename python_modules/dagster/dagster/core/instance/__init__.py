@@ -1,4 +1,5 @@
 import datetime
+import hashlib
 import logging
 import os
 import time
@@ -22,6 +23,7 @@ from dagster.core.errors import (
 )
 from dagster.core.storage.migration.utils import upgrading_instance
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.utils import str_format_list
 from dagster.serdes import ConfigurableClass, whitelist_for_serdes
 from dagster.seven import get_current_datetime_in_utc
@@ -42,6 +44,42 @@ IS_AIRFLOW_INGEST_PIPELINE_STR = "is_airflow_ingest_pipeline"
 
 def _is_dagster_home_set():
     return bool(os.getenv("DAGSTER_HOME"))
+
+
+def _is_memoized_run(tags):
+    return tags.get(MEMOIZED_RUN_TAG) == "true"
+
+
+def _fake_output_address(_version_list):
+    # Placeholder function until actual version storage has been implemented
+    return {}
+
+
+def _version_hash(version):
+    return hashlib.sha1(version.encode("utf-8")).hexdigest()
+
+
+def _compute_step_input_versions(step, step_versions):
+    def _resolve_output_version(step_output_handle):
+        version = step_versions[step_output_handle.step_key] + step_output_handle.output_name
+        return _version_hash(version)
+
+    input_versions = {}
+    for input_name, step_input in step.step_input_dict.items():
+        if step_input.is_from_output:
+            version = "".join(
+                [
+                    _resolve_output_version(source_handle)
+                    for source_handle in step_input.source_handles
+                ]
+            )
+        elif step_input.is_from_config:
+            version = step_input.dagster_type.loader.compute_loaded_input_version(
+                step_input.config_data
+            )
+        input_versions[input_name] = version
+
+    return input_versions
 
 
 def _dagster_home():
@@ -513,6 +551,46 @@ class DagsterInstance:
                 pipeline_def = pipeline_def.get_pipeline_subset_def(
                     solids_to_execute=solids_to_execute
                 )
+
+        if _is_memoized_run(tags):
+            unmemoized_steps = []
+
+            speculative_execution_plan = create_execution_plan(
+                pipeline_def,
+                run_config=run_config,
+                mode=mode,
+                step_keys_to_execute=step_keys_to_execute,
+            )
+
+            step_versions = {}  # step_key (str) -> version (str)
+
+            for step in speculative_execution_plan.topological_steps():
+                input_versions = _compute_step_input_versions(step, step_versions)
+                all_input_versions = "".join(
+                    [
+                        input_version_name + version
+                        for input_version_name, version in input_versions.items()
+                    ]
+                )
+                step_version = (
+                    step.solid.definition.version if step.solid.definition.version else ""
+                )
+                unhashed_version = all_input_versions + step_version
+                step_version = _version_hash(unhashed_version)
+                step_versions[step.key] = step_version
+
+                output_versions = [
+                    _version_hash(name + step_version) for name in step.step_output_dict.keys()
+                ]
+
+                addresses = _fake_output_address(
+                    output_versions
+                )  # TODO: replace with real version storage once that has landed.
+
+                if any([not version in addresses for version in output_versions]):
+                    unmemoized_steps.append(step.key)
+
+                step_keys_to_execute = unmemoized_steps
 
         if execution_plan is None:
             execution_plan = create_execution_plan(
