@@ -1,4 +1,6 @@
 # start-snippet
+from pathlib import Path
+
 from dagster_aws.emr import emr_pyspark_step_launcher
 from dagster_aws.s3 import s3_intermediate_storage, s3_resource
 from dagster_pyspark import DataFrame as DagsterPySparkDataFrame
@@ -42,13 +44,14 @@ emr_mode = ModeDefinition(
         "pyspark_step_launcher": emr_pyspark_step_launcher.configured(
             {
                 "cluster_id": {"env": "EMR_CLUSTER_ID"},
-                "local_pipeline_package_path": ".",
+                "local_pipeline_package_path": str(Path(__file__).parent),
                 "deploy_local_pipeline_package": True,
                 "region_name": "us-west-1",
                 "staging_bucket": "dagster-scratch-80542c2",
+                "wait_for_logs": True,
             }
         ),
-        "pyspark": pyspark_resource,
+        "pyspark": pyspark_resource.configured({"spark_conf": {"spark.executor.memory": "2g"}}),
         "s3": s3_resource,
     },
     intermediate_storage_defs=[
@@ -60,7 +63,10 @@ emr_mode = ModeDefinition(
 
 local_mode = ModeDefinition(
     name="local",
-    resource_defs={"pyspark_step_launcher": no_step_launcher, "pyspark": pyspark_resource},
+    resource_defs={
+        "pyspark_step_launcher": no_step_launcher,
+        "pyspark": pyspark_resource.configured({"spark_conf": {"spark.default.parallelism": 1}}),
+    },
 )
 
 
