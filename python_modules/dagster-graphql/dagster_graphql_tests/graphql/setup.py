@@ -54,7 +54,7 @@ from dagster import (
     weekly_schedule,
 )
 from dagster.cli.workspace import Workspace
-from dagster.core.definitions.decorators.cross_dag import launch_pipeline_run_resource
+from dagster.core.definitions.decorators.cross_dag import launch_pipeline_run_resource_factory
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import InProcessRepositoryLocation, RepositoryLocationHandle
@@ -1037,11 +1037,24 @@ def noop_resource(_):
     return noop
 
 
+
+selector_dict = {
+    'repositoryLocationName': '<<in_process>>',
+    'repositoryName': 'test_repo',
+    'pipelineName': 'csv_hello_world',
+    'solidSelection': [],
+}
+
+
 @pipeline(
     mode_defs=[
         ModeDefinition(
             name="default",
-            resource_defs={"launch_pipeline_run_resource": launch_pipeline_run_resource},
+            resource_defs={
+                "launch_pipeline_run_resource": launch_pipeline_run_resource_factory(
+                    selector_dict=selector_dict
+                )
+            },
         ),
         ModeDefinition(name="noop", resource_defs={"launch_pipeline_run_resource": noop_resource}),
     ],
@@ -1062,7 +1075,7 @@ def cross_pipeline():
         )
 
     def execution_params_fn():
-        return {'selector': selector_fn(), 'runConfigData': csv_hello_world_solids_config()}
+        return {'runConfigData': csv_hello_world_solids_config()}
 
     # pylint: disable=unused-variable
     def should_execute_pipeline_fn(solid_context):
