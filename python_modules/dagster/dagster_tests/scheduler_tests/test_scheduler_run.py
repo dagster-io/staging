@@ -9,7 +9,7 @@ from dagster import daily_schedule, hourly_schedule, pipeline, repository, solid
 from dagster.core.host_representation import PythonEnvRepositoryLocation, RepositoryLocationHandle
 from dagster.core.scheduler import ScheduleTickStatus
 from dagster.core.storage.pipeline_run import PipelineRunStatus
-from dagster.core.storage.tags import SCHEDULED_EXECUTION_TIME_TAG
+from dagster.core.storage.tags import PARTITION_NAME_TAG, SCHEDULED_EXECUTION_TIME_TAG
 from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.scheduler.scheduler import launch_scheduled_runs
@@ -113,8 +113,9 @@ def _validate_tick(tick, external_schedule, expected_datetime, expected_status, 
     assert tick_data.run_id == expected_run_id
 
 
-def _validate_run_started(run, expected_datetime):
+def _validate_run_started(run, expected_datetime, expected_partition):
     assert run.tags[SCHEDULED_EXECUTION_TIME_TAG] == expected_datetime.isoformat()
+    assert run.tags[PARTITION_NAME_TAG] == expected_partition
     assert run.status == PipelineRunStatus.STARTED or run.status == PipelineRunStatus.SUCCESS
 
 
@@ -174,8 +175,7 @@ def test_launch_scheduled_execution():
             )
 
             _wait_for_all_runs_to_start(instance)
-
-            _validate_run_started(instance.get_runs()[0], expected_datetime)
+            _validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-28")
 
             # Verify idempotence
             launch_scheduled_runs(instance)
@@ -199,6 +199,11 @@ def test_launch_scheduled_execution():
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
             assert len([tick for tick in ticks if tick.status == ScheduleTickStatus.SUCCESS]) == 3
+
+            runs_by_partition = {run.tags[PARTITION_NAME_TAG]: run for run in instance.get_runs()}
+
+            assert "2019-03-01" in runs_by_partition
+            assert "2019-03-02" in runs_by_partition
 
             # Check idempotence again
             launch_scheduled_runs(instance)

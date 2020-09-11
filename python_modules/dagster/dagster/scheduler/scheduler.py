@@ -225,6 +225,7 @@ def _create_scheduler_run(
         repository_handle=external_repo.handle,
         schedule_name=external_schedule.name,
         schedule_execution_data_mode=ScheduleExecutionDataMode.LAUNCH_SCHEDULED_EXECUTION,
+        scheduled_execution_datetime_utc=schedule_time_utc,
     )
 
     if isinstance(schedule_execution_data, ExternalScheduleExecutionErrorData):
