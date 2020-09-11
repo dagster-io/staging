@@ -218,13 +218,12 @@ def _create_scheduler_run(
     external_pipeline,
     tick_holder,
 ):
-    # TODO we should pass in the schedule_time_utc here, let partition-less schedules know their
-    # intended execution time rather than needing to guess
     schedule_execution_data = repo_location.get_external_schedule_execution_data(
         instance=instance,
         repository_handle=external_repo.handle,
         schedule_name=external_schedule.name,
         schedule_execution_data_mode=ScheduleExecutionDataMode.LAUNCH_SCHEDULED_EXECUTION,
+        scheduled_execution_datetime_utc=schedule_time_utc,
     )
 
     if isinstance(schedule_execution_data, ExternalScheduleExecutionErrorData):
