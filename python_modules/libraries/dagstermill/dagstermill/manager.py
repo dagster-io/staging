@@ -148,14 +148,27 @@ class Manager(object):
             # Set this flag even though we're not in test for clearer error reporting
             raise_on_error=True,
         ) as pipeline_context:
+
             self.context = DagstermillRuntimeExecutionContext(
                 pipeline_context=pipeline_context,
-                solid_config=None,
+                solid_config=run_config.get("solids", {}).get(solid_def.name, {}).get("config"),
+                # .get(solid_def.name),  # suspicious?
                 resource_keys_to_init=get_required_resource_keys_to_init(
                     execution_plan,
                     pipeline_context.system_storage_def,
                     pipeline_context.intermediate_storage_def,
                 ),
+            )
+            self.context.log.info(
+                'in reconstitute_pipeline_context with solid name ' + solid_def.name
+            )
+            import json
+
+            self.context.log.info('solid_handle_kwargs' + json.dumps(solid_handle_kwargs))
+            self.context.log.info('full run_config' + json.dumps(run_config))
+            self.context.log.info(
+                'solid_config'
+                + json.dumps(run_config.get("solids", {}).get("config", {}).get(solid_def.name))
             )
 
         return self.context
@@ -230,7 +243,6 @@ class Manager(object):
             DagsterInstance.ephemeral(),
             scoped_resources_builder_cm=self._setup_resources,
         ) as pipeline_context:
-
             self.context = DagstermillExecutionContext(
                 pipeline_context=pipeline_context,
                 solid_config=solid_config,
@@ -241,6 +253,7 @@ class Manager(object):
                 ),
             )
 
+            self.context.log.info('in get_context')
         return self.context
 
     def yield_result(self, value, output_name="result"):
