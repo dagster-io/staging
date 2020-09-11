@@ -9,13 +9,13 @@ from dagster import daily_schedule, hourly_schedule, pipeline, repository, solid
 from dagster.core.host_representation import PythonEnvRepositoryLocation, RepositoryLocationHandle
 from dagster.core.scheduler import ScheduleTickStatus
 from dagster.core.storage.pipeline_run import PipelineRunStatus
-from dagster.core.storage.tags import SCHEDULED_EXECUTION_TIME_TAG
+from dagster.core.storage.tags import PARTITION_NAME_TAG, SCHEDULED_EXECUTION_TIME_TAG
 from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.scheduler.scheduler import launch_scheduled_runs
 from dagster.seven import get_timestamp_from_utc_datetime, get_utc_timezone
 
-_COUPLE_DAYS_AGO = datetime.now() - timedelta(days=2)
+_COUPLE_DAYS_AGO = datetime(year=2019, month=2, day=25)
 
 
 def _throw(_context):
@@ -113,8 +113,9 @@ def _validate_tick(tick, external_schedule, expected_datetime, expected_status, 
     assert tick_data.run_id == expected_run_id
 
 
-def _validate_run_started(run, expected_datetime):
+def _validate_run_started(run, expected_datetime, expected_partition):
     assert run.tags[SCHEDULED_EXECUTION_TIME_TAG] == expected_datetime.isoformat()
+    assert run.tags[PARTITION_NAME_TAG] == expected_partition
     assert run.status == PipelineRunStatus.STARTED or run.status == PipelineRunStatus.SUCCESS
 
 
@@ -134,15 +135,16 @@ def _wait_for_all_runs_to_start(instance, timeout=10):
 
 
 def test_launch_scheduled_execution():
-    external_repo = get_external_repo()
-    with instance_with_schedules(external_repo) as instance:
-        external_schedule = external_repo.get_external_schedule("simple_schedule")
+    initial_datetime = datetime(
+        year=2019, month=2, day=27, hour=23, minute=59, second=59, tzinfo=get_utc_timezone(),
+    )
+    with freeze_time(initial_datetime) as frozen_datetime:
+        external_repo = get_external_repo()
+        with instance_with_schedules(external_repo) as instance:
+            external_schedule = external_repo.get_external_schedule("simple_schedule")
 
-        schedule_origin = external_schedule.get_origin()
-        initial_datetime = datetime(
-            year=2019, month=2, day=27, hour=23, minute=59, second=59, tzinfo=get_utc_timezone(),
-        )
-        with freeze_time(initial_datetime) as frozen_datetime:
+            schedule_origin = external_schedule.get_origin()
+
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
@@ -174,8 +176,7 @@ def test_launch_scheduled_execution():
             )
 
             _wait_for_all_runs_to_start(instance)
-
-            _validate_run_started(instance.get_runs()[0], expected_datetime)
+            _validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
 
             # Verify idempotence
             launch_scheduled_runs(instance)
@@ -199,6 +200,11 @@ def test_launch_scheduled_execution():
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
             assert len([tick for tick in ticks if tick.status == ScheduleTickStatus.SUCCESS]) == 3
+
+            runs_by_partition = {run.tags[PARTITION_NAME_TAG]: run for run in instance.get_runs()}
+
+            assert "2019-02-28" in runs_by_partition
+            assert "2019-03-01" in runs_by_partition
 
             # Check idempotence again
             launch_scheduled_runs(instance)
