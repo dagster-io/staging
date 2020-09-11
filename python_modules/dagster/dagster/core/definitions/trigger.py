@@ -100,6 +100,18 @@ class TriggeredExecutionDefinition(object):
     def mode(self):
         return self._mode
 
+    @property
+    def should_execute_fn(self):
+        return self._should_execute_fn
+
+    @property
+    def run_config_fn(self):
+        return self._run_config_fn
+
+    @property
+    def tags_fn(self):
+        return self._tags_fn
+
     def get_run_config(self, context):
         check.inst_param(context, "context", TriggeredExecutionContext)
         return self._run_config_fn(context)
