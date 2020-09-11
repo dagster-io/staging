@@ -6,6 +6,7 @@ from datetime import datetime
 
 import pytest
 from dateutil.relativedelta import relativedelta
+from freezegun import freeze_time
 
 from dagster import (
     Any,
@@ -31,6 +32,8 @@ from dagster.core.definitions.decorators import (
     monthly_schedule,
     weekly_schedule,
 )
+from dagster.core.definitions.schedule import ScheduleExecutionContext
+from dagster.core.test_utils import instance_for_test
 from dagster.core.utility_solids import define_stub_solid
 
 # This file tests a lot of parameter name stuff, so these warnings are spurious
@@ -347,49 +350,91 @@ def test_schedule_decorators_sanity():
         return {}
 
 
-def _check_partitions(partition_schedule_def, expected_relative_delta):
+def _check_partitions(partition_schedule_def, expected_num_partitions, expected_relative_delta):
     partitions = partition_schedule_def.get_partition_set().partition_fn()
+    assert len(partitions) == expected_num_partitions
 
     for index, partition in enumerate(partitions):
         assert partition.value == partitions[0].value + (index * expected_relative_delta)
 
 
+@freeze_time("2019-02-27 00:01:01")
 def test_partitions_for_schedule_decorators():
-    @hourly_schedule(
-        pipeline_name="foo_pipeline", start_date=datetime(year=2019, month=1, day=1),
-    )
-    def hourly_foo_schedule():
-        return {}
+    with instance_for_test() as instance:
 
-    _check_partitions(hourly_foo_schedule, relativedelta(hours=1))
+        context_without_time = ScheduleExecutionContext(instance, None)
 
-    @daily_schedule(
-        pipeline_name="foo_pipeline", start_date=datetime(year=2019, month=1, day=1),
-    )
-    def daily_foo_schedule():
-        return {}
+        @hourly_schedule(
+            pipeline_name="foo_pipeline", start_date=datetime(year=2019, month=1, day=1, minute=1),
+        )
+        def hourly_foo_schedule(hourly_time):
+            return {"hourly_time": hourly_time.isoformat()}
 
-    _check_partitions(daily_foo_schedule, relativedelta(days=1))
+        _check_partitions(hourly_foo_schedule, 24 * (31 + 26), relativedelta(hours=1))
 
-    @weekly_schedule(
-        pipeline_name="foo_pipeline",
-        execution_day_of_week=1,
-        start_date=datetime(year=2019, month=1, day=1),
-    )
-    def weekly_foo_schedule():
-        return {}
+        assert hourly_foo_schedule.get_run_config(context_without_time) == {
+            "hourly_time": datetime(year=2019, month=2, day=26, hour=23, minute=1).isoformat()
+        }
 
-    _check_partitions(weekly_foo_schedule, relativedelta(weeks=1))
+        invalid_partition_time = datetime(year=2019, month=1, day=27, hour=1, minute=0)
+        context_with_invalid_time = ScheduleExecutionContext(instance, invalid_partition_time)
 
-    @monthly_schedule(
-        pipeline_name="foo_pipeline",
-        execution_day_of_month=3,
-        start_date=datetime(year=2019, month=1, day=1),
-    )
-    def monthly_foo_schedule():
-        return {}
+        assert hourly_foo_schedule.get_run_config(
+            ScheduleExecutionContext(instance, invalid_partition_time)
+        ) == {"hourly_time": invalid_partition_time.isoformat()}
 
-    _check_partitions(monthly_foo_schedule, relativedelta(months=1))
+        # Scheduled execution time that doesn't match a partition still generates
+        # run config (using a non-existent partition) but shouldn't execute
+        assert not hourly_foo_schedule.should_execute(context_with_invalid_time)
+
+        valid_time = datetime(year=2019, month=1, day=27, hour=1, minute=1)
+
+        assert hourly_foo_schedule.get_run_config(
+            ScheduleExecutionContext(instance, valid_time)
+        ) == {"hourly_time": valid_time.isoformat()}
+
+        @daily_schedule(
+            pipeline_name="foo_pipeline", start_date=datetime(year=2019, month=1, day=1),
+        )
+        def daily_foo_schedule(daily_time):
+            return {"daily_time": daily_time.isoformat()}
+
+        _check_partitions(daily_foo_schedule, (31 + 26), relativedelta(days=1))
+
+        valid_daily_time = datetime(year=2019, month=1, day=27)
+        assert daily_foo_schedule.get_run_config(
+            ScheduleExecutionContext(instance, valid_daily_time)
+        ) == {"daily_time": valid_daily_time.isoformat()}
+
+        @weekly_schedule(
+            pipeline_name="foo_pipeline",
+            execution_day_of_week=1,
+            start_date=datetime(year=2019, month=1, day=1),
+        )
+        def weekly_foo_schedule(weekly_time):
+            return {"weekly_time": weekly_time.isoformat()}
+
+        valid_weekly_time = datetime(year=2019, month=1, day=29)
+        assert weekly_foo_schedule.get_run_config(
+            ScheduleExecutionContext(instance, valid_weekly_time)
+        ) == {"weekly_time": valid_weekly_time.isoformat()}
+
+        _check_partitions(weekly_foo_schedule, 8, relativedelta(weeks=1))
+
+        @monthly_schedule(
+            pipeline_name="foo_pipeline",
+            execution_day_of_month=3,
+            start_date=datetime(year=2019, month=1, day=1),
+        )
+        def monthly_foo_schedule(monthly_time):
+            return {"monthly_time": monthly_time.isoformat()}
+
+        valid_monthly_time = datetime(year=2019, month=2, day=3)
+        assert monthly_foo_schedule.get_run_config(
+            ScheduleExecutionContext(instance, valid_monthly_time)
+        ) == {"monthly_time": valid_monthly_time.isoformat()}
+
+        _check_partitions(monthly_foo_schedule, 1, relativedelta(months=1))
 
 
 def test_schedule_decorators_bad():
