@@ -72,9 +72,18 @@ def define_hello_world_config_solid():
     )
 
 
+def define_goodbye_config_solid():
+    return dagstermill.define_dagstermill_solid(
+        "goodbye_config",
+        nb_test_path("hello_world_config"),
+        config_schema={"farewell": Field(String, is_required=False, default_value="goodbye")},
+    )
+
+
 def define_hello_world_config_pipeline():
     return PipelineDefinition(
-        name="hello_world_config_pipeline", solid_defs=[define_hello_world_config_solid()]
+        name="hello_world_config_pipeline",
+        solid_defs=[define_hello_world_config_solid(), define_goodbye_config_solid()],
     )
 
 
