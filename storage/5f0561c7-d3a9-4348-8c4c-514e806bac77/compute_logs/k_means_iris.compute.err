@@ -1,0 +1,155 @@
+[32m2020-09-11 01:37:00[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_START - Started execution of step "k_means_iris.compute".
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+                 pid = 16587
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:00[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - OBJECT_STORE_OPERATION - Retrieved intermediate object for input path in filesystem object store using pickle.
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"metadata_entries": [["key", null, ["/Users/catherinewu/dagster/storage/5f0561c7-d3a9-4348-8c4c-514e806bac77/intermediates/download_file.compute/path"]]], "op": "GET_OBJECT", "value_name": "path"}
+                 pid = 16587
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:00[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_INPUT - Got input "path" of type "String". (Type check passed).
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"input_name": "path", "type_check_data": [true, "path", null, []]}
+                 pid = 16587
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:00[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_INPUT - Got input "secret_number" of type "Int". (Type check passed).
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"input_name": "secret_number", "type_check_data": [true, "secret_number", null, []]}
+                 pid = 16587
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+Executing:   0%|          | 0/16 [00:00<?, ?cell/s]Executing:   6%|▋         | 1/16 [00:00<00:11,  1.27cell/s]WARNING:papermill:/Users/catherinewu/.pyenv/versions/3.7.4/envs/dagster37/lib/python3.7/site-packages/pandas/compat/__init__.py:117: UserWarning: Could not import the lzma module. Your installed Python is incomplete. Attempting to use lzma compression will result in a RuntimeError.
+  warnings.warn(msg)
+
+Executing:  12%|█▎        | 2/16 [00:01<00:10,  1.28cell/s]WARNING:papermill:2020-09-11 01:37:03 - dagster - INFO - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - in reconstitute_pipeline_context with solid name k_means_iris
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:03 - dagster - INFO - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - solid_handle_kwargs{"name": "k_means_iris", "parent": null}
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:03 - dagster - INFO - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - full run_config{"solids": {"download_file": {"config": {"path": "iris.data", "url": "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"}}, "k_means_iris": {"config": {"seed": 50}, "inputs": {"secret_number": 12345}}}, "storage": {"filesystem": null}}
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:03 - dagster - INFO - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - solid_confignull
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+Executing:  19%|█▉        | 3/16 [00:03<00:14,  1.11s/cell]WARNING:papermill:2020-09-11 01:37:03 - dagster - INFO - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - <class 'dagstermill.context.DagstermillRuntimeExecutionContext'>
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:03 - dagster - INFO - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - returning self._solid_config
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+Executing:  31%|███▏      | 5/16 [00:03<00:08,  1.27cell/s]Executing:  38%|███▊      | 6/16 [00:03<00:05,  1.71cell/s]Executing:  38%|███▊      | 6/16 [00:04<00:06,  1.44cell/s]
+[32m2020-09-11 01:37:04[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_MATERIALIZATION - Location of output notebook in file manager
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"materialization": [[["Users", "catherinewu", "dagster", "storage", "5f0561c7", "d3a9", "4348", "8c4c", "514e806bac77", "files", "d9a22799", "86f5", "4295", "95bc", "d2146f34b880", "ipynb"]], "Location of output notebook in file manager", [["d9a22799-86f5-4295-95bc-d2146f34b880.ipynb", null, ["/Users/catherinewu/dagster/storage/5f0561c7-d3a9-4348-8c4c-514e806bac77/files/d9a22799-86f5-4295-95bc-d2146f34b880.ipynb"]]]]}
+                 pid = 16587
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:04[0m - dagster - [34mERROR[0m - [31miris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_FAILURE - Execution of step "k_means_iris.compute" failed.
+            cls_name = "PapermillExecutionError"
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+       error_message = "papermill.exceptions.PapermillExecutionError: \n---------------------------------------------------------------------------\nException encountered at \"In [3]\":\n---------------------------------------------------------------------------\nTypeError                                 Traceback (most recent call last)\n<ipython-input-3-3cbc935fd72d> in <module>\n      3 solid_config = context.solid_config\n      4 import json\n----> 5 context.log.info(json.dumps(context.solid_def))\n      6 context.log.info(json.dumps(context.solid))\n      7 context.log.info(json.dumps(solid_config))\n\n~/.pyenv/versions/3.7.4/lib/python3.7/json/__init__.py in dumps(obj, skipkeys, ensure_ascii, check_circular, allow_nan, cls, indent, separators, default, sort_keys, **kw)\n    229         cls is None and indent is None and separators is None and\n    230         default is None and not sort_keys and not kw):\n--> 231         return _default_encoder.encode(obj)\n    232     if cls is None:\n    233         cls = JSONEncoder\n\n~/.pyenv/versions/3.7.4/lib/python3.7/json/encoder.py in encode(self, o)\n    197         # exceptions aren't as detailed.  The list call should be roughly\n    198         # equivalent to the PySequence_Fast that ''.join() would do.\n--> 199         chunks = self.iterencode(o, _one_shot=True)\n    200         if not isinstance(chunks, (list, tuple)):\n    201             chunks = list(chunks)\n\n~/.pyenv/versions/3.7.4/lib/python3.7/json/encoder.py in iterencode(self, o, _one_shot)\n    255                 self.key_separator, self.item_separator, self.sort_keys,\n    256                 self.skipkeys, _one_shot)\n--> 257         return _iterencode(o, 0)\n    258 \n    259 def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,\n\n~/.pyenv/versions/3.7.4/lib/python3.7/json/encoder.py in default(self, o)\n    177 \n    178         \"\"\"\n--> 179         raise TypeError(f'Object of type {o.__class__.__name__} '\n    180                         f'is not JSON serializable')\n    181 \n\nTypeError: Object of type SolidDefinition is not JSON serializable\n\n"
+                 pid = 16587
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+
+papermill.exceptions.PapermillExecutionError: 
+---------------------------------------------------------------------------
+Exception encountered at "In [3]":
+---------------------------------------------------------------------------
+TypeError                                 Traceback (most recent call last)
+<ipython-input-3-3cbc935fd72d> in <module>
+      3 solid_config = context.solid_config
+      4 import json
+----> 5 context.log.info(json.dumps(context.solid_def))
+      6 context.log.info(json.dumps(context.solid))
+      7 context.log.info(json.dumps(solid_config))
+
+~/.pyenv/versions/3.7.4/lib/python3.7/json/__init__.py in dumps(obj, skipkeys, ensure_ascii, check_circular, allow_nan, cls, indent, separators, default, sort_keys, **kw)
+    229         cls is None and indent is None and separators is None and
+    230         default is None and not sort_keys and not kw):
+--> 231         return _default_encoder.encode(obj)
+    232     if cls is None:
+    233         cls = JSONEncoder
+
+~/.pyenv/versions/3.7.4/lib/python3.7/json/encoder.py in encode(self, o)
+    197         # exceptions aren't as detailed.  The list call should be roughly
+    198         # equivalent to the PySequence_Fast that ''.join() would do.
+--> 199         chunks = self.iterencode(o, _one_shot=True)
+    200         if not isinstance(chunks, (list, tuple)):
+    201             chunks = list(chunks)
+
+~/.pyenv/versions/3.7.4/lib/python3.7/json/encoder.py in iterencode(self, o, _one_shot)
+    255                 self.key_separator, self.item_separator, self.sort_keys,
+    256                 self.skipkeys, _one_shot)
+--> 257         return _iterencode(o, 0)
+    258 
+    259 def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
+
+~/.pyenv/versions/3.7.4/lib/python3.7/json/encoder.py in default(self, o)
+    177 
+    178         """
+--> 179         raise TypeError(f'Object of type {o.__class__.__name__} '
+    180                         f'is not JSON serializable')
+    181 
+
+TypeError: Object of type SolidDefinition is not JSON serializable
+
+
+  File "/Users/catherinewu/dagster/python_modules/dagster/dagster/core/errors.py", line 181, in user_code_error_boundary
+    yield
+  File "/Users/catherinewu/dagster/python_modules/libraries/dagstermill/dagstermill/solids.py", line 218, in _t_fn
+    raise exc
+  File "/Users/catherinewu/dagster/python_modules/libraries/dagstermill/dagstermill/solids.py", line 191, in _t_fn
+    log_output=True,
+  File "/Users/catherinewu/.pyenv/versions/3.7.4/envs/dagster37/lib/python3.7/site-packages/papermill/execute.py", line 108, in execute_notebook
+    raise_for_execution_errors(nb, output_path)
+  File "/Users/catherinewu/.pyenv/versions/3.7.4/envs/dagster37/lib/python3.7/site-packages/papermill/execute.py", line 192, in raise_for_execution_errors
+    raise error
+[0m

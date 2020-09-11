@@ -1,0 +1,56 @@
+[32m2020-09-11 01:36:59[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_START - Started execution of step "download_file.compute".
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+                 pid = 16587
+               solid = "download_file"
+    solid_definition = "download_file"
+            step_key = "download_file.compute"
+[32m2020-09-11 01:36:59[0m - dagster - [34mINFO[0m - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - /Users/catherinewu/dagster/examples/docs_snippets/docs_snippets/legacy/data_science/iris-kmeans_2.ipynb
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+               solid = "download_file"
+    solid_definition = "download_file"
+            step_key = "download_file.compute"
+[32m2020-09-11 01:36:59[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_OUTPUT - Yielded output "path" of type "String". (Type check passed).
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"intermediate_materialization": null, "step_output_handle": ["download_file.compute", "path"], "type_check_data": [true, "path", null, []]}
+                 pid = 16587
+               solid = "download_file"
+    solid_definition = "download_file"
+            step_key = "download_file.compute"
+[32m2020-09-11 01:36:59[0m - dagster - [34mWARNING[0m - system - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - Replacing existing intermediate for download_file.compute.path
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+               solid = "download_file"
+    solid_definition = "download_file"
+            step_key = "download_file.compute"
+WARNING:root:Removing existing path /Users/catherinewu/dagster/storage/5f0561c7-d3a9-4348-8c4c-514e806bac77/intermediates/download_file.compute/path
+[32m2020-09-11 01:36:59[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - OBJECT_STORE_OPERATION - Stored intermediate object for output path in filesystem object store using pickle.
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"metadata_entries": [["key", null, ["/Users/catherinewu/dagster/storage/5f0561c7-d3a9-4348-8c4c-514e806bac77/intermediates/download_file.compute/path"]]], "op": "SET_OBJECT", "value_name": "path"}
+                 pid = 16587
+               solid = "download_file"
+    solid_definition = "download_file"
+            step_key = "download_file.compute"
+[32m2020-09-11 01:37:00[0m - dagster - [34mDEBUG[0m - iris_pipeline - 5f0561c7-d3a9-4348-8c4c-514e806bac77 - STEP_SUCCESS - Finished execution of step "download_file.compute" in 217ms.
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"duration_ms": 217.121817}
+                 pid = 16587
+               solid = "download_file"
+    solid_definition = "download_file"
+            step_key = "download_file.compute"
