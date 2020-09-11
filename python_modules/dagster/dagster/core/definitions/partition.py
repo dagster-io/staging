@@ -6,6 +6,7 @@ from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantV
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import check_tags
 from dagster.utils import merge_dicts
+from dagster.utils.partitions import DEFAULT_DATE_FORMAT
 
 from .mode import DEFAULT_MODE_NAME
 
@@ -29,11 +30,27 @@ class Partition(namedtuple("_Partition", ("value name"))):
         )
 
 
+def create_default_partition_selector_fn(fmt=None):
+    fmt = check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT)
+
+    def inner(context, partition_set_def):
+        check.inst_param(context, "context", ScheduleExecutionContext)
+        check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
+
+        scheduled_time = context.scheduled_execution_time_utc
+
+        return (
+            Partition(value=scheduled_time, name=scheduled_time.strftime(fmt))
+            if scheduled_time
+            else last_partition(context, partition_set_def)
+        )
+
+    return inner
+
+
 def last_partition(context, partition_set_def):
     check.inst_param(context, "context", ScheduleExecutionContext)
-    partition_set_def = check.inst_param(
-        partition_set_def, "partition_set_def", PartitionSetDefinition
-    )
+    check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
 
     partitions = partition_set_def.get_partitions()
     if not partitions:
@@ -178,8 +195,8 @@ class PartitionSetDefinition(
             should_execute (Optional[function]): Function that runs at schedule execution time that
             determines whether a schedule should execute. Defaults to a function that always returns
             ``True``.
-            partition_selector (Callable[PartitionSet], Partition): A partition selector for the
-                schedule.
+            partition_selector (Callable[ScheduleExecutionContext, PartitionSetDefinition],
+            Partition): A partition selector for the schedule.
             environment_vars (Optional[dict]): The environment variables to set for the schedule.
 
         Returns:
