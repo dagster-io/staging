@@ -67,7 +67,7 @@ class DagsterTypeLoaderFromDecorator(DagsterTypeLoader):
         func,
         required_resource_keys,
         loader_version=None,
-        external_version_fn=lambda: None,
+        external_version_fn=lambda x: None,
     ):
         self._config_type = check.inst_param(config_type, "config_type", ConfigType)
         self._func = check.callable_param(func, "func")
@@ -98,7 +98,11 @@ class DagsterTypeLoaderFromDecorator(DagsterTypeLoader):
 
 
 def _create_type_loader_for_decorator(
-    config_type, func, required_resource_keys, loader_version=None, external_version_fn=lambda: None
+    config_type,
+    func,
+    required_resource_keys,
+    loader_version=None,
+    external_version_fn=lambda x: None,
 ):
     return DagsterTypeLoaderFromDecorator(
         config_type, func, required_resource_keys, loader_version, external_version_fn
@@ -118,7 +122,7 @@ def dagster_type_loader(
     config_schema,
     required_resource_keys=None,
     loader_version=None,
-    external_version_fn=lambda: None,
+    external_version_fn=lambda x: None,
 ):
     """Create an dagster type loader that maps config data to a runtime value.
 
