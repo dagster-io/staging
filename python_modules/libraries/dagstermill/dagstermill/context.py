@@ -115,9 +115,19 @@ class DagstermillExecutionContext(AbstractComputeExecutionContext):
         """collections.namedtuple: A dynamically-created type whose properties allow access to
         solid-specific config."""
         if self._solid_config:
+            self.log.info('returning self._solid_config')
             return self._solid_config
 
         solid_config = self.environment_config.solids.get(self.solid.name)
+        if not solid_config:
+            self.log.info('not solid_config!!!!! :( ' + self.solid.name)
+
+        else:
+            import json
+
+            self.log.info(
+                'returning solid_config for ' + self.solid.name + " : " + json.dumps(solid_config)
+            )
         return solid_config.config if solid_config else None
 
 

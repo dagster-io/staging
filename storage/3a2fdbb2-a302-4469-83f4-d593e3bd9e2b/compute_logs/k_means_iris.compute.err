@@ -1,0 +1,127 @@
+[32m2020-09-11 01:37:40[0m - dagster - [34mDEBUG[0m - iris_pipeline - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - STEP_START - Started execution of step "k_means_iris.compute".
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+                 pid = 16610
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:40[0m - dagster - [34mDEBUG[0m - iris_pipeline - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - OBJECT_STORE_OPERATION - Retrieved intermediate object for input path in filesystem object store using pickle.
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"metadata_entries": [["key", null, ["/Users/catherinewu/dagster/storage/3a2fdbb2-a302-4469-83f4-d593e3bd9e2b/intermediates/download_file.compute/path"]]], "op": "GET_OBJECT", "value_name": "path"}
+                 pid = 16610
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:40[0m - dagster - [34mDEBUG[0m - iris_pipeline - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - STEP_INPUT - Got input "path" of type "String". (Type check passed).
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"input_name": "path", "type_check_data": [true, "path", null, []]}
+                 pid = 16610
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:40[0m - dagster - [34mDEBUG[0m - iris_pipeline - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - STEP_INPUT - Got input "secret_number" of type "Int". (Type check passed).
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"input_name": "secret_number", "type_check_data": [true, "secret_number", null, []]}
+                 pid = 16610
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+Executing:   0%|          | 0/16 [00:00<?, ?cell/s]Executing:   6%|▋         | 1/16 [00:00<00:11,  1.30cell/s]WARNING:papermill:/Users/catherinewu/.pyenv/versions/3.7.4/envs/dagster37/lib/python3.7/site-packages/pandas/compat/__init__.py:117: UserWarning: Could not import the lzma module. Your installed Python is incomplete. Attempting to use lzma compression will result in a RuntimeError.
+  warnings.warn(msg)
+
+Executing:  12%|█▎        | 2/16 [00:01<00:10,  1.32cell/s]WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - in reconstitute_pipeline_context with solid name k_means_iris
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - solid_handle_kwargs{"name": "k_means_iris", "parent": null}
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - full run_config{"solids": {"download_file": {"config": {"path": "iris.data", "url": "https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data"}}, "k_means_iris": {"config": {"seed": 50}, "inputs": {"secret_number": 12345}}}, "storage": {"filesystem": null}}
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - solid_confignull
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+Executing:  19%|█▉        | 3/16 [00:03<00:14,  1.09s/cell]WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - <class 'dagstermill.context.DagstermillRuntimeExecutionContext'>
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - returning self._solid_config
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - "download_file"
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - "download_file"
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+WARNING:papermill:2020-09-11 01:37:44 - dagster - INFO - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - {"seed": 50}
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+
+Executing:  31%|███▏      | 5/16 [00:03<00:08,  1.28cell/s]Executing:  50%|█████     | 8/16 [00:03<00:04,  1.79cell/s]Executing:  62%|██████▎   | 10/16 [00:06<00:05,  1.17cell/s]Executing:  69%|██████▉   | 11/16 [00:07<00:04,  1.15cell/s]Executing:  81%|████████▏ | 13/16 [00:07<00:01,  1.58cell/s]Executing:  94%|█████████▍| 15/16 [00:09<00:00,  1.59cell/s]Executing: 17cell [00:09,  1.75cell/s]                      
+[32m2020-09-11 01:37:50[0m - dagster - [34mDEBUG[0m - system - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - Notebook execution complete for k_means_iris at /var/folders/kc/ktvc7zns7tlfgz7srfkb34280000gn/T/tmp3439mhtg/69973e8d-b82b-4a09-9d1b-5a95773872e5-out.ipynb.
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+[32m2020-09-11 01:37:50[0m - dagster - [34mDEBUG[0m - iris_pipeline - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - STEP_MATERIALIZATION - Location of output notebook in file manager
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"materialization": [[["Users", "catherinewu", "dagster", "storage", "3a2fdbb2", "a302", "4469", "83f4", "d593e3bd9e2b", "files", "58edaf6d", "3094", "49ec", "9852", "521ede8b313d", "ipynb"]], "Location of output notebook in file manager", [["58edaf6d-3094-49ec-9852-521ede8b313d.ipynb", null, ["/Users/catherinewu/dagster/storage/3a2fdbb2-a302-4469-83f4-d593e3bd9e2b/files/58edaf6d-3094-49ec-9852-521ede8b313d.ipynb"]]]]}
+                 pid = 16610
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
+/Users/catherinewu/.pyenv/versions/3.7.4/envs/dagster37/lib/python3.7/site-packages/pandas/compat/__init__.py:117: UserWarning: Could not import the lzma module. Your installed Python is incomplete. Attempting to use lzma compression will result in a RuntimeError.
+  warnings.warn(msg)
+[32m2020-09-11 01:37:51[0m - dagster - [34mDEBUG[0m - iris_pipeline - 3a2fdbb2-a302-4469-83f4-d593e3bd9e2b - STEP_SUCCESS - Finished execution of step "k_means_iris.compute" in 10.48s.
+dagster/is_resume_retry = "false"
+dagster/parent_run_id = "5f0561c7-d3a9-4348-8c4c-514e806bac77"
+ dagster/root_run_id = "5075d72d-e248-452d-88a0-7453cf6dda67"
+dagster/solid_selection = "*"
+ event_specific_data = {"duration_ms": 10481.294114}
+                 pid = 16610
+               solid = "k_means_iris"
+    solid_definition = "k_means_iris"
+            step_key = "k_means_iris.compute"
