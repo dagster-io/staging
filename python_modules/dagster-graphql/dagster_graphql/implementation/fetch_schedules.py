@@ -181,6 +181,8 @@ def get_schedule_config(graphene_info, external_schedule):
     check.inst_param(external_schedule, "external_schedule", ExternalSchedule)
     handle = external_schedule.handle.repository_handle
 
+    ### Doesn't this need the partition if not the time???
+
     result = graphene_info.context.get_external_schedule_execution_data(
         handle, external_schedule.name
     )
