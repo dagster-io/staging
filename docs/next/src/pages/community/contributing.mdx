@@ -134,13 +134,19 @@ interactively when you are in `--watch` mode.
 
 ## Developing Docs
 
-Running a live html version of the docs can expedite documentation
-development:
+To run the Dagster documentation website locally, run the following commands:
 
 ```bash
 cd docs
-make livehtml
+yarn --cwd next dev  # Serves the docs website on http://localhost:3001
 ```
 
-Our documentation employs a combination of Markdown and
-reStructuredText.
+The API documentation is generated from ReStructured Text files (`.rst`), which extracts Python
+docstrings from the library files. The `.rst` files can be found in the `docs/sections/api/apidocs`
+directory.
+
+If you change any `.rst` files, be sure to run the following command in the `docs` directory:
+
+```bash
+make buildnext
+```
