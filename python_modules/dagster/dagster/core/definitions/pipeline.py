@@ -151,7 +151,9 @@ class PipelineDefinition(IContainSolids):
         _parent_pipeline_def=None,  # https://github.com/dagster-io/dagster/issues/2115
     ):
         if not name:
-            warnings.warn("Pipeline must have a name")
+            warnings.warn(
+                "Must provide a name to pipeline. This will be an error starting in 0.9.8."
+            )
         # name might be <<unnamed>> when constructing pipeline subsets
         elif name != "<<unnamed>>" and not is_valid_name(name):
             check_for_invalid_name_and_warn(name)

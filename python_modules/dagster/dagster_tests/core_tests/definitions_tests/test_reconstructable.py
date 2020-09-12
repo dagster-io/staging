@@ -56,7 +56,7 @@ def test_lambda():
 
 
 def test_manual_instance():
-    defn = PipelineDefinition([the_solid])
+    defn = PipelineDefinition(name="test", solid_defs=[the_solid])
     with pytest.raises(
         DagsterInvariantViolationError,
         match="Reconstructable target should be a function or definition produced by a decorated function",
