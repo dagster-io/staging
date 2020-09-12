@@ -45,6 +45,7 @@ def test_hook():
         pass
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[a_solid],
         dependencies={
             SolidInvocation("a_solid", "a_solid_with_hook", hook_defs={a_hook, named_hook}): {}
@@ -71,6 +72,7 @@ def test_hook_user_error():
         return 1
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[a_solid],
         dependencies={SolidInvocation("a_solid", "a_solid_with_hook", hook_defs={error_hook}): {}},
     )
@@ -119,6 +121,7 @@ def test_hook_with_resource():
         pass
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[a_solid],
         dependencies={SolidInvocation("a_solid", "a_solid_with_hook", hook_defs={a_hook}): {}},
         mode_defs=[ModeDefinition(resource_defs={"resource_a": resource_a})],
@@ -142,6 +145,7 @@ def test_hook_resource_error():
         DagsterInvalidDefinitionError, match='Resource "resource_b" is required by hook "a_hook"'
     ):
         PipelineDefinition(
+            name="test",
             solid_defs=[a_solid],
             dependencies={SolidInvocation("a_solid", "a_solid_with_hook", hook_defs={a_hook}): {}},
             mode_defs=[ModeDefinition(resource_defs={"resource_a": resource_a})],
@@ -175,6 +179,7 @@ def test_success_hook():
         raise SomeUserException()
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[succeeded_solid, failed_solid],
         dependencies={
             SolidInvocation(
@@ -229,6 +234,7 @@ def test_failure_hook():
         raise SomeUserException()
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[failed_solid, succeeded_solid],
         dependencies={
             SolidInvocation(
@@ -269,6 +275,7 @@ def test_success_hook_event():
         raise SomeUserException()
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[a_solid, failed_solid],
         dependencies={
             SolidInvocation("a_solid", hook_defs={a_hook}): {},
@@ -303,6 +310,7 @@ def test_failure_hook_event():
         raise SomeUserException()
 
     a_pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[a_solid, failed_solid],
         dependencies={
             SolidInvocation("a_solid", hook_defs={a_hook}): {},

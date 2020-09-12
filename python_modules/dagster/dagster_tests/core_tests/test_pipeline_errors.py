@@ -45,7 +45,9 @@ def create_root_fn_failure_solid(name):
 
 
 def test_compute_failure_pipeline():
-    pipeline_def = PipelineDefinition(solid_defs=[create_root_fn_failure_solid("failing")])
+    pipeline_def = PipelineDefinition(
+        name="test", solid_defs=[create_root_fn_failure_solid("failing")]
+    )
     pipeline_result = execute_pipeline(pipeline_def, raise_on_error=False)
 
     assert not pipeline_result.success
@@ -91,6 +93,7 @@ def test_failure_midstream():
     )
 
     pipeline_def = PipelineDefinition(
+        name="test",
         solid_defs=[solid_a, solid_b, solid_c, solid_d],
         dependencies={
             "C": {"A": DependencyDefinition(solid_a.name), "B": DependencyDefinition(solid_b.name)},
@@ -281,7 +284,7 @@ def test_no_name_pipeline_warnings():
     with warnings.catch_warnings(record=True) as w:
         _ = PipelineDefinition(solid_defs=[])
         assert len(w) == 1
-        assert "Pipeline must have a name" in str(w[-1].message)
+        assert "Must provide a name to pipeline" in str(w[-1].message)
 
 
 @pytest.mark.skipif(sys.version_info.major < 3, reason="Bug in catch_warnings on py2")

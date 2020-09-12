@@ -114,7 +114,8 @@ class TestDBTSingleOperationSolids:
         instance = DagsterInstance.ephemeral()
         result = execute_pipeline(
             PipelineDefinition(
-                [configured_solid],
+                name="test",
+                solid_defs=[configured_solid],
                 mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": mock_dbt_rpc_resource})],
             ),
             instance=instance,
