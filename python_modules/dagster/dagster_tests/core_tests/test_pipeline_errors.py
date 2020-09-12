@@ -91,6 +91,7 @@ def test_failure_midstream():
     )
 
     pipeline_def = PipelineDefinition(
+        name="test",
         solid_defs=[solid_a, solid_b, solid_c, solid_d],
         dependencies={
             "C": {"A": DependencyDefinition(solid_a.name), "B": DependencyDefinition(solid_b.name)},
@@ -276,20 +277,20 @@ def test_explicit_failure():
     assert exc_info.value.metadata_entries == [EventMetadataEntry.text("why", label="always_fails")]
 
 
-@pytest.mark.skipif(sys.version_info.major < 3, reason="Bug in catch_warnings on py2")
-def test_no_name_pipeline_warnings():
-    with warnings.catch_warnings(record=True) as w:
-        _ = PipelineDefinition(solid_defs=[])
-        assert len(w) == 1
-        assert "Pipeline must have a name" in str(w[-1].message)
+# @pytest.mark.skipif(sys.version_info.major < 3, reason="Bug in catch_warnings on py2")
+# def test_no_name_pipeline_warnings():
+#     with warnings.catch_warnings(record=True) as w:
+#         _ = PipelineDefinition(solid_defs=[])
+#         assert len(w) == 1
+#         assert "Pipeline must have a name" in str(w[-1].message)
 
 
-@pytest.mark.skipif(sys.version_info.major < 3, reason="Bug in catch_warnings on py2")
-def test_pipeline_invalid_name_warning():
-    with warnings.catch_warnings(record=True) as w:
-        _ = PipelineDefinition(name="d d", solid_defs=[])
-        assert len(w) == 1
-        assert (
-            'You provided name "d d" which is invalid. '
-            'Name must pass regex "^[A-Za-z0-9_]+$"' in str(w[-1].message)
-        )
+# @pytest.mark.skipif(sys.version_info.major < 3, reason="Bug in catch_warnings on py2")
+# def test_pipeline_invalid_name_warning():
+#     with warnings.catch_warnings(record=True) as w:
+#         _ = PipelineDefinition(name="d d", solid_defs=[])
+#         assert len(w) == 1
+#         assert (
+#             'You provided name "d d" which is invalid. '
+#             'Name must pass regex "^[A-Za-z0-9_]+$"' in str(w[-1].message)
+#         )
