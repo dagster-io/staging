@@ -174,6 +174,7 @@ def test_solid_with_input():
         return foo_to_foo
 
     pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[define_stub_solid("test_value", {"foo": "bar"}), hello_world],
         dependencies={"hello_world": {"foo_to_foo": DependencyDefinition("test_value")}},
     )
@@ -254,12 +255,12 @@ def test_wrong_argument_to_pipeline():
     with pytest.raises(
         DagsterInvalidDefinitionError, match="You have passed a lambda or function non_solid_func"
     ):
-        PipelineDefinition(solid_defs=[non_solid_func])
+        PipelineDefinition(name="test", solid_defs=[non_solid_func])
 
     with pytest.raises(
         DagsterInvalidDefinitionError, match="You have passed a lambda or function <lambda>"
     ):
-        PipelineDefinition(solid_defs=[lambda x: x])
+        PipelineDefinition(name="test", solid_defs=[lambda x: x])
 
 
 def test_descriptions():

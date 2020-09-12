@@ -68,6 +68,7 @@ def is_valid_name(name):
 def check_for_invalid_name_and_warn(name):
     check.str_param(name, "name")
     if not is_valid_name(name):
+        raise Exception('nope')
         warnings.warn(
             (
                 'You provided name "{name}" which is invalid. Name must pass regex "{regex}" '
