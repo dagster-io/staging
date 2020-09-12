@@ -27,6 +27,7 @@ def _dataframe_solid(name, input_defs, compute_fn):
 
 def get_solid_result_value(solid_inst):
     pipe = PipelineDefinition(
+        name="test",
         solid_defs=[load_num_csv_solid("load_csv"), solid_inst],
         dependencies={
             solid_inst.name: {
@@ -91,7 +92,7 @@ def test_pandas_csv_in_memory():
 
 
 def _sum_only_pipeline():
-    return PipelineDefinition(solid_defs=[sum_table, sum_sq_table], dependencies={})
+    return PipelineDefinition(name="test", solid_defs=[sum_table, sum_sq_table], dependencies={})
 
 
 def test_two_input_solid():
@@ -110,6 +111,7 @@ def test_two_input_solid():
     )
 
     pipe = PipelineDefinition(
+        name="test",
         solid_defs=[
             load_num_csv_solid("load_csv1"),
             load_num_csv_solid("load_csv2"),
@@ -181,6 +183,7 @@ def test_pandas_multiple_inputs():
     )
 
     pipe = PipelineDefinition(
+        name="test",
         solid_defs=[load_num_csv_solid("load_one"), load_num_csv_solid("load_two"), double_sum],
         dependencies={
             "double_sum": {
@@ -200,6 +203,7 @@ def test_pandas_multiple_inputs():
 def test_rename_input():
     result = execute_pipeline(
         PipelineDefinition(
+            name="test",
             solid_defs=[load_num_csv_solid("load_csv"), sum_table, sum_sq_table_renamed_input],
             dependencies={
                 "sum_table": {"num_csv": DependencyDefinition("load_csv")},

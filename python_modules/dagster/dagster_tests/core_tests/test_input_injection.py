@@ -43,6 +43,7 @@ def test_string_from_aliased_inputs():
         called["yup"] = True
 
     pipeline = PipelineDefinition(
+        name="test",
         solid_defs=[str_as_input],
         dependencies={SolidInvocation("str_as_input", alias="aliased"): {}},
     )

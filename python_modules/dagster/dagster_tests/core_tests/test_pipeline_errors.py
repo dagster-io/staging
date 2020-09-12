@@ -91,6 +91,7 @@ def test_failure_midstream():
     )
 
     pipeline_def = PipelineDefinition(
+        name="test",
         solid_defs=[solid_a, solid_b, solid_c, solid_d],
         dependencies={
             "C": {"A": DependencyDefinition(solid_a.name), "B": DependencyDefinition(solid_b.name)},

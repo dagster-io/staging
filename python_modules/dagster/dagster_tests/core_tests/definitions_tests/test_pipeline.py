@@ -65,6 +65,7 @@ def test_two_inputs_without_dsl():
         return num_one - num_two
 
     pipeline_def = PipelineDefinition(
+        name="test",
         solid_defs=[subtract, return_two, return_three],
         dependencies={
             "subtract": {
@@ -310,7 +311,7 @@ def test_bad_positional_input_use():
 
 
 def test_nameless():
-    noname = PipelineDefinition([return_one])
+    noname = PipelineDefinition(name="test", solid_defs=[return_one])
 
     assert noname.name == "<<unnamed>>"
     assert noname.display_name == "<<unnamed>>"
