@@ -5,6 +5,7 @@ import { useQuery } from "react-apollo";
 import Loading from "../Loading";
 import gql from "graphql-tag";
 import { RouteComponentProps } from "react-router";
+import { Link } from "react-router-dom";
 import { ScheduleRootQuery } from "./types/ScheduleRootQuery";
 import { ScheduleRow, ScheduleRowHeader } from "./ScheduleRow";
 
@@ -44,7 +45,11 @@ export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
           return (
             <ScrollContainer>
               <div style={{ display: "flex" }}>
-                <Header>Schedules</Header>
+                <Header>
+                  <Link to="/schedules">Schedules</Link>
+                  {" > "}
+                  {scheduleDefinitionOrError.name}
+                </Header>
                 <div style={{ flex: 1 }} />
                 <SchedulerTimezoneNote />
               </div>
