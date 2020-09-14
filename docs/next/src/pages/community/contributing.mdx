@@ -98,12 +98,11 @@ PYENV=py27 tox
 ## Developing Dagit
 
 For development, run the Dagit GraphQL server on a different port than
-the webapp, from any directory that contains a `workspace.yaml` file. For
-example:
+the webapp, with any pipeline. For example:
 
 ```bash
 cd dagster/examples/docs_snippets/docs_snippets/intro_tutorial
-dagit -p 3333
+dagit -p 3333 -f airflow.py
 ```
 
 Keep this running. Then, in another terminal, run the local development
