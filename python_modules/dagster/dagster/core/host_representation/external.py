@@ -364,6 +364,10 @@ class ExternalSchedule:
     def handle(self):
         return self._handle
 
+    @property
+    def is_sensor(self):
+        return self._external_schedule_data.is_sensor
+
     def get_origin(self):
         return self._handle.get_origin()
 

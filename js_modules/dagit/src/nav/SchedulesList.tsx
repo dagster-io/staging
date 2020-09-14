@@ -26,7 +26,7 @@ export const SchedulesList: React.FunctionComponent<SchedulesListProps> = ({ rep
 
   const [q, setQ] = React.useState<string>("");
 
-  const schedules = useQuery<SchedulesListQuery>(SCHEDULES_LIST_QUERY, {
+  const { data } = useQuery<SchedulesListQuery>(SCHEDULES_LIST_QUERY, {
     fetchPolicy: "cache-and-network",
     variables: {
       repositorySelector: {
@@ -37,17 +37,30 @@ export const SchedulesList: React.FunctionComponent<SchedulesListProps> = ({ rep
   });
 
   const repoSchedules =
-    schedules.data?.scheduleDefinitionsOrError?.__typename === "ScheduleDefinitions"
-      ? schedules.data.scheduleDefinitionsOrError.results
+    data?.scheduleDefinitionsOrError?.__typename === "ScheduleDefinitions"
+      ? data.scheduleDefinitionsOrError.results
+      : [];
+  const repoSensors =
+    data?.sensorDefinitionsOrError?.__typename === "ScheduleDefinitions"
+      ? data.sensorDefinitionsOrError.results
       : [];
 
-  const items = repoSchedules
-    .filter(({ name }) => !q || iincludes(name, q))
-    .map(({ name, scheduleState }) => ({
-      to: `/schedules/${name}`,
-      label: name,
-      status: scheduleState?.status
-    }));
+  const items = [
+    ...repoSchedules
+      .filter(({ name }) => !q || iincludes(name, q))
+      .map(({ name, scheduleState }) => ({
+        to: `/schedules/${name}`,
+        label: name,
+        status: scheduleState?.status
+      })),
+    ...repoSensors
+      .filter(({ name }) => !q || iincludes(name, q))
+      .map(({ name, scheduleState }) => ({
+        to: `/sensors/${name}`,
+        label: name,
+        status: scheduleState?.status
+      }))
+  ];
 
   const onShiftFocus = (dir: 1 | -1) => {
     const idx = items.findIndex(p => p.label === focused);
@@ -73,70 +86,80 @@ export const SchedulesList: React.FunctionComponent<SchedulesListProps> = ({ rep
   };
 
   return (
-    <div
-      style={{
-        flex: 1,
-        display: "flex",
-        flexDirection: "column",
-        borderTop: `1px solid ${Colors.DARK_GRAY4}`
-      }}
-    >
-      <Header>
-        <ShortcutHandler
-          onShortcut={() => inputRef.current?.focus()}
-          shortcutFilter={e => e.altKey && e.keyCode === 80}
-          shortcutLabel={`⌥P then Up / Down`}
-        >
-          <InputGroup
-            type="text"
-            inputRef={c => (inputRef.current = c)}
-            value={q}
-            small
-            placeholder={`Search schedules...`}
-            onKeyDown={e => {
-              if (e.key === "ArrowDown") {
-                onShiftFocus(1);
-              }
-              if (e.key === "ArrowUp") {
-                onShiftFocus(-1);
-              }
-              if (e.key === "Enter" || e.key === "Return") {
-                onConfirmFocused();
-              }
-            }}
-            onChange={(e: React.ChangeEvent<any>) => setQ(e.target.value)}
-            style={{
-              border: `1px solid ${Colors.DARK_GRAY5}`,
-              background: Colors.DARK_GRAY4
-            }}
-          />
-        </ShortcutHandler>
-        <div style={{ width: 4 }} />
-        <ButtonGroup>
-          <a href="/schedules">
-            <Button small={true} icon={<Icon icon="diagram-tree" iconSize={13} />}>
-              View All{" "}
-            </Button>
-          </a>
-        </ButtonGroup>
-      </Header>
-      <Items>
-        {items.map(p => (
-          <Item
-            key={p.label}
-            data-tooltip={p.label}
-            data-tooltip-style={p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle}
-            className={`${p.label === selector ? "selected" : ""} ${
-              p.label === focused ? "focused" : ""
-            }`}
-            to={p.to}
+    <>
+      {repoSensors.length ? (
+        <ItemHeader>Schedules and Sensors:</ItemHeader>
+      ) : (
+        <ItemHeader>Schedules:</ItemHeader>
+      )}
+
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          borderTop: `1px solid ${Colors.DARK_GRAY4}`
+        }}
+      >
+        <Header>
+          <ShortcutHandler
+            onShortcut={() => inputRef.current?.focus()}
+            shortcutFilter={e => e.altKey && e.keyCode === 80}
+            shortcutLabel={`⌥P then Up / Down`}
           >
-            <div>{p.label}</div>
-            <div>{p.status === ScheduleStatus.RUNNING && <ScheduleStatusDot size={9} />}</div>
-          </Item>
-        ))}
-      </Items>
-    </div>
+            <InputGroup
+              type="text"
+              inputRef={c => (inputRef.current = c)}
+              value={q}
+              small
+              placeholder={`Search schedules...`}
+              onKeyDown={e => {
+                if (e.key === "ArrowDown") {
+                  onShiftFocus(1);
+                }
+                if (e.key === "ArrowUp") {
+                  onShiftFocus(-1);
+                }
+                if (e.key === "Enter" || e.key === "Return") {
+                  onConfirmFocused();
+                }
+              }}
+              onChange={(e: React.ChangeEvent<any>) => setQ(e.target.value)}
+              style={{
+                border: `1px solid ${Colors.DARK_GRAY5}`,
+                background: Colors.DARK_GRAY4
+              }}
+            />
+          </ShortcutHandler>
+          <div style={{ width: 4 }} />
+          <ButtonGroup>
+            <a href="/schedules">
+              <Button small={true} icon={<Icon icon="diagram-tree" iconSize={13} />}>
+                View All{" "}
+              </Button>
+            </a>
+          </ButtonGroup>
+        </Header>
+        <Items>
+          {items.map(p => (
+            <Item
+              key={p.label}
+              data-tooltip={p.label}
+              data-tooltip-style={
+                p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle
+              }
+              className={`${p.label === selector ? "selected" : ""} ${
+                p.label === focused ? "focused" : ""
+              }`}
+              to={p.to}
+            >
+              <div>{p.label}</div>
+              <div>{p.status === ScheduleStatus.RUNNING && <ScheduleStatusDot size={9} />}</div>
+            </Item>
+          ))}
+        </Items>
+      </div>
+    </>
   );
 };
 
@@ -213,6 +236,19 @@ const Item = styled(Link)`
     color: ${Colors.WHITE} !important;
   }
 `;
+const ItemHeader = styled.div`
+  font-size: 15px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 8px 12px;
+  padding-left: 8px;
+  margin-top: 10px;
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid transparent;
+  display: block;
+  font-weight: bold;
+  color: ${Colors.LIGHT_GRAY3} !important;
+`;
 
 const BaseTooltipStyle = {
   fontSize: 13,
@@ -243,6 +279,16 @@ const SelectedItemTooltipStyle = JSON.stringify({
 export const SCHEDULES_LIST_QUERY = gql`
   query SchedulesListQuery($repositorySelector: RepositorySelector!) {
     scheduleDefinitionsOrError(repositorySelector: $repositorySelector) {
+      ... on ScheduleDefinitions {
+        results {
+          name
+          scheduleState {
+            status
+          }
+        }
+      }
+    }
+    sensorDefinitionsOrError(repositorySelector: $repositorySelector) {
       ... on ScheduleDefinitions {
         results {
           name

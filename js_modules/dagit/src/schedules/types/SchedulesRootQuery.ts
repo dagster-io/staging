@@ -199,6 +199,115 @@ export interface SchedulesRootQuery_scheduleDefinitionsOrError_PythonError {
 
 export type SchedulesRootQuery_scheduleDefinitionsOrError = SchedulesRootQuery_scheduleDefinitionsOrError_RepositoryNotFoundError | SchedulesRootQuery_scheduleDefinitionsOrError_ScheduleDefinitions | SchedulesRootQuery_scheduleDefinitionsOrError_PythonError;
 
+export interface SchedulesRootQuery_sensorDefinitionsOrError_RepositoryNotFoundError {
+  __typename: "RepositoryNotFoundError";
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_partitionSet {
+  __typename: "PartitionSet";
+  name: string;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData_run {
+  __typename: "PipelineRun";
+  pipelineName: string;
+  status: PipelineRunStatus;
+  runId: string;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData {
+  __typename: "ScheduleTickSuccessData";
+  run: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData_run | null;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error_cause | null;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData {
+  __typename: "ScheduleTickFailureData";
+  error: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error;
+}
+
+export type SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData = SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData | SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData;
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks {
+  __typename: "ScheduleTick";
+  tickId: string;
+  status: ScheduleTickStatus;
+  timestamp: number;
+  tickSpecificData: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks_tickSpecificData | null;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_runs_tags {
+  __typename: "PipelineTag";
+  key: string;
+  value: string;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_runs {
+  __typename: "PipelineRun";
+  runId: string;
+  tags: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_runs_tags[];
+  pipelineName: string;
+  status: PipelineRunStatus;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState {
+  __typename: "ScheduleState";
+  id: string;
+  scheduleOriginId: string;
+  repositoryOriginId: string;
+  scheduleName: string;
+  cronSchedule: string;
+  runningScheduleCount: number;
+  ticks: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_ticks[];
+  runsCount: number;
+  runs: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState_runs[];
+  ticksCount: number;
+  status: ScheduleStatus;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results {
+  __typename: "ScheduleDefinition";
+  name: string;
+  cronSchedule: string;
+  pipelineName: string;
+  solidSelection: (string | null)[] | null;
+  mode: string;
+  partitionSet: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_partitionSet | null;
+  scheduleState: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results_scheduleState | null;
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions {
+  __typename: "ScheduleDefinitions";
+  results: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results[];
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_PythonError_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface SchedulesRootQuery_sensorDefinitionsOrError_PythonError {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: SchedulesRootQuery_sensorDefinitionsOrError_PythonError_cause | null;
+}
+
+export type SchedulesRootQuery_sensorDefinitionsOrError = SchedulesRootQuery_sensorDefinitionsOrError_RepositoryNotFoundError | SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions | SchedulesRootQuery_sensorDefinitionsOrError_PythonError;
+
 export interface SchedulesRootQuery_scheduleStatesOrError_RepositoryNotFoundError {
   __typename: "RepositoryNotFoundError";
 }
@@ -296,6 +405,7 @@ export interface SchedulesRootQuery {
   repositoryOrError: SchedulesRootQuery_repositoryOrError;
   scheduler: SchedulesRootQuery_scheduler;
   scheduleDefinitionsOrError: SchedulesRootQuery_scheduleDefinitionsOrError;
+  sensorDefinitionsOrError: SchedulesRootQuery_sensorDefinitionsOrError;
   scheduleStatesOrError: SchedulesRootQuery_scheduleStatesOrError;
 }
 

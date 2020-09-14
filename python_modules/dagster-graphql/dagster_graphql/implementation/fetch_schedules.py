@@ -122,7 +122,7 @@ def get_schedule_states_or_error(
 
 
 @capture_dauphin_error
-def get_schedule_definitions_or_error(graphene_info, repository_selector):
+def get_schedule_definitions_or_error(graphene_info, repository_selector, is_sensor=False):
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.inst_param(repository_selector, "repository_selector", RepositorySelector)
 
@@ -135,6 +135,8 @@ def get_schedule_definitions_or_error(graphene_info, repository_selector):
             graphene_info, external_schedule=external_schedule
         )
         for external_schedule in external_schedules
+        if (is_sensor and external_schedule.is_sensor)
+        or (not is_sensor and not external_schedule.is_sensor)
     ]
 
     return graphene_info.schema.type_named("ScheduleDefinitions")(results=results)

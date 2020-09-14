@@ -98,79 +98,84 @@ export const RepositoryContentList: React.FunctionComponent<RepositoryContentLis
   };
 
   return (
-    <div
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-        borderTop: `1px solid ${Colors.DARK_GRAY4}`
-      }}
-    >
-      <Header>
-        <ShortcutHandler
-          onShortcut={() => inputRef.current?.focus()}
-          shortcutFilter={e => e.altKey && e.keyCode === 80}
-          shortcutLabel={`⌥P then Up / Down`}
-        >
-          <InputGroup
-            type="text"
-            inputRef={c => (inputRef.current = c)}
-            value={q}
-            small
-            placeholder={`Search ${type}...`}
-            onKeyDown={e => {
-              if (e.key === "ArrowDown") {
-                onShiftFocus(1);
-              }
-              if (e.key === "ArrowUp") {
-                onShiftFocus(-1);
-              }
-              if (e.key === "Enter" || e.key === "Return") {
-                onConfirmFocused();
-              }
-            }}
-            onChange={(e: React.ChangeEvent<any>) => setQ(e.target.value)}
-            style={{
-              border: `1px solid ${Colors.DARK_GRAY5}`,
-              background: Colors.DARK_GRAY4
-            }}
-          />
-        </ShortcutHandler>
-        <div style={{ width: 4 }} />
-        <ButtonGroup>
-          <Button
-            small={true}
-            active={type === "pipelines"}
-            intent={type === "pipelines" ? "primary" : "none"}
-            icon={<Icon icon="diagram-tree" iconSize={13} />}
-            onClick={() => setType("pipelines")}
-          />
-          <Button
-            small={true}
-            active={type === "solids"}
-            intent={type === "solids" ? "primary" : "none"}
-            icon={<Icon icon="git-commit" iconSize={13} />}
-            onClick={() => setType("solids")}
-          />
-        </ButtonGroup>
-      </Header>
-      <Items>
-        {items.map(p => (
-          <Item
-            key={p.label}
-            data-tooltip={p.label}
-            data-tooltip-style={p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle}
-            className={`${p.label === selector ? "selected" : ""} ${
-              p.label === focused ? "focused" : ""
-            }`}
-            to={p.to}
+    <>
+      <ItemHeader>Pipelines & Solids:</ItemHeader>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: "flex",
+          flexDirection: "column",
+          borderTop: `1px solid ${Colors.DARK_GRAY4}`
+        }}
+      >
+        <Header>
+          <ShortcutHandler
+            onShortcut={() => inputRef.current?.focus()}
+            shortcutFilter={e => e.altKey && e.keyCode === 80}
+            shortcutLabel={`⌥P then Up / Down`}
           >
-            {p.label}
-          </Item>
-        ))}
-      </Items>
-    </div>
+            <InputGroup
+              type="text"
+              inputRef={c => (inputRef.current = c)}
+              value={q}
+              small
+              placeholder={`Search ${type}...`}
+              onKeyDown={e => {
+                if (e.key === "ArrowDown") {
+                  onShiftFocus(1);
+                }
+                if (e.key === "ArrowUp") {
+                  onShiftFocus(-1);
+                }
+                if (e.key === "Enter" || e.key === "Return") {
+                  onConfirmFocused();
+                }
+              }}
+              onChange={(e: React.ChangeEvent<any>) => setQ(e.target.value)}
+              style={{
+                border: `1px solid ${Colors.DARK_GRAY5}`,
+                background: Colors.DARK_GRAY4
+              }}
+            />
+          </ShortcutHandler>
+          <div style={{ width: 4 }} />
+          <ButtonGroup>
+            <Button
+              small={true}
+              active={type === "pipelines"}
+              intent={type === "pipelines" ? "primary" : "none"}
+              icon={<Icon icon="diagram-tree" iconSize={13} />}
+              onClick={() => setType("pipelines")}
+            />
+            <Button
+              small={true}
+              active={type === "solids"}
+              intent={type === "solids" ? "primary" : "none"}
+              icon={<Icon icon="git-commit" iconSize={13} />}
+              onClick={() => setType("solids")}
+            />
+          </ButtonGroup>
+        </Header>
+        <Items>
+          {items.map(p => (
+            <Item
+              key={p.label}
+              data-tooltip={p.label}
+              data-tooltip-style={
+                p.label === selector ? SelectedItemTooltipStyle : ItemTooltipStyle
+              }
+              className={`${p.label === selector ? "selected" : ""} ${
+                p.label === focused ? "focused" : ""
+              }`}
+              to={p.to}
+            >
+              {p.label}
+            </Item>
+          ))}
+        </Items>
+      </div>
+    </>
   );
 };
 
@@ -180,6 +185,20 @@ const Header = styled.div`
   & .bp3-input-group {
     flex: 1;
   }
+`;
+
+const ItemHeader = styled.div`
+  font-size: 15px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  padding: 8px 12px;
+  padding-left: 8px;
+  margin-top: 10px;
+  border-left: 4px solid transparent;
+  border-bottom: 1px solid transparent;
+  display: block;
+  font-weight: bold;
+  color: ${Colors.LIGHT_GRAY3} !important;
 `;
 
 const Items = styled.div`

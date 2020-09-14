@@ -6,7 +6,7 @@ import Loading from "../Loading";
 import gql from "graphql-tag";
 import { RouteComponentProps } from "react-router";
 import { ScheduleRootQuery } from "./types/ScheduleRootQuery";
-import { ScheduleRow, ScheduleRowHeader } from "./ScheduleRow";
+import { SensorRow, ScheduleRow, SensorRowHeader, ScheduleRowHeader } from "./ScheduleRow";
 
 import { __RouterContext as RouterContext } from "react-router";
 import * as querystring from "query-string";
@@ -15,10 +15,12 @@ import { useScheduleSelector } from "../DagsterRepositoryContext";
 import { SCHEDULE_DEFINITION_FRAGMENT, SchedulerTimezoneNote } from "./ScheduleUtils";
 
 export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
-  scheduleName: string;
+  scheduleName?: string;
+  sensorName?: string;
 }>> = ({ match, location }) => {
-  const { scheduleName } = match.params;
-  const scheduleSelector = useScheduleSelector(scheduleName);
+  const isSensor = !match.path.startsWith("/schedules/");
+  const name = isSensor ? match.params.sensorName : match.params.scheduleName;
+  const scheduleSelector = useScheduleSelector(name || "");
   const { history } = React.useContext(RouterContext);
   const qs = querystring.parse(location.search);
   const cursor = (qs.cursor as string) || undefined;
@@ -41,25 +43,47 @@ export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
 
         if (scheduleDefinitionOrError.__typename === "ScheduleDefinition") {
           const partitionSetName = scheduleDefinitionOrError.partitionSet?.name;
-          return (
-            <ScrollContainer>
-              <div style={{ display: "flex" }}>
-                <Header>Schedules</Header>
-                <div style={{ flex: 1 }} />
-                <SchedulerTimezoneNote />
-              </div>
-              <ScheduleRowHeader schedule={scheduleDefinitionOrError} />
-              <ScheduleRow schedule={scheduleDefinitionOrError} />
-              {partitionSetName ? (
-                <PartitionView
-                  pipelineName={scheduleDefinitionOrError.pipelineName}
-                  partitionSetName={partitionSetName}
-                  cursor={cursor}
-                  setCursor={setCursor}
-                />
-              ) : null}
-            </ScrollContainer>
-          );
+          if (isSensor) {
+            return (
+              <ScrollContainer>
+                <Header>
+                  Sensor <code>{name}</code>
+                </Header>
+                <SensorRowHeader />
+                <SensorRow sensor={scheduleDefinitionOrError} />
+                {partitionSetName ? (
+                  <PartitionView
+                    pipelineName={scheduleDefinitionOrError.pipelineName}
+                    partitionSetName={partitionSetName}
+                    cursor={cursor}
+                    setCursor={setCursor}
+                  />
+                ) : null}
+              </ScrollContainer>
+            );
+          } else {
+            return (
+              <ScrollContainer>
+                <div style={{ display: "flex" }}>
+                  <Header>
+                    Schedule <code>{name}</code>
+                  </Header>
+                  <div style={{ flex: 1 }} />
+                  <SchedulerTimezoneNote />
+                </div>
+                <ScheduleRowHeader schedule={scheduleDefinitionOrError} />
+                <ScheduleRow schedule={scheduleDefinitionOrError} />
+                {partitionSetName ? (
+                  <PartitionView
+                    pipelineName={scheduleDefinitionOrError.pipelineName}
+                    partitionSetName={partitionSetName}
+                    cursor={cursor}
+                    setCursor={setCursor}
+                  />
+                ) : null}
+              </ScrollContainer>
+            );
+          }
         } else {
           return null;
         }

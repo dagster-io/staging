@@ -1,10 +1,12 @@
-import boto3
 import os
-import pytz
 from datetime import datetime, timedelta
+
+import boto3
+import pytz
+
 from dagster import check
-from dagster.utils.backcompat import experimental
 from dagster.core.definitions.sensor import SensorDefinition
+from dagster.utils.backcompat import experimental
 
 MAX_KEYS = 1000
 
