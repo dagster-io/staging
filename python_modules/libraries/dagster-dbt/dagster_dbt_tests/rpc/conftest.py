@@ -19,11 +19,6 @@ RPC_ENDPOINT = "http://{hostname}:{port}/jsonrpc".format(hostname=TEST_HOSTNAME,
 # ======= SOLIDS I ========
 
 
-@pytest.fixture(scope="class")
-def dbt_seed(prepare_dbt_cli, dbt_executable, dbt_config_dir):  # pylint: disable=unused-argument
-    subprocess.run([dbt_executable, "seed", "--profiles-dir", dbt_config_dir], check=True)
-
-
 def get_rpc_server_status():
     status_request_body = b'{"jsonrpc": "2.0", "method": "status", "id": 1}'
     req = request.Request(
