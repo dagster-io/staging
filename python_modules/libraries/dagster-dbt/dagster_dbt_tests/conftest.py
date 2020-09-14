@@ -1,4 +1,5 @@
 import os
+import subprocess
 from distutils import spawn
 
 import pytest
@@ -51,5 +52,7 @@ def prepare_dbt_cli(conn_string):  # pylint: disable=unused-argument, redefined-
 
 
 @pytest.fixture(scope="class")
-def dbt_seed(prepare_dbt_cli, dbt_executable, dbt_config_dir):  # pylint: disable=unused-argument
+def dbt_seed(
+    prepare_dbt_cli, dbt_executable, dbt_config_dir
+):  # pylint: disable=unused-argument, redefined-outer-name
     subprocess.run([dbt_executable, "seed", "--profiles-dir", dbt_config_dir], check=True)
