@@ -49,6 +49,10 @@ class EmrError(Exception):
 
 
 class EmrJobRunner:
+    """
+    Some doc for the job runner.
+    """
+
     def __init__(
         self, region, check_cluster_every=30, aws_access_key_id=None, aws_secret_access_key=None,
     ):
