@@ -10,11 +10,11 @@ exports[`renders execution 1`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -31,7 +31,7 @@ exports[`renders execution 1`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -59,7 +59,7 @@ exports[`renders execution 1`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -83,13 +83,13 @@ exports[`renders execution 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -113,13 +113,13 @@ exports[`renders execution 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -143,7 +143,7 @@ exports[`renders execution 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -244,7 +244,7 @@ exports[`renders execution 1`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -348,10 +348,10 @@ exports[`renders execution 1`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf selected "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig selected "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#10161A\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4,\\"fontWeight\\":600}"
               href="/pipeline/airline_demo_ingest_pipeline/playground"
@@ -360,7 +360,7 @@ exports[`renders execution 1`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/playground"
@@ -371,7 +371,7 @@ exports[`renders execution 1`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>
@@ -797,11 +797,11 @@ exports[`renders pipeline page 1`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -818,7 +818,7 @@ exports[`renders pipeline page 1`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -846,7 +846,7 @@ exports[`renders pipeline page 1`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -870,13 +870,13 @@ exports[`renders pipeline page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -900,13 +900,13 @@ exports[`renders pipeline page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -930,7 +930,7 @@ exports[`renders pipeline page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -1031,7 +1031,7 @@ exports[`renders pipeline page 1`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -1135,10 +1135,10 @@ exports[`renders pipeline page 1`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf selected "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig selected "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#10161A\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4,\\"fontWeight\\":600}"
               href="/pipeline/airline_demo_ingest_pipeline/"
@@ -1147,7 +1147,7 @@ exports[`renders pipeline page 1`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/"
@@ -1158,7 +1158,7 @@ exports[`renders pipeline page 1`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>
@@ -5534,11 +5534,11 @@ exports[`renders pipeline solid page 1`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -5555,7 +5555,7 @@ exports[`renders pipeline solid page 1`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -5583,7 +5583,7 @@ exports[`renders pipeline solid page 1`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -5607,13 +5607,13 @@ exports[`renders pipeline solid page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -5637,13 +5637,13 @@ exports[`renders pipeline solid page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -5667,7 +5667,7 @@ exports[`renders pipeline solid page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -5768,7 +5768,7 @@ exports[`renders pipeline solid page 1`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -5872,10 +5872,10 @@ exports[`renders pipeline solid page 1`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf selected "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig selected "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#10161A\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4,\\"fontWeight\\":600}"
               href="/pipeline/airline_demo_ingest_pipeline/"
@@ -5884,7 +5884,7 @@ exports[`renders pipeline solid page 1`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/"
@@ -5895,7 +5895,7 @@ exports[`renders pipeline solid page 1`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>
@@ -10271,11 +10271,11 @@ exports[`renders solids explorer 1`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -10292,7 +10292,7 @@ exports[`renders solids explorer 1`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -10320,7 +10320,7 @@ exports[`renders solids explorer 1`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -10344,13 +10344,13 @@ exports[`renders solids explorer 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -10374,13 +10374,13 @@ exports[`renders solids explorer 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -10404,7 +10404,7 @@ exports[`renders solids explorer 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -10505,7 +10505,7 @@ exports[`renders solids explorer 1`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -10609,10 +10609,10 @@ exports[`renders solids explorer 1`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_ingest_pipeline/"
@@ -10621,7 +10621,7 @@ exports[`renders solids explorer 1`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/"
@@ -10632,7 +10632,7 @@ exports[`renders solids explorer 1`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>
@@ -12134,11 +12134,11 @@ exports[`renders type page 1`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -12155,7 +12155,7 @@ exports[`renders type page 1`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -12183,7 +12183,7 @@ exports[`renders type page 1`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -12207,13 +12207,13 @@ exports[`renders type page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -12237,13 +12237,13 @@ exports[`renders type page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -12267,7 +12267,7 @@ exports[`renders type page 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -12368,7 +12368,7 @@ exports[`renders type page 1`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -12472,10 +12472,10 @@ exports[`renders type page 1`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf selected "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig selected "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#10161A\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4,\\"fontWeight\\":600}"
               href="/pipeline/airline_demo_ingest_pipeline/"
@@ -12484,7 +12484,7 @@ exports[`renders type page 1`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/"
@@ -12495,7 +12495,7 @@ exports[`renders type page 1`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>
@@ -16871,11 +16871,11 @@ exports[`renders type page 2`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -16892,7 +16892,7 @@ exports[`renders type page 2`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -16920,7 +16920,7 @@ exports[`renders type page 2`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -16944,13 +16944,13 @@ exports[`renders type page 2`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -16974,13 +16974,13 @@ exports[`renders type page 2`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -17004,7 +17004,7 @@ exports[`renders type page 2`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -17105,7 +17105,7 @@ exports[`renders type page 2`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -17209,10 +17209,10 @@ exports[`renders type page 2`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf selected "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig selected "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#10161A\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4,\\"fontWeight\\":600}"
               href="/pipeline/airline_demo_ingest_pipeline/"
@@ -17221,7 +17221,7 @@ exports[`renders type page 2`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/"
@@ -17232,7 +17232,7 @@ exports[`renders type page 2`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>
@@ -21608,11 +21608,11 @@ exports[`renders without error 1`] = `
   }
 >
   <div
-    className="LeftNav__LeftNavContainer-sc-1s6k43w-2 fvpwMW"
+    className="LeftNav__LeftNavContainer-sc-1s6k43w-1 fnbhMH"
   >
     <div>
       <div
-        className="LeftNav__LogoContainer-sc-1s6k43w-5 ebRkKK"
+        className="LeftNav__LogoContainer-sc-1s6k43w-4 kFRSr"
       >
         <img
           alt="logo"
@@ -21629,7 +21629,7 @@ exports[`renders without error 1`] = `
           }
         />
         <div
-          className="LeftNav__LogoMetaContainer-sc-1s6k43w-6 hAsnwr"
+          className="LeftNav__LogoMetaContainer-sc-1s6k43w-5 jVbWDi"
         >
           <img
             alt="title"
@@ -21657,7 +21657,7 @@ exports[`renders without error 1`] = `
         />
       </div>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/runs"
         onClick={[Function]}
       >
@@ -21681,13 +21681,13 @@ exports[`renders without error 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Runs
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/assets"
         onClick={[Function]}
       >
@@ -21711,13 +21711,13 @@ exports[`renders without error 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Assets
         </div>
       </a>
       <a
-        className="LeftNav__Tab-sc-1s6k43w-3 jgIaWh"
+        className="LeftNav__Tab-sc-1s6k43w-2 kYoTIm"
         href="/scheduler"
         onClick={[Function]}
       >
@@ -21741,7 +21741,7 @@ exports[`renders without error 1`] = `
           </svg>
         </span>
         <div
-          className="LeftNav__TabLabel-sc-1s6k43w-4 kirFmu"
+          className="LeftNav__TabLabel-sc-1s6k43w-3 dskmQq"
         >
           Scheduler
         </div>
@@ -21842,7 +21842,7 @@ exports[`renders without error 1`] = `
         }
       >
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="RepositoryContentList__ItemHeader-sc-91axco-1 dvqRNr"
         >
           Pipelines & Solids:
         </div>
@@ -21946,10 +21946,10 @@ exports[`renders without error 1`] = `
             </div>
           </div>
           <div
-            className="RepositoryContentList__Items-sc-91axco-1 hTPIY"
+            className="RepositoryContentList__Items-sc-91axco-2 ilJiWd"
           >
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf selected "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig selected "
               data-tooltip="airline_demo_ingest_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#10161A\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4,\\"fontWeight\\":600}"
               href="/pipeline/airline_demo_ingest_pipeline/"
@@ -21958,7 +21958,7 @@ exports[`renders without error 1`] = `
               airline_demo_ingest_pipeline
             </a>
             <a
-              className="RepositoryContentList__Item-sc-91axco-2 fWmLHf  "
+              className="RepositoryContentList__Item-sc-91axco-3 dxsWig  "
               data-tooltip="airline_demo_warehouse_pipeline"
               data-tooltip-style="{\\"fontSize\\":13,\\"padding\\":3,\\"paddingRight\\":7,\\"left\\":9,\\"top\\":5,\\"color\\":\\"#FFFFFF\\",\\"background\\":\\"#182026\\",\\"transform\\":\\"none\\",\\"border\\":0,\\"borderRadius\\":4}"
               href="/pipeline/airline_demo_warehouse_pipeline/"
@@ -21969,7 +21969,7 @@ exports[`renders without error 1`] = `
           </div>
         </div>
         <div
-          className="LeftNav__ItemHeader-sc-1s6k43w-1 dUjoCX"
+          className="SchedulesList__ItemHeader-iq7kk9-4 idBMYy"
         >
           Schedules:
         </div>

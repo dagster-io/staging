@@ -1128,6 +1128,7 @@ snapshots['test_external_repository_data 1'] = '''{
       "__class__": "ExternalScheduleData",
       "cron_schedule": "0 0 * * *",
       "environment_vars": {},
+      "is_sensor": false,
       "mode": "default",
       "name": "a_schedule",
       "partition_set_name": "a_schedule_partitions",

@@ -1,10 +1,12 @@
-import boto3
 import os
-import pytz
 from datetime import datetime, timedelta
+
+import boto3
+import pytz
+
 from dagster import check
-from dagster.utils.backcompat import experimental
 from dagster.core.definitions.sensor import SensorDefinition
+from dagster.utils.backcompat import experimental
 
 MAX_KEYS = 1000
 
@@ -15,18 +17,18 @@ def _s3_updated(bucket, prefix, interval_seconds):
         seconds=interval_seconds
     )
 
-    last_key = ''
+    last_key = ""
     has_keys = False
     while True:
         response = s3_session.list_objects_v2(
-            Bucket=bucket, Delimiter='', MaxKeys=MAX_KEYS, Prefix=prefix, StartAfter=last_key,
+            Bucket=bucket, Delimiter="", MaxKeys=MAX_KEYS, Prefix=prefix, StartAfter=last_key,
         )
-        has_keys = any([obj['LastModified'] > modified_cutoff for obj in response.get('Contents')])
+        has_keys = any([obj["LastModified"] > modified_cutoff for obj in response.get("Contents")])
 
-        if has_keys or response['KeyCount'] < MAX_KEYS:
+        if has_keys or response["KeyCount"] < MAX_KEYS:
             break
 
-        last_key = response.get('Contents', [])[-1:].get('Key', '')
+        last_key = response.get("Contents", [])[-1:].get("Key", "")
 
     return has_keys
 

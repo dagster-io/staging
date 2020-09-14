@@ -41,6 +41,7 @@ const AppRoutes = () => (
     <Route path="/solids/:name?" component={SolidsRoot} />
     <Route path="/scheduler" component={SchedulerRoot} exact={true} />
     <Route path="/schedules/:scheduleName" component={ScheduleRoot} />
+    <Route path="/sensors/:sensorName" component={ScheduleRoot} />
     <Route path="/schedules" component={SchedulesRoot} />
     <Route path="/assets" component={AssetsRoot} exact={true} />
     <Route path="/assets/(/?.*)" component={AssetsRoot} />

@@ -15,6 +15,7 @@ import { useQuery } from "react-apollo";
 import {
   SchedulesRootQuery,
   SchedulesRootQuery_repositoryOrError_Repository,
+  SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results,
   SchedulesRootQuery_scheduleDefinitionsOrError_ScheduleDefinitions_results,
   SchedulesRootQuery_scheduleStatesOrError_ScheduleStates_results
 } from "./types/SchedulesRootQuery";
@@ -22,7 +23,7 @@ import {
 import Loading from "../Loading";
 import PythonErrorInfo from "../PythonErrorInfo";
 
-import { ScheduleRow, ScheduleStateRow } from "./ScheduleRow";
+import { ScheduleRow, ScheduleStateRow, SensorRow } from "./ScheduleRow";
 import { RepositoryInformation } from "../RepositoryInformation";
 
 import { useRepositorySelector } from "../DagsterRepositoryContext";
@@ -91,6 +92,7 @@ export const SchedulesRoot: React.FunctionComponent = () => {
           scheduler,
           repositoryOrError,
           scheduleDefinitionsOrError,
+          sensorDefinitionsOrError,
           scheduleStatesOrError: scheduleStatesWithoutDefinitionsOrError
         } = result;
         let staleReconcileSection = null;
@@ -144,11 +146,24 @@ export const SchedulesRoot: React.FunctionComponent = () => {
           }
         }
 
+        const sensorDefinitionsSection =
+          repositoryOrError.__typename === "Repository" &&
+          sensorDefinitionsOrError.__typename === "ScheduleDefinitions" &&
+          sensorDefinitionsOrError.results.length ? (
+            <div style={{ marginTop: scheduleDefinitionsSection ? 30 : 0 }}>
+              <SensorTable
+                sensors={sensorDefinitionsOrError.results.filter(s => s.scheduleState)}
+                repository={repositoryOrError}
+              />
+            </div>
+          ) : null;
+
         return (
           <ScrollContainer>
             <SchedulerInfo schedulerOrError={scheduler} errorsOnly={true} />
             {staleReconcileSection}
             {scheduleDefinitionsSection}
+            {sensorDefinitionsSection}
           </ScrollContainer>
         );
       }}
@@ -202,6 +217,51 @@ const ScheduleTable: React.FunctionComponent<{
       )}
       {props.schedules.map(schedule => (
         <ScheduleRow schedule={schedule} key={schedule.name} />
+      ))}
+    </div>
+  );
+};
+
+const SensorTable: React.FunctionComponent<{
+  sensors: SchedulesRootQuery_sensorDefinitionsOrError_ScheduleDefinitions_results[];
+  repository: SchedulesRootQuery_repositoryOrError_Repository;
+}> = props => {
+  if (props.sensors.length === 0) {
+    return null;
+  }
+
+  return (
+    <div>
+      <Header>Sensors</Header>
+      <div>
+        {`${props.sensors.length} loaded from `}
+        <Tooltip
+          interactionKind={PopoverInteractionKind.HOVER}
+          content={
+            <pre>
+              <RepositoryInformation repository={props.repository} />
+              <div style={{ fontSize: 11 }}>
+                <span style={{ marginRight: 5 }}>id:</span>
+                <span style={{ opacity: 0.5 }}>{props.repository.id}</span>
+              </div>
+            </pre>
+          }
+        >
+          <Code>{props.repository.name}</Code>
+        </Tooltip>
+      </div>
+
+      {props.sensors.length > 0 && (
+        <Legend>
+          <LegendColumn style={{ maxWidth: 60, paddingRight: 2 }}></LegendColumn>
+          <LegendColumn style={{ flex: 1.4 }}>Sensor Name</LegendColumn>
+          <LegendColumn>Pipeline</LegendColumn>
+          <LegendColumn style={{ flex: 1 }}>Latest Runs</LegendColumn>
+          <LegendColumn style={{ flex: 1 }}>Execution Params</LegendColumn>
+        </Legend>
+      )}
+      {props.sensors.map(sensor => (
+        <SensorRow sensor={sensor} key={sensor.name} />
       ))}
     </div>
   );

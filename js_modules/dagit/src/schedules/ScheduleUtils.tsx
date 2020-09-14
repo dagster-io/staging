@@ -90,6 +90,14 @@ export const SCHEDULES_ROOT_QUERY = gql`
       }
       ...PythonErrorFragment
     }
+    sensorDefinitionsOrError(repositorySelector: $repositorySelector) {
+      ... on ScheduleDefinitions {
+        results {
+          ...ScheduleDefinitionFragment
+        }
+      }
+      ...PythonErrorFragment
+    }
     scheduleStatesOrError(repositorySelector: $repositorySelector, withNoScheduleDefinition: true) {
       __typename
       ... on ScheduleStates {

@@ -17,6 +17,7 @@ from dagster.core.definitions import (
     TriggeredExecutionDefinition,
 )
 from dagster.core.definitions.partition import PartitionScheduleDefinition
+from dagster.core.definitions.sensor import SensorDefinition
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
@@ -162,7 +163,7 @@ class ExternalPresetData(
 class ExternalScheduleData(
     namedtuple(
         "_ExternalScheduleData",
-        "name cron_schedule pipeline_name solid_selection mode environment_vars partition_set_name",
+        "name cron_schedule pipeline_name solid_selection mode environment_vars partition_set_name is_sensor",
     )
 ):
     def __new__(
@@ -174,6 +175,7 @@ class ExternalScheduleData(
         mode,
         environment_vars,
         partition_set_name,
+        is_sensor,
     ):
         return super(ExternalScheduleData, cls).__new__(
             cls,
@@ -184,6 +186,7 @@ class ExternalScheduleData(
             mode=check.opt_str_param(mode, "mode"),
             environment_vars=check.opt_dict_param(environment_vars, "environment_vars"),
             partition_set_name=check.opt_str_param(partition_set_name, "partition_set_name"),
+            is_sensor=check.opt_bool_param(is_sensor, "is_sensor"),
         )
 
 
@@ -372,6 +375,7 @@ def external_schedule_data_from_def(schedule_def):
         partition_set_name=schedule_def.get_partition_set().name
         if isinstance(schedule_def, PartitionScheduleDefinition)
         else None,
+        is_sensor=isinstance(schedule_def, SensorDefinition),
     )
 
 

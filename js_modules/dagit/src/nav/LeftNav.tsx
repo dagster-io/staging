@@ -97,9 +97,7 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({ options, repo, 
         <RepositoryPicker options={options} repo={repo} setRepo={setRepo} />
         {repo && (
           <div style={{ display: "flex", flex: 1, flexDirection: "column", minHeight: 0 }}>
-            <ItemHeader>Pipelines & Solids:</ItemHeader>
             <RepositoryContentList {...match?.params} repo={repo} />
-            <ItemHeader>Schedules:</ItemHeader>
             <SchedulesList {...match?.params} repo={repo} />
           </div>
         )}
@@ -113,20 +111,6 @@ const LogoWebsocketStatus = styled(WebsocketStatus)`
   position: absolute;
   top: 28px;
   left: 42px;
-`;
-
-const ItemHeader = styled.div`
-  font-size: 15px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  padding: 8px 12px;
-  padding-left: 8px;
-  margin-top: 10px;
-  border-left: 4px solid transparent;
-  border-bottom: 1px solid transparent;
-  display: block;
-  font-weight: bold;
-  color: ${Colors.LIGHT_GRAY3} !important;
 `;
 
 const LeftNavContainer = styled.div`

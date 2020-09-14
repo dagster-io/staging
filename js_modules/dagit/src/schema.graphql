@@ -1039,6 +1039,7 @@ type Query {
   scheduler: SchedulerOrError!
   scheduleDefinitionOrError(scheduleSelector: ScheduleSelector!): ScheduleDefinitionOrError!
   scheduleDefinitionsOrError(repositorySelector: RepositorySelector!): ScheduleDefinitionsOrError!
+  sensorDefinitionsOrError(repositorySelector: RepositorySelector!): ScheduleDefinitionsOrError!
   scheduleStatesOrError(repositorySelector: RepositorySelector, withNoScheduleDefinition: Boolean): ScheduleStatesOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!

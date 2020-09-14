@@ -112,6 +112,10 @@ class DauphinQuery(dauphin.ObjectType):
         dauphin.NonNull("ScheduleDefinitionsOrError"),
         repositorySelector=dauphin.NonNull("RepositorySelector"),
     )
+    sensorDefinitionsOrError = dauphin.Field(
+        dauphin.NonNull("ScheduleDefinitionsOrError"),
+        repositorySelector=dauphin.NonNull("RepositorySelector"),
+    )
     scheduleStatesOrError = dauphin.Field(
         dauphin.NonNull("ScheduleStatesOrError"),
         repositorySelector=dauphin.Argument("RepositorySelector"),
@@ -232,6 +236,13 @@ class DauphinQuery(dauphin.ObjectType):
     def resolve_scheduleDefinitionsOrError(self, graphene_info, **kwargs):
         return get_schedule_definitions_or_error(
             graphene_info, RepositorySelector.from_graphql_input(kwargs.get("repositorySelector"))
+        )
+
+    def resolve_sensorDefinitionsOrError(self, graphene_info, **kwargs):
+        return get_schedule_definitions_or_error(
+            graphene_info,
+            RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
+            is_sensor=True,
         )
 
     def resolve_scheduleStatesOrError(self, graphene_info, **kwargs):

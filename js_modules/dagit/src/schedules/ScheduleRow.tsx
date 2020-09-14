@@ -689,6 +689,264 @@ export const TickTag: React.FunctionComponent<{
   }
 };
 
+export const SensorRowHeader: React.FunctionComponent = () => {
+  return (
+    <Legend>
+      <LegendColumn style={{ maxWidth: 60, paddingRight: 2 }}></LegendColumn>
+      <LegendColumn style={{ flex: 1.4 }}>Sensor Name</LegendColumn>
+      <LegendColumn>Pipeline</LegendColumn>
+      <LegendColumn style={{ flex: 1 }}>Latest Runs</LegendColumn>
+      <LegendColumn style={{ flex: 1 }}>Execution Params</LegendColumn>
+    </Legend>
+  );
+};
+
+export const SensorRow: React.FunctionComponent<{
+  sensor: ScheduleDefinitionFragment;
+}> = ({ sensor }) => {
+  const match = useRouteMatch("/sensors/:sensorName");
+
+  const [startSchedule, { loading: toggleOnInFlight }] = useMutation(START_SCHEDULE_MUTATION, {
+    onCompleted: displayScheduleMutationErrors
+  });
+  const [stopSchedule, { loading: toggleOffInFlight }] = useMutation(STOP_SCHEDULE_MUTATION, {
+    onCompleted: displayScheduleMutationErrors
+  });
+
+  const { name, cronSchedule, pipelineName, mode, solidSelection, scheduleState } = sensor;
+
+  const scheduleId = scheduleState?.scheduleOriginId;
+
+  const scheduleSelector = useScheduleSelector(name);
+
+  const [configRequested, setConfigRequested] = React.useState(false);
+
+  const { data, loading: yamlLoading } = useQuery(FETCH_SCHEDULE_YAML, {
+    variables: { scheduleSelector },
+    skip: !configRequested
+  });
+
+  const runConfigError =
+    data?.scheduleDefinitionOrError?.runConfigOrError.__typename === "PythonError"
+      ? data.scheduleDefinitionOrError.runConfigOrError
+      : null;
+
+  const runConfigYaml = runConfigError
+    ? null
+    : data?.scheduleDefinitionOrError?.runConfigOrError.yaml;
+
+  const displayName = match ? (
+    <ScheduleName>{name}</ScheduleName>
+  ) : (
+    <>
+      <Link to={`/sensors/${name}`}>
+        <ScheduleName>{name}</ScheduleName>
+      </Link>
+
+      {scheduleId && <span style={{ fontSize: 10 }}>Schedule ID: {scheduleId}</span>}
+    </>
+  );
+
+  if (!scheduleState) {
+    return (
+      <RowContainer key={name}>
+        <RowColumn style={{ flex: 1.4 }}>{displayName}</RowColumn>
+        <RowColumn>
+          <Link to={`/pipeline/${pipelineName}/`}>
+            <Icon icon="diagram-tree" /> {pipelineName}
+          </Link>
+        </RowColumn>
+        <RowColumn
+          style={{
+            maxWidth: 150
+          }}
+        >
+          <div
+            style={{
+              position: "relative",
+              width: "100%",
+              whiteSpace: "pre-wrap",
+              display: "block"
+            }}
+          >
+            {cronSchedule ? (
+              <Tooltip position={"bottom"} content={cronSchedule}>
+                {getNaturalLanguageCronString(cronSchedule)}
+              </Tooltip>
+            ) : (
+              <div>-</div>
+            )}
+          </div>
+        </RowColumn>
+        <RowColumn
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            flex: 1
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div>{`Mode: ${mode}`}</div>
+          </div>
+        </RowColumn>
+      </RowContainer>
+    );
+  }
+
+  const { status, runningScheduleCount, runs, runsCount, scheduleOriginId } = scheduleState;
+
+  return (
+    <RowContainer key={name}>
+      <RowColumn style={{ maxWidth: 60, paddingLeft: 0, textAlign: "center" }}>
+        <Switch
+          checked={status === ScheduleStatus.RUNNING}
+          large={true}
+          disabled={toggleOffInFlight || toggleOnInFlight}
+          innerLabelChecked="on"
+          innerLabel="off"
+          onChange={() => {
+            if (status === ScheduleStatus.RUNNING) {
+              stopSchedule({
+                variables: { scheduleOriginId }
+              });
+            } else {
+              startSchedule({
+                variables: { scheduleSelector }
+              });
+            }
+          }}
+        />
+
+        {errorDisplay(status, runningScheduleCount)}
+      </RowColumn>
+      <RowColumn style={{ flex: 1.4 }}>{displayName}</RowColumn>
+      <RowColumn>
+        <Link to={`/pipeline/${pipelineName}/`}>
+          <Icon icon="diagram-tree" /> {pipelineName}
+        </Link>
+      </RowColumn>
+      <RowColumn
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}
+      >
+        <div>
+          {runs.map(run => {
+            const [partition] = run.tags
+              .filter(tag => tag.key === "dagster/partition")
+              .map(tag => tag.value);
+            const runLabel = partition ? (
+              <>
+                <div>Run id: {titleForRun(run)}</div>
+                <div>Partition: {partition}</div>
+              </>
+            ) : (
+              titleForRun(run)
+            );
+            return (
+              <div
+                style={{
+                  display: "inline-block",
+                  cursor: "pointer",
+                  marginRight: 5
+                }}
+                key={run.runId}
+              >
+                <Link to={`/pipeline/${run.pipelineName}/runs/${run.runId}`}>
+                  <Tooltip
+                    position={"top"}
+                    content={runLabel}
+                    wrapperTagName="div"
+                    targetTagName="div"
+                  >
+                    <RunStatus status={run.status} />
+                  </Tooltip>
+                </Link>
+              </div>
+            );
+          })}
+
+          {runsCount > NUM_RUNS_TO_DISPLAY && (
+            <Link
+              to={`/runs/?q=${encodeURIComponent(`tag:dagster/schedule_name=${name}`)}`}
+              style={{ verticalAlign: "top" }}
+            >
+              {" "}
+              +{runsCount - NUM_RUNS_TO_DISPLAY} more
+            </Link>
+          )}
+        </div>
+      </RowColumn>
+      <RowColumn
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          flex: 1
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <div>{`Mode: ${mode}`}</div>
+        </div>
+        <Popover
+          content={
+            yamlLoading ? (
+              <Spinner size={32} />
+            ) : (
+              <Menu>
+                <MenuItem
+                  text="View Configuration..."
+                  icon="share"
+                  onClick={() => {
+                    if (runConfigError) {
+                      showCustomAlert({
+                        body: <PythonErrorInfo error={runConfigError} />
+                      });
+                    } else {
+                      showCustomAlert({
+                        title: "Config",
+                        body: (
+                          <HighlightedCodeBlock
+                            value={runConfigYaml || "Unable to resolve config"}
+                            languages={["yaml"]}
+                          />
+                        )
+                      });
+                    }
+                  }}
+                />
+                <MenuItem
+                  text="Open in Playground..."
+                  icon="edit"
+                  target="_blank"
+                  disabled={!runConfigYaml}
+                  href={`/pipeline/${pipelineName}/playground/setup?${qs.stringify({
+                    mode,
+                    solidSelection,
+                    config: runConfigYaml
+                  })}`}
+                />
+                <MenuDivider />
+              </Menu>
+            )
+          }
+          position={"bottom"}
+        >
+          <Button
+            minimal={true}
+            icon="chevron-down"
+            onClick={() => {
+              setConfigRequested(true);
+            }}
+          />
+        </Popover>
+      </RowColumn>
+    </RowContainer>
+  );
+};
+
 const ScheduleName = styled.pre`
   margin: 0;
 `;

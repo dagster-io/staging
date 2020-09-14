@@ -2,6 +2,7 @@ import datetime
 from collections import defaultdict
 
 from dagster_aws.s3.sensor import s3_sensor
+
 from dagster import PartitionSetDefinition, ScheduleExecutionContext
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.utils.partitions import date_partition_range
@@ -134,7 +135,7 @@ def longitudinal_schedule():
     )
 
 
-@s3_sensor(pipeline_name='many_events', bucket='prha.upload', prefix='foo')
+@s3_sensor(pipeline_name="many_events", bucket="prha.upload", prefix="foo")
 def sensor_schedule(_):
     return {}
 

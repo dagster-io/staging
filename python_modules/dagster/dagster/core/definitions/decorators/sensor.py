@@ -23,11 +23,11 @@ def sensor(
         name (str): The name of this sensor
     """
     check.str_param(pipeline_name, "pipeline_name")
-    check.opt_callable_param(run_config_fn, 'run_config_fn')
-    check.opt_callable_param(tags_fn, 'tags_fn')
+    check.opt_callable_param(run_config_fn, "run_config_fn")
+    check.opt_callable_param(tags_fn, "tags_fn")
     check.opt_str_param(sensor_name, "sensor_name")
-    check.opt_str_param(mode, 'mode')
-    check.opt_nullable_list_param(solid_selection, 'solid_selection', of_type=str)
+    check.opt_str_param(mode, "mode")
+    check.opt_nullable_list_param(solid_selection, "solid_selection", of_type=str)
     check.opt_dict_param(environment_vars, "environment_vars", key_type=str, value_type=str)
 
     def inner(fn):
