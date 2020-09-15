@@ -230,6 +230,7 @@ class DagsterApiServer(DagsterApiServicer):
             self._check_for_orphaned_runs()
 
     def _check_for_orphaned_runs(self):
+        sys.stderr.write("CHECKING FOR ORPHANED RUNS\n")
         with self._execution_lock:
             runs_to_clear = []
             for run_id, (process, instance_ref) in self._executions.items():
@@ -283,8 +284,13 @@ class DagsterApiServer(DagsterApiServicer):
             # Once there are no more running executions after we have received a request to
             # shut down, terminate the server
             if self._shutdown_once_executions_finish_event.is_set():
+                sys.stderr.write("HOW MANY EXECUTIONS??? " + repr(len(self._executions)) + "\n")
+
                 if len(self._executions) == 0:
+                    sys.stderr.write("SETTING SERVER TERMINATION EVENT\n")
                     self._server_termination_event.set()
+            else:
+                sys.stderr.write("NO SHUTDOWN EVENT YET\n")
 
     def _recon_repository_from_origin(self, repository_origin):
         check.inst_param(
@@ -696,6 +702,7 @@ class DagsterApiServer(DagsterApiServicer):
 
     def ShutdownServer(self, request, _context):
         try:
+            sys.stderr.write("GOT SHUTDOWN SERVER EVENT: \n")
             self._shutdown_once_executions_finish_event.set()
             return api_pb2.ShutdownServerReply(
                 serialized_shutdown_server_result=serialize_dagster_namedtuple(
@@ -889,7 +896,11 @@ SERVER_FAILED_TO_BIND_TOKEN_BYTES = b"dagster_grpc_server_failed_to_bind"
 
 
 def server_termination_target(termination_event, server):
-    termination_event.wait()
+    sys.stderr.write("WAITING FOR TERMINATION EVENT!!!\n")
+
+    while not termination_event.is_set():
+        time.sleep(0.1)
+    sys.stderr.write("STOPPING SERVER!!!\n")
     # We could make this grace period configurable if we set it in the ShutdownServer handler
     server.stop(grace=5)
 
