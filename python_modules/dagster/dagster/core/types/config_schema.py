@@ -8,7 +8,11 @@ from dagster.core.decorator_utils import (
 )
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.utils import ensure_gen, ensure_single_item
-from dagster.utils.backcompat import canonicalize_backcompat_args, rename_warning
+from dagster.utils.backcompat import (
+    canonicalize_backcompat_args,
+    experimental_arg_warning,
+    rename_warning,
+)
 
 
 class DagsterTypeLoader(object):
@@ -79,6 +83,8 @@ class DagsterTypeLoaderFromDecorator(DagsterTypeLoader):
             required_resource_keys, "required_resource_keys", of_type=str
         )
         self._loader_version = check.opt_str_param(loader_version, "loader_version")
+        if self._loader_version:
+            experimental_arg_warning("loader_version", "DagsterTypeLoaderFromDecorator.__init__")
         self._external_version_fn = check.callable_param(external_version_fn, "external_version_fn")
 
     @property
