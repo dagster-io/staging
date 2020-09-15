@@ -411,6 +411,7 @@ class EphemeralDagsterGrpcClient(DagsterGrpcClient):
         return self
 
     def __exit__(self, _exception_type, _exception_value, _traceback):
+        sys.stderr.write("EXITING EPHEMERAL CLASS \n")
         self.cleanup_server()
 
     def __del__(self):

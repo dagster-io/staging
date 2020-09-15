@@ -350,9 +350,12 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(
         )
 
     def cleanup(self):
+        sys.stderr.write("CLEANING UP HANDLE\n")
         self.heartbeat_shutdown_event.set()
         self.heartbeat_thread.join()
+        sys.stderr.write("CLEANING UP SERVER\n")
         self.client.cleanup_server()
+        sys.stderr.write("CLEANED UP SERVER\n")
 
 
 class InProcessRepositoryLocationHandle(

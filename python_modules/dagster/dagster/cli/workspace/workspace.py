@@ -40,5 +40,7 @@ class Workspace:
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
+        sys.stderr.write("CLEANING UP WORKSPACE \n")
         for handle in self.repository_location_handles:
             handle.cleanup()
+        sys.stderr.write("CLEANED UP WORKSPACE\n")
