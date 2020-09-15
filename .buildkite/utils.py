@@ -1,5 +1,7 @@
 import subprocess
 
+DAGIT_PATH = "js_modules/dagit"
+
 
 def check_for_release():
     try:
@@ -19,6 +21,25 @@ def check_for_release():
         return True
 
     return False
+
+
+def is_diff_only_dagit():
+    try:
+        branch_name = str(subprocess.check_output(["git", "branch", "--show-current"])).strip(
+            "'b\\n"
+        )
+        merge_base = str(
+            subprocess.check_output(["git", "merge-base", "master", branch_name])
+        ).strip("'b\\n")
+        diff_files = (
+            str(subprocess.check_output(["git", "diff", merge_base, branch_name, "--name-only"]))
+            .strip("'b\\n")
+            .split("\\n")
+        )
+        return all(filepath.startswith(DAGIT_PATH) for (filepath) in diff_files)
+
+    except subprocess.CalledProcessError:
+        return False
 
 
 def network_buildkite_container(network_name):
