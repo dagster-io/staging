@@ -10,7 +10,12 @@ from defines import (
 )
 from module_build_spec import ModuleBuildSpec
 from step_builder import StepBuilder, wait_step
-from utils import check_for_release, connect_sibling_docker_container, network_buildkite_container
+from utils import (
+    check_for_release,
+    connect_sibling_docker_container,
+    is_diff_only_dagit,
+    network_buildkite_container,
+)
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
@@ -238,7 +243,9 @@ def postgres_extra_cmds_fn(_):
         connect_sibling_docker_container("postgres", "test-postgres-db", "POSTGRES_TEST_DB_HOST"),
         network_buildkite_container("postgres_multi"),
         connect_sibling_docker_container(
-            "postgres_multi", "test-run-storage-db", "POSTGRES_TEST_RUN_STORAGE_DB_HOST",
+            "postgres_multi",
+            "test-run-storage-db",
+            "POSTGRES_TEST_RUN_STORAGE_DB_HOST",
         ),
         connect_sibling_docker_container(
             "postgres_multi",
@@ -363,7 +370,8 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         env_vars=["AWS_DEFAULT_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     ),
     ModuleBuildSpec(
-        "python_modules/libraries/dagster-azure", env_vars=["AZURE_STORAGE_ACCOUNT_KEY"],
+        "python_modules/libraries/dagster-azure",
+        env_vars=["AZURE_STORAGE_ACCOUNT_KEY"],
     ),
     ModuleBuildSpec(
         "python_modules/libraries/dagster-celery",
@@ -620,7 +628,28 @@ def version_equality_checks(version=SupportedPython.V3_7):
     ]
 
 
-if __name__ == "__main__":
+def dagit_steps():
+    return [
+        StepBuilder("dagit frontend only")
+        .run(
+            "cd js_modules/dagit",
+            "yarn install",
+            "yarn run ts",
+            "yarn run jest",
+            "yarn run check-prettier",
+            "yarn run check-lint",
+            "yarn run download-schema",
+            "yarn run generate-types",
+            "git diff --exit-code",
+            "mv coverage/lcov.info lcov.dagit.$BUILDKITE_BUILD_ID.info",
+            "buildkite-agent artifact upload lcov.dagit.$BUILDKITE_BUILD_ID.info",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
+    ]
+
+
+def non_dagit_steps():
     steps = []
     steps += publish_test_images()
 
@@ -634,7 +663,11 @@ if __name__ == "__main__":
     steps += pylint_steps()
     steps += [
         StepBuilder("isort")
-        .run("pip install isort>=4.3.21", "make isort", "git diff --exit-code",)
+        .run(
+            "pip install isort>=4.3.21",
+            "make isort",
+            "git diff --exit-code",
+        )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
         StepBuilder("black")
@@ -647,29 +680,6 @@ if __name__ == "__main__":
             "pip install -e python_modules/dagster -qqq",
             "pip install -e python_modules/libraries/dagstermill -qqq",
             "pytest -vv docs/test_doc_build.py",
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-        StepBuilder("dagit webapp tests")
-        .run(
-            "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
-            "pip install -e python_modules/dagster -qqq",
-            "pip install -e python_modules/dagster-graphql -qqq",
-            "pip install -e python_modules/libraries/dagster-cron -qqq",
-            "pip install -e python_modules/libraries/dagster-slack -qqq",
-            "pip install -e python_modules/dagit -qqq",
-            "pip install -e examples/legacy_examples -qqq",
-            "cd js_modules/dagit",
-            "yarn install",
-            "yarn run ts",
-            "yarn run jest",
-            "yarn run check-prettier",
-            "yarn run check-lint",
-            "yarn run download-schema",
-            "yarn run generate-types",
-            "git diff --exit-code",
-            "mv coverage/lcov.info lcov.dagit.$BUILDKITE_BUILD_ID.info",
-            "buildkite-agent artifact upload lcov.dagit.$BUILDKITE_BUILD_ID.info",
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
@@ -701,6 +711,16 @@ if __name__ == "__main__":
     steps += next_docs_build_tests()
     steps += examples_tests()
     steps += integration_tests()
+
+    return steps
+
+
+if __name__ == "__main__":
+    steps = dagit_steps()
+    dagit_only = is_diff_only_dagit()
+
+    if not dagit_only:
+        steps += non_dagit_steps()
 
     if DO_COVERAGE:
         steps += [wait_step(), coverage_step()]
