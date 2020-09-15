@@ -32,7 +32,11 @@ module.exports = {
     "@typescript-eslint/prefer-interface": "off",
     "@typescript-eslint/no-empty-interface": "off",
     "react-hooks/rules-of-hooks": "error",
-    "react-hooks/exhaustive-deps": "warn"
+    "react-hooks/exhaustive-deps": "warn",
+    // [todo dish]: Temporarily disable while determining whether to keep...
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/ban-types": "off"
   },
   settings: {
     react: {
