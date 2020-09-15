@@ -1,5 +1,6 @@
 import pytest
 from dagster_dbt.cli import (
+    dbt_cli_compile,
     dbt_cli_run,
     dbt_cli_run_operation,
     dbt_cli_snapshot,
@@ -109,6 +110,16 @@ class TestDbtCliSolids:
     ):  # pylint: disable=unused-argument
         """This command will is a no-op without more arguments, but this test shows that it can invoked successfully."""
         test_solid = configured(dbt_cli_snapshot_freshness, name="test_solid")(
+            {"project-dir": test_project_dir, "profiles-dir": dbt_config_dir}
+        )
+
+        result = execute_solid(test_solid)
+        assert result.success
+
+    def test_dbt_cli_compile(
+        self, dbt_seed, test_project_dir, dbt_config_dir
+    ):  # pylint: disable=unused-argument
+        test_solid = configured(dbt_cli_compile, name="test_solid")(
             {"project-dir": test_project_dir, "profiles-dir": dbt_config_dir}
         )
 

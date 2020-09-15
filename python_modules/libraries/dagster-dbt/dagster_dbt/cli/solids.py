@@ -306,3 +306,79 @@ def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
     )
 
     return DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code)
+
+
+@solid(
+    description="A solid to invoke dbt compile via CLI.",
+    input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
+    config_schema={
+        **CLI_CONFIG_SCHEMA,
+        "parse-only": Field(config=bool, is_required=False, default_value=False,),
+        "threads": Field(
+            config=Noneable(int),
+            default_value=None,
+            is_required=False,
+            description="Specify number of threads to use while executing models. Overrides settings in profiles.yml.",
+        ),
+        "no-version-check": Field(
+            config=bool,
+            description="Skip the check that dbt's version matches the one specified in the dbt_project.yml file ('require-dbt-version')",
+            is_required=False,
+            default_value=False,
+        ),
+        "models": Field(
+            config=Noneable([str]),
+            default_value=None,
+            is_required=False,
+            description="The dbt models to run.",
+        ),
+        "exclude": Field(
+            config=Noneable([str]),
+            default_value=None,
+            is_required=False,
+            description="The dbt models to exclude.",
+        ),
+        "selector": Field(
+            config=Noneable([str]),
+            default_value=None,
+            is_required=False,
+            description="The selector name to use, as defined in your selectors.yml",
+        ),
+        "state": Field(
+            config=Noneable([str]),
+            default_value=None,
+            is_required=False,
+            description="If set, use the given directory as the source for json files to compare with this project.",
+        ),
+        "full-refresh": Field(
+            config=bool,
+            description="If specified, DBT will drop incremental models and fully-recalculate the incremental table from the model definition. (--full-refresh)",
+            is_required=False,
+            default_value=False,
+        ),
+    },
+)
+def dbt_cli_compile(context) -> DbtCliResult:
+    logs, raw_output, return_code = execute_dbt(
+        context.solid_config["dbt_executable"],
+        command=("compile",),
+        flags_dict=passthrough_flags_only(
+            context.solid_config,
+            (
+                "parse-only",
+                "threads",
+                "no-version-check",
+                "models",
+                "exclude",
+                "selector",
+                "state",
+                "full-refresh",
+            ),
+        ),
+        log=context.log,
+        warn_error=context.solid_config["warn-error"],
+        ignore_handled_error=context.solid_config["ignore_handled_error"],
+    )
+
+    return DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code)
