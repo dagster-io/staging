@@ -16,7 +16,7 @@ from dagster.utils import datetime_as_float, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRunStatsSnapshot
 from .base import AssetAwareEventLogStorage, EventLogStorage
-from .schema import SqlEventLogStorageTable
+from .schema import SqlEventLogStorageMetadata, SqlEventLogStorageTable
 
 
 class SqlEventLogStorage(EventLogStorage):
@@ -282,7 +282,8 @@ class SqlEventLogStorage(EventLogStorage):
         # run_id
         # https://stackoverflow.com/a/54386260/324449
         with self.connect() as conn:
-            conn.execute(SqlEventLogStorageTable.delete())  # pylint: disable=no-value-for-parameter
+            SqlEventLogStorageMetadata.drop_all(conn)
+            SqlEventLogStorageMetadata.create_all(conn)
 
     def delete_events(self, run_id):
         check.str_param(run_id, "run_id")

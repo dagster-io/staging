@@ -24,7 +24,7 @@ from dagster.utils import merge_dicts
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from .base import RunStorage
-from .schema import RunTagsTable, RunsTable, SnapshotsTable
+from .schema import RunStorageSqlMetadata, RunTagsTable, RunsTable, SnapshotsTable
 
 
 class SnapshotType(Enum):
@@ -522,10 +522,8 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
     def wipe(self):
         """Clears the run storage."""
         with self.connect() as conn:
-            # https://stackoverflow.com/a/54386260/324449
-            conn.execute(RunsTable.delete())  # pylint: disable=no-value-for-parameter
-            conn.execute(RunTagsTable.delete())  # pylint: disable=no-value-for-parameter
-            conn.execute(SnapshotsTable.delete())  # pylint: disable=no-value-for-parameter
+            RunStorageSqlMetadata.drop_all(conn)
+            RunStorageSqlMetadata.create_all(conn)
 
 
 GET_PIPELINE_SNAPSHOT_QUERY_ID = "get-pipeline-snapshot"

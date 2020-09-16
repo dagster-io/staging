@@ -53,7 +53,8 @@ class TestPostgresInstance:
         )
         from dagster_postgres.run_storage import PostgresRunStorage  # pylint: disable=import-error
 
-        storage = PostgresRunStorage.create_clean_storage(conn_string)
+        storage = PostgresRunStorage(conn_string)
+        storage.wipe()
         assert storage
         return storage
 
@@ -67,7 +68,8 @@ class TestPostgresInstance:
             PostgresEventLogStorage,
         )
 
-        storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+        storage = PostgresEventLogStorage(conn_string)
+        storage.wipe()
         assert storage
         return storage
 
@@ -81,7 +83,8 @@ class TestPostgresInstance:
             PostgresScheduleStorage,
         )
 
-        storage = PostgresScheduleStorage.create_clean_storage(conn_string)
+        storage = PostgresScheduleStorage(conn_string)
+        storage.wipe()
         assert storage
         return storage
 

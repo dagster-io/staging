@@ -28,8 +28,10 @@ def simple():
 def test_postgres_instance(multi_postgres):
     run_storage_conn_string, event_log_storage_conn_string = multi_postgres
 
-    run_storage = PostgresRunStorage.create_clean_storage(run_storage_conn_string)
-    event_storage = PostgresEventLogStorage.create_clean_storage(event_log_storage_conn_string)
+    run_storage = PostgresRunStorage(run_storage_conn_string)
+    run_storage.wipe()
+    event_storage = PostgresEventLogStorage(event_log_storage_conn_string)
+    event_storage.wipe()
 
     with seven.TemporaryDirectory() as temp_dir:
         instance = DagsterInstance(
