@@ -312,6 +312,10 @@ def touch_file(path):
 
 def _kill_on_event(termination_event):
     termination_event.wait()
+    send_interrupt()
+
+
+def send_interrupt():
     if IS_WINDOWS:
         # This will raise a KeyboardInterrupt in python land - meaning this wont be able to
         # interrupt things like sleep()
@@ -339,8 +343,14 @@ def start_termination_thread(termination_event):
     int_thread.start()
 
 
+_received_interrupt = {"received": False}
+
+
 # Wraps code that we don't want a SIGINT to interrupt (but throw a KeyboardInterrupt if a
-# SIGINT was received while it ran)
+# SIGINT was received while it ran). You can also call raise_delayed_interrupts within this
+# context when you reach a checkpoint where it's safe to raise a KeyboardInterrupt, or open a
+# `raise_interrupts_immediately` context during a period in which it's once again safe to raise
+# interrupts.
 @contextlib.contextmanager
 def delay_interrupts():
     if not seven.is_main_thread():
@@ -348,20 +358,53 @@ def delay_interrupts():
     else:
         original_signal_handler = signal.getsignal(signal.SIGINT)
 
-        received_interrupt = {"received": False}
-
         def _new_signal_handler(signo, _):
             check.invariant(signo == signal.SIGINT)
-            received_interrupt["received"] = True
-
-        signal.signal(signal.SIGINT, _new_signal_handler)
+            _received_interrupt["received"] = True
 
         try:
+            signal.signal(signal.SIGINT, _new_signal_handler)
             yield
         finally:
             signal.signal(signal.SIGINT, original_signal_handler)
-            if received_interrupt["received"]:
-                raise KeyboardInterrupt
+            raise_delayed_interrupts()
+
+
+# Restores the default SIGINT handler behavior within this context. Typically this would be a no-op,
+# but can be used within a delay_interrupts context to temporarily restore normal interrupt handling
+# behavior. Will also immediately raise an interrupt if called inside a `delay_interrupts` context
+# where an interrupt was received.
+@contextlib.contextmanager
+def raise_interrupts_immediately():
+    if not seven.is_main_thread():
+        yield
+    else:
+        raise_delayed_interrupts()
+        original_signal_handler = signal.getsignal(signal.SIGINT)
+
+        def _new_signal_handler(signo, _):
+            check.invariant(signo == signal.SIGINT)
+            raise KeyboardInterrupt
+
+        try:
+            signal.signal(signal.SIGINT, _new_signal_handler)
+            yield
+        finally:
+            signal.signal(signal.SIGINT, original_signal_handler)
+
+
+# Call within a `delay_interrupts` context whenever you reach a checkpoint where it's safe to
+# raise any interrupts that were received inside the context.
+def raise_delayed_interrupts():
+    if _received_interrupt["received"]:
+        _received_interrupt["received"] = False
+        raise KeyboardInterrupt
+
+
+def pop_delayed_interrupts():
+    ret = _received_interrupt["received"]
+    _received_interrupt["received"] = False
+    return ret
 
 
 def datetime_as_float(dt):

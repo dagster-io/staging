@@ -3,6 +3,7 @@ import time
 from dagster import check
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.retries import Retries
+from dagster.utils import pop_delayed_interrupts
 
 from .plan import ExecutionPlan
 
@@ -37,9 +38,16 @@ class ActiveExecution(object):
         self._success = set()
         self._failed = set()
         self._skipped = set()
+        self._interrupted = set()
+
+        self._is_interrupted = False
 
         # Start the show by loading _executable with the set of _pending steps that have no deps
         self._update()
+
+    @property
+    def interrupted(self):
+        return self._is_interrupted
 
     def _update(self):
         """Moves steps from _pending to _executable / _pending_skip / _pending_retry
@@ -118,6 +126,9 @@ class ActiveExecution(object):
 
     def get_steps_to_execute(self, limit=None):
         check.opt_int_param(limit, "limit")
+        check.invariant(
+            not self._is_interrupted, "Adding steps after the execution was interrupted"
+        )
         self._update()
 
         steps = sorted(
@@ -182,6 +193,14 @@ class ActiveExecution(object):
         self._skipped.add(step_key)
         self._mark_complete(step_key)
 
+    def mark_interrupted(self, step_key):
+        self._interrupted.add(step_key)
+
+    def check_for_interrupts(self):
+        has_new_interrupt = pop_delayed_interrupts()
+        self._is_interrupted = self._is_interrupted or has_new_interrupt
+        return has_new_interrupt
+
     def mark_up_for_retry(self, step_key, at_time=None):
         check.invariant(
             not self._retries.disabled,
@@ -219,6 +238,11 @@ class ActiveExecution(object):
     def handle_event(self, dagster_event):
         check.inst_param(dagster_event, "dagster_event", DagsterEvent)
 
+        if dagster_event.step_key in self._interrupted:
+            # State changes may come in after a step is interrupted due to
+            # race conditions, but can be ignored
+            return
+
         if dagster_event.is_step_failure:
             self.mark_failed(dagster_event.step_key)
         elif dagster_event.is_step_success:
@@ -237,11 +261,16 @@ class ActiveExecution(object):
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
         """
         if step_key in self._in_flight:
-            pipeline_context.log.error(
-                "Step {key} finished without success or failure event, assuming failure.".format(
-                    key=step_key
+            if step_key in self._interrupted:
+                pipeline_context.log.info(
+                    "Step {key} failed due to being interrupted.".format(key=step_key)
                 )
-            )
+            else:
+                pipeline_context.log.error(
+                    "Step {key} finished without success or failure event, assuming failure.".format(
+                        key=step_key
+                    )
+                )
             self.mark_failed(step_key)
 
     @property
