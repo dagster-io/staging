@@ -1,5 +1,5 @@
 import pytest
-from dagster_dbt.cli import (
+from dagster_dbt import (
     dbt_cli_compile,
     dbt_cli_run,
     dbt_cli_run_operation,
