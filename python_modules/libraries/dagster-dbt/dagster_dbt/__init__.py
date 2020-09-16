@@ -1,6 +1,7 @@
 from dagster.core.utils import check_dagster_package_version
 
 from .cli.solids import (
+    dbt_cli_compile,
     dbt_cli_run,
     dbt_cli_run_operation,
     dbt_cli_snapshot,
