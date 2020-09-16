@@ -1,21 +1,20 @@
 import * as React from "react";
 
-import { PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs } from "./types/PartitionLongitudinalQuery";
+import { RunGraphFragment } from "../types/RunGraphFragment";
 import { RowContainer } from "../ListComponents";
 
 import { Line } from "react-chartjs-2";
 import { colorHash } from "../Util";
 import { Colors } from "@blueprintjs/core";
+import { PIPELINE_LABEL } from "../RunGraphUtils";
 
-type Run = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs;
 type PointValue = number | null | undefined;
 type Point = { x: string; y: PointValue };
 
-export const PIPELINE_LABEL = "Total pipeline";
 interface PartitionGraphProps {
-  runsByPartitionName: { [name: string]: Run[] };
-  getPipelineDataForRun: (run: Run) => PointValue;
-  getStepDataForRun: (run: Run) => { [key: string]: PointValue[] };
+  runsByPartitionName: { [name: string]: RunGraphFragment[] };
+  getPipelineDataForRun: (run: RunGraphFragment) => PointValue;
+  getStepDataForRun: (run: RunGraphFragment) => { [key: string]: PointValue[] };
   title?: string;
   yLabel?: string;
 }
@@ -93,7 +92,7 @@ export class PartitionGraph extends React.Component<PartitionGraphProps, Partiti
     });
   };
 
-  selectRun(runs?: Run[]) {
+  selectRun(runs?: RunGraphFragment[]) {
     if (!runs || !runs.length) {
       return null;
     }
@@ -182,7 +181,7 @@ const _fillPartitions = (partitionNames: string[], points: Point[]) => {
   }));
 };
 
-const _reverseSortRunCompare = (a: Run, b: Run) => {
+const _reverseSortRunCompare = (a: RunGraphFragment, b: RunGraphFragment) => {
   if (!a.stats || a.stats.__typename !== "PipelineRunStatsSnapshot" || !a.stats.startTime) {
     return 1;
   }
