@@ -16,7 +16,7 @@ from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.telemetry import log_repo_stats, telemetry_wrapper
 from dagster.core.utils import str_format_set
-from dagster.utils import merge_dicts
+from dagster.utils import merge_dicts, raise_delayed_interrupts
 from dagster.utils.backcompat import canonicalize_backcompat_args
 
 from .context_creation_pipeline import (
@@ -650,6 +650,15 @@ def _core_execution_iterator(pipeline_context, execution_plan, steps_started, pi
             if event.is_step_failure:
                 pipeline_success_ref.value = False
             yield event
+
+            # If we're inside a `delay_interrupts` context, check for any interrupts after each
+            # event. To be able to safely terminate within an individual execution step, the
+            # underlying executor or step launcher must run any parts of the step that can be
+            # safely interrupted within a `raise_interrupts_immediately` context. If the executor or
+            # step launcher performs non-blocking polling in a loop while waiting for something else
+            # to do the execution, it can also add additional `raise_delayed_interrupts` calls as
+            # part of the polling loop.
+            raise_delayed_interrupts()
     except (Exception, KeyboardInterrupt):
         pipeline_success_ref.value = False
         raise  # finally block will run before this is re-raised

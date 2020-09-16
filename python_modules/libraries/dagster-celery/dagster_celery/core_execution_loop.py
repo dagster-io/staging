@@ -7,6 +7,7 @@ from dagster.core.events import DagsterEvent, EngineEventData
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
+from dagster.utils import raise_delayed_interrupts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 from .defaults import task_default_priority, task_default_queue
@@ -127,6 +128,10 @@ def core_celery_execution_loop(pipeline_context, execution_plan, step_execution_
                 raise
 
         time.sleep(TICK_SECONDS)
+
+        # If this is being called in a `delay_interrupts` context, check for any interrupts,
+        # raise any received interrupts now that we can terminate slow/hanging solids
+        raise_delayed_interrupts()
 
     if step_errors:
         raise DagsterSubprocessError(
