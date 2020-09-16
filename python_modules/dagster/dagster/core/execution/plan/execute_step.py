@@ -29,7 +29,7 @@ from dagster.core.execution.plan.objects import (
 )
 from dagster.core.storage.object_store import ObjectStoreOperation
 from dagster.core.types.dagster_type import DagsterTypeKind
-from dagster.utils import delay_interrupts
+from dagster.utils import raise_interrupts_immediately
 from dagster.utils.timing import time_execution_scope
 
 
@@ -284,13 +284,9 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
                     )
                 )
 
-    # We only want to log exactly one step success event or failure event if possible,
-    # so wait to handle any interrupts (that normally log a failure event) until the success
-    # event has finished
-    with delay_interrupts():
-        yield DagsterEvent.step_success_event(
-            step_context, StepSuccessData(duration_ms=timer_result.millis)
-        )
+    yield DagsterEvent.step_success_event(
+        step_context, StepSuccessData(duration_ms=timer_result.millis)
+    )
 
 
 def _create_step_events_for_output(step_context, output):
@@ -397,12 +393,12 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
         solid_def_name=step_context.solid_def.name,
         solid_name=step_context.solid.name,
     ):
+        with raise_interrupts_immediately():
+            gen = check.opt_generator(step_context.step.compute_fn(step_context, evaluated_inputs))
 
-        gen = check.opt_generator(step_context.step.compute_fn(step_context, evaluated_inputs))
-
-        if gen is not None:
-            for event in gen:
-                yield event
+            if gen is not None:
+                for event in gen:
+                    yield event
 
 
 def _generate_error_boundary_msg_for_step_input(context, input_):

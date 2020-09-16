@@ -19,7 +19,12 @@ from dagster import (
     solid,
 )
 from dagster.core.instance import DagsterInstance
-from dagster.utils import delay_interrupts, safe_tempfile_path
+from dagster.utils import (
+    delay_interrupts,
+    raise_delayed_interrupts,
+    raise_interrupts_immediately,
+    safe_tempfile_path,
+)
 
 
 def _send_kbd_int(temp_files):
@@ -33,8 +38,8 @@ def write_a_file(context):
     with open(context.solid_config["tempfile"], "w") as ff:
         ff.write("yup")
 
-    while True:
-        time.sleep(0.1)
+    time.sleep(60)
+    raise Exception("Timed out")
 
 
 @solid
@@ -81,8 +86,6 @@ def test_interrupt():
         assert DagsterEventType.PIPELINE_FAILURE in results
 
 
-# https://github.com/dagster-io/dagster/issues/1970
-@pytest.mark.skip
 def test_interrupt_multiproc():
     with seven.TemporaryDirectory() as tempdir:
         file_1 = os.path.join(tempdir, "file_1")
@@ -93,29 +96,30 @@ def test_interrupt_multiproc():
         # launch a thread the waits until the file is written to launch an interrupt
         Thread(target=_send_kbd_int, args=([file_1, file_2, file_3, file_4],)).start()
 
-        results = []
-        try:
-            # launch a pipeline that writes a file and loops infinitely
-            # next time the launched thread wakes up it will send a keyboard
-            # interrupt
-            for result in execute_pipeline_iterator(
-                reconstructable(write_files_pipeline),
-                run_config={
-                    "solids": {
-                        "write_1": {"config": {"tempfile": file_1}},
-                        "write_2": {"config": {"tempfile": file_2}},
-                        "write_3": {"config": {"tempfile": file_3}},
-                        "write_4": {"config": {"tempfile": file_4}},
+        with delay_interrupts():
+            results = []
+            try:
+                # launch a pipeline that writes a file and loops infinitely
+                # next time the launched thread wakes up it will send a keyboard
+                # interrupt
+                for result in execute_pipeline_iterator(
+                    reconstructable(write_files_pipeline),
+                    run_config={
+                        "solids": {
+                            "write_1": {"config": {"tempfile": file_1}},
+                            "write_2": {"config": {"tempfile": file_2}},
+                            "write_3": {"config": {"tempfile": file_3}},
+                            "write_4": {"config": {"tempfile": file_4}},
+                        },
+                        "execution": {"multiprocess": {"config": {"max_concurrent": 4}}},
+                        "storage": {"filesystem": {}},
                     },
-                    "execution": {"multiprocess": {"config": {"max_concurrent": 4}}},
-                    "storage": {"filesystem": {}},
-                },
-                instance=DagsterInstance.local_temp(tempdir=tempdir),
-            ):
-                results.append(result)
-            assert False  # should never reach
-        except (DagsterSubprocessError, KeyboardInterrupt):
-            pass
+                    instance=DagsterInstance.local_temp(tempdir=tempdir),
+                ):
+                    results.append(result)
+                assert False  # should never reach
+            except (DagsterSubprocessError, KeyboardInterrupt):
+                pass
 
         assert [result.event_type for result in results].count(DagsterEventType.STEP_FAILURE) == 4
         assert DagsterEventType.PIPELINE_FAILURE in [result.event_type for result in results]
@@ -216,3 +220,73 @@ def test_delay_interrupt():
 
     assert not outer_interrupt
     assert not inner_interrupt
+
+
+def test_raise_interrupts_immediately_no_op():
+    with raise_interrupts_immediately():
+        try:
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+        except KeyboardInterrupt:
+            standard_interrupt = True
+
+    assert standard_interrupt
+
+
+def test_interrupt_inside_nested_delay_and_raise():
+    interrupt_inside_nested_raise = False
+    interrupt_after_delay = False
+
+    try:
+        with delay_interrupts():
+            with raise_interrupts_immediately():
+                try:
+                    os.kill(os.getpid(), signal.SIGINT)
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    interrupt_inside_nested_raise = True
+
+    except KeyboardInterrupt:
+        interrupt_after_delay = True
+
+    assert interrupt_inside_nested_raise
+    assert not interrupt_after_delay
+
+
+def test_interrupt_after_nested_delay_and_raise():
+    interrupt_inside_nested_raise = False
+    interrupt_after_delay = False
+
+    try:
+        with delay_interrupts():
+            with raise_interrupts_immediately():
+                try:
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    interrupt_inside_nested_raise = True
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        interrupt_after_delay = True
+
+    assert not interrupt_inside_nested_raise
+    assert interrupt_after_delay
+
+
+def test_raise_delayed_interrupts():
+    interrupt_from_check = False
+    interrupt_after_delay = False
+    try:
+        with delay_interrupts():
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+            try:
+                raise_delayed_interrupts()
+            except KeyboardInterrupt:
+                interrupt_from_check = True
+    except KeyboardInterrupt:
+        interrupt_after_delay = True
+
+    assert interrupt_from_check
+    assert not interrupt_after_delay
