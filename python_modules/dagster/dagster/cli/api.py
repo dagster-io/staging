@@ -94,6 +94,7 @@ from dagster.serdes.ipc import (
     read_unary_input,
     setup_interrupt_support,
 )
+from dagster.utils import delay_interrupts
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import (
     recon_pipeline_from_origin,
@@ -313,9 +314,10 @@ def execute_run_command(input_file, output_file):
             def send_to_stream(event):
                 ipc_stream.send(event)
 
-            return _execute_run_command_body(
-                recon_pipeline, args.pipeline_run_id, instance, send_to_stream
-            )
+            with delay_interrupts():
+                return _execute_run_command_body(
+                    recon_pipeline, args.pipeline_run_id, instance, send_to_stream
+                )
 
 
 @click.command(
