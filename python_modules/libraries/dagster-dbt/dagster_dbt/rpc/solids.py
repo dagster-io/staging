@@ -693,8 +693,8 @@ def dbt_rpc_compile_sql(context, sql: String) -> String:
     context.log.debug(resp.text)
     raise_for_rpc_error(context, resp)
     request_token = resp.json().get("result").get("request_token")
-    result = list(dbt_rpc_poll(context, request_token))[-1]
-    return result.value.results[0].node["compiled_sql"]
+    result = dbt_rpc_poll(context, request_token)
+    return result.results[0].node["compiled_sql"]  # pylint: disable=no-member # TODO
 
 
 def create_dbt_rpc_run_sql_solid(
@@ -766,8 +766,8 @@ def create_dbt_rpc_run_sql_solid(
         context.log.debug(resp.text)
         raise_for_rpc_error(context, resp)
         request_token = resp.json().get("result").get("request_token")
-        result = list(dbt_rpc_poll(context, request_token))[-1]
-        table = result.value.results[0].table
+        result = dbt_rpc_poll(context, request_token)
+        table = result.results[0].table  # pylint: disable=no-member  # TODO
         return pd.DataFrame.from_records(data=table["rows"], columns=table["column_names"])
 
     return _dbt_rpc_run_sql
