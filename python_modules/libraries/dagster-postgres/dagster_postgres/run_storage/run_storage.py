@@ -50,17 +50,6 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
             inst_data=inst_data, postgres_url=pg_url_from_config(config_value)
         )
 
-    @staticmethod
-    def create_clean_storage(postgres_url):
-        engine = create_engine(
-            postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
-        )
-        try:
-            RunStorageSqlMetadata.drop_all(engine)
-        finally:
-            engine.dispose()
-        return PostgresRunStorage(postgres_url)
-
     def connect(self, run_id=None):  # pylint: disable=arguments-differ, unused-argument
         return create_pg_connection(self._engine, __file__, "event log")
 

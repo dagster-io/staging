@@ -21,14 +21,16 @@ def conn_string():  # pylint: disable=redefined-outer-name, unused-argument
 
 @pytest.fixture(scope="function")
 def clean_storage(conn_string):  # pylint: disable=redefined-outer-name
-    storage = PostgresRunStorage.create_clean_storage(conn_string)
+    storage = PostgresRunStorage(conn_string)
+    storage.wipe()
     assert storage
     return storage
 
 
 @pytest.fixture(scope="function")
 def clean_schedule_storage(conn_string):  # pylint: disable=redefined-outer-name
-    storage = PostgresScheduleStorage.create_clean_storage(conn_string)
+    storage = PostgresScheduleStorage(conn_string)
+    storage.wipe()
     assert storage
     return storage
 

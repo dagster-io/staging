@@ -53,7 +53,7 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         )
         self._disposed = False
 
-        retry_pg_connection_fn(lambda: SqlEventLogStorageMetadata.create_all(self._engine))
+        retry_pg_connection_fn(lambda: SqlEventLogStorageMetadata.create_all(self.connect()))
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
@@ -72,12 +72,6 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         return PostgresEventLogStorage(
             inst_data=inst_data, postgres_url=pg_url_from_config(config_value)
         )
-
-    @staticmethod
-    def create_clean_storage(conn_string):
-        inst = PostgresEventLogStorage(conn_string)
-        inst.wipe()
-        return inst
 
     def store_event(self, event):
         """Store an event corresponding to a pipeline run.
