@@ -79,7 +79,8 @@ def test_basic_event_store(conn_string):
 
     events, _result = synthesize_events(_solids)
 
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     for event in events:
         event_log_storage.store_event(event)
@@ -129,7 +130,8 @@ def test_basic_get_logs_for_run(conn_string):
 
     events, result = synthesize_events(_solids)
 
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     for event in events:
         event_log_storage.store_event(event)
@@ -157,7 +159,8 @@ def test_wipe_postgres_event_log(conn_string):
 
     events, result = synthesize_events(_solids)
 
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     for event in events:
         event_log_storage.store_event(event)
@@ -189,7 +192,8 @@ def test_delete_postgres_event_log(conn_string):
 
     events, result = synthesize_events(_solids)
 
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     for event in events:
         event_log_storage.store_event(event)
@@ -212,7 +216,8 @@ def test_delete_postgres_event_log(conn_string):
 
 
 def test_basic_get_logs_for_run_cursor(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     @solid
     def return_one(_):
@@ -248,7 +253,8 @@ def test_basic_get_logs_for_run_cursor(conn_string):
 
 
 def test_basic_get_logs_for_run_multiple_runs(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     @solid
     def return_one(_):
@@ -307,7 +313,8 @@ def test_basic_get_logs_for_run_multiple_runs(conn_string):
 
 
 def test_basic_get_logs_for_run_multiple_runs_cursors(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     @solid
     def return_one(_):
@@ -359,7 +366,8 @@ def test_basic_get_logs_for_run_multiple_runs_cursors(conn_string):
 
 
 def test_listen_notify_single_run_event(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     @solid
     def return_one(_):
@@ -390,7 +398,8 @@ def test_listen_notify_single_run_event(conn_string):
 
 
 def test_listen_notify_filter_two_runs_event(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     @solid
     def return_one(_):
@@ -433,7 +442,8 @@ def test_listen_notify_filter_two_runs_event(conn_string):
 
 
 def test_listen_notify_filter_run_event(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     @solid
     def return_one(_):
@@ -504,7 +514,8 @@ def test_load_from_config(hostname):
 
 
 def test_asset_materialization(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
 
     asset_key = AssetKey(["path", "to", "asset_one"])
 
@@ -536,7 +547,8 @@ def test_asset_materialization(conn_string):
 
 
 def test_asset_events_error_parsing(conn_string):
-    event_log_storage = PostgresEventLogStorage.create_clean_storage(conn_string)
+    event_log_storage = PostgresEventLogStorage(conn_string)
+    event_log_storage.wipe()
     _logs = []
 
     def mock_log(msg):

@@ -74,12 +74,6 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
             inst_data=inst_data, postgres_url=pg_url_from_config(config_value)
         )
 
-    @staticmethod
-    def create_clean_storage(conn_string):
-        inst = PostgresEventLogStorage(conn_string)
-        inst.wipe()
-        return inst
-
     def store_event(self, event):
         """Store an event corresponding to a pipeline run.
         Args:
