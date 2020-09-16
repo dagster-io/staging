@@ -18,6 +18,7 @@ from dagster.core.execution.plan.external_step import (
     PICKLED_STEP_RUN_REF_FILE_NAME,
     step_context_to_step_run_ref,
 )
+from dagster.utils import raise_interrupts_immediately
 
 # On EMR, Spark is installed here
 EMR_SPARK_HOME = "/usr/lib/spark/"
@@ -241,15 +242,19 @@ class EmrPySparkStepLauncher(StepLauncher):
         """
         done = False
         all_events = []
-        while not done:
-            time.sleep(check_interval)  # AWS rate-limits us if we poll it too often
-            done = self.emr_job_runner.is_emr_step_complete(log, self.cluster_id, emr_step_id)
+        # If this is being called within a `delay_interrupts` context, allow interrupts
+        # while waiting for the pyspark execution to complete, so that we can terminate slow or
+        # hanging steps
+        with raise_interrupts_immediately():
+            while not done:
+                time.sleep(check_interval)  # AWS rate-limits us if we poll it too often
+                done = self.emr_job_runner.is_emr_step_complete(log, self.cluster_id, emr_step_id)
 
-            all_events_new = self.read_events(s3, run_id, step_key)
-            if len(all_events_new) > len(all_events):
-                for i in range(len(all_events), len(all_events_new)):
-                    yield all_events_new[i]
-                all_events = all_events_new
+                all_events_new = self.read_events(s3, run_id, step_key)
+                if len(all_events_new) > len(all_events):
+                    for i in range(len(all_events), len(all_events_new)):
+                        yield all_events_new[i]
+                    all_events = all_events_new
 
     def read_events(self, s3, run_id, step_key):
         events_s3_obj = s3.Object(  # pylint: disable=no-member
