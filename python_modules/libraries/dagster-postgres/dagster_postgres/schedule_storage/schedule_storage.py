@@ -12,7 +12,7 @@ from dagster.core.storage.sql import (
 )
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
-from ..utils import pg_config, pg_url_from_config
+from ..utils import pg_config, pg_url_from_config, retry_pg_connection_fn
 
 
 class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
@@ -39,8 +39,9 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         self._engine = create_engine(
             self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
         )
-        ScheduleStorageSqlMetadata.create_all(self._engine)
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
+
+        retry_pg_connection_fn(lambda: ScheduleStorageSqlMetadata.create_all(self._engine))
 
     @property
     def inst_data(self):
@@ -69,16 +70,20 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
 
     @contextmanager
     def connect(self):
-        try:
-            conn = self._engine.connect()
-            with handle_schema_errors(
-                conn,
-                get_alembic_config(__file__),
-                msg="Postgres schedule storage requires migration",
-            ):
-                yield self._engine
-        finally:
-            conn.close()
+        def _connect():
+            try:
+                conn = self._engine.connect()
+                with handle_schema_errors(
+                    conn,
+                    get_alembic_config(__file__),
+                    msg="Postgres schedule storage requires migration",
+                ):
+                    yield conn
+            finally:
+                conn.close()
+
+        # Retry connection to gracefully handle transient connection issues
+        return retry_pg_connection_fn(_connect)
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)

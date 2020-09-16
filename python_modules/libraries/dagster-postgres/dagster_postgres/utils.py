@@ -1,9 +1,16 @@
+import logging
 import time
 
 import psycopg2
+import six
+import sqlalchemy
 
-from dagster import Field, IntSource, Selector, StringSource
+from dagster import Field, IntSource, Selector, StringSource, check
 from dagster.seven import quote_plus as urlquote
+
+
+class DagsterPostgresException(Exception):
+    pass
 
 
 def get_conn(conn_string):
@@ -44,18 +51,32 @@ def get_conn_string(username, password, hostname, db_name, port="5432"):
     )
 
 
-def wait_for_connection(conn_string):
-    retry_limit = 20
+def retry_pg_connection_fn(fn, retry_limit=20, retry_wait=0.2):
+    """Reusable retry logic for any psycopg2/sqlalchemy PG connection functions that may fail.
+    Intended to be used anywhere we connect to PG, to gracefully handle transient connection issues.
+    """
+    check.callable_param(fn, "fn")
+    check.int_param(retry_limit, "retry_limit")
+    check.numeric_param(retry_wait, "retry_wait")
 
-    while retry_limit:
+    while True:
         try:
-            psycopg2.connect(conn_string)
-            return True
-        except psycopg2.OperationalError:
-            pass
+            return fn()
+        except (
+            # See: https://www.psycopg.org/docs/errors.html
+            # These are broad, we may want to list out specific exceptions to capture
+            psycopg2.DatabaseError,
+            psycopg2.OperationalError,
+            sqlalchemy.exc.OperationalError,
+        ) as exc:
+            logging.warning("Retrying failed database connection")
+            if retry_limit == 0:
+                six.raise_from(DagsterPostgresException("too many retries for DB connection"), exc)
 
-        time.sleep(0.2)
+        time.sleep(retry_wait)
         retry_limit -= 1
 
-    assert retry_limit == 0
-    raise Exception("too many retries for db at {conn_string}".format(conn_string=conn_string))
+
+def wait_for_connection(conn_string):
+    retry_pg_connection_fn(lambda: psycopg2.connect(conn_string))
+    return True

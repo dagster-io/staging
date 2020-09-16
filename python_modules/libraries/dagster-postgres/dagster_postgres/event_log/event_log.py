@@ -12,7 +12,12 @@ from dagster.core.storage.event_log import (
     SqlEventLogStorageMetadata,
     SqlEventLogStorageTable,
 )
-from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
+from dagster.core.storage.sql import (
+    create_engine,
+    get_alembic_config,
+    handle_schema_errors,
+    run_alembic_upgrade,
+)
 from dagster.serdes import (
     ConfigurableClass,
     ConfigurableClassData,
@@ -20,12 +25,9 @@ from dagster.serdes import (
 )
 
 from ..pynotify import await_pg_notifications
-from ..utils import pg_config, pg_url_from_config
+from ..utils import pg_config, pg_url_from_config, retry_pg_connection_fn
 
 CHANNEL_NAME = "run_events"
-
-# Why? Because this is about as long as we expect a roundtrip to RDS to take.
-WATCHER_POLL_INTERVAL = 0.2
 
 
 class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
@@ -56,7 +58,8 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
             self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
         )
         self._disposed = False
-        SqlEventLogStorageMetadata.create_all(self._engine)
+
+        retry_pg_connection_fn(lambda: SqlEventLogStorageMetadata.create_all(self._engine))
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
@@ -89,19 +92,37 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         """
         check.inst_param(event, "event", EventRecord)
         sql_statement = self.prepare_insert_statement(event)  # from SqlEventLogStorage.py
-        result_proxy = self._engine.execute(
-            sql_statement.returning(SqlEventLogStorageTable.c.run_id, SqlEventLogStorageTable.c.id)
-        )
-        res = result_proxy.fetchone()
-        result_proxy.close()
-        self._engine.execute(
-            """NOTIFY {channel}, %s; """.format(channel=CHANNEL_NAME),
-            (res[0] + "_" + str(res[1]),),
-        )
+        with self.connect() as conn:
+            result_proxy = conn.execute(
+                sql_statement.returning(
+                    SqlEventLogStorageTable.c.run_id, SqlEventLogStorageTable.c.id
+                )
+            )
+            res = result_proxy.fetchone()
+            result_proxy.close()
+            conn.execute(
+                """NOTIFY {channel}, %s; """.format(channel=CHANNEL_NAME),
+                (res[0] + "_" + str(res[1]),),
+            )
 
     @contextmanager
     def connect(self, run_id=None):
-        yield self._engine
+        def _connect():
+            conn = None
+            try:
+                conn = self._engine.connect()
+                with handle_schema_errors(
+                    conn,
+                    get_alembic_config(__file__),
+                    msg="Postgres event log storage requires migration",
+                ):
+                    yield conn
+            finally:
+                if conn:
+                    conn.close()
+
+        # Retry connection to gracefully handle transient connection issues
+        return retry_pg_connection_fn(_connect)
 
     def watch(self, run_id, start_cursor, callback):
         self._event_watcher.watch_run(run_id, start_cursor, callback)
