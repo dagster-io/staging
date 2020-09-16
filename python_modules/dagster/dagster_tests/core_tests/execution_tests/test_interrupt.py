@@ -19,7 +19,12 @@ from dagster import (
     solid,
 )
 from dagster.core.instance import DagsterInstance
-from dagster.utils import delay_interrupts, safe_tempfile_path
+from dagster.utils import (
+    check_for_delayed_interrupts,
+    delay_interrupts,
+    raise_interrupts_immediately,
+    safe_tempfile_path,
+)
 
 
 def _send_kbd_int(temp_files):
@@ -216,3 +221,73 @@ def test_delay_interrupt():
 
     assert not outer_interrupt
     assert not inner_interrupt
+
+
+def test_raise_interrupts_immediately_no_op():
+    with raise_interrupts_immediately():
+        try:
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+        except KeyboardInterrupt:
+            standard_interrupt = True
+
+    assert standard_interrupt
+
+
+def test_interrupt_inside_nested_delay_and_raise():
+    interrupt_inside_nested_raise = False
+    interrupt_after_delay = False
+
+    try:
+        with delay_interrupts():
+            with raise_interrupts_immediately():
+                try:
+                    os.kill(os.getpid(), signal.SIGINT)
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    interrupt_inside_nested_raise = True
+
+    except KeyboardInterrupt:
+        interrupt_after_delay = True
+
+    assert interrupt_inside_nested_raise
+    assert not interrupt_after_delay
+
+
+def test_interrupt_after_nested_delay_and_raise():
+    interrupt_inside_nested_raise = False
+    interrupt_after_delay = False
+
+    try:
+        with delay_interrupts():
+            with raise_interrupts_immediately():
+                try:
+                    time.sleep(1)
+                except KeyboardInterrupt:
+                    interrupt_inside_nested_raise = True
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        interrupt_after_delay = True
+
+    assert not interrupt_inside_nested_raise
+    assert interrupt_after_delay
+
+
+def test_check_for_delayed_interrupts():
+    interrupt_from_check = False
+    interrupt_after_delay = False
+    try:
+        with delay_interrupts():
+            os.kill(os.getpid(), signal.SIGINT)
+            time.sleep(1)
+            try:
+                check_for_delayed_interrupts()
+            except KeyboardInterrupt:
+                interrupt_from_check = True
+    except KeyboardInterrupt:
+        interrupt_after_delay = True
+
+    assert interrupt_from_check
+    assert not interrupt_after_delay
