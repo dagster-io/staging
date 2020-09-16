@@ -10,6 +10,7 @@ import six
 
 from dagster import check
 from dagster.seven import multiprocessing
+from dagster.utils import raise_delayed_interrupts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 
@@ -140,6 +141,11 @@ def execute_child_process_command(command):
     completed_properly = False
 
     while not completed_properly:
+        try:
+            raise_delayed_interrupts()
+        except KeyboardInterrupt as e:
+            yield e
+
         event = _poll_for_event(process, event_queue)
 
         if event == PROCESS_DEAD_AND_QUEUE_EMPTY:
