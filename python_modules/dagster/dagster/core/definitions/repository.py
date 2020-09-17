@@ -5,7 +5,7 @@ from dagster.utils import merge_dicts
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
-from .trigger import ExecutableDefinition
+from .executable import ExecutableDefinition
 
 VALID_REPOSITORY_DATA_DICT_KEYS = {
     "pipelines",

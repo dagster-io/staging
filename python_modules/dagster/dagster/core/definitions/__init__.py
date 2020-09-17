@@ -2,6 +2,7 @@ from .config import ConfigMapping
 from .decorators import (
     composite_solid,
     daily_schedule,
+    executable,
     failure_hook,
     hook,
     hourly_schedule,
@@ -12,7 +13,6 @@ from .decorators import (
     schedule,
     solid,
     success_hook,
-    triggered_execution,
     weekly_schedule,
 )
 from .dependency import (
@@ -70,4 +70,4 @@ from .schedule import ScheduleDefinition, ScheduleExecutionContext
 from .solid import CompositeSolidDefinition, ISolidDefinition, SolidDefinition
 from .solid_container import IContainSolids, create_execution_structure
 from .system_storage import SystemStorageData, SystemStorageDefinition, system_storage
-from .trigger import ExecutableContext, ExecutableDefinition
+from .executable import ExecutableContext, ExecutableDefinition

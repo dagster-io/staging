@@ -7,7 +7,7 @@ from ..partition import PartitionSetDefinition
 from ..pipeline import PipelineDefinition
 from ..repository import VALID_REPOSITORY_DATA_DICT_KEYS, RepositoryData, RepositoryDefinition
 from ..schedule import ScheduleDefinition
-from ..trigger import ExecutableDefinition
+from ..executable import ExecutableDefinition
 
 
 class _Repository(object):

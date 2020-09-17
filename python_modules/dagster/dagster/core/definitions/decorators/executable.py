@@ -1,5 +1,5 @@
 from dagster import check
-from dagster.core.definitions.trigger import ExecutableDefinition
+from dagster.core.definitions.executable import ExecutableDefinition
 from dagster.utils.backcompat import experimental
 
 
