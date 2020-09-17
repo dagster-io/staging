@@ -13,12 +13,15 @@ from dagster import (
 from dagster.core.definitions import InputDefinition
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
+from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.resolve_versions import (
     join_and_hash,
     resolve_config_version,
+    resolve_step_output_versions,
     resolve_step_versions,
 )
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
+from dagster.seven import mock
 
 
 def test_join_and_hash():
@@ -73,6 +76,48 @@ def test_resolve_step_versions_no_external_dependencies():
     assert versions["versioned_solid_no_input.compute"] == solid1_hash
 
     assert versions["versioned_solid_takes_input.compute"] == solid2_hash
+
+
+def test_resolve_step_output_versions_no_external_dependencies():
+    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+    versions = resolve_step_output_versions(speculative_execution_plan)
+
+    solid1_hash = join_and_hash([versioned_solid_no_input.version])
+    output1_hash = join_and_hash([solid1_hash + "result"])
+    outputs_hash = join_and_hash([output1_hash])
+    solid2_hash = join_and_hash([outputs_hash, versioned_solid_takes_input.version])
+    output2_hash = join_and_hash([solid2_hash + "result"])
+
+    assert versions[StepOutputHandle("versioned_solid_no_input.compute", "result")] == output1_hash
+    assert (
+        versions[StepOutputHandle("versioned_solid_takes_input.compute", "result")] == output2_hash
+    )
+
+
+def test_resolve_unmemoized_steps_no_stored_results():
+    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+
+    instance = DagsterInstance.ephemeral()
+    instance.get_addresses_for_step_output_versions = mock.MagicMock(return_value={})
+
+    assert instance.resolve_unmemoized_steps(speculative_execution_plan) == [
+        "versioned_solid_no_input.compute",
+        "versioned_solid_takes_input.compute",
+    ]
+
+
+def test_resolve_unmemoized_steps_yes_stored_results():
+    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+    step_output_handle = StepOutputHandle("versioned_solid_no_input.compute", "result")
+
+    instance = DagsterInstance.ephemeral()
+    instance.get_addresses_for_step_output_versions = mock.MagicMock(
+        return_value={(versioned_pipeline.name, step_output_handle): "some_address"}
+    )
+
+    assert instance.resolve_unmemoized_steps(speculative_execution_plan) == [
+        "versioned_solid_takes_input.compute",
+    ]
 
 
 def test_versioned_execution_plan_no_external_dependencies():  # TODO: flesh out this test once version storage has been implemented
