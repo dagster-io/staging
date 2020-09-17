@@ -2,10 +2,10 @@ from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.utils import merge_dicts
 
+from .executable import ExecutableDefinition
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
-from .executable import ExecutableDefinition
 
 VALID_REPOSITORY_DATA_DICT_KEYS = {
     "pipelines",
@@ -144,7 +144,7 @@ class RepositoryData(object):
             schedules (Dict[str, Union[ScheduleDefinition, Callable[[], ScheduleDefinition]]]):
                 The schedules belonging to the repository.
             executables (Dict[str, Union[ExecutableDefinition, Callable[[], ExecutableDefinition]]]):
-                The triggered executions for a repository.
+                The predefined executables for a repository.
 
         """
         check.dict_param(pipelines, "pipelines", key_type=str)
@@ -173,10 +173,7 @@ class RepositoryData(object):
             ),
         )
         self._executables = _CacheingDefinitionIndex(
-            ExecutableDefinition,
-            "ExecutableDefinition",
-            "triggered_execution",
-            executables,
+            ExecutableDefinition, "ExecutableDefinition", "executable", executables,
         )
         self._all_pipelines = None
         self._solids = None
@@ -273,8 +270,9 @@ class RepositoryData(object):
             elif isinstance(definition, ExecutableDefinition):
                 if definition.name in executables:
                     raise DagsterInvalidDefinitionError(
-                        "Duplicate triggered execution definition found for triggered execution "
-                        "{name}".format(name=definition.name)
+                        "Duplicate executable definition found for executable {name}".format(
+                            name=definition.name
+                        )
                     )
                 executables[definition.name] = definition
 
@@ -427,13 +425,13 @@ class RepositoryData(object):
     def get_all_executables(self):
         return self._executables.get_all_definitions()
 
-    def get_triggered_execution(self, trigger_name):
-        check.str_param(trigger_name, "trigger_name")
-        return self._executables.get_definition(trigger_name)
+    def get_executable(self, name):
+        check.str_param(name, "name")
+        return self._executables.get_definition(name)
 
-    def has_triggered_execution(self, trigger_name):
-        check.str_param(trigger_name, "trigger_name")
-        return self._executables.has_definition(trigger_name)
+    def has_executable(self, name):
+        check.str_param(name, "name")
+        return self._executables.has_definition(name)
 
     def get_all_solid_defs(self):
         if self._all_solids is not None:
@@ -604,11 +602,11 @@ class RepositoryDefinition(object):
         return self._repository_data.has_schedule(name)
 
     @property
-    def triggered_execution_defs(self):
+    def executable_defs(self):
         return self._repository_data.get_all_executables()
 
-    def get_triggered_execution_def(self, name):
-        return self._repository_data.get_triggered_execution(name)
+    def get_executable_def(self, name):
+        return self._repository_data.get_executable(name)
 
-    def has_triggered_execution_def(self, name):
-        return self._repository_data.has_triggered_execution(name)
+    def has_executable_def(self, name):
+        return self._repository_data.has_executable(name)

@@ -32,17 +32,17 @@ class ExecutableDefinition(object):
 
     Args:
         name (str): The name of this executable.
-        pipeline_name (str): The name of the pipeline to execute when the trigger fires.
+        pipeline_name (str): The name of the pipeline to execute.
         run_config_fn (Callable[[ExecutableContext], [Dict]]): A function that takes a
             ExecutableContext object and returns the environment configuration that
             parameterizes this execution, as a dict.
         tags_fn (Optional[Callable[[ExecutableContext], Optional[Dict[str, str]]]]): A
-            function that generates tags to attach to the triggered execution. Takes a
+            function that generates tags to attach to the execution. Takes a
             :py:class:`~dagster.ExecutableContext` and returns a dictionary of tags (string
             key-value pairs).
         mode (Optional[str]): The mode to apply when executing this pipeline. (default: 'default')
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
-            solid names) to execute when the trigger fires. e.g. ``['*some_solid+', 'other_solid']``
+            solid names) to execute. e.g. ``['*some_solid+', 'other_solid']``
     """
 
     __slots__ = [
@@ -60,7 +60,6 @@ class ExecutableDefinition(object):
         pipeline_name,
         run_config_fn=None,
         tags_fn=None,
-        should_execute_fn=None,
         mode="default",
         solid_selection=None,
     ):
@@ -99,7 +98,3 @@ class ExecutableDefinition(object):
     def get_tags(self, context):
         check.inst_param(context, "context", ExecutableContext)
         return self._tags_fn(context)
-
-    def should_execute(self, context):
-        check.inst_param(context, "context", ExecutableContext)
-        return self._should_execute_fn(context)
