@@ -12,7 +12,7 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
-from dagster.core.definitions.decorators import triggered_execution
+from dagster.core.definitions.decorators import executable
 
 
 @lambda_solid
@@ -132,12 +132,12 @@ def define_baz_partitions():
     }
 
 
-@triggered_execution(pipeline_name="foo_pipeline")
+@executable(pipeline_name="foo_pipeline")
 def triggered_foo(_):
     return {"foo": "FOO"}
 
 
-@triggered_execution(pipeline_name="baz_pipeline")
+@executable(pipeline_name="baz_pipeline")
 def triggered_error(_):
     raise Exception("womp womp")
 

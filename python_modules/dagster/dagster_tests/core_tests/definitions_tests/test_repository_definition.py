@@ -11,7 +11,7 @@ from dagster import (
     lambda_solid,
     repository,
 )
-from dagster.core.definitions.decorators import triggered_execution
+from dagster.core.definitions.decorators import executable
 
 
 def create_single_node_pipeline(name, called):
@@ -166,7 +166,7 @@ def test_schedule_partitions():
 
 
 def test_triggered_executions():
-    @triggered_execution(pipeline_name="foo")
+    @executable(pipeline_name="foo")
     def unscheduled_foo(_):
         return {}
 
