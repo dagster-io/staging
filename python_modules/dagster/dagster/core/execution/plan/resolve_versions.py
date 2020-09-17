@@ -32,9 +32,7 @@ def _resolve_step_input_versions(step, step_versions):
     return input_versions
 
 
-def resolve_step_versions(
-    pipeline_def, speculative_execution_plan=None, run_config=None, mode=None,
-):
+def resolve_step_versions(speculative_execution_plan):
     """Resolves the version of each step in an execution plan.
 
         If an execution plan is not provided, then it is constructed from pipeline_def, run_config, and
@@ -42,21 +40,9 @@ def resolve_step_versions(
         version for that step.
 
         Args:
-            pipeline_def (PipelineDefinition): Definition for the pipeline to construct execution plan
-                for.
-            speculative_execution_plan (Optional[ExecutionPlan]): Execution plan to resolve steps for,
-                if provided.
-            run_config (Optional[dict]): The environment configuration that parameterizes the run, as a
-                dict.
+            speculative_execution_plan (ExecutionPlan): Execution plan to resolve steps for.
             mode (Optional[str]): The pipeline mode in which to execute this run.
         """
-    from dagster.core.execution.api import create_execution_plan
-
-    if not speculative_execution_plan:
-        speculative_execution_plan = create_execution_plan(
-            pipeline_def, run_config=run_config, mode=mode,
-        )
-
     step_versions = {}  # step_key (str) -> version (str)
 
     for step in speculative_execution_plan.topological_steps():
