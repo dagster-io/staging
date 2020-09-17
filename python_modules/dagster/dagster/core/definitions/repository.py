@@ -11,7 +11,7 @@ VALID_REPOSITORY_DATA_DICT_KEYS = {
     "pipelines",
     "partition_sets",
     "schedules",
-    "triggered_executions",
+    "executables",
 }
 
 
@@ -124,7 +124,7 @@ class RepositoryData(object):
     of repository members.
     """
 
-    def __init__(self, pipelines, partition_sets, schedules, triggered_executions):
+    def __init__(self, pipelines, partition_sets, schedules, executables):
         """Constructs a new RepositoryData object.
 
         You may pass pipeline, partition_set, and schedule definitions directly, or you may pass
@@ -143,14 +143,14 @@ class RepositoryData(object):
                 The partition sets belonging to the repository.
             schedules (Dict[str, Union[ScheduleDefinition, Callable[[], ScheduleDefinition]]]):
                 The schedules belonging to the repository.
-            triggered_executions (Dict[str, Union[ExecutableDefinition, Callable[[], ExecutableDefinition]]]):
+            executables (Dict[str, Union[ExecutableDefinition, Callable[[], ExecutableDefinition]]]):
                 The triggered executions for a repository.
 
         """
         check.dict_param(pipelines, "pipelines", key_type=str)
         check.dict_param(partition_sets, "partition_sets", key_type=str)
         check.dict_param(schedules, "schedules", key_type=str)
-        check.dict_param(triggered_executions, "triggered_executions", key_type=str)
+        check.dict_param(executables, "executables", key_type=str)
 
         self._pipelines = _CacheingDefinitionIndex(
             PipelineDefinition, "PipelineDefinition", "pipeline", pipelines
@@ -172,11 +172,11 @@ class RepositoryData(object):
                 partition_sets,
             ),
         )
-        self._triggered_executions = _CacheingDefinitionIndex(
+        self._executables = _CacheingDefinitionIndex(
             ExecutableDefinition,
             "ExecutableDefinition",
             "triggered_execution",
-            triggered_executions,
+            executables,
         )
         self._all_pipelines = None
         self._solids = None
@@ -234,7 +234,7 @@ class RepositoryData(object):
         pipelines = {}
         partition_sets = {}
         schedules = {}
-        triggered_executions = {}
+        executables = {}
         for definition in repository_definitions:
             if isinstance(definition, PipelineDefinition):
                 if definition.name in pipelines:
@@ -271,18 +271,18 @@ class RepositoryData(object):
                         )
                     partition_sets[partition_set_def.name] = partition_set_def
             elif isinstance(definition, ExecutableDefinition):
-                if definition.name in triggered_executions:
+                if definition.name in executables:
                     raise DagsterInvalidDefinitionError(
                         "Duplicate triggered execution definition found for triggered execution "
                         "{name}".format(name=definition.name)
                     )
-                triggered_executions[definition.name] = definition
+                executables[definition.name] = definition
 
         return RepositoryData(
             pipelines=pipelines,
             partition_sets=partition_sets,
             schedules=schedules,
-            triggered_executions=triggered_executions,
+            executables=executables,
         )
 
     def get_pipeline_names(self):
@@ -424,16 +424,16 @@ class RepositoryData(object):
 
         return self._schedules.has_definition(schedule_name)
 
-    def get_all_triggered_executions(self):
-        return self._triggered_executions.get_all_definitions()
+    def get_all_executables(self):
+        return self._executables.get_all_definitions()
 
     def get_triggered_execution(self, trigger_name):
         check.str_param(trigger_name, "trigger_name")
-        return self._triggered_executions.get_definition(trigger_name)
+        return self._executables.get_definition(trigger_name)
 
     def has_triggered_execution(self, trigger_name):
         check.str_param(trigger_name, "trigger_name")
-        return self._triggered_executions.has_definition(trigger_name)
+        return self._executables.has_definition(trigger_name)
 
     def get_all_solid_defs(self):
         if self._all_solids is not None:
@@ -605,7 +605,7 @@ class RepositoryDefinition(object):
 
     @property
     def triggered_execution_defs(self):
-        return self._repository_data.get_all_triggered_executions()
+        return self._repository_data.get_all_executables()
 
     def get_triggered_execution_def(self, name):
         return self._repository_data.get_triggered_execution(name)

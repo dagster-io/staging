@@ -63,7 +63,7 @@ class _Repository(object):
             if not set(repository_definitions.keys()).issubset(VALID_REPOSITORY_DATA_DICT_KEYS):
                 raise DagsterInvalidDefinitionError(
                     "Bad return value from repository construction function: dict must not contain "
-                    "keys other than {{'pipelines', 'partition_sets', 'schedules', 'triggered_executions'}}: found "
+                    "keys other than {{'pipelines', 'partition_sets', 'schedules', 'executables'}}: found "
                     "{bad_keys}".format(
                         bad_keys=", ".join(
                             [

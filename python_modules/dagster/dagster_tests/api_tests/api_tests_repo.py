@@ -152,7 +152,7 @@ def bar_repo():
         },
         "schedules": define_bar_schedules(),
         "partition_sets": define_baz_partitions(),
-        "triggered_executions": {
+        "executables": {
             "triggered_foo": triggered_foo,
             "triggered_error": lambda: triggered_error,
         },

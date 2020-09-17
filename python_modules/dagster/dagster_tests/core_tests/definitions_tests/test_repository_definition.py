@@ -165,7 +165,7 @@ def test_schedule_partitions():
     assert some_repo.get_partition_set_def("daily_foo_partitions")
 
 
-def test_triggered_executions():
+def test_executables():
     @executable(pipeline_name="foo")
     def unscheduled_foo(_):
         return {}
@@ -174,7 +174,7 @@ def test_triggered_executions():
     def some_repo():
         return {
             "pipelines": {"foo": lambda: create_single_node_pipeline("foo", {})},
-            "triggered_executions": {"unscheduled_foo": lambda: unscheduled_foo},
+            "executables": {"unscheduled_foo": lambda: unscheduled_foo},
         }
 
     assert len(some_repo.triggered_execution_defs) == 1

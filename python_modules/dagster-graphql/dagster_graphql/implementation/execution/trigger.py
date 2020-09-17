@@ -22,7 +22,7 @@ def trigger_execution(graphene_info, trigger_selector):
 
     matches = [
         triggered_execution
-        for triggered_execution in repository.get_external_triggered_executions()
+        for triggered_execution in repository.get_external_executables()
         if triggered_execution.name == trigger_selector.trigger_name
     ]
 
