@@ -120,6 +120,8 @@ class TestRunStorage:
         assert test_run.tags["tag2"] == "val2"
         assert test_run.tags["tag3"] == "val3"
 
+        print("WHAT ARE THE RUN TAGS?? " + repr(storage.get_run_tags()))
+
         assert storage.get_run_tags() == [
             ("tag1", {"val1", "val2"}),
             ("tag2", {"val2"}),
