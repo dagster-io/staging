@@ -177,5 +177,5 @@ def test_executables():
             "executables": {"unscheduled_foo": lambda: unscheduled_foo},
         }
 
-    assert len(some_repo.triggered_execution_defs) == 1
-    assert some_repo.get_triggered_execution_def("unscheduled_foo")
+    assert len(some_repo.executable_defs) == 1
+    assert some_repo.get_executable_def("unscheduled_foo")

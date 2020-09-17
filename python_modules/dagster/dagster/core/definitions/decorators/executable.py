@@ -14,7 +14,7 @@ def executable(
     the pipeline execution.
 
     Args:
-        pipeline_name (str): The name of the pipeline to execute when the trigger fires.
+        pipeline_name (str): The name of the pipeline to execute.
         name (Optional[str]): The name of this executable.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) for the pipeline execution e.g. ``['*some_solid+', 'other_solid']``
@@ -34,10 +34,10 @@ def executable(
 
     def inner(fn):
         check.callable_param(fn, "fn")
-        trigger_name = name or fn.__name__
+        executable_name = name or fn.__name__
 
         return ExecutableDefinition(
-            name=trigger_name,
+            name=executable_name,
             pipeline_name=pipeline_name,
             run_config_fn=fn,
             tags_fn=tags_fn,

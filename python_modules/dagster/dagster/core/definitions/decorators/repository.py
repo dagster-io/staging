@@ -3,11 +3,11 @@ from functools import update_wrapper
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
 
+from ..executable import ExecutableDefinition
 from ..partition import PartitionSetDefinition
 from ..pipeline import PipelineDefinition
 from ..repository import VALID_REPOSITORY_DATA_DICT_KEYS, RepositoryData, RepositoryDefinition
 from ..schedule import ScheduleDefinition
-from ..executable import ExecutableDefinition
 
 
 class _Repository(object):
