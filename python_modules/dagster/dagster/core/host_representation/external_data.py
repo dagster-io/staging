@@ -14,7 +14,7 @@ from dagster.core.definitions import (
     PresetDefinition,
     RepositoryDefinition,
     ScheduleDefinition,
-    TriggeredExecutionDefinition,
+    ExecutableDefinition,
 )
 from dagster.core.definitions.partition import PartitionScheduleDefinition
 from dagster.core.snap import PipelineSnapshot
@@ -387,7 +387,7 @@ def external_partition_set_data_from_def(partition_set_def):
 
 def external_triggered_execution_def(triggered_execution_def):
     check.inst_param(
-        triggered_execution_def, "triggered_execution_def", TriggeredExecutionDefinition
+        triggered_execution_def, "triggered_execution_def", ExecutableDefinition
     )
     return ExternalTriggeredExecutionData(
         name=triggered_execution_def.name,

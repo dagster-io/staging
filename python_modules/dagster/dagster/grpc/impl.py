@@ -5,7 +5,7 @@ import sys
 from datetime import datetime
 
 from dagster import check
-from dagster.core.definitions import ScheduleExecutionContext, TriggeredExecutionContext
+from dagster.core.definitions import ScheduleExecutionContext, ExecutableContext
 from dagster.core.definitions.reconstructable import (
     ReconstructablePipeline,
     ReconstructableRepository,
@@ -281,7 +281,7 @@ def get_external_triggered_execution_params(recon_repo, external_triggered_execu
         external_triggered_execution_args.trigger_name
     )
     with DagsterInstance.from_ref(external_triggered_execution_args.instance_ref) as instance:
-        context = TriggeredExecutionContext(instance)
+        context = ExecutableContext(instance)
 
         try:
             with user_code_error_boundary(

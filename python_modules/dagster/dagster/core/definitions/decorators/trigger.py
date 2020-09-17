@@ -1,5 +1,5 @@
 from dagster import check
-from dagster.core.definitions.trigger import TriggeredExecutionDefinition
+from dagster.core.definitions.trigger import ExecutableDefinition
 from dagster.utils.backcompat import experimental
 
 
@@ -15,7 +15,7 @@ def triggered_execution(
     """
     The decorated function will be called as the ``run_config_fn`` of the underlying
     :py:class:`~dagster.TriggeredDefinition` and should take a
-    :py:class:`~dagster.TriggeredExecutionContext` as its only argument, returning the environment
+    :py:class:`~dagster.ExecutableContext` as its only argument, returning the environment
     dict for the triggered execution.
 
     Args:
@@ -25,13 +25,13 @@ def triggered_execution(
             solid names) to execute when the trigger fires. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The pipeline mode to apply for the triggered execution
             (Default: 'default')
-        tags_fn (Optional[Callable[[TriggeredExecutionContext], Optional[Dict[str, str]]]]): A
+        tags_fn (Optional[Callable[[ExecutableContext], Optional[Dict[str, str]]]]): A
             function that generates tags to attach to the triggered execution. Takes a
-            :py:class:`~dagster.TriggeredExecutionContext` and returns a dictionary of tags (string
+            :py:class:`~dagster.ExecutableContext` and returns a dictionary of tags (string
             key-value pairs).
-        should_execute_fn (Optional[Callable[[TriggeredExecutionContext], bool]]): A function that
+        should_execute_fn (Optional[Callable[[ExecutableContext], bool]]): A function that
             runs at trigger time to determine whether a pipeline execution should be initiated or
-            skipped. Takes a :py:class:`~dagster.TriggeredExecutionContext` and returns a boolean
+            skipped. Takes a :py:class:`~dagster.ExecutableContext` and returns a boolean
             (``True`` if a pipeline run should be execute). Defaults to a function that always
             returns ``True``.
     """
@@ -47,7 +47,7 @@ def triggered_execution(
         check.callable_param(fn, "fn")
         trigger_name = name or fn.__name__
 
-        return TriggeredExecutionDefinition(
+        return ExecutableDefinition(
             name=trigger_name,
             pipeline_name=pipeline_name,
             run_config_fn=fn,

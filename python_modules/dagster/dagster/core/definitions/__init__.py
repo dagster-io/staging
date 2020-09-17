@@ -70,4 +70,4 @@ from .schedule import ScheduleDefinition, ScheduleExecutionContext
 from .solid import CompositeSolidDefinition, ISolidDefinition, SolidDefinition
 from .solid_container import IContainSolids, create_execution_structure
 from .system_storage import SystemStorageData, SystemStorageDefinition, system_storage
-from .trigger import TriggeredExecutionContext, TriggeredExecutionDefinition
+from .trigger import ExecutableContext, ExecutableDefinition

@@ -7,7 +7,7 @@ from ..partition import PartitionSetDefinition
 from ..pipeline import PipelineDefinition
 from ..repository import VALID_REPOSITORY_DATA_DICT_KEYS, RepositoryData, RepositoryDefinition
 from ..schedule import ScheduleDefinition
-from ..trigger import TriggeredExecutionDefinition
+from ..trigger import ExecutableDefinition
 
 
 class _Repository(object):
@@ -41,14 +41,14 @@ class _Repository(object):
                     isinstance(definition, PipelineDefinition)
                     or isinstance(definition, PartitionSetDefinition)
                     or isinstance(definition, ScheduleDefinition)
-                    or isinstance(definition, TriggeredExecutionDefinition)
+                    or isinstance(definition, ExecutableDefinition)
                 ):
                     bad_definitions.append((i, type(definition)))
             if bad_definitions:
                 raise DagsterInvalidDefinitionError(
                     "Bad return value from repository construction function: all elements of list "
                     "must be of type PipelineDefinition, PartitionSetDefinition, "
-                    "ScheduleDefinition, or TriggeredExecutionDefinition. Got {bad_definitions_formatted}.".format(
+                    "ScheduleDefinition, or ExecutableDefinition. Got {bad_definitions_formatted}.".format(
                         bad_definitions_formatted=", ".join(
                             [
                                 "value of type {type_} at index {i}".format(type_=type_, i=i)

@@ -5,7 +5,7 @@ from dagster.utils import merge_dicts
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
-from .trigger import TriggeredExecutionDefinition
+from .trigger import ExecutableDefinition
 
 VALID_REPOSITORY_DATA_DICT_KEYS = {
     "pipelines",
@@ -143,7 +143,7 @@ class RepositoryData(object):
                 The partition sets belonging to the repository.
             schedules (Dict[str, Union[ScheduleDefinition, Callable[[], ScheduleDefinition]]]):
                 The schedules belonging to the repository.
-            triggered_executions (Dict[str, Union[TriggeredExecutionDefinition, Callable[[], TriggeredExecutionDefinition]]]):
+            triggered_executions (Dict[str, Union[ExecutableDefinition, Callable[[], ExecutableDefinition]]]):
                 The triggered executions for a repository.
 
         """
@@ -173,8 +173,8 @@ class RepositoryData(object):
             ),
         )
         self._triggered_executions = _CacheingDefinitionIndex(
-            TriggeredExecutionDefinition,
-            "TriggeredExecutionDefinition",
+            ExecutableDefinition,
+            "ExecutableDefinition",
             "triggered_execution",
             triggered_executions,
         )
@@ -270,7 +270,7 @@ class RepositoryData(object):
                             "{partition_set_name}".format(partition_set_name=partition_set_def.name)
                         )
                     partition_sets[partition_set_def.name] = partition_set_def
-            elif isinstance(definition, TriggeredExecutionDefinition):
+            elif isinstance(definition, ExecutableDefinition):
                 if definition.name in triggered_executions:
                     raise DagsterInvalidDefinitionError(
                         "Duplicate triggered execution definition found for triggered execution "
