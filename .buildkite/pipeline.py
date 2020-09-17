@@ -632,6 +632,13 @@ def dagit_steps():
     return [
         StepBuilder("dagit frontend only")
         .run(
+            "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
+            "pip install -e python_modules/dagster -qqq",
+            "pip install -e python_modules/dagster-graphql -qqq",
+            "pip install -e python_modules/libraries/dagster-cron -qqq",
+            "pip install -e python_modules/libraries/dagster-slack -qqq",
+            "pip install -e python_modules/dagit -qqq",
+            "pip install -e examples/legacy_examples -qqq",
             "cd js_modules/dagit",
             "yarn install",
             "yarn run ts",
