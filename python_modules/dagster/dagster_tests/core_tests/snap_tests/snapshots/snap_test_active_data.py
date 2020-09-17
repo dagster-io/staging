@@ -1135,7 +1135,7 @@ snapshots['test_external_repository_data 1'] = '''{
       "solid_selection": null
     }
   ],
-  "external_triggered_execution_datas": [],
+  "external_executable_datas": [],
   "name": "repo"
 }'''
 

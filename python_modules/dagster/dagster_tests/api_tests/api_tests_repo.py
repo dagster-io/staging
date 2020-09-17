@@ -133,12 +133,12 @@ def define_baz_partitions():
 
 
 @executable(pipeline_name="foo_pipeline")
-def triggered_foo(_):
+def executable_foo(_):
     return {"foo": "FOO"}
 
 
 @executable(pipeline_name="baz_pipeline")
-def triggered_error(_):
+def executable_error(_):
     raise Exception("womp womp")
 
 
@@ -153,7 +153,7 @@ def bar_repo():
         "schedules": define_bar_schedules(),
         "partition_sets": define_baz_partitions(),
         "executables": {
-            "triggered_foo": triggered_foo,
-            "triggered_error": lambda: triggered_error,
+            "executable_foo": executable_foo,
+            "executable_error": lambda: executable_error,
         },
     }
