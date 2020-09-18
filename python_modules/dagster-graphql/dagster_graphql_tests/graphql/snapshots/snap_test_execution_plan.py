@@ -26,7 +26,7 @@ snapshots['test_success_whole_execution_plan_with_in_memory_config 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_solid.compute'
             },
@@ -47,7 +47,7 @@ snapshots['test_success_whole_execution_plan_with_in_memory_config 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_sq_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_sq_solid.compute'
             },
@@ -80,7 +80,7 @@ snapshots['test_successful_one_part_execute_plan 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_solid.compute'
             },
@@ -118,7 +118,7 @@ snapshots['test_successful_two_part_execute_plan 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_solid.compute'
             },
@@ -161,7 +161,7 @@ snapshots['test_successful_two_part_execute_plan 2'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_sq_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_sq_solid.compute'
             },
@@ -290,7 +290,7 @@ snapshots['test_success_whole_execution_plan 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_solid.compute'
             },
@@ -321,7 +321,7 @@ snapshots['test_success_whole_execution_plan 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_sq_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_sq_solid.compute'
             },
@@ -359,7 +359,7 @@ snapshots['test_success_whole_execution_plan_with_filesystem_config 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_solid.compute'
             },
@@ -390,7 +390,7 @@ snapshots['test_success_whole_execution_plan_with_filesystem_config 1'] = {
             },
             {
                 '__typename': 'ExecutionStepOutputEvent',
-                'message': 'Yielded output "result" of type "PoorMansDataFrame". (Type check passed).',
+                'message': 'Yielded output "result" of type "PoorMansDataFrame" for step "sum_sq_solid.compute". (Type check passed).',
                 'outputName': 'result',
                 'stepKey': 'sum_sq_solid.compute'
             },
@@ -405,90 +405,6 @@ snapshots['test_success_whole_execution_plan_with_filesystem_config 1'] = {
                 'stepKey': 'sum_sq_solid.compute'
             }
         ]
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_in_memory_instance_grpc] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_sqlite_instance_deployed_grpc] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_sqlite_instance_grpc] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_postgres_instance_grpc] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_postgres_instance_in_process_env] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_postgres_instance_out_of_process_env] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
-    }
-}
-
-snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan[readonly_postgres_instance_multi_location] 1'] = {
-    'executionPlanOrError': {
-        '__typename': 'PipelineConfigValidationInvalid',
-        'errors': [
-            {
-                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
-            }
-        ],
-        'pipelineName': 'csv_hello_world'
     }
 }
 
