@@ -5,10 +5,14 @@ import * as yaml from 'yaml';
 
 import {showCustomAlert} from '../CustomAlertProvider';
 import {APP_PATH_PREFIX} from '../DomUtils';
+import {filterByQuery} from '../GraphQueryImpl';
 import PythonErrorInfo from '../PythonErrorInfo';
 import {Timestamp, TimezoneContext, timestampToString} from '../TimeComponents';
 import {formatElapsedTime} from '../Util';
+import {toGraphQueryItems} from '../gaant/GaantChart';
+import {ExecutionParams} from '../types/globalTypes';
 
+import {StepSelection} from './Run';
 import {LaunchPipelineExecution} from './types/LaunchPipelineExecution';
 import {LaunchPipelineReexecution} from './types/LaunchPipelineReexecution';
 import {RunActionMenuFragment} from './types/RunActionMenuFragment';
@@ -78,12 +82,7 @@ export function openRunInBrowser(
   }
 }
 
-function getExecutionMetadata(
-  run: RunFragment | RunTableRunFragment | RunActionMenuFragment,
-  resumeRetry = false,
-  stepKeys: string[] = [],
-  stepQuery = '',
-) {
+function getBaseExecutionMetadata(run: RunFragment | RunTableRunFragment | RunActionMenuFragment) {
   return {
     parentRunId: run.runId,
     rootRunId: run.rootRunId ? run.rootRunId : run.runId,
@@ -97,10 +96,6 @@ function getExecutionMetadata(
           value: tag.value,
         })),
       // pass resume/retry indicator via tags
-      {
-        key: 'dagster/is_resume_retry',
-        value: resumeRetry.toString(),
-      },
       // pass run group info via tags
       {
         key: 'dagster/parent_run_id',
@@ -110,95 +105,70 @@ function getExecutionMetadata(
         key: 'dagster/root_run_id',
         value: run.rootRunId ? run.rootRunId : run.runId,
       },
-      // pass step selection query via tags
-      ...(stepKeys.length > 0 && stepQuery
-        ? [
-            {
-              key: 'dagster/step_selection',
-              value: stepQuery,
-            },
-          ]
-        : []),
     ],
   };
 }
 
-function isRunFragment(
-  run: RunFragment | RunTableRunFragment | RunActionMenuFragment,
-): run is RunFragment {
-  return (run as RunFragment).runConfigYaml !== undefined;
-}
+export type ReExecutionStyle =
+  | {type: 'all'}
+  | {type: 'from-failure'}
+  | {type: 'selection'; selection: StepSelection}
+  | {type: 'from-selected'; selection: StepSelection};
 
 export function getReexecutionVariables(input: {
-  run: RunFragment | RunTableRunFragment | RunActionMenuFragment;
-  envYaml?: string;
-  stepKeys?: string[];
-  stepQuery?: string;
-  resumeRetry?: boolean;
+  run: (RunFragment | RunTableRunFragment | RunActionMenuFragment) & {runConfigYaml: string};
+  style: ReExecutionStyle;
   repositoryLocationName: string;
   repositoryName: string;
 }) {
-  const {
-    run,
-    envYaml,
-    stepKeys,
-    resumeRetry,
-    stepQuery,
-    repositoryLocationName,
-    repositoryName,
-  } = input;
+  const {run, style, repositoryLocationName, repositoryName} = input;
 
-  if (isRunFragment(run)) {
-    if (!run || run.pipeline.__typename === 'UnknownPipeline') {
-      return undefined;
-    }
-
-    const executionParams = {
-      mode: run.mode,
-      runConfigData: yaml.parse(run.runConfigYaml),
-      selector: {
-        repositoryLocationName,
-        repositoryName,
-        pipelineName: run.pipeline.name,
-        solidSelection: run.pipeline.solidSelection,
-      },
-    };
-
-    // subset re-execution
-    const {executionPlan} = run;
-    if (stepKeys && stepKeys.length > 0 && executionPlan) {
-      const step = executionPlan.steps.find((s) => stepKeys.includes(s.key));
-      if (!step) return;
-      executionParams['stepKeys'] = stepKeys;
-    }
-
-    executionParams['executionMetadata'] = getExecutionMetadata(
-      run,
-      resumeRetry,
-      stepKeys,
-      stepQuery,
-    );
-
-    return {executionParams};
-  } else {
-    if (!envYaml) {
-      return undefined;
-    }
-
-    return {
-      executionParams: {
-        mode: run.mode,
-        runConfigData: yaml.parse(envYaml),
-        selector: {
-          repositoryLocationName,
-          repositoryName,
-          pipelineName: run.pipelineName,
-          solidSelection: run.solidSelection,
-        },
-        executionMetadata: getExecutionMetadata(run),
-      },
-    };
+  if (!run || ('pipeline' in run && run.pipeline.__typename === 'UnknownPipeline')) {
+    return undefined;
   }
+
+  const executionParams: ExecutionParams = {
+    mode: run.mode,
+    runConfigData: yaml.parse(run.runConfigYaml),
+    executionMetadata: getBaseExecutionMetadata(run),
+    selector: {
+      repositoryLocationName,
+      repositoryName,
+      pipelineName: 'pipelineName' in run ? run.pipelineName : run.pipeline.name,
+      solidSelection: 'solidSelection' in run ? run.solidSelection : run.pipeline.solidSelection,
+    },
+  };
+
+  if (style.type === 'from-failure') {
+    executionParams.executionMetadata?.tags?.push({
+      key: 'dagster/is_resume_retry',
+      value: 'true',
+    });
+  }
+  if (style.type === 'selection') {
+    executionParams.stepKeys = style.selection.keys;
+    executionParams.executionMetadata?.tags?.push({
+      key: 'dagster/step_selection',
+      value: style.selection.query,
+    });
+  }
+  if (style.type === 'from-selected') {
+    if (!('executionPlan' in run) || !run.executionPlan) {
+      console.warn('Run execution plan must be present to launch from-selected execution');
+      return undefined;
+    }
+    const selectionAndDownstreamQuery = style.selection.keys.map((k) => `${k}*`).join(',');
+    const graph = toGraphQueryItems(run.executionPlan);
+    const graphFiltered = filterByQuery(graph, selectionAndDownstreamQuery);
+
+    executionParams.stepKeys = graphFiltered.all.map((node) => node.name);
+    executionParams.executionMetadata?.tags?.push({
+      key: 'dagster/step_selection',
+      value: selectionAndDownstreamQuery,
+    });
+  }
+
+  return {executionParams};
 }
 
 export const LAUNCH_PIPELINE_EXECUTION_MUTATION = gql`
