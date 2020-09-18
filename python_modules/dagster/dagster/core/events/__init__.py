@@ -424,11 +424,12 @@ class DagsterEvent(
             event_type=DagsterEventType.STEP_OUTPUT,
             step_context=step_context,
             event_specific_data=step_output_data,
-            message='Yielded output "{output_name}" of type "{output_type}".{type_check_clause}'.format(
+            message='Yielded output "{output_name}" of type "{output_type}" for step "{step_key}".{type_check_clause}'.format(
                 output_name=step_output_data.step_output_handle.output_name,
                 output_type=step_context.step.step_output_named(
                     step_output_data.step_output_handle.output_name
                 ).dagster_type.name,
+                step_key=step_context.step.key,
                 type_check_clause=(
                     " Warning! Type check failed."
                     if not step_output_data.type_check_data.success
