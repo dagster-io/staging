@@ -243,9 +243,7 @@ def postgres_extra_cmds_fn(_):
         connect_sibling_docker_container("postgres", "test-postgres-db", "POSTGRES_TEST_DB_HOST"),
         network_buildkite_container("postgres_multi"),
         connect_sibling_docker_container(
-            "postgres_multi",
-            "test-run-storage-db",
-            "POSTGRES_TEST_RUN_STORAGE_DB_HOST",
+            "postgres_multi", "test-run-storage-db", "POSTGRES_TEST_RUN_STORAGE_DB_HOST",
         ),
         connect_sibling_docker_container(
             "postgres_multi",
@@ -370,8 +368,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         env_vars=["AWS_DEFAULT_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
     ),
     ModuleBuildSpec(
-        "python_modules/libraries/dagster-azure",
-        env_vars=["AZURE_STORAGE_ACCOUNT_KEY"],
+        "python_modules/libraries/dagster-azure", env_vars=["AZURE_STORAGE_ACCOUNT_KEY"],
     ),
     ModuleBuildSpec(
         "python_modules/libraries/dagster-celery",
@@ -670,11 +667,7 @@ def non_dagit_steps():
     steps += pylint_steps()
     steps += [
         StepBuilder("isort")
-        .run(
-            "pip install isort>=4.3.21",
-            "make isort",
-            "git diff --exit-code",
-        )
+        .run("pip install isort>=4.3.21", "make isort", "git diff --exit-code",)
         .on_integration_image(SupportedPython.V3_7)
         .build(),
         StepBuilder("black")
