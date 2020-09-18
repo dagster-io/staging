@@ -8,6 +8,7 @@ from dagster import (
     solid,
 )
 from dagster.config.field import Field
+from dagster.utils.backcompat import experimental
 
 from .types import DbtCliResult, DbtCliStatsResult
 from .utils import execute_dbt, get_run_results
@@ -123,6 +124,7 @@ def passthrough_flags_only(solid_config, additional_flags):
     },
     tags={"kind": "dbt"},
 )
+@experimental
 def dbt_cli_run(context) -> DbtCliStatsResult:
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
@@ -184,6 +186,7 @@ def dbt_cli_run(context) -> DbtCliStatsResult:
         ),
     },
 )
+@experimental
 def dbt_cli_test(context) -> DbtCliStatsResult:
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
@@ -227,6 +230,7 @@ def dbt_cli_test(context) -> DbtCliStatsResult:
         ),
     },
 )
+@experimental
 def dbt_cli_snapshot(context) -> DbtCliResult:
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
@@ -257,6 +261,7 @@ def dbt_cli_snapshot(context) -> DbtCliResult:
         ),
     },
 )
+@experimental
 def dbt_cli_run_operation(context) -> DbtCliResult:
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
@@ -295,6 +300,7 @@ def dbt_cli_run_operation(context) -> DbtCliResult:
         ),
     },
 )
+@experimental
 def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
@@ -359,6 +365,7 @@ def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
         ),
     },
 )
+@experimental
 def dbt_cli_compile(context) -> DbtCliResult:
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
