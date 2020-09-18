@@ -22,8 +22,9 @@ def execute_dbt(
     executable, command, flags_dict, log, warn_error, ignore_handled_error
 ) -> Tuple[List[dict], str, int]:
     check.tuple_param(command, "command", of_type=str)
-
     check.dict_param(flags_dict, "flags_dict", key_type=str)
+    check.bool_param(warn_error, "warn_error")
+    check.bool_param(ignore_handled_error, "ignore_handled_error")
 
     warn_error = ["--warn-error"] if warn_error else []
     command_list = [executable, "--log-format", "json", *warn_error, *command]
