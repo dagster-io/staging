@@ -90,7 +90,7 @@ class LazyRepositorySymbolsAndCodePointers:
         self._loadable_repository_symbols = None
         self._code_pointers_by_repo_name = None
 
-    def _load(self):
+    def load(self):
         self._loadable_repository_symbols = load_loadable_repository_symbols(
             self._loadable_target_origin
         )
@@ -101,14 +101,14 @@ class LazyRepositorySymbolsAndCodePointers:
     @property
     def loadable_repository_symbols(self):
         if self._loadable_repository_symbols is None:
-            self._load()
+            self.load()
 
         return self._loadable_repository_symbols
 
     @property
     def code_pointers_by_repo_name(self):
         if self._code_pointers_by_repo_name is None:
-            self._load()
+            self.load()
 
         return self._code_pointers_by_repo_name
 
@@ -165,6 +165,7 @@ class DagsterApiServer(DagsterApiServicer):
         loadable_target_origin=None,
         heartbeat=False,
         heartbeat_timeout=30,
+        lazy_load=False,
     ):
         super(DagsterApiServer, self).__init__()
 
@@ -194,6 +195,8 @@ class DagsterApiServer(DagsterApiServicer):
         self._repository_symbols_and_code_pointers = LazyRepositorySymbolsAndCodePointers(
             loadable_target_origin
         )
+        if not lazy_load:
+            self._repository_symbols_and_code_pointers.load()
 
         self.__last_heartbeat_time = time.time()
         if heartbeat:
@@ -912,6 +915,7 @@ class DagsterGrpcServer(object):
         loadable_target_origin=None,
         heartbeat=False,
         heartbeat_timeout=30,
+        lazy_load=False,
     ):
         check.opt_str_param(host, "host")
         check.opt_int_param(port, "port")
@@ -945,6 +949,7 @@ class DagsterGrpcServer(object):
             loadable_target_origin=loadable_target_origin,
             heartbeat=heartbeat,
             heartbeat_timeout=heartbeat_timeout,
+            lazy_load=lazy_load,
         )
 
         add_DagsterApiServicer_to_server(self._servicer, self.server)
@@ -1035,10 +1040,17 @@ def wait_for_grpc_server(server_process, timeout=3):
                 return False
         else:
             return True
+    return False
 
 
 def open_server_process(
-    port, socket, loadable_target_origin=None, max_workers=1, heartbeat=False, heartbeat_timeout=30
+    port,
+    socket,
+    loadable_target_origin=None,
+    max_workers=1,
+    heartbeat=False,
+    heartbeat_timeout=30,
+    lazy_load=False,
 ):
     check.invariant((port or socket) and not (port and socket), "Set only port or socket")
     check.opt_inst_param(loadable_target_origin, "loadable_target_origin", LoadableTargetOrigin)
@@ -1057,6 +1069,7 @@ def open_server_process(
         + ["-n", str(max_workers)]
         + (["--heartbeat"] if heartbeat else [])
         + (["--heartbeat-timeout", str(heartbeat_timeout)] if heartbeat_timeout else [])
+        + (["--lazy-load"] if lazy_load else [])
     )
 
     if loadable_target_origin:
@@ -1091,7 +1104,9 @@ def open_server_process(
         return None
 
 
-def open_server_process_on_dynamic_port(max_retries=10, loadable_target_origin=None, max_workers=1):
+def open_server_process_on_dynamic_port(
+    max_retries=10, loadable_target_origin=None, max_workers=1, lazy_load=False
+):
     server_process = None
     retries = 0
     while server_process is None and retries < max_retries:
@@ -1102,6 +1117,7 @@ def open_server_process_on_dynamic_port(max_retries=10, loadable_target_origin=N
                 socket=None,
                 loadable_target_origin=loadable_target_origin,
                 max_workers=max_workers,
+                lazy_load=lazy_load,
             )
         except CouldNotBindGrpcServerToAddress:
             pass
@@ -1130,6 +1146,7 @@ class GrpcServerProcess(object):
         max_workers=1,
         heartbeat=False,
         heartbeat_timeout=30,
+        lazy_load=False,
     ):
         self.port = None
         self.socket = None
@@ -1142,6 +1159,7 @@ class GrpcServerProcess(object):
         check.bool_param(heartbeat, "heartbeat")
         check.int_param(heartbeat_timeout, "heartbeat_timeout")
         check.invariant(heartbeat_timeout > 0, "heartbeat_timeout must be greater than 0")
+        check.bool_param(lazy_load, "lazy_load")
         check.invariant(
             max_workers > 1 if heartbeat else True,
             "max_workers must be greater than 1 if heartbeat is True",
@@ -1152,6 +1170,7 @@ class GrpcServerProcess(object):
                 max_retries=max_retries,
                 loadable_target_origin=loadable_target_origin,
                 max_workers=max_workers,
+                lazy_load=lazy_load,
             )
         else:
             self.socket = safe_tempfile_path_unmanaged()
@@ -1163,6 +1182,7 @@ class GrpcServerProcess(object):
                 max_workers=max_workers,
                 heartbeat=heartbeat,
                 heartbeat_timeout=heartbeat_timeout,
+                lazy_load=lazy_load,
             )
 
         if self.server_process is None:
