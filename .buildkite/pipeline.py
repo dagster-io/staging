@@ -13,7 +13,7 @@ from step_builder import StepBuilder, wait_step
 from utils import (
     check_for_release,
     connect_sibling_docker_container,
-    is_diff_only_dagit,
+    is_phab_and_dagit_only,
     network_buildkite_container,
 )
 
@@ -627,7 +627,7 @@ def version_equality_checks(version=SupportedPython.V3_7):
 
 def dagit_steps():
     return [
-        StepBuilder("dagit frontend only")
+        StepBuilder("dagit webapp tests")
         .run(
             "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
             "pip install -e python_modules/dagster -qqq",
@@ -717,7 +717,7 @@ def non_dagit_steps():
 
 if __name__ == "__main__":
     all_steps = dagit_steps()
-    dagit_only = is_diff_only_dagit()
+    dagit_only = is_phab_and_dagit_only()
 
     if not dagit_only:
         all_steps += non_dagit_steps()
