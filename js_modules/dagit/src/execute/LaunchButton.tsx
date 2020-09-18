@@ -19,6 +19,7 @@ import {WebsocketStatusContext} from '../WebsocketStatus';
 export interface LaunchButtonConfiguration {
   title: string;
   disabled: boolean;
+  scope?: string;
   onClick: () => void;
   icon?: IconName | JSX.Element | 'dagster-spinner';
   tooltip?: string | JSX.Element;
@@ -87,7 +88,7 @@ export const LaunchButton: React.FunctionComponent<LaunchButtonProps> = ({config
     <ShortcutHandler
       onShortcut={onClick}
       shortcutLabel={`⌥L`}
-      shortcutFilter={e => e.keyCode === 76 && e.altKey}
+      shortcutFilter={(e) => e.keyCode === 76 && e.altKey}
     >
       <ButtonWithConfiguration
         status={status}
@@ -103,6 +104,7 @@ export const LaunchButton: React.FunctionComponent<LaunchButtonProps> = ({config
 interface LaunchButtonDropdownProps {
   title: string;
   small?: boolean;
+  primary: LaunchButtonConfiguration;
   options: LaunchButtonConfiguration[];
   disabled?: boolean;
   tooltip?: string;
@@ -112,33 +114,36 @@ interface LaunchButtonDropdownProps {
 export const LaunchButtonDropdown: React.FunctionComponent<LaunchButtonDropdownProps> = ({
   title,
   small,
+  primary,
   options,
   disabled,
-  tooltip,
   icon,
+  tooltip,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const {forced, status, onConfigSelected} = useLaunchButtonCommonState({
-    disabled: disabled || options.every(d => d.disabled),
+    disabled: disabled || options.every((d) => d.disabled),
   });
 
   return (
     <ShortcutHandler
-      onShortcut={() => onConfigSelected(options[0])}
+      onShortcut={() => onConfigSelected(primary)}
       shortcutLabel={`⌥L`}
-      shortcutFilter={e => e.keyCode === 76 && e.altKey}
+      shortcutFilter={(e) => e.keyCode === 76 && e.altKey}
     >
       <ButtonWithConfiguration
         status={status}
         small={small}
         title={title}
         joined="right"
-        onClick={() => onConfigSelected(options[0])}
+        icon={icon}
+        tooltip={tooltip}
+        onClick={() => onConfigSelected(primary)}
         {...forced}
       />
       <Popover
         isOpen={isOpen}
-        onInteraction={nextOpen => setIsOpen(nextOpen)}
+        onInteraction={(nextOpen) => setIsOpen(nextOpen)}
         disabled={status === LaunchButtonStatus.Disabled}
         position="bottom-right"
         content={
@@ -292,7 +297,7 @@ const ButtonText = styled.span`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 300px;
+  max-width: 350px;
 `;
 
 const LaunchMenuItem = styled(MenuItem)`

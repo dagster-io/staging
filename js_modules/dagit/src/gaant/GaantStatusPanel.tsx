@@ -4,6 +4,7 @@ import styled from 'styled-components/macro';
 
 import {IRunMetadataDict, IStepState} from '../RunMetadataProvider';
 import {formatElapsedTime} from '../Util';
+import {StepSelection} from '../runs/Run';
 
 import {GaantChartMode} from './Constants';
 import {boxStyleFor} from './GaantChartLayout';
@@ -11,7 +12,7 @@ import {RunGroupPanel} from './RunGroupPanel';
 
 interface GaantStatusPanelProps {
   metadata: IRunMetadataDict;
-  selectedSteps: string[];
+  selection: StepSelection;
   runId: string;
   nowMs: number;
 
@@ -24,7 +25,7 @@ export const GaantStatusPanel: React.FunctionComponent<GaantStatusPanelProps> = 
   runId,
   nowMs,
   metadata,
-  selectedSteps,
+  selection,
   onClickStep,
   onDoubleClickStep,
   onHighlightStep,
@@ -44,7 +45,7 @@ export const GaantStatusPanel: React.FunctionComponent<GaantStatusPanelProps> = 
       name={stepName}
       key={stepName}
       metadata={metadata}
-      selected={selectedSteps.includes(stepName)}
+      selected={selection.keys.includes(stepName)}
       onClick={onClickStep}
       onDoubleClick={onDoubleClickStep}
       onHover={onHighlightStep}
