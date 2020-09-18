@@ -31,6 +31,7 @@ def is_phab_and_dagit_only():
 
     try:
         base_branch = branch_name.replace("/diff/", "/base/")
+        subprocess.check_call(["git", "fetch", "origin", base_branch])
         diff_files = (
             str(subprocess.check_output(["git", "diff", base_branch, branch_name, "--name-only"]))
             .strip("'b\\n")
