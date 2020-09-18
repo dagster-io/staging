@@ -63,5 +63,6 @@ const TypeSignature = styled(Code)`
     padding: 4px 10px;
     box-shadow: none;
     color: black;
+    /* Just a comment */
   }
 `;
