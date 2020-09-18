@@ -47,6 +47,7 @@ CLI_COMMON_FLAGS_CONFIG_SCHEMA = {
         config=bool,
         is_required=False,
         description="If set, bypass the adapter-level cache of database state",
+        default_value=False,
     ),
 }
 
@@ -56,31 +57,31 @@ CLI_CONFIG_SCHEMA = {
     **CLI_COMMON_FLAGS_CONFIG_SCHEMA,
     "warn-error": Field(
         config=bool,
-        description="Whether or not to --warn-error.",
         is_required=False,
+        description="If dbt would normally warn, instead raise an exception. Examples include --models that selects nothing, deprecations, configurations with no associated models, invalid test configurations, and missing sources/refs in tests.",
         default_value=False,
     ),
     "dbt_executable": Field(
         config=StringSource,
         is_required=False,
+        description="Path to the dbt executable. Default is {}".format(DEFAULT_DBT_EXECUTABLE),
         default_value=DEFAULT_DBT_EXECUTABLE,
-        description="Path to the dbt binary.",
     ),
     "ignore_handled_error": Field(
         config=bool,
-        default_value=False,
         is_required=False,
-        description="When true, will not raise an exception when the dbt CLI returns error code 1.",
+        description="When True, will not raise an exception when the dbt CLI returns error code 1. Default is False.",
+        default_value=False,
     ),
 }
 
-CLI_BASE_FLAGS = set(CLI_COMMON_FLAGS_CONFIG_SCHEMA.keys())
+CLI_COMMON_FLAGS = set(CLI_COMMON_FLAGS_CONFIG_SCHEMA.keys())
 
 
 def passthrough_flags_only(solid_config, additional_flags):
     return {
         flag: solid_config[flag]
-        for flag in (CLI_BASE_FLAGS ^ set(additional_flags))
+        for flag in (CLI_COMMON_FLAGS ^ set(additional_flags))
         if solid_config.get(flag) is not None
     }
 
