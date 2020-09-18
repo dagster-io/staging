@@ -336,6 +336,62 @@ class SqlEventLogStorage(EventLogStorage):
             )
             return conn.execute(query).fetchone()
 
+    def get_addresses_for_step_output_versions(self, step_output_versions):
+        """
+        For each given step output, finds whether an output exists with the given
+        version, and returns its address if it does.
+
+        Args:
+            step_output_versions (Dict[(str, StepOutputHandle), str]):
+                (pipeline name, step output handle) -> version.
+
+        Returns:
+            Dict[(str, StepOutputHandle), str]: (pipeline name, step output handle) -> address.
+                For each step output, an address if there is one and None otherwise.
+        """
+        c = SqlEventLogStorageTable.c
+        output_events_query = db.select([c.id, c.timestamp, c.event]).where(
+            c.dagster_event_type == DagsterEventType.STEP_OUTPUT.value
+        )
+        with self.connect() as conn:
+            step_output_records = conn.execute(output_events_query).fetchall()
+
+        # if multiple output events wrote to the same address, only the latest one is relevant
+        latest_version_by_address = {}
+        for record in step_output_records:
+            dagster_event = deserialize_json_to_dagster_namedtuple(record.event).dagster_event
+            step_output_data = dagster_event.event_specific_data
+            address = step_output_data.address
+            version = step_output_data.version
+            pipeline_name = dagster_event.pipeline_name
+            step_output = step_output_data.step_output_handle
+            timestamp = record.timestamp
+
+            if address and (
+                address not in latest_version_by_address
+                or latest_version_by_address[address][2] < timestamp
+            ):
+                latest_version_by_address[address] = (
+                    pipeline_name,
+                    step_output,
+                    version,
+                    timestamp,
+                )
+
+        step_output_versions_set = set(step_output_versions.items())
+        address_by_output = {
+            (pipeline_name, step_output): address
+            for address, (
+                pipeline_name,
+                step_output,
+                version,
+                _,
+            ) in latest_version_by_address.items()
+            if ((pipeline_name, step_output), version) in step_output_versions_set
+        }
+
+        return address_by_output
+
 
 class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage):
     @abstractmethod
