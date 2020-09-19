@@ -1,10 +1,8 @@
-import boto3
-from botocore.handlers import disable_signing
-
 from dagster import Field, StringSource, resource
 from dagster.utils.merger import merge_dicts
 
 from .file_manager import S3FileManager
+from .utils import construct_s3_client
 
 S3_SESSION_CONFIG = {
     "use_unsigned_session": Field(
@@ -78,17 +76,11 @@ def s3_resource(context):
               endpoint_url: "http://localhost"
               # Optional[str]: Specifies a custom endpoint for the S3 session. Default is None.
     """
-    use_unsigned_session = context.resource_config["use_unsigned_session"]
-    region_name = context.resource_config.get("region_name")
-    endpoint_url = context.resource_config.get("endpoint_url")
-
-    s3 = boto3.resource(  # pylint:disable=C0103
-        "s3", region_name=region_name, use_ssl=True, endpoint_url=endpoint_url
-    ).meta.client
-
-    if use_unsigned_session:
-        s3.meta.events.register("choose-signer.s3.*", disable_signing)
-    return s3
+    return construct_s3_client(
+        region_name=context.resource_config.get("region_name"),
+        endpoint_url=context.resource_config.get("endpoint_url"),
+        use_unsigned_session=context.resource_config["use_unsigned_session"],
+    )
 
 
 @resource(
@@ -101,29 +93,12 @@ def s3_resource(context):
     )
 )
 def s3_file_manager(context):
-    s3_session = _s3_session_from_config(context.resource_config)
     return S3FileManager(
-        s3_session=s3_session,
+        s3_session=construct_s3_client(
+            region_name=context.resource_config.get("region_name"),
+            endpoint_url=context.resource_config.get("endpoint_url"),
+            use_unsigned_session=context.resource_config["use_unsigned_session"],
+        ),
         s3_bucket=context.resource_config["s3_bucket"],
         s3_base_key=context.resource_config["s3_prefix"],
     )
-
-
-def _s3_session_from_config(config):
-    """
-    Args:
-        config: A configuration containing the fields in S3_SESSION_CONFIG.
-
-    Returns: A boto3 s3 session.
-    """
-    use_unsigned_session = config["use_unsigned_session"]
-    region_name = config.get("region_name")
-    endpoint_url = config.get("endpoint_url")
-
-    s3 = boto3.resource(  # pylint:disable=C0103
-        "s3", region_name=region_name, use_ssl=True, endpoint_url=endpoint_url
-    ).meta.client
-
-    if use_unsigned_session:
-        s3.meta.events.register("choose-signer.s3.*", disable_signing)
-    return s3
