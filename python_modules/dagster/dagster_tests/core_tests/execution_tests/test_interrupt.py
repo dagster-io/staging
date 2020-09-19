@@ -32,7 +32,7 @@ from dagster.utils import (
 def _send_kbd_int(temp_files):
     while not all([os.path.exists(temp_file) for temp_file in temp_files]):
         time.sleep(0.1)
-    send_interrupt()
+    seven.thread.interrupt_main()
 
 
 @solid(config_schema={"tempfile": Field(String)})
