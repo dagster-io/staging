@@ -3,6 +3,7 @@ import sys
 from io import BytesIO, StringIO
 
 import boto3
+from botocore.config import Config
 
 from dagster import check
 from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
@@ -13,7 +14,10 @@ from dagster.core.types.marshal import SerializationStrategy
 class S3ObjectStore(ObjectStore):
     def __init__(self, bucket, s3_session=None):
         self.bucket = check.str_param(bucket, "bucket")
-        self.s3 = s3_session or boto3.client("s3")
+
+        self.s3 = s3_session or boto3.client(
+            "s3", config=Config(retries={"max_attempts": 5, "mode": "standard"})
+        )
         self.s3.head_bucket(Bucket=bucket)
         super(S3ObjectStore, self).__init__("s3", sep="/")
 
