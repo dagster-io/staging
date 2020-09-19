@@ -346,6 +346,8 @@ def start_termination_thread(termination_event):
 _received_interrupt = {"received": False}
 
 
+_num_delays = {"num": 0}
+
 # Wraps code that we don't want a SIGINT to interrupt (but throw a KeyboardInterrupt if a
 # SIGINT was received while it ran). You can also call raise_delayed_interrupts within this
 # context when you reach a checkpoint where it's safe to raise a KeyboardInterrupt, or open a
@@ -353,6 +355,10 @@ _received_interrupt = {"received": False}
 # interrupts.
 @contextlib.contextmanager
 def delay_interrupts():
+
+    my_delay = _num_delays["num"]
+    _num_delays["num"] = _num_delays["num"] + 1
+
     if not seven.is_main_thread():
         yield
     else:
@@ -363,9 +369,17 @@ def delay_interrupts():
             _received_interrupt["received"] = True
 
         try:
+            print("REPLACING SIGNAL HANDLER" + str(my_delay))
+
+            import traceback
+
+            traceback.print_stack(file=sys.stdout)
+
             signal.signal(signal.SIGINT, _new_signal_handler)
             yield
         finally:
+            print("RESTORING SIGNAL HANDLER" + str(my_delay))
+
             signal.signal(signal.SIGINT, original_signal_handler)
             raise_delayed_interrupts()
 
