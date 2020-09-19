@@ -717,26 +717,25 @@ class _ExecuteRunWithPlanIterable(object):
         # To be maximally certain that interrupts are always caught during an execution process,
         # you can safely add an additional `with delay_interrupts()` at the very beginning of the
         # process that performs the execution
-        with delay_interrupts():
-            for event in self.execution_context_manager.prepare_context():
-                yield event
-            self.pipeline_context = self.execution_context_manager.get_context()
-            generator_closed = False
-            try:
-                if self.pipeline_context:  # False if we had a pipeline init failure
-                    for event in self.iterator(
-                        execution_plan=self.execution_plan, pipeline_context=self.pipeline_context,
-                    ):
-                        yield event
-            except GeneratorExit:
-                # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
-                # (see https://amir.rachum.com/blog/2017/03/03/generator-cleanup/).
-                generator_closed = True
-                raise
-            finally:
-                for event in self.execution_context_manager.shutdown_context():
-                    if not generator_closed:
-                        yield event
+        for event in self.execution_context_manager.prepare_context():
+            yield event
+        self.pipeline_context = self.execution_context_manager.get_context()
+        generator_closed = False
+        try:
+            if self.pipeline_context:  # False if we had a pipeline init failure
+                for event in self.iterator(
+                    execution_plan=self.execution_plan, pipeline_context=self.pipeline_context,
+                ):
+                    yield event
+        except GeneratorExit:
+            # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
+            # (see https://amir.rachum.com/blog/2017/03/03/generator-cleanup/).
+            generator_closed = True
+            raise
+        finally:
+            for event in self.execution_context_manager.shutdown_context():
+                if not generator_closed:
+                    yield event
 
 
 def _check_execute_pipeline_args(pipeline, run_config, mode, preset, tags, solid_selection=None):
