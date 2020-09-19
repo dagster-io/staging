@@ -32,7 +32,7 @@ from dagster.utils import (
 def _send_kbd_int(temp_files):
     while not all([os.path.exists(temp_file) for temp_file in temp_files]):
         time.sleep(0.1)
-    send_interrupt()
+    seven.thread.interrupt_main()
 
 
 @solid(config_schema={"tempfile": Field(String)})
@@ -183,16 +183,34 @@ def test_interrupt_resource_teardown():
 
 
 def _send_interrupt_to_self():
+    print("SENDING SIGNAL")
     os.kill(os.getpid(), signal.SIGINT)
     start_time = time.time()
-    while not check_received_delayed_interrupt():
-        time.sleep(1)
-        if time.time() - start_time > 15:
-            raise Exception("Timed out waiting for interrupt to be received")
+    try:
+        while not check_received_delayed_interrupt():
+            print("NO INTERRUPT YET SLEEPING")
+            time.sleep(1)
+            if time.time() - start_time > 15:
+                raise Exception("Timed out waiting for interrupt to be received")
+        print("RECEIVED DELAYED INTERRUPT, LEAVING")
+    except KeyboardInterrupt:
+        print("GOT A KEYBOARD INTERRUPT, RERAISING")
+        raise
 
 
 @pytest.mark.skipif(seven.IS_WINDOWS, reason="Interrupts handled differently on windows")
 def test_delay_interrupt():
+
+    # Verify standard interrupt handler
+    standard_interrupt = False
+
+    try:
+        _send_interrupt_to_self()
+    except KeyboardInterrupt:
+        standard_interrupt = True
+
+    assert standard_interrupt
+
     outer_interrupt = False
     inner_interrupt = False
 
@@ -236,13 +254,19 @@ def test_delay_interrupt():
 
 @pytest.mark.skipif(seven.IS_WINDOWS, reason="Interrupts handled differently on windows")
 def test_raise_interrupts_immediately_no_op():
-    with raise_interrupts_immediately():
-        try:
-            _send_interrupt_to_self()
-        except KeyboardInterrupt:
-            standard_interrupt = True
+    standard_interrupt = False
+    outer_interrupt = False
+    try:
+        with raise_interrupts_immediately():
+            try:
+                _send_interrupt_to_self()
+            except KeyboardInterrupt:
+                standard_interrupt = True
+    except KeyboardInterrupt:
+        outer_interrupt = True
 
     assert standard_interrupt
+    assert not outer_interrupt
 
 
 @pytest.mark.skipif(seven.IS_WINDOWS, reason="Interrupts handled differently on windows")
