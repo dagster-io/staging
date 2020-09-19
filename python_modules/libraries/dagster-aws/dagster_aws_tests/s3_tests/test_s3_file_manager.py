@@ -8,6 +8,7 @@ from dagster_aws.s3 import (
     s3_file_manager,
     s3_plus_default_storage_defs,
 )
+from dagster_aws.s3.utils import construct_boto_client_retry_config
 from moto import mock_s3
 
 from dagster import (
@@ -218,12 +219,15 @@ def test_s3_file_manger_resource(MockS3FileManager, mock_boto3_resource):
             s3_bucket=resource_config["s3_bucket"],
             s3_base_key=resource_config["s3_prefix"],
         )
+
         mock_boto3_resource.assert_called_once_with(
             "s3",
             region_name=resource_config["region_name"],
             endpoint_url=resource_config["endpoint_url"],
             use_ssl=True,
+            config=mock_boto3_resource.call_args.kwargs["config"],
         )
+        assert mock_boto3_resource.call_args.kwargs["config"].retries["max_attempts"] == 5
 
         did_it_run["it_ran"] = True
 
