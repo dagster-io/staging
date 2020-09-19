@@ -23,8 +23,6 @@ from dagster import (
 )
 from dagster.seven import mock
 
-# For deps
-
 
 def test_s3_file_manager_write():
     s3_mock = mock.MagicMock()
@@ -218,12 +216,15 @@ def test_s3_file_manger_resource(MockS3FileManager, mock_boto3_resource):
             s3_bucket=resource_config["s3_bucket"],
             s3_base_key=resource_config["s3_prefix"],
         )
+
         mock_boto3_resource.assert_called_once_with(
             "s3",
             region_name=resource_config["region_name"],
             endpoint_url=resource_config["endpoint_url"],
             use_ssl=True,
+            config=mock_boto3_resource.call_args.kwargs["config"],
         )
+        assert mock_boto3_resource.call_args.kwargs["config"].retries["max_attempts"] == 5
 
         did_it_run["it_ran"] = True
 
