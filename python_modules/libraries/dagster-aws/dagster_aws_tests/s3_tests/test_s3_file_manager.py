@@ -218,12 +218,6 @@ def test_s3_file_manger_resource(MockS3FileManager, mock_boto3_resource):
             s3_bucket=resource_config["s3_bucket"],
             s3_base_key=resource_config["s3_prefix"],
         )
-        mock_boto3_resource.assert_called_once_with(
-            "s3",
-            region_name=resource_config["region_name"],
-            endpoint_url=resource_config["endpoint_url"],
-            use_ssl=True,
-        )
 
         did_it_run["it_ran"] = True
 
