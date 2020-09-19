@@ -1,4 +1,5 @@
 import boto3
+from botocore.config import Config
 from botocore.handlers import disable_signing
 
 from dagster import Field, StringSource, resource
@@ -83,7 +84,11 @@ def s3_resource(context):
     endpoint_url = context.resource_config.get("endpoint_url")
 
     s3 = boto3.resource(  # pylint:disable=C0103
-        "s3", region_name=region_name, use_ssl=True, endpoint_url=endpoint_url
+        "s3",
+        region_name=region_name,
+        use_ssl=True,
+        endpoint_url=endpoint_url,
+        config=Config(retries={"max_attempts": 5, "mode": "standard"}),
     ).meta.client
 
     if use_unsigned_session:
