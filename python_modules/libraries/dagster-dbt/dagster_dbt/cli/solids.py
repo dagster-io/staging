@@ -1,7 +1,10 @@
 from dagster import (
+    AssetMaterialization,
+    EventMetadataEntry,
     InputDefinition,
     Noneable,
     Nothing,
+    Output,
     OutputDefinition,
     Permissive,
     StringSource,
@@ -138,8 +141,32 @@ def dbt_cli_run(context) -> DbtCliStatsResult:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
 
-    return DbtCliStatsResult(
-        logs=logs, raw_output=raw_output, return_code=return_code, **get_run_results(logs)
+    run_results = get_run_results(logs)
+
+    yield AssetMaterialization(
+        asset_key="dbt_cli_run-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
+        description="The output of a shell execution of `dbt run`.",
+        metadata_entries=[
+            EventMetadataEntry.float(
+                label="return_code",
+                value=float(return_code),
+                description="The return code of a shell exeuction of `dbt run`.",
+            ),
+            EventMetadataEntry.json(
+                label="run_results",
+                data=run_results,
+                description="The summarized results of a shell execution of `dbt run`.",
+            ),
+            EventMetadataEntry.text(
+                label="raw_output",
+                text=raw_output,
+                description="The raw output of a shell execution of `dbt run`.",
+            ),
+        ],
+    )
+
+    yield Output(
+        DbtCliStatsResult(logs=logs, raw_output=raw_output, return_code=return_code, **run_results)
     )
 
 
@@ -200,8 +227,32 @@ def dbt_cli_test(context) -> DbtCliStatsResult:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
 
-    return DbtCliStatsResult(
-        logs=logs, raw_output=raw_output, return_code=return_code, **get_run_results(logs)
+    run_results = get_run_results(logs)
+
+    yield AssetMaterialization(
+        asset_key="dbt_cli_test-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
+        description="The output of a shell execution of `dbt test`.",
+        metadata_entries=[
+            EventMetadataEntry.float(
+                label="return_code",
+                value=float(return_code),
+                description="The return code of a shell exeuction of `dbt test`.",
+            ),
+            EventMetadataEntry.json(
+                label="run_results",
+                data=run_results,
+                description="The summarized results of a shell execution of `dbt test`.",
+            ),
+            EventMetadataEntry.text(
+                label="raw_output",
+                text=raw_output,
+                description="The raw output of a shell execution of `dbt test`.",
+            ),
+        ],
+    )
+
+    yield Output(
+        DbtCliStatsResult(logs=logs, raw_output=raw_output, return_code=return_code, **run_results)
     )
 
 
@@ -242,7 +293,24 @@ def dbt_cli_snapshot(context) -> DbtCliResult:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
 
-    return DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code)
+    yield AssetMaterialization(
+        asset_key="dbt_cli_snapshot-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
+        description="The output of a shell execution of `dbt snapshot`.",
+        metadata_entries=[
+            EventMetadataEntry.float(
+                label="return_code",
+                value=float(return_code),
+                description="The return code of a shell exeuction of `dbt snapshot`.",
+            ),
+            EventMetadataEntry.text(
+                label="raw_output",
+                text=raw_output,
+                description="The raw output of a shell execution of `dbt snapshot`.",
+            ),
+        ],
+    )
+
+    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
 
 
 @solid(
@@ -273,7 +341,24 @@ def dbt_cli_run_operation(context) -> DbtCliResult:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
 
-    return DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code)
+    yield AssetMaterialization(
+        asset_key="dbt_cli_run_operation-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
+        description="The output of a shell execution of `dbt run-operation`.",
+        metadata_entries=[
+            EventMetadataEntry.float(
+                label="return_code",
+                value=float(return_code),
+                description="The return code of a shell exeuction of `dbt run-operation`.",
+            ),
+            EventMetadataEntry.text(
+                label="raw_output",
+                text=raw_output,
+                description="The raw output of a shell execution of `dbt run-operation`.",
+            ),
+        ],
+    )
+
+    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
 
 
 @solid(
@@ -312,7 +397,24 @@ def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
 
-    return DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code)
+    yield AssetMaterialization(
+        asset_key="dbt_cli_snapshot_freshness-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
+        description="The output of a shell execution of `dbt source snapshot-freshness`.",
+        metadata_entries=[
+            EventMetadataEntry.float(
+                label="return_code",
+                value=float(return_code),
+                description="The return code of a shell exeuction of `dbt source snapshot-freshness`.",
+            ),
+            EventMetadataEntry.text(
+                label="raw_output",
+                text=raw_output,
+                description="The raw output of a shell execution of `dbt source snapshot-freshness`.",
+            ),
+        ],
+    )
+
+    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
 
 
 @solid(
@@ -389,4 +491,21 @@ def dbt_cli_compile(context) -> DbtCliResult:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
 
-    return DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code)
+    yield AssetMaterialization(
+        asset_key="dbt_cli_compile-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
+        description="The output of a shell execution of `dbt compile`.",
+        metadata_entries=[
+            EventMetadataEntry.float(
+                label="return_code",
+                value=float(return_code),
+                description="The return code of a shell exeuction of `dbt compile`.",
+            ),
+            EventMetadataEntry.text(
+                label="raw_output",
+                text=raw_output,
+                description="The raw output of a shell execution of `dbt compile`.",
+            ),
+        ],
+    )
+
+    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
