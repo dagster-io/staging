@@ -76,10 +76,29 @@ def resolve_step_versions(speculative_execution_plan, mode=None, run_config=None
     Execution plan provides execution steps for analysis. It returns dict[str, str] where each key
     is a step key, and each value is the associated version for that step.
 
+    The version for a step combines the versions of all inputs to the step, and the version of the
+    solid that the step contains. The inputs consist of all input definitions provided to the step.
+    The process for computing the step version is as follows:
+        1.  Compute the version for each input to the step.
+        2.  Compute the version of the solid provided to the step.
+        3.  Sort, concatenate and hash the input and solid versions.
+
+    The solid version combines the version of the solid definition, the versions of the required
+    resources, and the version of the config provided to the solid.
+    The process for computing the solid version is as follows:
+        1.  Sort, concatenate and hash the versions of the required resources.
+        2.  Resolve the version of the configuration provided to the solid.
+        3.  Sort, concatenate and hash together the concatted resource versions, the config version,
+                and the solid's version definition.
+
     Args:
         speculative_execution_plan (ExecutionPlan): Execution plan to resolve steps for.
         mode (Optional[str]): The pipeline mode in which to execute this run.
         run_config (Optional[dict]): The config value to use for this pipeline.
+
+    Returns:
+        Dict[str, Optional[str]]: A dictionary that maps the key of an execution step to a version.
+            If a step has no computed version, then the step key maps to None.
     """
     from dagster.core.execution.plan.plan import ExecutionPlan
 
