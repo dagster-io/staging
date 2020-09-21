@@ -9,6 +9,7 @@ from dagster import (
     Array,
     AssetMaterialization,
     Bool,
+    DagsterInvalidDefinitionError,
     EventMetadataEntry,
     Failure,
     Field,
@@ -693,8 +694,8 @@ def dbt_rpc_compile_sql(context, sql: String) -> String:
     context.log.debug(resp.text)
     raise_for_rpc_error(context, resp)
     request_token = resp.json().get("result").get("request_token")
-    result = dbt_rpc_poll(context, request_token)
-    return result.results[0].node["compiled_sql"]  # pylint: disable=no-member # TODO
+    result = list(dbt_rpc_poll(context, request_token))[-1]
+    return result.value.results[0].node["compiled_sql"]
 
 
 def create_dbt_rpc_run_sql_solid(
@@ -719,10 +720,10 @@ def create_dbt_rpc_run_sql_solid(
     check.opt_inst_param(obj=output_def, param_name="output_def", ttype=OutputDefinition)
 
     if "input_defs" in kwargs:
-        raise TypeError("Overriding input_defs is not supported.")
+        raise DagsterInvalidDefinitionError("Overriding input_defs is not supported.")
 
     if "required_resource_keys" in kwargs:
-        raise TypeError("Overriding required_resource_keys is not supported.")
+        raise DagsterInvalidDefinitionError("Overriding required_resource_keys is not supported.")
 
     @solid(
         name=name,
@@ -766,8 +767,8 @@ def create_dbt_rpc_run_sql_solid(
         context.log.debug(resp.text)
         raise_for_rpc_error(context, resp)
         request_token = resp.json().get("result").get("request_token")
-        result = dbt_rpc_poll(context, request_token)
-        table = result.results[0].table  # pylint: disable=no-member  # TODO
+        result = list(dbt_rpc_poll(context, request_token))[-1]
+        table = result.value.results[0].table
         return pd.DataFrame.from_records(data=table["rows"], columns=table["column_names"])
 
     return _dbt_rpc_run_sql
