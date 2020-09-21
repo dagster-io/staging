@@ -81,7 +81,7 @@ CLI_COMMON_FLAGS = set(CLI_COMMON_FLAGS_CONFIG_SCHEMA.keys())
 def passthrough_flags_only(solid_config, additional_flags):
     return {
         flag: solid_config[flag]
-        for flag in (CLI_COMMON_FLAGS ^ set(additional_flags))
+        for flag in (CLI_COMMON_FLAGS | set(additional_flags))
         if solid_config.get(flag) is not None
     }
 
