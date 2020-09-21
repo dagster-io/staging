@@ -6,7 +6,30 @@ from dagster.core.system_config.objects import EnvironmentConfig
 
 
 def _resolve_step_input_versions(step, step_versions):
+    """Computes and returns the versions for each input defined for a given step.
+
+    If an input is constructed from outputs of other steps, the input version is computed by
+    sorting, concatenating, and hashing the versions of each output it is constructed from.
+
+    If an input is constructed from externally loaded input (via run config), the input version is
+    the version of the provided type loader for that input.
+
+    Args:
+        step (ExecutionStep): The step for which to compute input versions.
+        step_versions (Dict[str, Optional[str]]): Each key is a step key, and the value is the
+            versiion of the corresponding step.
+
+    Returns:
+        Dict[str, Optional[str]]: A dictionary that maps the names of the inputs to the provided
+            step to their computed versions.
+    """
+
     def _resolve_output_version(step_output_handle):
+        """Returns version of step output.
+
+        Step output version is computed by sorting, concatenating, and hashing together the version
+        of the step corresponding to the provided step output handle and the name of the output.
+        """
         if (
             step_output_handle.step_key not in step_versions
             or not step_versions[step_output_handle.step_key]
