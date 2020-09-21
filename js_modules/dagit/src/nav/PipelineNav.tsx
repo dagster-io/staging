@@ -3,7 +3,7 @@ import React from 'react';
 import {Link, LinkProps, useRouteMatch} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {useRepository} from '../DagsterRepositoryContext';
+import {activePipelineForName, useRepository} from '../DagsterRepositoryContext';
 import {explorerPathFromString, explorerPathToString} from '../PipelinePathUtils';
 
 const PIPELINE_TABS: {
@@ -58,6 +58,12 @@ export const PipelineNav: React.FunctionComponent = () => {
     pathSolids: [],
   });
 
+  let disableTabs = false;
+  if (explorerPath.snapshotId) {
+    const pipeline = activePipelineForName(repository, explorerPath.pipelineName);
+    disableTabs = pipeline?.pipelineSnapshotId !== explorerPath.snapshotId;
+  }
+
   return (
     <PipelineTabBarContainer>
       <PipelineName>{explorerPath.pipelineName}</PipelineName>
@@ -67,6 +73,7 @@ export const PipelineNav: React.FunctionComponent = () => {
             key={tab.title}
             tab={tab}
             active={active === tab}
+            disabled={disableTabs}
             to={`/pipeline/${explorerPathWithoutSnapshot}${tab.pathComponent}`}
           />
         ),
@@ -137,7 +144,11 @@ const cursor = (props: TabProps) => {
 // `disabled` links simply render as divs.
 const WrappedLink = (props: TabProps & LinkProps) => {
   const {active, disabled, ...remaining} = props;
-  return disabled ? <div /> : <Link {...remaining} />;
+  return disabled ? (
+    <div className={remaining.className}>{remaining.children}</div>
+  ) : (
+    <Link {...remaining} />
+  );
 };
 
 const PipelineTabContainer = styled(WrappedLink)`

@@ -4,9 +4,14 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
 import {Redirect, RouteComponentProps} from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {usePipelineSelector, useActivePipelineForName} from './DagsterRepositoryContext';
+import {
+  usePipelineSelector,
+  useRepository,
+  activePipelineForName,
+} from './DagsterRepositoryContext';
 import Loading from './Loading';
 import PipelineExplorer, {PipelineExplorerOptions} from './PipelineExplorer';
 import {
@@ -131,7 +136,8 @@ export const PipelineExplorerRoot: React.FunctionComponent<RouteComponentProps> 
 
   const selectedName = explorerPath.pathSolids[explorerPath.pathSolids.length - 1];
 
-  const pipeline = useActivePipelineForName(explorerPath.pipelineName);
+  const repository = useRepository();
+  const pipeline = activePipelineForName(repository, explorerPath.pipelineName);
 
   return (
     <ExplorerSnapshotResolver explorerPath={explorerPath} options={options}>
@@ -165,7 +171,10 @@ export const PipelineExplorerRoot: React.FunctionComponent<RouteComponentProps> 
         return (
           <>
             {pathID && pipeline?.pipelineSnapshotId !== pathID && (
-              <SnapshotNotice>You are viewing a historical pipeline snapshot.</SnapshotNotice>
+              <SnapshotNotice>
+                You are viewing a historical pipeline snapshot.{' '}
+                <Link to={`/pipeline/${explorerPath.pipelineName}`}>View current pipeline</Link>
+              </SnapshotNotice>
             )}
             <PipelineExplorer
               options={options}
