@@ -3,7 +3,12 @@ from dagster.config.config_type import Array
 from dagster.core.types.dagster_type import DagsterTypeKind
 
 from .config_schema import DagsterTypeLoader
-from .dagster_type import DagsterType, PythonObjectDagsterType, resolve_dagster_type
+from .dagster_type import (
+    ContainerDagsterType,
+    DagsterType,
+    PythonObjectDagsterType,
+    resolve_dagster_type,
+)
 
 PythonSet = PythonObjectDagsterType(
     set, "PythonSet", description="""Represents a python dictionary to pass between solids"""
@@ -29,14 +34,12 @@ class TypedSetLoader(DagsterTypeLoader):
         return runtime_value
 
 
-class _TypedPythonSet(DagsterType):
+class _TypedPythonSet(ContainerDagsterType):
     def __init__(self, item_dagster_type):
         self.item_type = item_dagster_type
         super(_TypedPythonSet, self).__init__(
             key="TypedPythonSet.{}".format(item_dagster_type.key),
-            name=None,
             loader=(TypedSetLoader(item_dagster_type) if item_dagster_type.loader else None),
-            type_check_fn=self.type_check_method,
         )
 
     def type_check_method(self, context, value):
