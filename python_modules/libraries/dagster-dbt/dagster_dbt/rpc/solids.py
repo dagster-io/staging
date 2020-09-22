@@ -26,6 +26,7 @@ from dagster import (
     solid,
 )
 
+from ..errors import DagsterDbtUnexpectedRpcPollOutput
 from .types import DbtRpcPollResult
 from .utils import log_rpc, raise_for_rpc_error
 
