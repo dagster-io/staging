@@ -3,6 +3,7 @@ import time
 from dagster import check
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.retries import Retries
+from dagster.utils import pop_delayed_interrupts
 
 from .plan import ExecutionPlan
 
@@ -37,6 +38,7 @@ class ActiveExecution(object):
         self._success = set()
         self._failed = set()
         self._skipped = set()
+        self._interrupted = set()
 
         # Start the show by loading _executable with the set of _pending steps that have no deps
         self._update()
@@ -182,6 +184,12 @@ class ActiveExecution(object):
         self._skipped.add(step_key)
         self._mark_complete(step_key)
 
+    def mark_interrupted(self, step_key):
+        self._interrupted.add(step_key)
+
+    def check_for_interrupts(self):
+        return pop_delayed_interrupts()
+
     def mark_up_for_retry(self, step_key, at_time=None):
         check.invariant(
             not self._retries.disabled,
@@ -237,11 +245,16 @@ class ActiveExecution(object):
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
         """
         if step_key in self._in_flight:
-            pipeline_context.log.error(
-                "Step {key} finished without success or failure event, assuming failure.".format(
-                    key=step_key
+            if step_key in self._interrupted:
+                pipeline_context.log.info(
+                    "Step {key} failed due to being interrupted.".format(key=step_key)
                 )
-            )
+            else:
+                pipeline_context.log.error(
+                    "Step {key} finished without success or failure event, assuming failure.".format(
+                        key=step_key
+                    )
+                )
             self.mark_failed(step_key)
 
     @property
