@@ -56,19 +56,25 @@ def _dagster_home():
 
     if not dagster_home_path:
         raise DagsterInvariantViolationError(
-            "DAGSTER_HOME is not set, check is_dagster_home_set before invoking."
+            (
+                "The environment variable $DAGSTER_HOME is not set. Dagster requires this "
+                "environment variable to be set to an existing directory in your filesystem.\n"
+                "You can resolve this error by exporting the environment variable."
+                "For example, you can run the following command in your shell or include it in your shell configuration file:\n"
+                '\texport DAGSTER_HOME="~/dagster_home"'
+            )
         )
 
     dagster_home_path = os.path.expanduser(dagster_home_path)
 
     if not os.path.isabs(dagster_home_path):
         raise DagsterInvariantViolationError(
-            "DAGSTER_HOME must be absolute path: {}".format(dagster_home_path)
+            '$DAGSTER_HOME "{}" must be an absolute path.'.format(dagster_home_path)
         )
 
     if not (os.path.exists(dagster_home_path) and os.path.isdir(dagster_home_path)):
         raise DagsterInvariantViolationError(
-            'DAGSTER_HOME "{}" is not a folder or does not exist!'.format(dagster_home_path)
+            '$DAGSTER_HOME "{}" is not a folder or does not exist!'.format(dagster_home_path)
         )
 
     return dagster_home_path
