@@ -1,10 +1,17 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
+from collections import defaultdict
 
 import six
 
 from dagster import check
+from dagster.core.definitions.asset import Asset
+from dagster.core.errors import (
+    DagsterTypeLoadingError,
+    DagsterTypeMaterializationError,
+    user_code_error_boundary,
+)
 from dagster.core.execution.context.system import SystemExecutionContext
-from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.execution.plan.objects import StepInput, StepOutput, StepOutputHandle
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
@@ -109,9 +116,56 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         self.type_storage_plugin_registry = check.inst_param(
             type_storage_plugin_registry, "type_storage_plugin_registry", TypeStoragePluginRegistry
         )
+        # keeps track of an asset cache (mapping from asset identifier to asset objects)
+        self.assets = defaultdict(list)
 
     def _get_paths(self, step_output_handle):
         return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
+
+    def load_object_from_config(self, context, step_input):
+        check.inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(step_input, "step_input", StepInput)
+
+        with user_code_error_boundary(
+            DagsterTypeLoadingError,
+            msg_fn=_generate_error_boundary_msg_for_step_input(context, step_input),
+        ):
+            input_value = step_input.dagster_type.loader.construct_from_config_value(
+                context, step_input.config_data
+            )
+
+        # keep track of loaded objects -- caching and versioning
+        # create an asset instance from step_input
+        asset = Asset.from_step_input(
+            value=input_value, step_key=context.step.key, step_input=step_input
+        )
+
+        self.assets[asset.key].append(asset)
+
+        return input_value
+
+    def materialize_object_to_config(self, context, step_output, output_spec, value):
+        check.inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(step_output, "step_output", StepOutput)
+
+        with user_code_error_boundary(
+            DagsterTypeMaterializationError,
+            msg_fn=_generate_error_boundary_msg_for_step_output(context, step_output),
+        ):
+            materializations = step_output.dagster_type.materializer.materialize_runtime_values(
+                context, output_spec, value
+            )
+        # keep track of materialized objects -- caching and versioning
+        # create an asset instance from step_output_handle
+        asset = Asset.from_step_output_handle(
+            value=value,
+            step_output_handle=StepOutputHandle.from_step(
+                step=context.step, output_name=step_output.name
+            ),
+        )
+        self.assets[asset.key].append(asset)
+
+        return materializations
 
     def get_intermediate_object(self, dagster_type, step_output_handle):
         check.inst_param(dagster_type, "dagster_type", DagsterType)
@@ -163,6 +217,11 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
+        # keep track of materialized objects -- caching and versioning
+        # create an asset instance from step_output_handle
+        asset = Asset.from_step_output_handle(value=value, step_output_handle=step_output_handle)
+        self.assets[asset.key].append(asset)
+        # set object
         if self.has_intermediate(context, step_output_handle):
             context.log.warning(
                 "Replacing existing intermediate for %s.%s"
@@ -196,6 +255,12 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         paths = self._get_paths(step_output_handle)
         check.param_invariant(len(paths) > 0, "paths")
         key = self.object_store.key_for_paths([self.root] + paths)
+
+        # remove from the asset cache
+        asset_key = Asset.get_key(step_output_handle.step_key, step_output_handle)
+        if asset_key in self.assets:
+            del self.assets[asset_key]
+
         return self.object_store.rm_object(key)
 
     def copy_intermediate_from_run(self, context, run_id, step_output_handle):
@@ -248,4 +313,32 @@ def build_fs_intermediate_storage(root_for_run_id, run_id, type_storage_plugin_r
         type_storage_plugin_registry
         if type_storage_plugin_registry
         else TypeStoragePluginRegistry(types_to_register=[]),
+    )
+
+
+def _generate_error_boundary_msg_for_step_input(context, input_):
+    return lambda: """Error occurred during input loading:
+    input name: "{input_}"
+    step key: "{key}"
+    solid invocation: "{solid}"
+    solid definition: "{solid_def}"
+    """.format(
+        input_=input_.name,
+        key=context.step.key,
+        solid_def=context.solid_def.name,
+        solid=context.solid.name,
+    )
+
+
+def _generate_error_boundary_msg_for_step_output(context, output_):
+    return lambda: """Error occurred during output materialization:
+            output name: "{output_name}"
+            step key: "{key}"
+            solid invocation: "{solid}"
+            solid definition: "{solid_def}"
+            """.format(
+        output_name=output_.name,
+        key=context.step.key,
+        solid_def=context.solid_def.name,
+        solid=context.solid.name,
     )

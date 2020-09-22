@@ -14,8 +14,6 @@ from dagster.core.errors import (
     DagsterStepOutputNotFoundError,
     DagsterTypeCheckDidNotPass,
     DagsterTypeCheckError,
-    DagsterTypeLoadingError,
-    DagsterTypeMaterializationError,
     user_code_error_boundary,
 )
 from dagster.core.events import DagsterEvent
@@ -362,23 +360,18 @@ def _create_output_materializations(step_context, output_name, value):
             config_output_name, output_spec = list(output_spec.items())[0]
             if config_output_name == output_name:
                 step_output = step.step_output_named(output_name)
-                with user_code_error_boundary(
-                    DagsterTypeMaterializationError,
-                    msg_fn=lambda: """Error occurred during output materialization:
-                    output name: "{output_name}"
-                    step key: "{key}"
-                    solid invocation: "{solid}"
-                    solid definition: "{solid_def}"
-                    """.format(
-                        output_name=output_name,
-                        key=step_context.step.key,
-                        solid_def=step_context.solid_def.name,
-                        solid=step_context.solid.name,
-                    ),
-                ):
-                    materializations = step_output.dagster_type.materializer.materialize_runtime_values(
-                        step_context, output_spec, value
-                    )
+                # use type materializer inside intermediate_storage so we can keep track of the
+                # materialized assets in the short term.
+                # this assumes when the users specify a DagsterTypeMaterializer they will use the
+                # ObjectStoreIntermediateStorage as intermediate_storage
+                # issue: https://github.com/dagster-io/dagster/issues/2942
+                # the goal is to merge set_intermediate and materialize_object_to_config
+                materializations = step_context.intermediate_storage.materialize_object_to_config(
+                    context=step_context,
+                    step_output=step_output,
+                    output_spec=output_spec,
+                    value=value,
+                )
 
                 for materialization in materializations:
                     if not isinstance(materialization, (AssetMaterialization, Materialization)):
@@ -425,20 +418,6 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
                 yield event
 
 
-def _generate_error_boundary_msg_for_step_input(context, input_):
-    return lambda: """Error occurred during input loading:
-    input name: "{input_}"
-    step key: "{key}"
-    solid invocation: "{solid}"
-    solid definition: "{solid_def}"
-    """.format(
-        input_=input_.name,
-        key=context.step.key,
-        solid_def=context.solid_def.name,
-        solid=context.solid.name,
-    )
-
-
 def _input_values_from_intermediate_storage(step_context):
     step = step_context.step
 
@@ -480,13 +459,15 @@ def _input_values_from_intermediate_storage(step_context):
             )
 
         elif step_input.is_from_config:
-            with user_code_error_boundary(
-                DagsterTypeLoadingError,
-                msg_fn=_generate_error_boundary_msg_for_step_input(step_context, step_input),
-            ):
-                input_value = step_input.dagster_type.loader.construct_from_config_value(
-                    step_context, step_input.config_data
-                )
+            # use type loader inside intermediate_storage so we can keep track of the loaded
+            # asset in the short term.
+            # this assumes when the users specify a DagsterTypeLoader they will use the
+            # ObjectStoreIntermediateStorage as intermediate_storage
+            # issue: https://github.com/dagster-io/dagster/issues/2942
+            # the goal is to merge get_intermediate and load_object_from_config
+            input_value = step_context.intermediate_storage.load_object_from_config(
+                context=step_context, step_input=step_input
+            )
 
         elif step_input.is_from_default_value:
             input_value = step_input.config_data
