@@ -2,6 +2,7 @@ import datetime
 import logging
 import os
 import time
+import warnings
 from abc import ABCMeta
 from collections import defaultdict, namedtuple
 from enum import Enum
@@ -56,19 +57,49 @@ def _dagster_home():
 
     if not dagster_home_path:
         raise DagsterInvariantViolationError(
-            "DAGSTER_HOME is not set, check is_dagster_home_set before invoking."
+            (
+                "The environment variable $DAGSTER_HOME is not set. Dagster requires this "
+                "environment variable to be set to an existing directory in your filesystem "
+                "contains your dagster instance configuration file (dagster.yaml).\n"
+                "You can resolve this error by exporting the environment variable."
+                "For example, you can run the following command in your shell or "
+                "include it in your shell configuration file:\n"
+                '\texport DAGSTER_HOME="~/dagster_home"'
+            )
         )
 
     dagster_home_path = os.path.expanduser(dagster_home_path)
 
     if not os.path.isabs(dagster_home_path):
         raise DagsterInvariantViolationError(
-            "DAGSTER_HOME must be absolute path: {}".format(dagster_home_path)
+            (
+                '$DAGSTER_HOME "{}" must be an absolute path. Dagster requires this '
+                "environment variable to be set to an existing directory in your filesystem that"
+                "contains your dagster instance configuration file (dagster.yaml)."
+            ).format(dagster_home_path)
         )
 
     if not (os.path.exists(dagster_home_path) and os.path.isdir(dagster_home_path)):
         raise DagsterInvariantViolationError(
-            'DAGSTER_HOME "{}" is not a folder or does not exist!'.format(dagster_home_path)
+            (
+                '$DAGSTER_HOME "{}" is not a directory or does not exist. Dagster requires this '
+                "environment variable to be set to an existing directory in your filesystem that "
+                "contains your dagster instance configuration file (dagster.yaml)."
+            ).format(dagster_home_path)
+        )
+
+    dagster_yaml_path = os.path.join(dagster_home_path, DAGSTER_CONFIG_YAML_FILENAME)
+
+    if not os.path.exists(dagster_yaml_path):
+        warnings.warn(
+            (
+                "The dagster instance configuration file (dagster.yaml) is not present in your "
+                "$DAGSTER_HOME. Dagster uses this file to know where and how to store "
+                "local artifacts, information about past runs, and structured events.\n"
+                "If nothing is specified, Dagster will store this information "
+                "in the local filesystem in the $DAGSTER_HOME directory."
+                ""
+            )
         )
 
     return dagster_home_path
