@@ -148,23 +148,27 @@ def dbt_rpc_poll(
 
 
 def unwrap_result(dbt_rpc_poll_generator) -> DbtRpcPollResult:
+    """A helper function that extracts the `DbtRpcPollResult` value from a generator.
+
+    The parameter `dbt_rpc_poll_generator` is expected to be an invocation of `dbt_rpc_poll`.
+    """
     output = None
     for x in dbt_rpc_poll_generator:
         output = x
 
     if output is None:
         raise DagsterDbtUnexpectedRpcPollOutput(
-            description="dbt_rpc_poll yielded None as its last value. Expected value of type Output.",
+            description="dbt_rpc_poll yielded None as its last value. Expected value of type Output containing DbtRpcPollResult.",
         )
 
     if not isinstance(output, Output):
         raise DagsterDbtUnexpectedRpcPollOutput(
-            description=f"dbt_rpc_poll yielded value of type {type(output)} as its last value. Expected value of type Output.",
+            description=f"dbt_rpc_poll yielded value of type {type(output)} as its last value. Expected value of type Output containing DbtRpcPollResult.",
         )
 
     if not isinstance(output.value, DbtRpcPollResult):
         raise DagsterDbtUnexpectedRpcPollOutput(
-            description=f"dbt_rpc_poll yielded Output with value of type {type(output.value)}. Expected value of type DbtRpcPollResult.",
+            description=f"dbt_rpc_poll yielded Output containing {type(output.value)}. Expected DbtRpcPollResult.",
         )
 
     return output.value
@@ -741,6 +745,9 @@ def create_dbt_rpc_run_sql_solid(
     """
     check.str_param(obj=name, param_name="name")
     check.opt_inst_param(obj=output_def, param_name="output_def", ttype=OutputDefinition)
+
+    if "config_schema" in kwargs:
+        raise DagsterInvalidDefinitionError("Overriding config_schema is not supported.")
 
     if "input_defs" in kwargs:
         raise DagsterInvalidDefinitionError("Overriding input_defs is not supported.")
