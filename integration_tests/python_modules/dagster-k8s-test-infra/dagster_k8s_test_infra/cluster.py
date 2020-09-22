@@ -85,6 +85,31 @@ def define_cluster_provider_fixture(additional_kind_images=None):
 
 
 @contextmanager
+def wait_for_celery_workers(namespace):
+    # Waiting on a Celery worker guarantees that rabbitmq will be ready
+    print('Waiting for Celery worker (for Rabbitmq)')
+    celery_worker_pod_name = (
+        check_output(
+            [
+                'kubectl',
+                'get',
+                'pods',
+                '--namespace',
+                namespace,
+                '-l',
+                'component=celery',
+                '-o',
+                'jsonpath="{.items[0].metadata.name}"',
+            ]
+        )
+        .decode('utf-8')
+        .strip('"')
+    )
+    wait_for_pod(celery_worker_pod_name, namespace=namespace)
+    yield
+
+
+@contextmanager
 def local_port_forward_postgres(namespace):
     print('Port-forwarding postgres')
     postgres_pod_name = (
