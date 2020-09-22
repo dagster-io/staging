@@ -164,7 +164,10 @@ def test_file_system_intermediate_storage_with_type_storage_plugin():
             intermediate_storage.rm_intermediate(context, StepOutputHandle("obj_name"))
 
 
-def test_file_system_intermediate_storage_with_composite_type_storage_plugin():
+@pytest.mark.parametrize(
+    "dagster_type", (List[String], Optional[String], List[Optional[String]], Optional[List[String]])
+)
+def test_file_system_intermediate_storage_with_composite_type_storage_plugin(dagster_type):
     run_id, _, intermediate_storage = define_intermediate_storage(
         type_storage_plugin_registry=TypeStoragePluginRegistry(
             [(RuntimeString, FancyStringFilesystemTypeStoragePlugin)]
@@ -174,32 +177,5 @@ def test_file_system_intermediate_storage_with_composite_type_storage_plugin():
     with yield_empty_pipeline_context(run_id=run_id) as context:
         with pytest.raises(check.NotImplementedCheckError):
             intermediate_storage.set_intermediate(
-                context, resolve_dagster_type(List[String]), StepOutputHandle("obj_name"), ["hello"]
-            )
-
-    with yield_empty_pipeline_context(run_id=run_id) as context:
-        with pytest.raises(check.NotImplementedCheckError):
-            intermediate_storage.set_intermediate(
-                context,
-                resolve_dagster_type(Optional[String]),
-                StepOutputHandle("obj_name"),
-                ["hello"],
-            )
-
-    with yield_empty_pipeline_context(run_id=run_id) as context:
-        with pytest.raises(check.NotImplementedCheckError):
-            intermediate_storage.set_intermediate(
-                context,
-                resolve_dagster_type(List[Optional[String]]),
-                StepOutputHandle("obj_name"),
-                ["hello"],
-            )
-
-    with yield_empty_pipeline_context(run_id=run_id) as context:
-        with pytest.raises(check.NotImplementedCheckError):
-            intermediate_storage.set_intermediate(
-                context,
-                resolve_dagster_type(Optional[List[String]]),
-                StepOutputHandle("obj_name"),
-                ["hello"],
+                context, dagster_type, StepOutputHandle("obj_name"), ["hello"]
             )
