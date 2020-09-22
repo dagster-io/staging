@@ -615,7 +615,7 @@ class ListType(DagsterType):
         self.inner_type = inner_type
         super(ListType, self).__init__(
             key=key,
-            name=None,
+            name=self.display_name,
             kind=DagsterTypeKind.LIST,
             type_check_fn=self.type_check_method,
             loader=_create_list_input_schema(inner_type),
