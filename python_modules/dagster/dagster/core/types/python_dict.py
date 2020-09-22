@@ -2,7 +2,12 @@ from dagster import check
 from dagster.config.field_utils import Permissive
 
 from .config_schema import dagster_type_loader
-from .dagster_type import DagsterType, PythonObjectDagsterType, resolve_dagster_type
+from .dagster_type import (
+    CompositeDagsterType,
+    DagsterType,
+    PythonObjectDagsterType,
+    resolve_dagster_type,
+)
 
 
 @dagster_type_loader(Permissive())
@@ -18,13 +23,12 @@ PythonDict = PythonObjectDagsterType(
 )
 
 
-class _TypedPythonDict(DagsterType):
+class _TypedPythonDict(CompositeDagsterType):
     def __init__(self, key_type, value_type):
         self.key_type = check.inst_param(key_type, "key_type", DagsterType)
         self.value_type = check.inst_param(value_type, "value_type", DagsterType)
         super(_TypedPythonDict, self).__init__(
             key="TypedPythonDict.{}.{}".format(key_type.key, value_type.key),
-            name=None,
             type_check_fn=self.type_check_method,
         )
 

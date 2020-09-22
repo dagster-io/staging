@@ -109,7 +109,7 @@ class DagsterType(object):
             check.param_invariant(
                 bool(key), "key", "If name is not provided, must provide key.",
             )
-            self.key, self.name = key, None
+            self.key, self.name = key, self.display_name
         elif key is None:
             check.param_invariant(
                 bool(name), "name", "If key is not provided, must provide name.",
@@ -548,7 +548,29 @@ def _create_nullable_input_schema(inner_type):
     return NoneableInputSchema(inner_type)
 
 
-class OptionalType(DagsterType):
+class CompositeDagsterType(DagsterType):
+    def __init__(self, key, type_check_fn, *args, **kwargs):
+        super(CompositeDagsterType, self).__init__(
+            key=key, name=self.display_name, type_check_fn=type_check_fn, *args, **kwargs
+        )
+
+    @property
+    @abstractmethod
+    def display_name(self):
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def inner_types(self):
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def type_param_keys(self):
+        raise NotImplementedError
+
+
+class OptionalType(CompositeDagsterType):
     def __init__(self, inner_type):
         inner_type = resolve_dagster_type(inner_type)
 
@@ -561,9 +583,8 @@ class OptionalType(DagsterType):
         self.inner_type = inner_type
         super(OptionalType, self).__init__(
             key=key,
-            name=None,
-            kind=DagsterTypeKind.NULLABLE,
             type_check_fn=self.type_check_method,
+            kind=DagsterTypeKind.NULLABLE,
             loader=_create_nullable_input_schema(inner_type),
         )
 
@@ -609,15 +630,14 @@ def _create_list_input_schema(inner_type):
     return ListInputSchema(inner_type)
 
 
-class ListType(DagsterType):
+class ListType(CompositeDagsterType):
     def __init__(self, inner_type):
         key = "List." + inner_type.key
         self.inner_type = inner_type
         super(ListType, self).__init__(
             key=key,
-            name=None,
-            kind=DagsterTypeKind.LIST,
             type_check_fn=self.type_check_method,
+            kind=DagsterTypeKind.LIST,
             loader=_create_list_input_schema(inner_type),
         )
 
@@ -838,7 +858,9 @@ def construct_dagster_type_dictionary(solid_defs):
                 type_dict_by_name[dagster_type.name] = dagster_type
                 continue
 
-            if type_dict_by_name[dagster_type.name] is not dagster_type:
+            if type_dict_by_name[dagster_type.name] is not dagster_type and not isinstance(
+                dagster_type, CompositeDagsterType
+            ):
                 raise DagsterInvalidDefinitionError(
                     (
                         'You have created two dagster types with the same name "{type_name}". '
