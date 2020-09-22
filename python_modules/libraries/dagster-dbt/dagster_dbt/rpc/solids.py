@@ -147,6 +147,29 @@ def dbt_rpc_poll(
     yield Output(value=rpc_poll_result, output_name="result")
 
 
+def unwrap_result(dbt_rpc_poll_generator) -> DbtRpcPollResult:
+    output = None
+    for x in dbt_rpc_poll_generator:
+        output = x
+
+    if output is None:
+        raise DagsterDbtUnexpectedRpcPollOutput(
+            description="dbt_rpc_poll yielded None as its last value. Expected value of type Output.",
+        )
+
+    if not isinstance(output, Output):
+        raise DagsterDbtUnexpectedRpcPollOutput(
+            description=f"dbt_rpc_poll yielded value of type {type(output)} as its last value. Expected value of type Output.",
+        )
+
+    if not isinstance(output.value, DbtRpcPollResult):
+        raise DagsterDbtUnexpectedRpcPollOutput(
+            description=f"dbt_rpc_poll yielded Output with value of type {type(output.value)}. Expected value of type DbtRpcPollResult.",
+        )
+
+    return output.value
+
+
 @solid(
     description="A solid to invoke dbt run over RPC.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
@@ -694,8 +717,8 @@ def dbt_rpc_compile_sql(context, sql: String) -> String:
     context.log.debug(resp.text)
     raise_for_rpc_error(context, resp)
     request_token = resp.json().get("result").get("request_token")
-    result = list(dbt_rpc_poll(context, request_token))[-1]
-    return result.value.results[0].node["compiled_sql"]
+    result = unwrap_result(dbt_rpc_poll(context, request_token))
+    return result.results[0].node["compiled_sql"]
 
 
 def create_dbt_rpc_run_sql_solid(
@@ -767,8 +790,8 @@ def create_dbt_rpc_run_sql_solid(
         context.log.debug(resp.text)
         raise_for_rpc_error(context, resp)
         request_token = resp.json().get("result").get("request_token")
-        result = list(dbt_rpc_poll(context, request_token))[-1]
-        table = result.value.results[0].table
+        result = unwrap_result(dbt_rpc_poll(context, request_token))
+        table = result.results[0].table
         return pd.DataFrame.from_records(data=table["rows"], columns=table["column_names"])
 
     return _dbt_rpc_run_sql
