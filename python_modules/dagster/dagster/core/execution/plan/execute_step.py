@@ -376,8 +376,14 @@ def _create_output_materializations(step_context, output_name, value):
                         solid=step_context.solid.name,
                     ),
                 ):
-                    materializations = step_output.dagster_type.materializer.materialize_runtime_values(
-                        step_context, output_spec, value
+                    # use type materializer inside intermediate_storage so we can keep track of the
+                    # materialized assets in the short term.
+                    # the goal is to merge set_intermediate and materialize_object_to_config
+                    materializations = step_context.intermediate_storage.materialize_object_to_config(
+                        context=step_context,
+                        step_output=step_output,
+                        output_spec=output_spec,
+                        value=value,
                     )
 
                 for materialization in materializations:
@@ -484,8 +490,11 @@ def _input_values_from_intermediate_storage(step_context):
                 DagsterTypeLoadingError,
                 msg_fn=_generate_error_boundary_msg_for_step_input(step_context, step_input),
             ):
-                input_value = step_input.dagster_type.loader.construct_from_config_value(
-                    step_context, step_input.config_data
+                # use type loader inside intermediate_storage so we can keep track of the loaded
+                # asset in the short term.
+                # the goal is to merge get_intermediate and load_object_from_config
+                input_value = step_context.intermediate_storage.load_object_from_config(
+                    context=step_context, step_input=step_input
                 )
 
         elif step_input.is_from_default_value:

@@ -2,12 +2,27 @@ import os
 
 import pytest
 
-from dagster import Bool, Int, List, Optional, String, check
+from dagster import (
+    Bool,
+    InputDefinition,
+    Int,
+    List,
+    Optional,
+    Output,
+    OutputDefinition,
+    String,
+    check,
+    execute_pipeline,
+    pipeline,
+    solid,
+    usable_as_dagster_type,
+)
 from dagster.core.definitions.events import ObjectStoreOperationType
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.intermediate_storage import build_fs_intermediate_storage
 from dagster.core.storage.type_storage import TypeStoragePlugin, TypeStoragePluginRegistry
+from dagster.core.types.config_schema import dagster_type_loader
 from dagster.core.types.dagster_type import String as RuntimeString
 from dagster.core.types.dagster_type import create_any_type, resolve_dagster_type
 from dagster.core.types.marshal import SerializationStrategy
@@ -203,3 +218,61 @@ def test_file_system_intermediate_storage_with_composite_type_storage_plugin():
                 StepOutputHandle("obj_name"),
                 ["hello"],
             )
+
+
+def test_intermediate_storage_asset_cache():
+    @dagster_type_loader(Int)
+    def custom_loader(_, value):
+        return CustomType(value)
+
+    @usable_as_dagster_type(loader=custom_loader)
+    class CustomType(int):
+        pass
+
+    @solid(
+        input_defs=[InputDefinition("custom_type_input", CustomType)],
+        output_defs=[OutputDefinition(Int, "result_1"), OutputDefinition(Int, "result_2"),],
+    )
+    def add_one(context, custom_type_input):
+        # cache input
+        assert len(context.get_system_context().intermediate_storage.assets.keys()) == 1
+        assert (
+            len(
+                context.get_system_context().intermediate_storage.assets[
+                    "add_one.compute-custom_type_input"
+                ]
+            )
+            == 1
+        )
+        yield Output(custom_type_input + 1, "result_1")
+        # cache output 1
+        assert len(context.get_system_context().intermediate_storage.assets.keys()) == 2
+        assert (
+            len(
+                context.get_system_context().intermediate_storage.assets["add_one.compute-result_1"]
+            )
+            == 1
+        )
+
+        yield Output(custom_type_input + 1, "result_2")
+        # cache output 2
+        assert len(context.get_system_context().intermediate_storage.assets.keys()) == 3
+        assert (
+            len(
+                context.get_system_context().intermediate_storage.assets["add_one.compute-result_2"]
+            )
+            == 1
+        )
+
+    @pipeline
+    def pipeline_load_and_cache():
+        return add_one()
+
+    instance = DagsterInstance.ephemeral()
+
+    result = execute_pipeline(
+        pipeline_load_and_cache,
+        run_config={"solids": {"add_one": {"inputs": {"custom_type_input": 1},}}},
+        instance=instance,
+    )
+    assert result.success
