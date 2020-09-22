@@ -5,7 +5,7 @@ import six
 from dagster import check
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
-from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
+from dagster.core.types.dagster_type import ContainerDagsterType, DagsterType, resolve_dagster_type
 
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
 from .type_storage import TypeStoragePluginRegistry
@@ -173,7 +173,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             return self.type_storage_plugin_registry.get(dagster_type.name).set_intermediate_object(
                 self, context, dagster_type, step_output_handle, value
             )
-        elif dagster_type.name is None:
+        elif dagster_type.name is None or issubclass(dagster_type, ContainerDagsterType):
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
