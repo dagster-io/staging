@@ -462,3 +462,7 @@ class DagsterImportError(DagsterError):
 
 class ExecutableError(DagsterUserCodeExecutionError):
     """Errors raised during the execution of user-provided functions for a defined Executable."""
+
+
+class DagsterInvalidObjectForAsset(DagsterError):
+    """Errors raised when the object type is not supported to generate a key for an asset object."""
