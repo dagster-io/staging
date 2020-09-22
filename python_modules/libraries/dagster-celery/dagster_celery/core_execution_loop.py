@@ -58,6 +58,16 @@ def core_celery_execution_loop(pipeline_context, execution_plan, step_execution_
     stopping = False
 
     while (not active_execution.is_complete and not stopping) or step_results:
+        if active_execution.check_for_interrupts():
+            yield DagsterEvent.engine_event(
+                pipeline_context,
+                "Celery executor: received termination signal - forwarding to active workers",
+                EngineEventData.interrupted(step_results.keys()),
+            )
+            stopping = True
+            for key, result in step_results.items():
+                result.revoke()
+                active_execution.mark_interrupted(key)
 
         results_to_pop = []
         for step_key, result in sorted(step_results.items(), key=lambda x: priority_for_key(x[0])):
