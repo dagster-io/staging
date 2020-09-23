@@ -1,7 +1,7 @@
 import pytest
-from lakehouse import AssetStorage, Lakehouse, asset_storage
+from lakehouse import AssetStorage, Lakehouse
 
-from dagster import ModeDefinition, PresetDefinition
+from dagster import ModeDefinition, PresetDefinition, resource
 
 
 class DictStorage(AssetStorage):
@@ -20,11 +20,11 @@ def basic_lakehouse_and_storages():
     storage1 = DictStorage()
     storage2 = DictStorage()
 
-    @asset_storage()
+    @resource()
     def some_storage(_):
         return storage1
 
-    @asset_storage()
+    @resource()
     def some_other_storage(_):
         return storage2
 
