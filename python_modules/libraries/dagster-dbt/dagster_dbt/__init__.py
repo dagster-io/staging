@@ -14,6 +14,8 @@ from .errors import (
     DagsterDbtError,
     DagsterDbtFatalCliRuntimeError,
     DagsterDbtHandledCliRuntimeError,
+    DagsterDbtUnexpectedCliOutputError,
+    DagsterDbtUnexpectedRpcPollOutput,
 )
 from .rpc.resources import DbtRpcClient, dbt_rpc_resource, local_dbt_rpc_resource
 from .rpc.solids import (
