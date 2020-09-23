@@ -166,12 +166,12 @@ export class Run extends React.Component<RunProps, RunState> {
           filter={logsFilter}
           selectedSteps={selectedSteps}
         >
-          {({filteredNodes, allNodes, loaded}) => (
+          {({filteredNodes, textMatchNodes, loaded}) => (
             <RunWithData
               run={run}
               runId={runId}
               filteredNodes={filteredNodes}
-              allNodes={allNodes}
+              textMatchNodes={textMatchNodes}
               logsLoading={!loaded}
               logsFilter={logsFilter}
               query={query}
@@ -192,8 +192,8 @@ export class Run extends React.Component<RunProps, RunState> {
 interface RunWithDataProps {
   run?: RunFragment;
   runId: string;
-  allNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
   filteredNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
+  textMatchNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
   logsFilter: LogFilter;
   query: string;
   selectedSteps: string[];
@@ -215,8 +215,8 @@ interface RunWithDataProps {
 const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   run,
   runId,
-  allNodes,
   filteredNodes,
+  textMatchNodes,
   logsFilter,
   logsLoading,
   query,
@@ -279,7 +279,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   };
 
   return (
-    <RunMetadataProvider logs={allNodes}>
+    <RunMetadataProvider logs={filteredNodes}>
       {(metadata) => (
         <SplitPanelContainer
           ref={splitPanelContainer}
@@ -334,7 +334,8 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
                 metadata={metadata}
               />
               <LogsScrollingTable
-                nodes={filteredNodes}
+                filteredNodes={filteredNodes}
+                textMatchNodes={textMatchNodes}
                 loading={logsLoading}
                 filterKey={JSON.stringify(logsFilter)}
                 metadata={metadata}
