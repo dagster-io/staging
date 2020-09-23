@@ -98,7 +98,10 @@ class InProgressCompositionContext(object):
                 )
             )
 
-        self._pending_invocations.pop(solid_name, None)
+        # Since solid_name may have been altered due to collision, retrieve the original name that
+        # the corresponding CallableSolidNode would have been instantiated under.
+        solid_name_pre_collision = solid_def.name if given_alias is None else given_alias
+        self._pending_invocations.pop(solid_name_pre_collision, None)
 
         self._invocations[solid_name] = InvokedSolidNode(
             solid_name, solid_def, input_bindings, input_mappings, tags, hook_defs
