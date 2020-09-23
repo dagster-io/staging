@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import pytest
 from freezegun import freeze_time
 
-from dagster import daily_schedule, hourly_schedule, pipeline, repository, solid
+from dagster import DagsterEventType, daily_schedule, hourly_schedule, pipeline, repository, solid
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import (
     PythonEnvRepositoryLocation,
@@ -145,21 +145,26 @@ def instance_with_schedules(external_repo_context):
 
 
 @contextmanager
-def grpc_repo():
+def grpc_repo_location():
     loadable_target_origin = LoadableTargetOrigin(
         executable_path=sys.executable, python_file=__file__, attribute="the_repo"
     )
     server_process = GrpcServerProcess(loadable_target_origin=loadable_target_origin)
     try:
         with server_process.create_ephemeral_client() as api_client:
-            repo_location = RepositoryLocation.from_handle(
+            yield RepositoryLocation.from_handle(
                 RepositoryLocationHandle.create_grpc_server_location(
                     port=api_client.port, socket=api_client.socket, host=api_client.host,
                 )
             )
-            yield repo_location.get_repository("the_repo")
     finally:
         server_process.wait()
+
+
+@contextmanager
+def grpc_repo():
+    with grpc_repo_location() as repo_location:
+        yield repo_location.get_repository("the_repo")
 
 
 @contextmanager
@@ -175,7 +180,7 @@ def cli_api_repo():
     ).get_repository("the_repo")
 
 
-def _validate_tick(
+def validate_tick(
     tick,
     external_schedule,
     expected_datetime,
@@ -194,7 +199,7 @@ def _validate_tick(
         assert expected_error in tick_data.error.message
 
 
-def _validate_run_started(run, expected_datetime, expected_partition, expected_success=True):
+def validate_run_started(run, expected_datetime, expected_partition, expected_success=True):
     assert run.tags[SCHEDULED_EXECUTION_TIME_TAG] == expected_datetime.isoformat()
     assert run.tags[PARTITION_NAME_TAG] == expected_partition
 
@@ -204,7 +209,7 @@ def _validate_run_started(run, expected_datetime, expected_partition, expected_s
         assert run.status == PipelineRunStatus.FAILURE
 
 
-def _wait_for_all_runs_to_start(instance, timeout=10):
+def wait_for_all_runs_to_start(instance, timeout=10):
     start_time = time.time()
     while True:
         if time.time() - start_time > timeout:
@@ -254,7 +259,7 @@ def test_simple_schedule(external_repo_context):
 
             expected_datetime = datetime(year=2019, month=2, day=28, tzinfo=get_utc_timezone())
 
-            _validate_tick(
+            validate_tick(
                 ticks[0],
                 external_schedule,
                 expected_datetime,
@@ -262,8 +267,8 @@ def test_simple_schedule(external_repo_context):
                 instance.get_runs()[0].run_id,
             )
 
-            _wait_for_all_runs_to_start(instance)
-            _validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
 
             # Verify idempotence
             launch_scheduled_runs(instance)
@@ -319,7 +324,7 @@ def test_bad_env_fn(external_repo_context):
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
-            _validate_tick(
+            validate_tick(
                 ticks[0],
                 external_schedule,
                 initial_datetime,
@@ -349,7 +354,7 @@ def test_bad_should_execute(external_repo_context):
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
-            _validate_tick(
+            validate_tick(
                 ticks[0],
                 external_schedule,
                 initial_datetime,
@@ -378,7 +383,7 @@ def test_skip(external_repo_context):
             assert instance.get_runs_count() == 0
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            _validate_tick(
+            validate_tick(
                 ticks[0], external_schedule, initial_datetime, ScheduleTickStatus.SKIPPED, None,
             )
 
@@ -400,20 +405,37 @@ def test_wrong_config(external_repo_context):
 
             assert instance.get_runs_count() == 1
 
-            _wait_for_all_runs_to_start(instance)
+            wait_for_all_runs_to_start(instance)
 
             run = instance.get_runs()[0]
 
-            _validate_run_started(run, initial_datetime, "2019-02-26", expected_success=False)
+            validate_run_started(run, initial_datetime, "2019-02-26", expected_success=False)
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            _validate_tick(
+            validate_tick(
                 ticks[0],
                 external_schedule,
                 initial_datetime,
                 ScheduleTickStatus.SUCCESS,
                 run.run_id,
+            )
+
+            run_logs = instance.all_logs(run.run_id)
+
+            assert (
+                len(
+                    list(
+                        filter(
+                            lambda event: (
+                                "DagsterInvalidConfigError" in event.dagster_event.message
+                                and event.dagster_event_type == DagsterEventType.ENGINE_EVENT
+                            ),
+                            run_logs,
+                        )
+                    )
+                )
+                > 0
             )
 
 
@@ -439,12 +461,12 @@ def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
             launch_scheduled_runs(instance)
 
             assert instance.get_runs_count() == 1
-            _wait_for_all_runs_to_start(instance)
-            _validate_run_started(instance.get_runs()[0], initial_datetime, "2019-02-26")
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], initial_datetime, "2019-02-26")
 
             good_ticks = instance.get_schedule_ticks(good_origin.get_id())
             assert len(good_ticks) == 1
-            _validate_tick(
+            validate_tick(
                 good_ticks[0],
                 good_schedule,
                 initial_datetime,
@@ -469,17 +491,17 @@ def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
             launch_scheduled_runs(instance)
 
             assert instance.get_runs_count() == 3
-            _wait_for_all_runs_to_start(instance)
+            wait_for_all_runs_to_start(instance)
 
             good_schedule_runs = instance.get_runs(
                 filters=PipelineRunsFilter.for_schedule(good_schedule)
             )
             assert len(good_schedule_runs) == 2
-            _validate_run_started(good_schedule_runs[0], new_now, "2019-02-27")
+            validate_run_started(good_schedule_runs[0], new_now, "2019-02-27")
 
             good_ticks = instance.get_schedule_ticks(good_origin.get_id())
             assert len(good_ticks) == 2
-            _validate_tick(
+            validate_tick(
                 good_ticks[0],
                 good_schedule,
                 new_now,
@@ -491,11 +513,11 @@ def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
                 filters=PipelineRunsFilter.for_schedule(bad_schedule)
             )
             assert len(bad_schedule_runs) == 1
-            _validate_run_started(bad_schedule_runs[0], new_now, "2019-02-27")
+            validate_run_started(bad_schedule_runs[0], new_now, "2019-02-27")
 
             bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
             assert len(bad_ticks) == 2
-            _validate_tick(
+            validate_tick(
                 bad_ticks[0],
                 bad_schedule,
                 new_now,
@@ -619,3 +641,41 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context):
                 len([tick for tick in hourly_ticks if tick.status == ScheduleTickStatus.SUCCESS])
                 == 2
             )
+
+
+def test_launch_failure():
+    with schedule_instance() as instance:
+        with grpc_repo_location() as repo_location:
+            external_repo = repo_location.get_repository("the_repo")
+            instance.reconcile_scheduler_state(external_repo)
+
+            # Launches will now fail
+            repo_location.location_handle.client.shutdown_server()
+
+            external_schedule = external_repo.get_external_schedule("simple_schedule")
+
+            schedule_origin = external_schedule.get_origin()
+            initial_datetime = datetime(
+                year=2019, month=2, day=27, hour=0, minute=0, second=0, tzinfo=get_utc_timezone(),
+            )
+
+            with freeze_time(initial_datetime):
+                instance.start_schedule_and_update_storage_state(external_schedule)
+
+                launch_scheduled_runs(instance)
+
+                assert instance.get_runs_count() == 1
+
+                run = instance.get_runs()[0]
+
+                validate_run_started(run, initial_datetime, "2019-02-26", expected_success=False)
+
+                ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+                assert len(ticks) == 1
+                validate_tick(
+                    ticks[0],
+                    external_schedule,
+                    initial_datetime,
+                    ScheduleTickStatus.SUCCESS,
+                    run.run_id,
+                )
