@@ -65,5 +65,3 @@ class DagsterDbtFatalCliRuntimeError(DagsterDbtCliRuntimeError):
 
 class DagsterDbtUnexpectedRpcPollOutput(DagsterDbtError):
     """Represents an unexpected response when polling the dbt RPC server."""
-
-    pass
