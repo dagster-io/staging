@@ -533,3 +533,13 @@ def compose(*args):
 
 def dict_without_keys(ddict, *keys):
     return {key: value for key, value in ddict.items() if key not in set(keys)}
+
+
+@contextlib.contextmanager
+def redirect_stdout(new_stdout):
+    original = sys.stdout
+    try:
+        sys.stdout = new_stdout
+        yield
+    finally:
+        sys.stdout = original

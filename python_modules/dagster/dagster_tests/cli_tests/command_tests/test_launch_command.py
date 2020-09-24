@@ -19,7 +19,7 @@ from .test_cli_commands import (
 
 
 def run_launch(kwargs, instance, expected_count=None):
-    run = execute_launch_command(instance, kwargs)
+    run = execute_launch_command(instance, print, kwargs)
     assert run
     if expected_count:
         assert instance.get_runs_count() == expected_count

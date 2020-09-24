@@ -11,7 +11,7 @@ def test_new_solid(capsys):
     execute_solid(configured_example)
 
     captured = capsys.readouterr()
-    assert captured.err.count("wheaties") == 6
+    assert captured.out.count("wheaties") == 6
 
 
 def test_another_new_solid(capsys):
@@ -25,4 +25,4 @@ def test_another_new_solid(capsys):
     )
 
     captured = capsys.readouterr()
-    assert captured.err.count("wheaties") == 6
+    assert captured.out.count("wheaties") == 6

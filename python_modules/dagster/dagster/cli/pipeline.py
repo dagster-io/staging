@@ -547,11 +547,11 @@ def do_execute_command(
 )
 def pipeline_launch_command(**kwargs):
     with DagsterInstance.get() as instance:
-        return execute_launch_command(instance, kwargs)
+        return execute_launch_command(instance, click.echo, kwargs)
 
 
 @telemetry_wrapper
-def execute_launch_command(instance, kwargs):
+def execute_launch_command(instance, print_fn, kwargs):
     preset = kwargs.get("preset")
     mode = kwargs.get("mode")
     check.inst_param(instance, "instance", DagsterInstance)
@@ -591,7 +591,11 @@ def execute_launch_command(instance, kwargs):
             solid_selection=solid_selection,
         )
 
-        return instance.launch_run(pipeline_run.run_id, external_pipeline)
+        launched_run = instance.launch_run(pipeline_run.run_id, external_pipeline)
+
+        print_fn("Launched run {run_id}".format(run_id=launched_run.run_id))
+
+        return launched_run
 
 
 @click.command(

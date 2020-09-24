@@ -14,6 +14,7 @@ from dagster.core.storage.runs import SqliteRunStorage
 from dagster.seven import mock
 
 HELLO_WORLD = "Hello World"
+HELLO_WORLD_ERROR = "Hello World Error"
 SEPARATOR = os.linesep if (os.name == "nt" and sys.version_info < (3,)) else "\n"
 EXPECTED_LOGS = [
     'STEP_START - Started execution of step "easy.compute".',
@@ -37,6 +38,7 @@ def test_compute_log_manager(
         def easy(context):
             context.log.info("easy")
             print(HELLO_WORLD)
+            sys.stderr.write(HELLO_WORLD_ERROR + SEPARATOR)
             return "easy"
 
         easy()
@@ -69,22 +71,23 @@ def test_compute_log_manager(
         step_key = compute_steps[0]
 
         stdout = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDOUT)
-        assert stdout.data == HELLO_WORLD + SEPARATOR
+        assert (HELLO_WORLD + SEPARATOR) in stdout.data
+        for expected in EXPECTED_LOGS:
+            assert expected in stdout.data
 
         stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
-        for expected in EXPECTED_LOGS:
-            assert expected in stderr.data
+        assert stderr.data == HELLO_WORLD_ERROR + SEPARATOR
 
         # Check ADLS2 directly
         adls2_object = fake_client.get_blob_client(
             container=container,
-            blob="{prefix}/storage/{run_id}/compute_logs/easy.compute.err".format(
+            blob="{prefix}/storage/{run_id}/compute_logs/easy.compute.out".format(
                 prefix="my_prefix", run_id=result.run_id
             ),
         )
-        adls2_stderr = six.ensure_str(adls2_object.download_blob().readall())
+        adls2_stdout = six.ensure_str(adls2_object.download_blob().readall())
         for expected in EXPECTED_LOGS:
-            assert expected in adls2_stderr
+            assert expected in adls2_stdout
 
         # Check download behavior by deleting locally cached logs
         compute_logs_dir = os.path.join(temp_dir, result.run_id, "compute_logs")
@@ -92,11 +95,12 @@ def test_compute_log_manager(
             os.unlink(os.path.join(compute_logs_dir, filename))
 
         stdout = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDOUT)
-        assert stdout.data == HELLO_WORLD + SEPARATOR
+        assert (HELLO_WORLD + SEPARATOR) in stdout.data
+        for expected in EXPECTED_LOGS:
+            assert expected in stdout.data
 
         stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
-        for expected in EXPECTED_LOGS:
-            assert expected in stderr.data
+        assert stderr.data == HELLO_WORLD_ERROR + SEPARATOR
 
 
 def test_compute_log_manager_from_config(storage_account, container, credential):
