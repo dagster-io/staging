@@ -8,7 +8,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler import ScheduleTickStatus
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.storage.tags import PARTITION_NAME_TAG, SCHEDULED_EXECUTION_TIME_TAG
-from dagster.scheduler.scheduler import launch_scheduled_runs
+from dagster.scheduler.scheduler import get_default_scheduler_logger, launch_scheduled_runs
 from dagster.seven import get_current_datetime_in_utc, get_utc_timezone, multiprocessing
 
 from .test_scheduler_run import (
@@ -25,14 +25,19 @@ def _test_launch_scheduled_runs_in_subprocess(instance_ref, execution_datetime, 
     with DagsterInstance.from_ref(instance_ref) as instance:
         with freeze_time(execution_datetime):
             launch_scheduled_runs(
-                instance, get_current_datetime_in_utc(), debug_crash_flags=debug_crash_flags
+                instance,
+                get_default_scheduler_logger(),
+                get_current_datetime_in_utc(),
+                debug_crash_flags=debug_crash_flags,
             )
 
 
 @pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
 @pytest.mark.parametrize("crash_location", ["TICK_CREATED", "TICK_HELD"])
 @pytest.mark.parametrize("crash_signal", [signal.SIGKILL, signal.SIGINT])
-def test_failure_recovery_before_run_created(external_repo_context, crash_location, crash_signal):
+def test_failure_recovery_before_run_created(
+    external_repo_context, crash_location, crash_signal, capfd
+):
     # Verify that if the scheduler crashes or is interrupted before a run is created,
     # it will create exactly one tick/run when it is re-launched
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -53,6 +58,14 @@ def test_failure_recovery_before_run_created(external_repo_context, crash_locati
             scheduler_process.join(timeout=60)
 
             assert scheduler_process.exitcode != 0
+
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-27T00:00:00+00:00 for the following schedules: ['simple_schedule']
+Launching run for simple_schedule at 2019-02-27T00:00:00+00:00
+"""
+            )
 
             ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
             assert len(ticks) == 1
@@ -83,12 +96,27 @@ def test_failure_recovery_before_run_created(external_repo_context, crash_locati
                 ScheduleTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-27T00:05:00+00:00 for the following schedules: ['simple_schedule']
+Launching run for simple_schedule at 2019-02-27T00:00:00+00:00
+Resuming previously interrupted schedule execution
+Completed scheduled launch of run {run_id} for simple_schedule
+""".format(
+                    run_id=instance.get_runs()[0].run_id
+                )
+            )
 
 
 @pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
 @pytest.mark.parametrize("crash_location", ["RUN_CREATED", "RUN_LAUNCHED"])
-@pytest.mark.parametrize("crash_signal", [signal.SIGKILL, signal.SIGINT])
-def test_failure_recovery_after_run_created(external_repo_context, crash_location, crash_signal):
+@pytest.mark.parametrize(
+    "crash_signal", [signal.SIGKILL, signal.SIGINT],
+)
+def test_failure_recovery_after_run_created(
+    external_repo_context, crash_location, crash_signal, capfd
+):
     # Verify that if the scheduler crashes or is interrupted after a run is created,
     # it will just re-launch the already-created run when it runs again
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -109,6 +137,8 @@ def test_failure_recovery_after_run_created(external_repo_context, crash_locatio
             scheduler_process.join(timeout=60)
 
             assert scheduler_process.exitcode != 0
+
+            capfd.readouterr()
 
             ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
             assert len(ticks) == 1
@@ -164,6 +194,22 @@ def test_failure_recovery_after_run_created(external_repo_context, crash_locatio
                 ScheduleTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
+
+            captured = capfd.readouterr()
+            if crash_location == "RUN_CREATED":
+                assert (
+                    "Run {run_id} already created for this execution of simple_schedule".format(
+                        run_id=instance.get_runs()[0].run_id
+                    )
+                    in captured.out
+                )
+            else:
+                assert (
+                    "Run {run_id} already completed for this execution of simple_schedule".format(
+                        run_id=instance.get_runs()[0].run_id
+                    )
+                    in captured.out
+                )
 
 
 @pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
