@@ -153,6 +153,10 @@ class ScheduleOrigin(six.with_metaclass(ABCMeta)):
         return create_snapshot_id(self)
 
     @abstractmethod
+    def get_repo_origin(self):
+        pass
+
+    @abstractmethod
     def get_repo_cli_args(self):
         pass
 
@@ -172,9 +176,11 @@ class SchedulePythonOrigin(
             check.inst_param(repository_origin, "repository_origin", RepositoryPythonOrigin),
         )
 
-    @property
     def executable_path(self):
         return self.repository_origin.executable_path
+
+    def get_repo_origin(self):
+        return self.repository_origin
 
     def get_repo_cli_args(self):
         return self.repository_origin.get_cli_args()
@@ -193,6 +199,9 @@ class ScheduleGrpcServerOrigin(
             check.str_param(schedule_name, "schedule_name"),
             check.inst_param(repository_origin, "repository_origin", RepositoryGrpcServerOrigin),
         )
+
+    def get_repo_origin(self):
+        return self.repository_origin
 
     def get_repo_cli_args(self):
         return self.repository_origin.get_cli_args()
