@@ -1,2 +1,3 @@
 load_from:
- - python_file: repo.py
+  - python_file: repo.py
+  - python_file: repo_two.py
