@@ -25,6 +25,7 @@ from dagster.core.test_utils import create_run_for_test
 from dagster.seven import multiprocessing
 
 HELLO_SOLID = "HELLO SOLID"
+HELLO_SOLID_ERROR = "HELLO SOLID ERROR"
 HELLO_RESOURCE = "HELLO RESOURCE"
 SEPARATOR = os.linesep if (os.name == "nt" and sys.version_info < (3,)) else "\n"
 
@@ -43,6 +44,7 @@ def spawn(_):
 @solid(input_defs=[InputDefinition("num", int)], required_resource_keys={"a"})
 def spew(_, num):
     print(HELLO_SOLID)
+    sys.stderr.write(HELLO_SOLID_ERROR + "\n")
     return num
 
 
@@ -79,7 +81,7 @@ def test_compute_log_to_disk():
         compute_io_path = manager.get_local_path(result.run_id, step_key, ComputeIOType.STDOUT)
         assert os.path.exists(compute_io_path)
         with open(compute_io_path, "r") as stdout_file:
-            assert normalize_file_content(stdout_file.read()) == HELLO_SOLID
+            assert HELLO_SOLID in normalize_file_content(stdout_file.read())
 
 
 @pytest.mark.skipif(
@@ -107,7 +109,7 @@ def test_compute_log_to_disk_multiprocess():
         compute_io_path = manager.get_local_path(result.run_id, step_key, ComputeIOType.STDOUT)
         assert os.path.exists(compute_io_path)
         with open(compute_io_path, "r") as stdout_file:
-            assert normalize_file_content(stdout_file.read()) == HELLO_SOLID
+            assert HELLO_SOLID in normalize_file_content(stdout_file.read())
 
 
 @pytest.mark.skipif(
@@ -129,11 +131,13 @@ def test_compute_log_manager():
     assert manager.is_watch_completed(result.run_id, step_key)
 
     stdout = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDOUT)
-    assert normalize_file_content(stdout.data) == HELLO_SOLID
+    cleaned_logs = stdout.data.replace("\x1b[34m", "").replace("\x1b[0m", "")
+    assert HELLO_SOLID in cleaned_logs
+    assert "dagster - DEBUG - spew_pipeline - " in cleaned_logs
 
     stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
     cleaned_logs = stderr.data.replace("\x1b[34m", "").replace("\x1b[0m", "")
-    assert "dagster - DEBUG - spew_pipeline - " in cleaned_logs
+    assert HELLO_SOLID_ERROR in cleaned_logs
 
     bad_logs = manager.read_logs_file("not_a_run_id", step_key, ComputeIOType.STDOUT)
     assert bad_logs.data is None
@@ -159,11 +163,12 @@ def test_compute_log_manager_subscriptions():
     stderr = []
     stderr_observable.subscribe(stderr.append)
     assert len(stdout) == 1
-    assert stdout[0].data.startswith(HELLO_SOLID)
-    assert stdout[0].cursor in [12, 13]
+    assert HELLO_SOLID in stdout[0].data
+    assert stdout[0].cursor == len(stdout[0].data)
+
     assert len(stderr) == 1
+    assert HELLO_SOLID_ERROR in stderr[0].data
     assert stderr[0].cursor == len(stderr[0].data)
-    assert stderr[0].cursor > 400
 
 
 def gen_solid_name(length):
@@ -201,7 +206,7 @@ def test_long_solid_names():
     assert manager.is_watch_completed(result.run_id, step_key)
 
     stdout = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDOUT)
-    assert normalize_file_content(stdout.data) == HELLO_SOLID
+    assert HELLO_SOLID in normalize_file_content(stdout.data)
 
 
 def execute_inner(step_key, pipeline_run, instance_ref):

@@ -29,9 +29,13 @@ def _test_launch_scheduled_runs_in_subprocess(instance_ref, execution_datetime, 
             )
 
 
-@pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
+@pytest.mark.parametrize(
+    "external_repo_context", [cli_api_repo, grpc_repo],
+)
 @pytest.mark.parametrize("crash_location", ["TICK_CREATED", "TICK_HELD"])
-@pytest.mark.parametrize("crash_signal", [signal.SIGKILL, signal.SIGINT])
+@pytest.mark.parametrize(
+    "crash_signal", [signal.SIGKILL, signal.SIGINT],
+)
 def test_failure_recovery_before_run_created(external_repo_context, crash_location, crash_signal):
     # Verify that if the scheduler crashes or is interrupted before a run is created,
     # it will create exactly one tick/run when it is re-launched
