@@ -31,7 +31,9 @@ class DauphinAsset(dauphin.ObjectType):
 
     def resolve_assetMaterializations(self, graphene_info, **kwargs):
         return [
-            graphene_info.schema.type_named("AssetMaterialization")(event=event)
+            graphene_info.schema.type_named("AssetMaterialization")(
+                event=event, partition_name=event.partition_name
+            )
             for event in get_asset_events(
                 graphene_info, self.key, kwargs.get("cursor"), kwargs.get("limit")
             )
@@ -74,6 +76,7 @@ class DauphinAssetMaterialization(dauphin.ObjectType):
 
     materializationEvent = dauphin.NonNull("StepMaterializationEvent")
     runOrError = dauphin.NonNull("PipelineRunOrError")
+    partitionName = dauphin.Field(dauphin.String)
 
     def resolve_materializationEvent(self, graphene_info):
         return graphene_info.schema.type_named("StepMaterializationEvent")(
