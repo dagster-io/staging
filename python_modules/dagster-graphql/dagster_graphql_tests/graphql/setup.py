@@ -2,6 +2,7 @@ import csv
 import datetime
 import logging
 import os
+import sys
 import time
 from collections import OrderedDict
 from copy import deepcopy
@@ -614,6 +615,7 @@ def spew_pipeline():
     @solid
     def spew(_):
         print("HELLO WORLD")  # pylint: disable=print-call
+        sys.stderr.write("HELLO WORLD ERROR\n")
 
     spew()
 

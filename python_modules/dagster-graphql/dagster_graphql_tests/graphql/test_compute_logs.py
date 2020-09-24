@@ -43,7 +43,7 @@ class TestComputeLogs(ExecutingGraphQLContextTestMatrix):
         compute_logs = result.data["pipelineRunOrError"]["computeLogs"]
         snapshot.assert_match(compute_logs)
 
-    def test_compute_logs_subscription_graphql(self, graphql_context, snapshot):
+    def test_compute_logs_subscription_stdout_graphql(self, graphql_context, snapshot):
         selector = infer_pipeline_selector(graphql_context, "spew_pipeline")
         payload = sync_execute_get_run_log_data(
             context=graphql_context,
@@ -65,5 +65,30 @@ class TestComputeLogs(ExecutingGraphQLContextTestMatrix):
         subscription.subscribe(lambda x: results.append(x.data))
         assert len(results) == 1
         result = results[0]
-        assert result["computeLogs"]["data"] == "HELLO WORLD\n"
+        assert "HELLO WORLD\n" in result["computeLogs"]["data"]
+        snapshot.assert_match(results)
+
+    def test_compute_logs_subscription_stderr_graphql(self, graphql_context, snapshot):
+        selector = infer_pipeline_selector(graphql_context, "spew_pipeline")
+        payload = sync_execute_get_run_log_data(
+            context=graphql_context,
+            variables={"executionParams": {"selector": selector, "mode": "default"}},
+        )
+        run_id = payload["run"]["runId"]
+
+        subscription = execute_dagster_graphql(
+            graphql_context,
+            COMPUTE_LOGS_SUBSCRIPTION,
+            variables={
+                "runId": run_id,
+                "stepKey": "spew.compute",
+                "ioType": "STDERR",
+                "cursor": "0",
+            },
+        )
+        results = []
+        subscription.subscribe(lambda x: results.append(x.data))
+        assert len(results) == 1
+        result = results[0]
+        assert result["computeLogs"]["data"] == "HELLO WORLD ERROR\n"
         snapshot.assert_match(results)
