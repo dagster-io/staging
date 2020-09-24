@@ -1,10 +1,15 @@
 from __future__ import print_function
 
+import re
+
+import click
 import mock
 import pytest
 from click.testing import CliRunner
 
+from dagster import DagsterInvariantViolationError
 from dagster.cli.schedule import (
+    check_repo_and_scheduler,
     schedule_list_command,
     schedule_logs_command,
     schedule_restart_command,
@@ -13,6 +18,8 @@ from dagster.cli.schedule import (
     schedule_up_command,
     schedule_wipe_command,
 )
+from dagster.core.host_representation import ExternalRepository
+from dagster.core.instance import DagsterInstance
 
 from .test_cli_commands import schedule_command_contexts
 
@@ -208,3 +215,38 @@ def test_schedules_logs(gen_schedule_args):
 
             assert result.exit_code == 0
             assert result.output.endswith("scheduler.log\n")
+
+
+def test_check_repo_and_scheduler_no_external_schedules():
+    repository = mock.MagicMock(spec=ExternalRepository)
+    repository.get_external_schedules.return_value = []
+    instance = mock.MagicMock(spec=DagsterInstance)
+    with pytest.raises(click.UsageError, match="There are no schedules defined for repository"):
+        check_repo_and_scheduler(repository, instance)
+
+
+def test_check_repo_and_scheduler_dagster_home_not_set():
+    repository = mock.MagicMock(spec=ExternalRepository)
+    repository.get_external_schedules.return_value = [mock.MagicMock()]
+    instance = mock.MagicMock(spec=DagsterInstance)
+    message = "$DAGSTER_HOME is not set :("
+
+    with mock.patch(
+        "dagster.cli.schedule._dagster_home", side_effect=DagsterInvariantViolationError(message)
+    ):
+        with pytest.raises(click.UsageError, match=re.escape(message)):
+            check_repo_and_scheduler(repository, instance)
+
+
+def test_check_repo_and_scheduler_instance_scheduler_not_set():
+    repository = mock.MagicMock(spec=ExternalRepository)
+    repository.get_external_schedules.return_value = [mock.MagicMock()]
+    instance = mock.MagicMock(spec=DagsterInstance)
+    type(instance).scheduler = mock.PropertyMock(return_value=None)
+
+    with mock.patch("dagster.cli.schedule._dagster_home", return_value=""):
+        with pytest.raises(
+            click.UsageError,
+            match=re.escape("A scheduler must be configured to run schedule commands."),
+        ):
+            check_repo_and_scheduler(repository, instance)

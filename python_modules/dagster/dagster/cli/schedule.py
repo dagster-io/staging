@@ -11,7 +11,7 @@ from dagster.cli.workspace.cli_target import (
     repository_target_argument,
 )
 from dagster.core.host_representation import ExternalRepository
-from dagster.core.instance import DagsterInstance
+from dagster.core.instance import DagsterInstance, _dagster_home
 from dagster.core.scheduler import ScheduleStatus, get_schedule_change_set
 
 
@@ -114,12 +114,20 @@ def check_repo_and_scheduler(repository, instance):
             "There are no schedules defined for repository {name}.".format(name=repository_name)
         )
 
+    try:
+        _dagster_home()
+    except DagsterInvariantViolationError as ex:
+        raise click.UsageError(str(ex))
+
     if not instance.scheduler:
         raise click.UsageError(
-            "A scheduler must be configured to run schedule commands.\n"
-            "You can configure a scheduler on your instance using dagster.yaml.\n"
-            "For more information, see:\n\n"
-            "https://docs.dagster.io/deploying/instance/#scheduler"
+            "A scheduler must be configured to run schedule commands."
+            "You can resolve this error by defining a scheduler on your instance"
+            "using your dagster.yaml, located in the $DAGSTER_HOME directory.\n"
+            "For example, you can add the following lines in your dagster.yaml file:\n\n"
+            "scheduler:\n"
+            "\tmodule: dagster_cron.cron_scheduler\n"
+            "\tclass: SystemCronScheduler\n"
         )
 
 
