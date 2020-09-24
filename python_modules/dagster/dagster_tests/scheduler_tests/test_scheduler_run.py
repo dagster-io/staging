@@ -20,7 +20,7 @@ from dagster.core.storage.tags import PARTITION_NAME_TAG, SCHEDULED_EXECUTION_TI
 from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
-from dagster.scheduler.scheduler import launch_scheduled_runs
+from dagster.scheduler.scheduler import get_default_scheduler_logger, launch_scheduled_runs
 from dagster.seven import (
     get_current_datetime_in_utc,
     get_timestamp_from_utc_datetime,
@@ -231,7 +231,7 @@ def wait_for_all_runs_to_start(instance, timeout=10):
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_simple_schedule(external_repo_context):
+def test_simple_schedule(external_repo_context, capfd):
     initial_datetime = datetime(
         year=2019, month=2, day=27, hour=23, minute=59, second=59, tzinfo=get_utc_timezone(),
     )
@@ -248,14 +248,26 @@ def test_simple_schedule(external_repo_context):
             assert len(ticks) == 0
 
             # launch_scheduled_runs does nothing before the first tick
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
             assert instance.get_runs_count() == 0
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
+            captured = capfd.readouterr()
+
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-27T23:59:59+00:00 for the following schedules: simple_schedule
+No new runs for simple_schedule
+"""
+            )
             # Move forward in time so we're past a tick
             frozen_datetime.tick(delta=timedelta(seconds=2))
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 1
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
@@ -274,8 +286,22 @@ def test_simple_schedule(external_repo_context):
             wait_for_all_runs_to_start(instance)
             validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
 
+            captured = capfd.readouterr()
+
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-28T00:00:01+00:00 for the following schedules: simple_schedule
+Launching run for simple_schedule at 2019-02-28T00:00:00+00:00
+Completed scheduled launch of run {run_id} for simple_schedule
+""".format(
+                    run_id=instance.get_runs()[0].run_id
+                )
+            )
+
             # Verify idempotence
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
             assert instance.get_runs_count() == 1
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
@@ -283,15 +309,21 @@ def test_simple_schedule(external_repo_context):
 
             # Verify advancing in time but not going past a tick doesn't add any new runs
             frozen_datetime.tick(delta=timedelta(seconds=2))
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
             assert instance.get_runs_count() == 1
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
             assert ticks[0].status == ScheduleTickStatus.SUCCESS
 
+            capfd.readouterr()
+
             # Traveling two more days in the future before running results in two new ticks
             frozen_datetime.tick(delta=timedelta(days=2))
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
             assert instance.get_runs_count() == 3
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
@@ -302,8 +334,24 @@ def test_simple_schedule(external_repo_context):
             assert "2019-02-28" in runs_by_partition
             assert "2019-03-01" in runs_by_partition
 
+            captured = capfd.readouterr()
+
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-03-02T00:00:03+00:00 for the following schedules: simple_schedule
+Launching 2 runs for simple_schedule at the following times: 2019-03-01T00:00:00+00:00, 2019-03-02T00:00:00+00:00
+Completed scheduled launch of run {first_run_id} for simple_schedule
+Completed scheduled launch of run {second_run_id} for simple_schedule
+""".format(
+                    first_run_id=instance.get_runs()[1].run_id,
+                    second_run_id=instance.get_runs()[0].run_id,
+                )
+            )
+
             # Check idempotence again
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
             assert instance.get_runs_count() == 3
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
@@ -312,7 +360,7 @@ def test_simple_schedule(external_repo_context):
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_bad_env_fn(external_repo_context):
+def test_bad_env_fn(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("bad_env_fn_schedule")
         schedule_origin = external_schedule.get_origin()
@@ -322,7 +370,9 @@ def test_bad_env_fn(external_repo_context):
         with freeze_time(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 0
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
@@ -338,11 +388,20 @@ def test_bad_env_fn(external_repo_context):
                 "schedule bad_env_fn_schedule",
             )
 
+            captured = capfd.readouterr()
+
+            assert "Failed to fetch schedule data for bad_env_fn_schedule: " in captured.out
+
+            assert (
+                "Error occurred during the execution of run_config_fn for "
+                "schedule bad_env_fn_schedule" in captured.out
+            )
+
 
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_bad_should_execute(external_repo_context):
+def test_bad_should_execute(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("bad_should_execute_schedule")
         schedule_origin = external_schedule.get_origin()
@@ -352,7 +411,9 @@ def test_bad_should_execute(external_repo_context):
         with freeze_time(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 0
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
@@ -368,11 +429,23 @@ def test_bad_should_execute(external_repo_context):
                 "schedule bad_should_execute_schedule",
             )
 
+            captured = capfd.readouterr()
+            assert (
+                "Failed to fetch schedule data for bad_should_execute_schedule: "
+            ) in captured.out
+
+            assert (
+                "Error occurred during the execution of should_execute "
+                "for schedule bad_should_execute_schedule" in captured.out
+            )
+
+            assert "Exception: bananas" in captured.out
+
 
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_skip(external_repo_context):
+def test_skip(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("skip_schedule")
         schedule_origin = external_schedule.get_origin()
@@ -382,7 +455,9 @@ def test_skip(external_repo_context):
         with freeze_time(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 0
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
@@ -391,11 +466,20 @@ def test_skip(external_repo_context):
                 ticks[0], external_schedule, initial_datetime, ScheduleTickStatus.SKIPPED, None,
             )
 
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-27T00:00:00+00:00 for the following schedules: skip_schedule
+Launching run for skip_schedule at 2019-02-27T00:00:00+00:00
+should_execute returned False for skip_schedule, skipping
+"""
+            )
+
 
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_wrong_config(external_repo_context):
+def test_wrong_config(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("wrong_config_schedule")
         schedule_origin = external_schedule.get_origin()
@@ -405,7 +489,9 @@ def test_wrong_config(external_repo_context):
         with freeze_time(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 1
 
@@ -441,6 +527,12 @@ def test_wrong_config(external_repo_context):
                 > 0
             )
 
+            captured = capfd.readouterr()
+
+            assert "Failed to fetch execution plan for wrong_config_schedule" in captured.out
+            assert "Error in config for pipeline the_pipeline" in captured.out
+            assert 'Missing required field "solids" at the root.' in captured.out
+
 
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
@@ -461,7 +553,9 @@ def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
             instance.start_schedule_and_update_storage_state(good_schedule)
             instance.start_schedule_and_update_storage_state(bad_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 1
             wait_for_all_runs_to_start(instance)
@@ -483,15 +577,17 @@ def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
             assert bad_ticks[0].status == ScheduleTickStatus.FAILURE
 
             assert (
-                "Error occurred during the execution of should_execute for schedule bad_should_execute_schedule"
-                in bad_ticks[0].error.message
+                "Error occurred during the execution of should_execute "
+                "for schedule bad_should_execute_schedule" in bad_ticks[0].error.message
             )
 
             frozen_datetime.tick(delta=timedelta(days=1))
 
             new_now = get_current_datetime_in_utc()
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 3
             wait_for_all_runs_to_start(instance)
@@ -544,7 +640,9 @@ def test_run_scheduled_on_time_boundary(external_repo_context):
             # Start schedule exactly at midnight
             instance.start_schedule_and_update_storage_state(external_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 1
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
@@ -552,7 +650,7 @@ def test_run_scheduled_on_time_boundary(external_repo_context):
             assert ticks[0].status == ScheduleTickStatus.SUCCESS
 
 
-def test_bad_load():
+def test_bad_load(capfd):
     with schedule_instance() as instance:
         working_directory = os.path.dirname(__file__)
         recon_repo = ReconstructableRepository.for_file(__file__, "doesnt_exist", working_directory)
@@ -573,7 +671,9 @@ def test_bad_load():
 
             frozen_datetime.tick(delta=timedelta(seconds=1))
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 0
 
@@ -586,9 +686,15 @@ def test_bad_load():
             )
             assert "doesnt_exist not found at module scope in file" in ticks[0].error.message
 
+            captured = capfd.readouterr()
+            assert "Error launching scheduled run" in captured.out
+            assert "doesnt_exist not found at module scope" in captured.out
+
             frozen_datetime.tick(delta=timedelta(days=1))
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 0
 
@@ -601,11 +707,15 @@ def test_bad_load():
             )
             assert "doesnt_exist not found at module scope in file" in ticks[0].error.message
 
+            captured = capfd.readouterr()
+            assert "Error launching scheduled run" in captured.out
+            assert "doesnt_exist not found at module scope" in captured.out
+
 
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_multiple_schedules_on_different_time_ranges(external_repo_context):
+def test_multiple_schedules_on_different_time_ranges(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("simple_schedule")
         external_hourly_schedule = external_repo.get_external_schedule("simple_hourly_schedule")
@@ -617,7 +727,9 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context):
             instance.start_schedule_and_update_storage_state(external_hourly_schedule)
             frozen_datetime.tick(delta=timedelta(seconds=2))
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 2
             ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
@@ -628,9 +740,26 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context):
             assert len(hourly_ticks) == 1
             assert hourly_ticks[0].status == ScheduleTickStatus.SUCCESS
 
+            captured = capfd.readouterr()
+
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-28T00:00:01+00:00 for the following schedules: simple_hourly_schedule, simple_schedule
+Launching run for simple_hourly_schedule at 2019-02-28T00:00:00+00:00
+Completed scheduled launch of run {first_run_id} for simple_hourly_schedule
+Launching run for simple_schedule at 2019-02-28T00:00:00+00:00
+Completed scheduled launch of run {second_run_id} for simple_schedule
+""".format(
+                    first_run_id=instance.get_runs()[1].run_id,
+                    second_run_id=instance.get_runs()[0].run_id,
+                )
+            )
+
             frozen_datetime.tick(delta=timedelta(hours=1))
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 3
 
@@ -645,11 +774,23 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context):
                 == 2
             )
 
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-28T01:00:01+00:00 for the following schedules: simple_hourly_schedule, simple_schedule
+Launching run for simple_hourly_schedule at 2019-02-28T01:00:00+00:00
+Completed scheduled launch of run {third_run_id} for simple_hourly_schedule
+No new runs for simple_schedule
+""".format(
+                    third_run_id=instance.get_runs()[0].run_id
+                )
+            )
+
 
 @pytest.mark.parametrize(
     "external_repo_context", [cli_api_repo, grpc_repo],
 )
-def test_launch_failure(external_repo_context):
+def test_launch_failure(external_repo_context, capfd):
     with instance_with_schedules(
         external_repo_context,
         overrides={
@@ -666,7 +807,9 @@ def test_launch_failure(external_repo_context):
         with freeze_time(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc())
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), get_current_datetime_in_utc()
+            )
 
             assert instance.get_runs_count() == 1
 
@@ -684,8 +827,19 @@ def test_launch_failure(external_repo_context):
                 run.run_id,
             )
 
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-02-27T00:00:00+00:00 for the following schedules: simple_schedule
+Launching run for simple_schedule at 2019-02-27T00:00:00+00:00
+Run {run_id} created successfully but failed to launch.
+""".format(
+                    run_id=instance.get_runs()[0].run_id
+                )
+            )
 
-def test_max_catchup_runs():
+
+def test_max_catchup_runs(capfd):
     initial_datetime = datetime(
         year=2019, month=2, day=27, hour=23, minute=59, second=59, tzinfo=get_utc_timezone(),
     )
@@ -698,7 +852,12 @@ def test_max_catchup_runs():
             # Day is now March 4 at 11:59PM
             frozen_datetime.tick(delta=timedelta(days=5))
 
-            launch_scheduled_runs(instance, get_current_datetime_in_utc(), max_catchup_runs=2)
+            launch_scheduled_runs(
+                instance,
+                get_default_scheduler_logger(),
+                get_current_datetime_in_utc(),
+                max_catchup_runs=2,
+            )
 
             assert instance.get_runs_count() == 2
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
@@ -728,3 +887,17 @@ def test_max_catchup_runs():
             )
 
             validate_run_started(instance.get_runs()[1], second_datetime, "2019-03-02")
+
+            captured = capfd.readouterr()
+            assert (
+                captured.out
+                == """Checking for new runs at 2019-03-04T23:59:59+00:00 for the following schedules: simple_schedule
+simple_schedule has fallen behind, only launching 2 runs
+Launching 2 runs for simple_schedule at the following times: 2019-03-03T00:00:00+00:00, 2019-03-04T00:00:00+00:00
+Completed scheduled launch of run {first_run_id} for simple_schedule
+Completed scheduled launch of run {second_run_id} for simple_schedule
+""".format(
+                    first_run_id=instance.get_runs()[1].run_id,
+                    second_run_id=instance.get_runs()[0].run_id,
+                )
+            )
