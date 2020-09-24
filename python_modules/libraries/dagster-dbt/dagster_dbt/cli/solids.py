@@ -130,6 +130,10 @@ def passthrough_flags_only(solid_config, additional_flags):
 )
 @experimental
 def dbt_cli_run(context) -> DbtCliStatsResult:
+    """This solid executes `dbt run` in the shell.
+
+
+    """
     logs, raw_output, return_code = execute_dbt(
         context.solid_config["dbt_executable"],
         command=("run",),

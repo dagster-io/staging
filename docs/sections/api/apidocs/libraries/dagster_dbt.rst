@@ -1,37 +1,24 @@
 dbt (dagster_dbt)
 -----------------
 
-This library provides an integration with `dbt <https://getdbt.com/>`_ (data build tool), created by `Fishtown Analytics <https://www.fishtownanalytics.com/>`_.
+This library provides a Dagster integration with `dbt <https://getdbt.com/>`_ (data build tool), created by `Fishtown Analytics <https://www.fishtownanalytics.com/>`_.
 
 .. currentmodule:: dagster_dbt
-
-CLI
-~~~
-
-.. autoclass:: DbtCliResult
-    :members:
-
-.. autoclass:: DbtCliStatsResult
-    :members:
-
-.. autofunction:: dbt_cli_compile
-
-.. autofunction:: dbt_cli_run
-
-.. autofunction:: dbt_cli_run_operation
-
-.. autofunction:: dbt_cli_snapshot
-
-.. autofunction:: dbt_cli_snapshot_freshness
-
-.. autofunction:: dbt_cli_test
 
 RPC
 ~~~
 
 .. autoclass:: DbtRpcClient
+    :members:
 
 .. autoclass:: DbtRpcPollResult
+    :members:
+
+.. autoclass:: NodeResult
+    :members:
+
+.. autoclass:: NodeTiming
+    :members:
 
 .. autofunction:: dbt_rpc_resource
 
@@ -60,6 +47,27 @@ RPC
 .. autofunction:: dbt_rpc_test
 
 .. autofunction:: dbt_rpc_test_and_wait
+
+CLI
+~~~
+
+.. autoclass:: DbtCliResult
+    :members:
+
+.. autoclass:: DbtCliStatsResult
+    :members:
+
+.. autofunction:: dbt_cli_compile
+
+.. autofunction:: dbt_cli_run
+
+.. autofunction:: dbt_cli_run_operation
+
+.. autofunction:: dbt_cli_snapshot
+
+.. autofunction:: dbt_cli_snapshot_freshness
+
+.. autofunction:: dbt_cli_test
 
 Errors
 ~~~~~~

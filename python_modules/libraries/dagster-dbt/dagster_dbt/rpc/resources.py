@@ -15,6 +15,7 @@ from .utils import is_fatal_code
 
 @attr.s
 class DbtRpcClient(object):
+    """A client for a dbt RPC server."""
 
     host: str = attr.ib(default="0.0.0.0")
     port: int = attr.ib(validator=attr.validators.instance_of(int), default=8580)
@@ -238,6 +239,23 @@ class DbtRpcClient(object):
     },
 )
 def dbt_rpc_resource(context) -> DbtRpcClient:
+    """This resource defines a dbt RPC client.
+
+    Examples:
+
+    .. code-block:: python
+
+        custom_dbt_rpc_resource = dbt_rpc_resource.configured({"host": "80.80.80.80","port": 8080,})
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"dbt_rpc": custom_dbt_rpc_resource})])
+        def dbt_rpc_pipeline():
+            # Run solids with `required_resource_keys={"dbt_rpc", ...}`.
+
+
+    Args:
+        host (str): The IP address of the host of the dbt RPC server.
+        port (int): The port of the dbt RPC server.
+    """
     return DbtRpcClient(host=context.resource_config["host"], port=context.resource_config["port"])
 
 
