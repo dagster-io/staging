@@ -176,8 +176,8 @@ class DbtRpcPollResult(object):
         tags (Dict): Additional key-value tags for this dbt RPC command.
         results (List[NodeResult]): The results of each executed dbt node (model) that was executed
             by the dbt RPC command.
-        generated_at (Optional[datetime.datetime]):
-
+        generated_at (Optional[datetime.datetime]): A timestamp of when the dbt RPC command was
+            generated.
     """
 
     _state: str = attr.ib()
