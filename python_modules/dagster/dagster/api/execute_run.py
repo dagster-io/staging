@@ -1,3 +1,5 @@
+import subprocess
+
 from dagster import check
 from dagster.cli.api import ExecuteRunArgsLoadComplete
 from dagster.core.events import EngineEventData
@@ -72,7 +74,7 @@ def _cli_api_execute_run_process(input_file, output_file, instance, pipeline_ori
         engine_event_data=EngineEventData(marker_start="cli_api_subprocess_init"),
     )
 
-    return open_ipc_subprocess(parts)
+    return open_ipc_subprocess(parts, stdout=subprocess.PIPE)
 
 
 def execute_run_grpc(api_client, instance_ref, pipeline_origin, pipeline_run):
