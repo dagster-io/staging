@@ -352,7 +352,7 @@ class SqlEventLogStorage(EventLogStorage):
             Dict[(str, StepOutputHandle), str]: (pipeline name, step output handle) -> address.
                 For each step output, an address if there is one and None otherwise.
         """
-        check.dict_param(step_output_versions, "step_output_versions", value_type=str)
+        check.dict_param(step_output_versions, "step_output_versions")
         for pipeline_name, step_output_handle in step_output_versions.keys():
             check.str_param(pipeline_name, "step_output_versions key[0]")
             check.inst_param(step_output_handle, "step_output_versions key[1]", StepOutputHandle)
