@@ -1,6 +1,7 @@
 import {useMutation, useQuery} from '@apollo/react-hooks';
 import {
   Button,
+  Callout,
   Code,
   Icon,
   Intent,
@@ -36,6 +37,7 @@ import {HighlightedCodeBlock} from '../HighlightedCodeBlock';
 import {RowColumn, RowContainer} from '../ListComponents';
 import {Legend, LegendColumn} from '../ListComponents';
 import PythonErrorInfo from '../PythonErrorInfo';
+import {RepositoryOriginInformation} from '../RepositoryInformation';
 import {assertUnreachable} from '../Util';
 import {RunStatus} from '../runs/RunStatusDots';
 import {titleForRun} from '../runs/RunUtils';
@@ -473,6 +475,7 @@ export const ScheduleStateRow: React.FunctionComponent<{
     runs,
     runsCount,
     scheduleOriginId,
+    repositoryOrigin,
   } = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
 
@@ -541,13 +544,19 @@ export const ScheduleStateRow: React.FunctionComponent<{
           />
         </RowColumn>
       )}
-      <RowColumn style={{flex: 1.4}}>
-        {dagsterRepoOption ? (
+
+      {dagsterRepoOption ? (
+        <RowColumn style={{flex: 1.4}}>
           <ButtonLink onClick={goToSchedule}>{scheduleName}</ButtonLink>
-        ) : (
+        </RowColumn>
+      ) : (
+        <RowColumn style={{flex: 3}}>
           <div>{scheduleName}</div>
-        )}
-      </RowColumn>
+          <Callout style={{marginTop: 10}}>
+            <RepositoryOriginInformation origin={repositoryOrigin} />
+          </Callout>
+        </RowColumn>
+      )}
       <RowColumn
         style={{
           maxWidth: 150,
