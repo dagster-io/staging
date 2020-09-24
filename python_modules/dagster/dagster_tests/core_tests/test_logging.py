@@ -230,4 +230,4 @@ def test_resource_logging(capsys):
         r"[a-f0-9]{12} - process.compute - test logging from bar resource",
     ]
     for expected_log_regex in expected_log_regexes:
-        assert re.search(expected_log_regex, captured.err, re.MULTILINE)
+        assert re.search(expected_log_regex, captured.out, re.MULTILINE)

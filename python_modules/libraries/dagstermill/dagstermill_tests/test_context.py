@@ -1,4 +1,4 @@
-from dagstermill.manager import MANAGER_FOR_NOTEBOOK_INSTANCE
+from dagstermill.manager import MANAGER_FOR_NOTEBOOK_INSTANCE, Manager
 
 from dagster import SolidDefinition
 from dagster.core.definitions.dependency import Solid
@@ -50,5 +50,8 @@ def test_solid():
 
 
 def test_log(capsys):
-    BARE_OUT_OF_PIPELINE_CONTEXT.log.info("Ho ho!")
-    assert "Ho ho!" in capsys.readouterr().err
+    # Create a new manager so that it will work with capsys properly
+    context = Manager().get_context()
+    context.log.info("Ho ho!")
+
+    assert "Ho ho!" in capsys.readouterr().out

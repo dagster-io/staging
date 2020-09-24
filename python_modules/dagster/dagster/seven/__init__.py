@@ -50,6 +50,11 @@ except NameError:
     ModuleNotFoundError = ImportError
 
 try:
+    from subprocess import DEVNULL
+except ImportError:
+    DEVNULL = open(os.devnull, "wb")
+
+try:
     import _thread as thread
 except ImportError:
     import thread

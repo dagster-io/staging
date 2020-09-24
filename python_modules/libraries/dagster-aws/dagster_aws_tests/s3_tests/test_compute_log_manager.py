@@ -15,6 +15,7 @@ from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
 
 HELLO_WORLD = "Hello World"
+HELLO_WORLD_ERROR = "Hello World Error"
 SEPARATOR = os.linesep if (os.name == "nt" and sys.version_info < (3,)) else "\n"
 EXPECTED_LOGS = [
     'STEP_START - Started execution of step "easy.compute".',
@@ -31,6 +32,7 @@ def test_compute_log_manager(s3_bucket):
         def easy(context):
             context.log.info("easy")
             print(HELLO_WORLD)  # pylint: disable=print-call
+            sys.stderr.write(HELLO_WORLD_ERROR + SEPARATOR)
             return "easy"
 
         easy()
@@ -61,16 +63,17 @@ def test_compute_log_manager(s3_bucket):
         step_key = compute_steps[0]
 
         stdout = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDOUT)
-        assert stdout.data == HELLO_WORLD + SEPARATOR
+        assert HELLO_WORLD + SEPARATOR in stdout.data
+        for expected in EXPECTED_LOGS:
+            assert expected in stdout.data
 
         stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
-        for expected in EXPECTED_LOGS:
-            assert expected in stderr.data
+        assert stderr.data == HELLO_WORLD_ERROR + SEPARATOR
 
         # Check S3 directly
         s3_object = s3.get_object(
             Bucket=s3_bucket,
-            Key="{prefix}/storage/{run_id}/compute_logs/easy.compute.err".format(
+            Key="{prefix}/storage/{run_id}/compute_logs/easy.compute.out".format(
                 prefix="my_prefix", run_id=result.run_id
             ),
         )
@@ -84,11 +87,13 @@ def test_compute_log_manager(s3_bucket):
             os.unlink(os.path.join(compute_logs_dir, filename))
 
         stdout = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDOUT)
-        assert stdout.data == HELLO_WORLD + SEPARATOR
+        assert HELLO_WORLD + SEPARATOR in stdout.data
+
+        for expected in EXPECTED_LOGS:
+            assert expected in stdout.data
 
         stderr = manager.read_logs_file(result.run_id, step_key, ComputeIOType.STDERR)
-        for expected in EXPECTED_LOGS:
-            assert expected in stderr.data
+        assert stderr.data == HELLO_WORLD_ERROR + SEPARATOR
 
 
 @mock_s3
