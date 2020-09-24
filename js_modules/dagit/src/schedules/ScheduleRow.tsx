@@ -1,6 +1,7 @@
 import {useMutation, useQuery} from '@apollo/react-hooks';
 import {
   Button,
+  Callout,
   Code,
   Icon,
   Intent,
@@ -36,6 +37,7 @@ import {HighlightedCodeBlock} from '../HighlightedCodeBlock';
 import {RowColumn, RowContainer} from '../ListComponents';
 import {Legend, LegendColumn} from '../ListComponents';
 import PythonErrorInfo from '../PythonErrorInfo';
+import {RepositoryOriginInformation} from '../RepositoryInformation';
 import {assertUnreachable} from '../Util';
 import {RunStatus} from '../runs/RunStatusDots';
 import {titleForRun} from '../runs/RunUtils';
@@ -49,6 +51,8 @@ import {
 import {ScheduleStateFragment} from './types/ScheduleStateFragment';
 import {StartSchedule, StartSchedule_startSchedule_PythonError} from './types/StartSchedule';
 import {StopSchedule, StopSchedule_stopRunningSchedule_PythonError} from './types/StopSchedule';
+import {useState} from 'react';
+import {IconNames} from '@blueprintjs/icons';
 
 type TickSpecificData = ScheduleDefinitionFragment_scheduleState_ticks_tickSpecificData | null;
 
@@ -459,11 +463,11 @@ export const ScheduleStateRow: React.FunctionComponent<{
     onCompleted: displayScheduleMutationErrors,
   });
 
-  const {options} = useRepositoryOptions();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_, setRepo] = useCurrentRepositoryState(options);
   const history = useHistory();
   const confirm = useConfirmation();
+  const {options} = useRepositoryOptions();
+  const [, setRepo] = useCurrentRepositoryState(options);
+  const [showRepositoryOrigin, setShowRepositoryOrigin] = useState(false);
 
   const {
     status,
@@ -473,6 +477,7 @@ export const ScheduleStateRow: React.FunctionComponent<{
     runs,
     runsCount,
     scheduleOriginId,
+    repositoryOrigin,
   } = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
 
@@ -541,13 +546,29 @@ export const ScheduleStateRow: React.FunctionComponent<{
           />
         </RowColumn>
       )}
-      <RowColumn style={{flex: 1.4}}>
-        {dagsterRepoOption ? (
+
+      {dagsterRepoOption ? (
+        <RowColumn style={{flex: 1.4}}>
           <ButtonLink onClick={goToSchedule}>{scheduleName}</ButtonLink>
-        ) : (
-          <div>{scheduleName}</div>
-        )}
-      </RowColumn>
+        </RowColumn>
+      ) : (
+        <RowColumn style={{flex: 3}}>
+          <div style={{display: 'flex', alignItems: 'base'}}>
+            <div>{scheduleName}</div>
+            <ButtonLink onClick={() => setShowRepositoryOrigin(!showRepositoryOrigin)}>
+              show info{' '}
+              <Icon
+                icon={showRepositoryOrigin ? IconNames.CHEVRON_DOWN : IconNames.CHEVRON_RIGHT}
+              />
+            </ButtonLink>
+          </div>
+          {showRepositoryOrigin && (
+            <Callout style={{marginTop: 10}}>
+              <RepositoryOriginInformation origin={repositoryOrigin} />
+            </Callout>
+          )}
+        </RowColumn>
+      )}
       <RowColumn
         style={{
           maxWidth: 150,
