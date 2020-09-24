@@ -805,7 +805,7 @@ def create_dbt_rpc_run_sql_solid(
     Args:
         name (str): The name of this solid.
         output_def (OutputDefinition, optional): The :class:`OutputDefinition
-            <dagster.OutputDefinition> for the solid. This value should always be a representation
+            <dagster.OutputDefinition>` for the solid. This value should always be a representation
             of a pandas ``DataFrame``. If not specified, the solid will default to an
             :class:`OutputDefinition <dagster.OutputDefinition>` named "df" with a ``DataFrame``
             dagster type.
