@@ -3,6 +3,7 @@ from future.standard_library import install_aliases  # isort:skip
 install_aliases()  # isort:skip
 
 import signal
+import sys
 
 import click
 import requests
@@ -16,7 +17,7 @@ from dagster.cli.workspace.cli_target import WORKSPACE_TARGET_WARNING, get_works
 from dagster.cli.workspace.workspace import Workspace
 from dagster.core.instance import DagsterInstance
 from dagster.seven import urljoin, urlparse
-from dagster.utils import DEFAULT_REPOSITORY_YAML_FILENAME
+from dagster.utils import DEFAULT_REPOSITORY_YAML_FILENAME, redirect_stdout
 from dagster.utils.log import get_stack_trace_array
 
 from .client.query import (
@@ -85,12 +86,15 @@ def execute_query_from_cli(workspace, query, instance, variables=None, output=No
 
     query = query.strip("'\" \n\t")
 
-    result_dict = execute_query(
-        workspace,
-        query,
-        instance=instance,
-        variables=seven.json.loads(variables) if variables else None,
-    )
+    # Since the expectation is that stdout will only include the result of the query,
+    # redirect any log output to stderr
+    with redirect_stdout(sys.stderr):
+        result_dict = execute_query(
+            workspace,
+            query,
+            instance=instance,
+            variables=seven.json.loads(variables) if variables else None,
+        )
     str_res = seven.json.dumps(result_dict)
 
     # Since this the entry point for CLI execution, some tests depend on us putting the result on
@@ -209,11 +213,11 @@ def ui(text, file, predefined, variables, remote, output, remap_sigterm, **kwarg
         res = execute_query_against_remote(remote, query, variables)
         print(res)  # pylint: disable=print-call
     else:
-        instance = DagsterInstance.get()
-        with get_workspace_from_kwargs(kwargs, instance) as workspace:
-            execute_query_from_cli(
-                workspace, query, instance, variables, output,
-            )
+        with DagsterInstance.get() as instance:
+            with get_workspace_from_kwargs(kwargs, instance) as workspace:
+                execute_query_from_cli(
+                    workspace, query, instance, variables, output,
+                )
 
 
 cli = create_dagster_graphql_cli()

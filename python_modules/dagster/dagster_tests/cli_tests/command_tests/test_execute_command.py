@@ -179,7 +179,7 @@ def test_output_execute_log_stdout(capfd):
 
         captured = capfd.readouterr()
         # All pipeline execute output currently logged to stderr
-        assert "HELLO WORLD" in captured.err
+        assert "HELLO WORLD" in captured.out
 
 
 def test_output_execute_log_stderr(capfd):
