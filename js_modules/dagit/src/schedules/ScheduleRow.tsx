@@ -48,6 +48,7 @@ import {
 import {ScheduleStateFragment} from './types/ScheduleStateFragment';
 import {StartSchedule, StartSchedule_startSchedule_PythonError} from './types/StartSchedule';
 import {StopSchedule, StopSchedule_stopRunningSchedule_PythonError} from './types/StopSchedule';
+import {ButtonLink} from '../ButtonLink';
 
 type TickSpecificData = ScheduleDefinitionFragment_scheduleState_ticks_tickSpecificData | null;
 
@@ -298,10 +299,10 @@ export const ScheduleRow: React.FunctionComponent<{
         }}
       >
         <div>
-          {runs.map((run) => {
+          {runs.map(run => {
             const [partition] = run.tags
-              .filter((tag) => tag.key === 'dagster/partition')
-              .map((tag) => tag.value);
+              .filter(tag => tag.key === 'dagster/partition')
+              .map(tag => tag.value);
             const runLabel = partition ? (
               <>
                 <div>Run id: {titleForRun(run)}</div>
@@ -459,7 +460,6 @@ export const ScheduleStateRow: React.FunctionComponent<{
   });
 
   const {options} = useRepositoryOptions();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_, setRepo] = useCurrentRepositoryState(options);
   const history = useHistory();
   const confirm = useConfirmation();
@@ -474,14 +474,6 @@ export const ScheduleStateRow: React.FunctionComponent<{
     scheduleOriginId,
   } = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
-
-  const goToRepositorySchedules = () => {
-    if (!dagsterRepoOption) {
-      return;
-    }
-    setRepo(dagsterRepoOption);
-    history.push(`/schedules`);
-  };
 
   const goToSchedule = () => {
     if (!dagsterRepoOption) {
@@ -549,16 +541,10 @@ export const ScheduleStateRow: React.FunctionComponent<{
         </RowColumn>
       )}
       <RowColumn style={{flex: 1.4}}>
-        <div>{scheduleName}</div>
-        {dagsterRepoOption && (
-          <div style={{marginTop: 10}}>
-            <Button onClick={goToRepositorySchedules} small={true}>
-              Go to repository schedules
-            </Button>{' '}
-            <Button onClick={goToSchedule} small={true}>
-              Go to schedule page
-            </Button>
-          </div>
+        {dagsterRepoOption ? (
+          <ButtonLink onClick={goToSchedule}>{scheduleName}</ButtonLink>
+        ) : (
+          <div>{scheduleName}</div>
         )}
       </RowColumn>
       <RowColumn
@@ -597,7 +583,7 @@ export const ScheduleStateRow: React.FunctionComponent<{
         }}
       >
         <div>
-          {runs.map((run) => {
+          {runs.map(run => {
             return (
               <div
                 style={{
