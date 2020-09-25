@@ -5,24 +5,31 @@ This library provides a Dagster integration with `dbt <https://getdbt.com/>`_ (d
 
 .. currentmodule:: dagster_dbt
 
-RPC
+
+CLI
 ~~~
 
-.. autoclass:: DbtRpcClient
+.. autofunction:: dbt_cli_compile
+
+.. autofunction:: dbt_cli_run
+
+.. autofunction:: dbt_cli_run_operation
+
+.. autofunction:: dbt_cli_snapshot
+
+.. autofunction:: dbt_cli_snapshot_freshness
+
+.. autofunction:: dbt_cli_test
+
+.. autoclass:: DbtCliResult
     :members:
 
-.. autoclass:: DbtRpcPollResult
+.. autoclass:: DbtCliStatsResult
     :members:
 
-.. autoclass:: NodeResult
-    :members:
 
-.. autoclass:: NodeTiming
-    :members:
-
-.. autofunction:: dbt_rpc_resource
-
-.. autoattribute:: local_dbt_rpc_resource
+RPC
+~~~
 
 .. autofunction:: create_dbt_rpc_run_sql_solid
 
@@ -48,26 +55,22 @@ RPC
 
 .. autofunction:: dbt_rpc_test_and_wait
 
-CLI
-~~~
+.. autofunction:: dbt_rpc_resource
 
-.. autoclass:: DbtCliResult
+.. autoattribute:: local_dbt_rpc_resource
+
+.. autoclass:: DbtRpcClient
     :members:
 
-.. autoclass:: DbtCliStatsResult
+.. autoclass:: DbtRpcPollResult
     :members:
 
-.. autofunction:: dbt_cli_compile
+.. autoclass:: NodeResult
+    :members:
 
-.. autofunction:: dbt_cli_run
+.. autoclass:: NodeTiming
+    :members:
 
-.. autofunction:: dbt_cli_run_operation
-
-.. autofunction:: dbt_cli_snapshot
-
-.. autofunction:: dbt_cli_snapshot_freshness
-
-.. autofunction:: dbt_cli_test
 
 Errors
 ~~~~~~
