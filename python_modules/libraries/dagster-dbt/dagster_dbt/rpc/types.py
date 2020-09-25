@@ -88,13 +88,15 @@ class NodeResult(object):
 
     @classmethod
     def from_result(cls, result):
-        """Constructs an instance of `NodeResult` from a dictionary `result`.
+        """Constructs an instance of :class:`NodeResult <dagster_dbt.NodeResult>` from a dictionary
+        ``result``.
 
         Args:
             result (Dict[str]): The result of a model that was run.
 
         Returns:
-            NodeResult: Returns the constructed `NodeResult` instance.
+            NodeResult: Returns the constructed :class:`NodeResult <dagster_dbt.NodeResult>`
+            instance.
         """
         return cls(
             node=result.get("node"),
@@ -193,8 +195,9 @@ class DbtRpcPollResult(object):
 
     @classmethod
     def from_results(cls, results):
-        """Constructs an instance of `DbtRpcPollResult` from a list of dictionaries `results`. Each
-        dictionary is converted into a `NodeResult`, and stored in the `results` property.
+        """Constructs an instance of :class:`DbtRpcPollResult <dagster_dbt.DbtRpcPollResult>` from a
+        list of dictionaries `results`. Each dictionary is converted into a :class:`NodeResult
+        <dagster_dbt.NodeResult>`, and stored in the `results` property.
 
         Args:
             results (Dict): The results of each model that was run via a dbt RPC command.
@@ -224,9 +227,9 @@ class DbtRpcPollResult(object):
 
     @property
     def results(self):
-        """List[NodeResult]: Get or set the list of `NodeResults`, which contain metadata about the
-        execution results of each model that was run.
-        """
+        """List[NodeResult]: Get or set the list of :class:`NodeResult <dagster_dbt.NodeResult>`s,
+        which contain metadata about the execution results of each model that was run.
+       """
         return self._results
 
     def __len__(self):
