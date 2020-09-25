@@ -27,5 +27,5 @@ def test_heartbeat():
         assert server.server_process.poll() is None
 
         # without the heartbeat, the server dies
-        time.sleep(2)
+        time.sleep(6)
         assert server.server_process.poll() is not None
