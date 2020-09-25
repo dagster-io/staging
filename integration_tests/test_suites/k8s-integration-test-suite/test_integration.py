@@ -17,34 +17,9 @@ from dagster.utils import load_yaml_from_path
 
 
 @pytest.mark.integration
-def test_k8s_run_launcher_default(dagster_instance, helm_namespace):
-    run_config = load_yaml_from_path(os.path.join(test_project_environments_path(), 'env.yaml'))
-    pipeline_name = 'demo_pipeline'
-    tags = {'key': 'value'}
-    run = create_run_for_test(
-        dagster_instance,
-        pipeline_name=pipeline_name,
-        run_config=run_config,
-        tags=tags,
-        mode='default',
-    )
-
-    dagster_instance.launch_run(
-        run.run_id,
-        ReOriginatedExternalPipelineForTest(get_test_project_external_pipeline(pipeline_name)),
-    )
-
-    result = wait_for_job_and_get_raw_logs(
-        job_name='dagster-run-%s' % run.run_id, namespace=helm_namespace
-    )
-
-    assert 'PIPELINE_SUCCESS' in result, 'no match, result: {}'.format(result)
-
-
-@pytest.mark.integration
 def test_failing_k8s_run_launcher(dagster_instance, helm_namespace):
-    run_config = {'blah blah this is wrong': {}}
-    pipeline_name = 'demo_pipeline'
+    run_config = {"blah blah this is wrong": {}}
+    pipeline_name = "demo_pipeline"
     run = create_run_for_test(dagster_instance, pipeline_name=pipeline_name, run_config=run_config)
 
     dagster_instance.launch_run(
@@ -52,10 +27,10 @@ def test_failing_k8s_run_launcher(dagster_instance, helm_namespace):
         ReOriginatedExternalPipelineForTest(get_test_project_external_pipeline(pipeline_name)),
     )
     result = wait_for_job_and_get_raw_logs(
-        job_name='dagster-run-%s' % run.run_id, namespace=helm_namespace
+        job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace
     )
 
-    assert 'PIPELINE_SUCCESS' not in result, 'no match, result: {}'.format(result)
+    assert "PIPELINE_SUCCESS" not in result, "no match, result: {}".format(result)
 
     event_records = dagster_instance.all_logs(run.run_id)
 
@@ -67,11 +42,11 @@ def test_failing_k8s_run_launcher(dagster_instance, helm_namespace):
 
 @pytest.mark.integration
 def test_k8s_run_launcher_terminate(dagster_instance, helm_namespace):
-    pipeline_name = 'slow_pipeline'
+    pipeline_name = "slow_pipeline"
 
-    tags = {'key': 'value'}
+    tags = {"key": "value"}
     run = create_run_for_test(
-        dagster_instance, pipeline_name=pipeline_name, run_config=None, tags=tags, mode='default',
+        dagster_instance, pipeline_name=pipeline_name, run_config=None, tags=tags, mode="default",
     )
 
     dagster_instance.launch_run(
@@ -79,7 +54,7 @@ def test_k8s_run_launcher_terminate(dagster_instance, helm_namespace):
         ReOriginatedExternalPipelineForTest(get_test_project_external_pipeline(pipeline_name)),
     )
 
-    wait_for_job(job_name='dagster-run-%s' % run.run_id, namespace=helm_namespace)
+    wait_for_job(job_name="dagster-run-%s" % run.run_id, namespace=helm_namespace)
 
     timeout = datetime.timedelta(0, 30)
     start_time = datetime.datetime.now()
