@@ -11,8 +11,10 @@ class Table(Asset):
     It knows the set of columns that its materializations are expected to contain.
     """
 
-    def __init__(self, storage_key, path, computation, columns):
-        super(Table, self).__init__(storage_key=storage_key, path=path, computation=computation)
+    def __init__(self, storage_key, path, computation, columns, partitions):
+        super(Table, self).__init__(
+            storage_key=storage_key, path=path, computation=computation, partitions=partitions
+        )
         self._columns = check.opt_list_param(columns, "columns", Column)
 
     @property
@@ -21,7 +23,9 @@ class Table(Asset):
 
 
 def source_table(path, columns, storage_key="default_storage"):
-    return Table(storage_key=storage_key, path=path, columns=columns, computation=None)
+    return Table(
+        storage_key=storage_key, path=path, columns=columns, computation=None, partitions=None
+    )
 
 
 class Column(namedtuple("_Column", "name data_type")):
