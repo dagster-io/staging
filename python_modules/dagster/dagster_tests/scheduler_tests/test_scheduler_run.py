@@ -153,7 +153,7 @@ def grpc_repo_location():
     loadable_target_origin = LoadableTargetOrigin(
         executable_path=sys.executable, python_file=__file__, attribute="the_repo"
     )
-    server_process = GrpcServerProcess(loadable_target_origin=loadable_target_origin)
+    server_process = GrpcServerProcess(loadable_target_origin=loadable_target_origin, max_workers=4)
     try:
         with server_process.create_ephemeral_client() as api_client:
             yield RepositoryLocation.from_handle(
