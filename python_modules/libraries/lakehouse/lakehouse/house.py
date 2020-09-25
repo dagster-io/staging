@@ -244,14 +244,19 @@ class Lakehouse:
             + [dep.asset.storage_key for dep in deps.values()]
         )
 
+        if computed_asset.partitions:
+            config_schema = {"partitions": [str]}
+        else:
+            config_schema = None
+
         return SolidDefinition(
-            name="__".join(computed_asset.path),
+            name=computed_asset.solid_name,
             input_defs=input_defs,
             compute_fn=self._create_asset_solid_compute_wrapper(
                 computed_asset, input_defs, output_def
             ),
             output_defs=[output_def],
-            config_schema=None,
+            config_schema=config_schema,
             required_resource_keys=required_resource_keys,
             positional_inputs=None,
             version=computed_asset.computation.version,
@@ -272,6 +277,10 @@ class Lakehouse:
                 kwargs[arg_name] = input_storage.load(
                     dep.in_memory_type, dep.asset.path, context.resources
                 )
+
+            if asset.partitions:
+                kwargs["partitions"] = context.solid_config["partitions"]
+
             result = asset.computation.compute_fn(**kwargs)
 
             output_storage = getattr(context.resources, asset.storage_key)
