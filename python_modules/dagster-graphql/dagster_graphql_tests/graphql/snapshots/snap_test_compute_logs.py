@@ -8,10 +8,10 @@ snapshots = Snapshot()
 
 snapshots['TestComputeLogs.test_get_compute_logs_over_graphql[sqlite_with_default_run_launcher_out_of_process_env] 1'] = {
     'stdout': {
-        'data': '''2020-09-25 13:51:31 - dagster - DEBUG - spew_pipeline - 9fc8f598-5e5a-44f4-b636-9dedf57952f8 - 18577 - spew.compute - STEP_START - Started execution of step "spew.compute".
+        'data': '''2020-09-25 14:49:22 - dagster - DEBUG - spew_pipeline - 7ebb0480-9e6d-4554-b4c1-e9e1da2fb649 - 25159 - spew.compute - STEP_START - Started execution of step "spew.compute".
 HELLO WORLD
-2020-09-25 13:51:31 - dagster - DEBUG - spew_pipeline - 9fc8f598-5e5a-44f4-b636-9dedf57952f8 - 18577 - spew.compute - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
-2020-09-25 13:51:31 - dagster - DEBUG - spew_pipeline - 9fc8f598-5e5a-44f4-b636-9dedf57952f8 - 18577 - spew.compute - STEP_SUCCESS - Finished execution of step "spew.compute" in 28ms.
+2020-09-25 14:49:22 - dagster - DEBUG - spew_pipeline - 7ebb0480-9e6d-4554-b4c1-e9e1da2fb649 - 25159 - spew.compute - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
+2020-09-25 14:49:22 - dagster - DEBUG - spew_pipeline - 7ebb0480-9e6d-4554-b4c1-e9e1da2fb649 - 25159 - spew.compute - STEP_SUCCESS - Finished execution of step "spew.compute" in 26ms.
 '''
     }
 }
@@ -19,10 +19,10 @@ HELLO WORLD
 snapshots['TestComputeLogs.test_compute_logs_subscription_stdout_graphql[sqlite_with_default_run_launcher_out_of_process_env] 1'] = [
     {
         'computeLogs': {
-            'data': '''2020-09-25 13:51:38 - dagster - DEBUG - spew_pipeline - 77688ed3-f540-4430-b3a3-049868605d21 - 18593 - spew.compute - STEP_START - Started execution of step "spew.compute".
+            'data': '''2020-09-25 14:49:29 - dagster - DEBUG - spew_pipeline - 4c5b5386-defa-4a19-9edc-e692bcccb578 - 25176 - spew.compute - STEP_START - Started execution of step "spew.compute".
 HELLO WORLD
-2020-09-25 13:51:38 - dagster - DEBUG - spew_pipeline - 77688ed3-f540-4430-b3a3-049868605d21 - 18593 - spew.compute - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
-2020-09-25 13:51:38 - dagster - DEBUG - spew_pipeline - 77688ed3-f540-4430-b3a3-049868605d21 - 18593 - spew.compute - STEP_SUCCESS - Finished execution of step "spew.compute" in 26ms.
+2020-09-25 14:49:29 - dagster - DEBUG - spew_pipeline - 4c5b5386-defa-4a19-9edc-e692bcccb578 - 25176 - spew.compute - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
+2020-09-25 14:49:29 - dagster - DEBUG - spew_pipeline - 4c5b5386-defa-4a19-9edc-e692bcccb578 - 25176 - spew.compute - STEP_SUCCESS - Finished execution of step "spew.compute" in 25ms.
 '''
         }
     }
