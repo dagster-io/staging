@@ -27,7 +27,7 @@ COMPUTE_LOGS_SUBSCRIPTION = """
 
 
 class TestComputeLogs(ExecutingGraphQLContextTestMatrix):
-    def test_get_compute_logs_over_graphql(self, graphql_context, snapshot):
+    def test_get_compute_logs_over_graphql(self, graphql_context):
         selector = infer_pipeline_selector(graphql_context, "spew_pipeline")
         payload = sync_execute_get_run_log_data(
             context=graphql_context,
@@ -41,9 +41,10 @@ class TestComputeLogs(ExecutingGraphQLContextTestMatrix):
             variables={"runId": run_id, "stepKey": "spew.compute"},
         )
         compute_logs = result.data["pipelineRunOrError"]["computeLogs"]
-        snapshot.assert_match(compute_logs)
 
-    def test_compute_logs_subscription_stdout_graphql(self, graphql_context, snapshot):
+        assert "HELLO WORLD" in compute_logs["stdout"]["data"]
+
+    def test_compute_logs_subscription_stdout_graphql(self, graphql_context):
         selector = infer_pipeline_selector(graphql_context, "spew_pipeline")
         payload = sync_execute_get_run_log_data(
             context=graphql_context,
@@ -66,9 +67,8 @@ class TestComputeLogs(ExecutingGraphQLContextTestMatrix):
         assert len(results) == 1
         result = results[0]
         assert "HELLO WORLD\n" in result["computeLogs"]["data"]
-        snapshot.assert_match(results)
 
-    def test_compute_logs_subscription_stderr_graphql(self, graphql_context, snapshot):
+    def test_compute_logs_subscription_stderr_graphql(self, graphql_context):
         selector = infer_pipeline_selector(graphql_context, "spew_pipeline")
         payload = sync_execute_get_run_log_data(
             context=graphql_context,
@@ -91,4 +91,3 @@ class TestComputeLogs(ExecutingGraphQLContextTestMatrix):
         assert len(results) == 1
         result = results[0]
         assert result["computeLogs"]["data"] == "HELLO WORLD ERROR\n"
-        snapshot.assert_match(results)

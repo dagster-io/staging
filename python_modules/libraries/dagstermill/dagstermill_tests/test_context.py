@@ -49,6 +49,7 @@ def test_solid():
     assert isinstance(BARE_OUT_OF_PIPELINE_CONTEXT.solid, Solid)
 
 
-def test_log(capsys):
+def test_log(capfd):
     BARE_OUT_OF_PIPELINE_CONTEXT.log.info("Ho ho!")
-    assert "Ho ho!" in capsys.readouterr().err
+
+    assert "Ho ho!" in capfd.readouterr().out

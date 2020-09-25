@@ -3,6 +3,7 @@ from future.standard_library import install_aliases  # isort:skip
 install_aliases()  # isort:skip
 
 import signal
+import sys
 
 import click
 import requests
@@ -15,7 +16,7 @@ from dagster.cli.workspace import workspace_target_argument
 from dagster.cli.workspace.cli_target import get_workspace_from_kwargs
 from dagster.cli.workspace.workspace import Workspace
 from dagster.core.instance import DagsterInstance
-from dagster.seven import DEVNULL, urljoin, urlparse
+from dagster.seven import urljoin, urlparse
 from dagster.utils import DEFAULT_REPOSITORY_YAML_FILENAME, redirect_stdout
 from dagster.utils.log import get_stack_trace_array
 
@@ -90,9 +91,9 @@ def execute_query_from_cli(workspace, query, instance, variables=None, output=No
 
     query = query.strip("'\" \n\t")
 
-    # Since the result is returned over stdout, suppress any additional output
-    # during query execution
-    with redirect_stdout(DEVNULL):
+    # Since the expectation is that stdout will only include the result of the query,
+    # redirect any log output to stderr
+    with redirect_stdout(sys.stderr):
         result_dict = execute_query(
             workspace,
             query,
