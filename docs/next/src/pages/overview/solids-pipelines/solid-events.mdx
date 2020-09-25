@@ -22,7 +22,7 @@ To return an output from a solid, simply `yield` an <PyObject module="dagster" o
 
 ```python literalinclude caption=solids.py
 file:/docs_snippets/docs_snippets/legacy/how_tos/solids.py
-lines:52-54
+lines:66-68
 ```
 
 Many solids yield only one output, like the example above. Returning a
@@ -32,7 +32,7 @@ with the default output name "result". For example:
 
 ```python literalinclude caption=solids.py
 file:/docs_snippets/docs_snippets/legacy/how_tos/solids.py
-lines:57-65
+lines:71-79
 ```
 
 Note that you cannot `yield` a single value without wrapping it in <PyObject module="dagster" object="Output" />.
@@ -42,7 +42,7 @@ its output. For example:
 
 ```python literalinclude caption=solids.py
 file:/docs_snippets/docs_snippets/legacy/how_tos/solids.py
-lines:68-71
+lines:82-85
 ```
 
 If you want to have multiple outputs for a solid, you cannot return
@@ -51,5 +51,5 @@ each of which is named and defined on `output_defs` to prevent ambiguity:
 
 ```python literalinclude caption=solids.py
 file:/docs_snippets/docs_snippets/legacy/how_tos/solids.py
-lines:74-77
+lines:88-91
 ```

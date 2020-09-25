@@ -12,7 +12,7 @@ def _return_one(context):
     return 1
 
 
-solid = SolidDefinition(
+solid_def = SolidDefinition(
     name="my_solid", input_defs=[], output_defs=[OutputDefinition(Int)], compute_fn=_return_one,
 )
 
@@ -22,14 +22,25 @@ def my_logging_solid(context):
     context.log.info("Hello world")
 
 
-@solid(input_defs=[InputDefinition("a", str), InputDefinition("b", int)])
+@solid(
+    input_defs=[
+        InputDefinition(name="a", dagster_type=str),
+        InputDefinition(name="b", dagster_type=int),
+    ]
+)
 def my_input_example_solid(context, a, b):
     pass
 
 
 @solid(
-    input_defs=[InputDefinition("a", int), InputDefinition("b", int)],
-    output_defs=[OutputDefinition("sum", int), OutputDefinition("difference", int)],
+    input_defs=[
+        InputDefinition(name="a", dagster_type=int),
+        InputDefinition(name="b", dagster_type=int),
+    ],
+    output_defs=[
+        OutputDefinition(name="sum", dagster_type=int),
+        OutputDefinition(name="difference", dagster_type=int),
+    ],
 )
 def my_input_output_example_solid(context, a, b):
     yield Output(a + b, output_name="sum")
@@ -37,8 +48,11 @@ def my_input_output_example_solid(context, a, b):
 
 
 @solid(
-    input_defs=[InputDefinition("a", int), InputDefinition("b", int)],
-    output_defs=[OutputDefinition("result", int)],
+    input_defs=[
+        InputDefinition(name="a", dagster_type=int),
+        InputDefinition(name="b", dagster_type=int),
+    ],
+    output_defs=[OutputDefinition(name="result", dagster_type=int)],
 )
 def my_explicit_def_solid(context, a, b):
     yield Output(a + b, output_name="result")
