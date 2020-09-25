@@ -237,7 +237,7 @@ class DagsterApiServer(DagsterApiServicer):
     def _check_for_orphaned_runs(self):
         with self._execution_lock:
             runs_to_clear = []
-            for run_id, (process, instance_ref) in self._executions.items():
+            for run_id, (process, instance) in self._executions.items():
                 if process.is_alive():
                     if not self._termination_events[run_id].is_set() or (
                         time.time() - self._termination_times[run_id]
@@ -249,43 +249,38 @@ class DagsterApiServer(DagsterApiServicer):
                     # Inform the system and mark the run as failed.
                     kill_process(process)
 
-                    with DagsterInstance.from_ref(instance_ref) as instance:
-                        runs_to_clear.append(run_id)
-                        run = instance.get_run_by_id(run_id)
-                        if not run:
-                            continue
+                    runs_to_clear.append(run_id)
+                    run = instance.get_run_by_id(run_id)
+                    if not run:
+                        continue
 
-                        message = (
-                            "Pipeline execution process for {run_id} killed "
-                            + "after failing to terminate"
-                        ).format(run_id=run.run_id)
-                        instance.report_engine_event(message, run, cls=self.__class__)
+                    message = (
+                        "Pipeline execution process for {run_id} killed "
+                        + "after failing to terminate"
+                    ).format(run_id=run.run_id)
+                    instance.report_engine_event(message, run, cls=self.__class__)
 
-                        if run.is_finished:
-                            continue
+                    if run.is_finished:
+                        continue
 
-                        instance.report_run_failed(run)
+                    instance.report_run_failed(run)
 
                 else:
-                    with DagsterInstance.from_ref(instance_ref) as instance:
-                        runs_to_clear.append(run_id)
+                    runs_to_clear.append(run_id)
 
-                        run = instance.get_run_by_id(run_id)
-                        if not run or run.is_finished:
-                            continue
+                    run = instance.get_run_by_id(run_id)
+                    if not run or run.is_finished:
+                        continue
 
-                        # the process died in an unexpected manner. inform the system
-                        message = "Pipeline execution process for {run_id} unexpectedly exited.".format(
-                            run_id=run.run_id
-                        )
-                        instance.report_engine_event(message, run, cls=self.__class__)
-                        instance.report_run_failed(run)
+                    # the process died in an unexpected manner. inform the system
+                    message = "Pipeline execution process for {run_id} unexpectedly exited.".format(
+                        run_id=run.run_id
+                    )
+                    instance.report_engine_event(message, run, cls=self.__class__)
+                    instance.report_run_failed(run)
 
             for run_id in runs_to_clear:
-                del self._executions[run_id]
-                del self._termination_events[run_id]
-                if run_id in self._termination_times:
-                    del self._termination_times[run_id]
+                self._cleanup_run(run_id)
 
             # Once there are no more running executions after we have received a request to
             # shut down, terminate the server
@@ -648,7 +643,7 @@ class DagsterApiServer(DagsterApiServicer):
             execution_process.start()
             self._executions[run_id] = (
                 execution_process,
-                execute_run_args.instance_ref,
+                DagsterInstance.from_ref(execute_run_args.instance_ref),
             )
             self._termination_events[run_id] = termination_event
 
@@ -690,10 +685,18 @@ class DagsterApiServer(DagsterApiServicer):
                     )
 
         with self._execution_lock:
-            if run_id in self._executions:
-                del self._executions[run_id]
-            if run_id in self._termination_events:
-                del self._termination_events[run_id]
+            self._cleanup_run(run_id)
+
+    def _cleanup_run(self, run_id):
+        # Assumes self._execution_lock is held
+        if run_id in self._executions:
+            _process, instance = self._executions[run_id]
+            instance.dispose()
+            del self._executions[run_id]
+        if run_id in self._termination_events:
+            del self._termination_events[run_id]
+        if run_id in self._termination_times:
+            del self._termination_times[run_id]
 
     def ShutdownServer(self, request, _context):
         try:
@@ -809,7 +812,7 @@ class DagsterApiServer(DagsterApiServicer):
             execution_process.start()
             self._executions[run_id] = (
                 execution_process,
-                execute_run_args.instance_ref,
+                DagsterInstance.from_ref(execute_run_args.instance_ref),
             )
             self._termination_events[run_id] = termination_event
 
