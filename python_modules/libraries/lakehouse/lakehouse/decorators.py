@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from dagster import check
 from dagster.seven import funcsigs
 
@@ -8,7 +6,9 @@ from .computation import AssetDependency, Computation
 from .table import Table
 
 
-def computed_asset(storage_key="default_storage", path=None, input_assets=None, version=None):
+def computed_asset(
+    storage_key="default_storage", path=None, input_assets=None, version=None, partitions=None
+):
     """Create an Asset with its computation built from the decorated function.
 
     The type annotations on the arguments and return value of the decorated function are use to
@@ -59,7 +59,8 @@ def computed_asset(storage_key="default_storage", path=None, input_assets=None, 
     def _computed_asset(fn):
         _path = path or (fn.__name__,)
         _input_assets = input_assets or []
-        kwarg_deps = _deps_by_arg_name(_input_assets, fn)
+        num_base_args = 1 if partitions else 0
+        kwarg_deps = _deps_by_arg_name(_input_assets, fn, num_base_args)
 
         return Asset(
             storage_key=storage_key,
@@ -70,13 +71,19 @@ def computed_asset(storage_key="default_storage", path=None, input_assets=None, 
                 output_in_memory_type=_infer_output_type(fn),
                 version=version,
             ),
+            partitions=partitions,
         )
 
     return _computed_asset
 
 
 def computed_table(
-    storage_key="default_storage", path=None, input_assets=None, columns=None, version=None
+    storage_key="default_storage",
+    path=None,
+    input_assets=None,
+    columns=None,
+    version=None,
+    partitions=None,
 ):
     """Create a Table with its computation built from the decorated function.
 
@@ -102,7 +109,8 @@ def computed_table(
     def _computed_table(fn):
         _path = path or (fn.__name__,)
         _input_assets = input_assets or []
-        kwarg_deps = _deps_by_arg_name(_input_assets, fn)
+        num_base_args = 1 if partitions else 0
+        kwarg_deps = _deps_by_arg_name(_input_assets, fn, num_base_args)
 
         return Table(
             storage_key=storage_key,
@@ -114,12 +122,13 @@ def computed_table(
                 version=version,
             ),
             columns=columns,
+            partitions=partitions,
         )
 
     return _computed_table
 
 
-def _deps_by_arg_name(input_assets, fn):
+def _deps_by_arg_name(input_assets, fn, num_base_args):
     """
     Args:
         input_assets (Optional[Union[List[Asset], Dict[str, Asset]]])
@@ -128,30 +137,27 @@ def _deps_by_arg_name(input_assets, fn):
     Returns (Dict[str, AssetDependency])
     """
     kwarg_types = _infer_kwarg_types(fn)
+    input_kwarg_types = kwarg_types[num_base_args:]
     if isinstance(input_assets, list):
         check.invariant(
-            len(kwarg_types) == len(input_assets),
-            'For {fn_name}, input_assets length "{input_assets_len}"" must match number of '
-            'keyword args "{num_kwargs}"'.format(
-                fn_name=fn.__name__,
-                input_assets_len=len(input_assets),
-                num_kwargs=len(kwarg_types),
-            ),
+            len(kwarg_types) == len(input_assets) + num_base_args,
+            f'For {fn.__name__}, input_assets length "{len(input_assets)}"" must match number of '
+            f'keyword args "{len(kwarg_types)}" plus number of base args "{num_base_args}".',
         )
         return {
-            kwarg: AssetDependency(input_asset, kwarg_types[kwarg])
-            for kwarg, input_asset in zip(kwarg_types.keys(), input_assets)
+            kwarg: AssetDependency(input_asset, annotated_type)
+            for (kwarg, annotated_type), input_asset in zip(input_kwarg_types, input_assets)
         }
     elif isinstance(input_assets, dict):
+        input_kwarg_names = [kwarg for kwarg, _ in input_kwarg_types]
+        input_asset_keys = list(input_assets.keys())
         check.invariant(
-            kwarg_types.keys() == input_assets.keys(),
-            "input_assets keys {kwarg_deps_keys} must match keyword args {kwargs}".format(
-                kwarg_deps_keys=input_assets.keys(), kwargs=kwarg_types.keys(),
-            ),
+            input_kwarg_names == input_asset_keys,
+            f"input_assets keys {input_asset_keys} must match keyword args {input_kwarg_names}",
         )
         return {
-            kwarg: AssetDependency(input_assets[kwarg], kwarg_types[kwarg])
-            for kwarg in kwarg_types.keys()
+            kwarg: AssetDependency(input_assets[kwarg], annotated_type)
+            for kwarg, annotated_type in input_kwarg_types
         }
     else:
         check.failed("input_assets must be a list or a dict")
@@ -160,7 +166,7 @@ def _deps_by_arg_name(input_assets, fn):
 def _infer_kwarg_types(fn):
     signature = funcsigs.signature(fn)
     params = signature.parameters.values()
-    return OrderedDict((param.name, param.annotation) for param in params)
+    return [(param.name, param.annotation) for param in params]
 
 
 def _infer_output_type(fn):

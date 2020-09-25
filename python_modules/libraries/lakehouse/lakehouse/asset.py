@@ -9,11 +9,12 @@ from .computation import Computation
 
 
 class Asset(six.with_metaclass(ABCMeta)):
-    def __init__(self, storage_key, path, computation):
+    def __init__(self, storage_key, path, computation, partitions):
         self._storage_key = check.str_param(storage_key, "storage_key")
         self._path = canonicalize_path(path)
         self._computation = check.opt_inst_param(computation, "computation", Computation)
         self._dagster_type = DagsterType(type_check_fn=lambda a, b: True, name=".".join(self.path))
+        self._partitions = check.opt_list_param(partitions, "partitions", of_type=str)
 
     @property
     def storage_key(self):
@@ -32,15 +33,23 @@ class Asset(six.with_metaclass(ABCMeta)):
         return self._computation
 
     @property
+    def partitions(self):
+        return self._partitions
+
+    @property
     def dagster_type(self):
         return self._dagster_type
+
+    @property
+    def solid_name(self):
+        return "__".join(self._path)
 
 
 def source_asset(path, storage_key="default_storage"):
     """A source asset is an asset that's not derived inside the lakehouse.  Other assets
     may depend on it, but it has no dependencies that the lakehouse is aware of.
     """
-    return Asset(storage_key=storage_key, path=path, computation=None)
+    return Asset(storage_key=storage_key, path=path, computation=None, partitions=None)
 
 
 def canonicalize_path(path: Union[Tuple[str, ...], List[str], str]) -> Tuple[str, ...]:
