@@ -459,6 +459,14 @@ def integration_tests():
         for suite in os.listdir(integration_suites_root)
     ]
 
+    # Temporarily only include full-test-suite
+    integration_suites = [
+        integration_suite
+        for integration_suite in integration_suites
+        if integration_suite
+        == os.path.join("integration_tests", "test_suites", "full-k8s-integration-test-suite")
+    ]
+
     for integration_suite in integration_suites:
         tox_env_suffixes = None
         if integration_suite == os.path.join(
