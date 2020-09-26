@@ -196,9 +196,14 @@ class DagsterKubernetesClient:
                 break
 
             if instance and run_id:
-                pipeline_run_status = instance.get_run_by_id(run_id).status
-                if pipeline_run_status != PipelineRunStatus.STARTED:
-                    raise DagsterK8sPipelineStatusException()
+                pipeline_run = instance.get_run_by_id(run_id)
+                if pipeline_run.status != PipelineRunStatus.STARTED:
+                    raise DagsterK8sPipelineStatusException(
+                        "Pipeline run {} ({}) in state {}, expected "
+                        "PipelineRunStatus.STARTED".format(
+                            pipeline_run.pipeline_name, pipeline_run.run_id, pipeline_run.status
+                        )
+                    )
 
             self.sleeper(wait_time_between_attempts)
 

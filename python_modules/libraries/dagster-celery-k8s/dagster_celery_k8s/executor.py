@@ -309,7 +309,13 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             instance.report_engine_event(
                 "Not scheduling step because pipeline run status is not STARTED",
                 pipeline_run,
-                EngineEventData([EventMetadataEntry.text(step_key, "Step key"),]),
+                EngineEventData(
+                    [
+                        EventMetadataEntry.text(step_key, "Step key"),
+                        EventMetadataEntry.text(pipeline_run.run_id, "Run ID"),
+                        EventMetadataEntry.text(str(pipeline_run.status), "Pipeline run status"),
+                    ]
+                ),
                 CeleryK8sJobExecutor,
                 step_key=step_key,
             )
