@@ -34,18 +34,18 @@ class RunLauncher(six.with_metaclass(ABCMeta)):
         """
 
     @abstractmethod
-    def can_terminate(self, run_id):
+    def can_terminate(self, run):
         """
-        Can this run_id be terminated by this run launcher.
+        Can this run be terminated by this run launcher.
         """
 
     @abstractmethod
-    def terminate(self, run_id):
+    def terminate(self, run):
         """
-        Terminates a process.
+        Terminates a pipeline run.
 
-        Returns False is the process was already terminated. Returns true if
-        the process was alive and was successfully terminated
+        Returns False if the pipeline run could not be successfully terminated. Returns true if
+        the pipeline run was alive and successfully terminated
         """
 
     def dispose(self):

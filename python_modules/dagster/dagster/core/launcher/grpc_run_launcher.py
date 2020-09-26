@@ -131,30 +131,32 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
             port=grpc_info.get("port"), socket=grpc_info.get("socket"), host=grpc_info.get("host")
         )
 
-    def can_terminate(self, run_id):
-        check.str_param(run_id, "run_id")
+    def can_terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        client = self._get_grpc_client_for_termination(run_id)
+        client = self._get_grpc_client_for_termination(run_id=run.run_id)
         if not client:
             return False
 
         try:
-            res = client.can_cancel_execution(CanCancelExecutionRequest(run_id=run_id), timeout=5)
+            res = client.can_cancel_execution(
+                CanCancelExecutionRequest(run_id=run.run_run_id), timeout=5
+            )
         except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
             # Server that created the run may no longer exist
             return False
 
         return res.can_cancel
 
-    def terminate(self, run_id):
-        check.str_param(run_id, "run_id")
+    def terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        client = self._get_grpc_client_for_termination(run_id)
+        client = self._get_grpc_client_for_termination(run_id=run.run_id)
 
         if not client:
             return False
 
-        res = client.cancel_execution(CancelExecutionRequest(run_id=run_id))
+        res = client.cancel_execution(CancelExecutionRequest(run_id=run.run_id))
 
         return res.success
 

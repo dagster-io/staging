@@ -1,0 +1,3 @@
+[32m2020-09-26 00:09:47[0m - dagster - [34mDEBUG[0m - slow_pipeline - b8884621-de8b-4767-a6a0-f2f01a2e16a5 - 10509 - slow_solid.compute - STEP_START - Started execution of step "slow_solid.compute".
+[32m2020-09-26 00:11:27[0m - dagster - [34mDEBUG[0m - slow_pipeline - b8884621-de8b-4767-a6a0-f2f01a2e16a5 - 10509 - slow_solid.compute - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
+[32m2020-09-26 00:11:27[0m - dagster - [34mDEBUG[0m - slow_pipeline - b8884621-de8b-4767-a6a0-f2f01a2e16a5 - 10509 - slow_solid.compute - STEP_SUCCESS - Finished execution of step "slow_solid.compute" in 1m40s.

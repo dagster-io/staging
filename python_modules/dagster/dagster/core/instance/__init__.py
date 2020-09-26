@@ -1042,6 +1042,24 @@ class DagsterInstance:
         run = self.get_run_by_id(run_id)
         return self._run_launcher.launch_run(self, run, external_pipeline=external_pipeline)
 
+    def can_terminate(self, run):
+        return self._run_launcher.can_terminate(run)
+
+    def terminate(self, run):
+        termination_success = self._run_launcher.terminate(run)
+
+        if termination_success:
+            self.report_engine_event(
+                message='Received termination request. Pipeline was successfully terminated.',
+                pipeline_run=run,
+            )
+        else:
+            self.report_engine_event(
+                message='Received termination request. Pipeline was not successfully terminated.',
+                pipeline_run=run,
+            )
+        return termination_success
+
     # Scheduler
 
     def reconcile_scheduler_state(self, external_repository):

@@ -11,7 +11,7 @@ from dagster.utils.hosted_user_process import recon_pipeline_from_origin
 
 class SyncInMemoryRunLauncher(RunLauncher, ConfigurableClass):
     """This run launcher launches runs synchronously, in memory, and is intended only for test.
-    
+
     Use the :py:class:`dagster.DefaultRunLauncher`.
     """
 
@@ -46,8 +46,8 @@ class SyncInMemoryRunLauncher(RunLauncher, ConfigurableClass):
         execute_run(recon_pipeline, run, self._instance)
         return run
 
-    def can_terminate(self, run_id):
+    def can_terminate(self, run):
         return False
 
-    def terminate(self, run_id):
+    def terminate(self, run):
         check.not_implemented("Termination not supported.")

@@ -1,0 +1,22 @@
+[32m2020-09-26 00:14:15[0m - dagster - [34mDEBUG[0m - slow_pipeline - df314dc5-50da-432d-8a3a-34eff4fb5bf5 - 10946 - slow_solid.compute - STEP_START - Started execution of step "slow_solid.compute".
+[32m2020-09-26 00:14:22[0m - dagster - [34mERROR[0m - [31mslow_pipeline - df314dc5-50da-432d-8a3a-34eff4fb5bf5 - 10946 - slow_solid.compute - STEP_FAILURE - Execution of step "slow_solid.compute" failed.
+
+KeyboardInterrupt
+
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/execution/plan/execute_plan.py", line 213, in _dagster_event_sequence_for_step
+    for step_event in check.generator(step_events):
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 290, in core_dagster_event_sequence_for_step
+    _step_output_error_checked_user_event_sequence(step_context, user_event_sequence)
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 55, in _step_output_error_checked_user_event_sequence
+    for user_event in user_event_sequence:
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/execution/plan/execute_step.py", line 424, in _user_event_sequence_for_step_compute_fn
+    for event in gen:
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 100, in _execute_core_compute
+    for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/execution/plan/compute.py", line 71, in _yield_compute_results
+    for event in user_event_sequence:
+  File "/home/ubuntu/dagster/python_modules/dagster/dagster/core/definitions/decorators/solid.py", line 227, in compute
+    result = fn(context, **kwargs)
+  File "/home/ubuntu/dagster/python_modules/dagster-test/dagster_test/test_project/test_pipelines/repo.py", line 318, in slow_solid
+    time.sleep(100)
+[0m

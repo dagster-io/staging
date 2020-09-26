@@ -198,10 +198,10 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
         process = self._get_process(run_id)
         return _is_alive(process) if process else False
 
-    def can_terminate(self, run_id):
-        check.str_param(run_id, "run_id")
+    def can_terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        process = self._get_process(run_id)
+        process = self._get_process(run_id=run.run_id)
 
         if not process:
             return False
@@ -211,10 +211,10 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
 
         return True
 
-    def terminate(self, run_id):
-        check.str_param(run_id, "run_id")
+    def terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        process = self._get_process(run_id)
+        process = self._get_process(run_id=run.run_id)
 
         if not process:
             return False
