@@ -73,9 +73,9 @@ def terminate_pipeline_execution(graphene_info, run_id):
 
     if (
         graphene_info.context.instance.run_launcher
-        and graphene_info.context.instance.run_launcher.can_terminate(run_id)
+        and graphene_info.context.instance.can_terminate(run)
     ):
-        if not graphene_info.context.instance.run_launcher.terminate(run_id):
+        if not graphene_info.context.instance.terminate(run):
             return can_not_term
 
         return graphene_info.schema.type_named("TerminatePipelineExecutionSuccess")(dauphin_run)

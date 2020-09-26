@@ -203,7 +203,7 @@ class DauphinPipelineRun(dauphin.ObjectType):
         return self.runId
 
     def resolve_canTerminate(self, graphene_info):
-        return graphene_info.context.instance.run_launcher.can_terminate(self.run_id)
+        return graphene_info.context.instance.can_terminate(self._pipeline_run)
 
     def resolve_assets(self, graphene_info):
         return get_assets_for_run_id(graphene_info, self.run_id)

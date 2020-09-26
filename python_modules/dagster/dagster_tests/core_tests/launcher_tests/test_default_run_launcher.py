@@ -245,6 +245,12 @@ def test_terminated_run(get_external_pipeline, in_process):  # pylint: disable=r
             poll_for_event(
                 instance, run_id, event_type="ENGINE_EVENT", message="Process for pipeline exited"
             )
+            poll_for_event(
+                instance,
+                run_id,
+                event_type="ENGINE_EVENT",
+                message="Received termination request. Pipeline was successfully terminated.",
+            )
 
             run_logs = instance.all_logs(run_id)
             event_types = [event.dagster_event.event_type_value for event in run_logs]

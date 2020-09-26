@@ -1,5 +1,6 @@
 from dagster import check
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.serdes import ConfigurableClass
 
 from .base import RunLauncher
@@ -44,15 +45,15 @@ class DefaultRunLauncher(RunLauncher, ConfigurableClass):
         else:
             return self._cli_api_run_launcher.launch_run(instance, run, external_pipeline)
 
-    def can_terminate(self, run_id):
+    def can_terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
         return self._cli_api_run_launcher.can_terminate(
-            run_id
-        ) or self._grpc_run_launcher.can_terminate(run_id)
+            run
+        ) or self._grpc_run_launcher.can_terminate(run)
 
-    def terminate(self, run_id):
-        return self._cli_api_run_launcher.terminate(run_id) or self._grpc_run_launcher.terminate(
-            run_id
-        )
+    def terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
+        return self._cli_api_run_launcher.terminate(run) or self._grpc_run_launcher.terminate(run)
 
     def dispose(self):
         self._cli_api_run_launcher.dispose()

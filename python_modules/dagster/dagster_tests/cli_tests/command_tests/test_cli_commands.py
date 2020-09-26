@@ -176,10 +176,10 @@ class InMemoryRunLauncher(RunLauncher, ConfigurableClass):
     def inst_data(self):
         return self._inst_data
 
-    def can_terminate(self, run_id):
+    def can_terminate(self, run):
         return False
 
-    def terminate(self, run_id):
+    def terminate(self, run):
         check.not_implemented("Termintation not supported")
 
 

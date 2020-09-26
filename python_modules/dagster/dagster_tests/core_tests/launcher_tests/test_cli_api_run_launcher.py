@@ -6,7 +6,12 @@ from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation.repository_location import InProcessRepositoryLocation
 from dagster.core.launcher import CliApiRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRunStatus
-from dagster.core.test_utils import instance_for_test, poll_for_finished_run, poll_for_step_start
+from dagster.core.test_utils import (
+    instance_for_test,
+    poll_for_event,
+    poll_for_finished_run,
+    poll_for_step_start,
+)
 
 
 @solid
@@ -159,6 +164,13 @@ def test_terminated_run():
 
         assert launcher.can_terminate(run_id)
         assert launcher.terminate(run_id)
+
+        poll_for_event(
+            instance,
+            run_id,
+            event_type="ENGINE_EVENT",
+            message="Received termination request. Pipeline was successfully terminated.",
+        )
 
         # Return false is already terminated
         assert not launcher.terminate(run_id)

@@ -295,8 +295,8 @@ class ExplodingRunLauncher(RunLauncher, ConfigurableClass):
     def join(self, timeout=30):
         """Nothing to join on since all executions are synchronous."""
 
-    def can_terminate(self, run_id):
+    def can_terminate(self, run):
         return False
 
-    def terminate(self, run_id):
-        check.not_implemented("Termination not supported")
+    def terminate(self, run):
+        raise NotImplementedError("Termination not supported")

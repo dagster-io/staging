@@ -354,6 +354,13 @@ def test_terminated_run(get_external_pipeline):  # pylint: disable=redefined-out
             assert launcher.can_terminate(run_id)
             assert launcher.terminate(run_id)
 
+            poll_for_event(
+                instance,
+                run_id,
+                event_type="ENGINE_EVENT",
+                message="Received termination request. Pipeline was successfully terminated.",
+            )
+
             # can_terminate returns False once termination has starte
             assert not launcher.can_terminate(run_id)
 

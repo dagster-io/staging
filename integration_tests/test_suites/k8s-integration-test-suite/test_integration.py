@@ -14,6 +14,7 @@ from dagster_test.test_project import (
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import create_run_for_test
 from dagster.utils import load_yaml_from_path
+from dagster import DagsterEventType
 
 
 @pytest.mark.integration
@@ -100,5 +101,18 @@ def test_k8s_run_launcher_terminate(dagster_instance, helm_namespace):
         time.sleep(5)
 
     assert pipeline_run.status == PipelineRunStatus.FAILURE
+
+    termination_engine_event_count = 0
+    event_records = dagster_instance.all_logs(pipeline_run.run_id)
+    for event_record in event_records:
+        if (
+            event_record.dagster_event
+            and event_record.dagster_event.event_type == DagsterEventType.ENGINE_EVENT
+            and event_record.dagster_event.message
+            == 'Received termination request. Pipeline was successfully terminated.'
+        ):
+            termination_engine_event_count += 1
+
+    assert termination_engine_event_count == 1
 
     assert not dagster_instance.run_launcher.terminate(run_id=run.run_id)

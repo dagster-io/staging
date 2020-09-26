@@ -262,35 +262,30 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         return run
 
     # https://github.com/dagster-io/dagster/issues/2741
-    def can_terminate(self, run_id):
-        check.str_param(run_id, "run_id")
+    def can_terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        pipeline_run = self._instance.get_run_by_id(run_id)
-        if not pipeline_run:
-            return False
-
-        if pipeline_run.status != PipelineRunStatus.STARTED:
+        if run.status != PipelineRunStatus.STARTED:
             return False
 
         return True
 
-    def terminate(self, run_id):
-        check.str_param(run_id, "run_id")
+    def terminate(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        if not self.can_terminate(run_id):
+        if not self.can_terminate(run):
             return False
 
-        job_name = get_job_name_from_run_id(run_id)
+        job_name = get_job_name_from_run_id(run_id=run.run_id)
 
-        job_namespace = self.get_namespace_from_run_config(run_id)
+        job_namespace = self.get_namespace_from_run_config(run=run)
 
         return delete_job(job_name=job_name, namespace=job_namespace)
 
-    def get_namespace_from_run_config(self, run_id):
-        check.str_param(run_id, "run_id")
+    def get_namespace_from_run_config(self, run):
+        check.inst_param(run, "run", PipelineRun)
 
-        pipeline_run = self._instance.get_run_by_id(run_id)
-        run_config = pipeline_run.run_config
+        run_config = run.run_config
         executor_config = _get_validated_celery_k8s_executor_config(run_config)
         return executor_config.get("job_namespace")
 
