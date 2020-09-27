@@ -4,7 +4,12 @@ import time
 
 from dagster import Field, Int, Materialization, pipeline, repository, solid
 from dagster.core.origin import PipelineGrpcServerOrigin, RepositoryGrpcServerOrigin
-from dagster.core.test_utils import instance_for_test, poll_for_finished_run, poll_for_step_start
+from dagster.core.test_utils import (
+    instance_for_test,
+    poll_for_event,
+    poll_for_finished_run,
+    poll_for_step_start,
+)
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
 from dagster.grpc.types import CancelExecutionRequest, ExecuteRunArgs
@@ -71,6 +76,20 @@ def test_cancel_run():
                 cancel_execution_request=CancelExecutionRequest(run_id=pipeline_run.run_id)
             )
             assert res.success is True
+
+            poll_for_event(
+                instance,
+                run_id=pipeline_run.run_id,
+                event_type="ENGINE_EVENT",
+                message="Received pipeline termination request",
+            )
+
+            poll_for_event(
+                instance,
+                run_id=pipeline_run.run_id,
+                event_type="ENGINE_EVENT",
+                message="Received pipeline termination request",
+            )
 
             poll_for_finished_run(instance, pipeline_run.run_id)
 
