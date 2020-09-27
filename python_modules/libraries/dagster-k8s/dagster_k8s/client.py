@@ -66,9 +66,9 @@ class DagsterKubernetesClient:
         check.str_param(job_name, "job_name")
         check.str_param(namespace, "namespace")
 
-        pod_names = self.get_pod_names_for_job(job_name, namespace)
-
         try:
+            pod_names = self.get_pod_names_for_job(job_name, namespace)
+
             # Collect all the errors so that we can post-process before raising
             errors = []
             try:
