@@ -213,19 +213,34 @@ class CliApiRunLauncher(RunLauncher, ConfigurableClass):
 
     def terminate(self, run_id):
         check.str_param(run_id, "run_id")
+        run = self._instance.get_run_by_id(run_id)
+
+        self._instance.report_engine_event(
+            message="Received pipeline termination request.", pipeline_run=run,
+        )
 
         process = self._get_process(run_id)
 
         if not process:
+            self._instance.report_engine_event(
+                message="Pipeline was not terminated since process is not found.", pipeline_run=run,
+            )
             return False
 
         if not _is_alive(process):
+            self._instance.report_engine_event(
+                message="Pipeline was not terminated since process is not alive.", pipeline_run=run,
+            )
             return False
 
         # Pipeline execution machinery is set up to gracefully
         # terminate and report to instance on KeyboardInterrupt
         interrupt_ipc_subprocess(process)
         seven.wait_for_process(process, timeout=30)
+
+        self._instance.report_engine_event(
+            message="Pipeline was terminated successfully.", pipeline_run=run,
+        )
         return True
 
     def get_active_run_count(self):
