@@ -462,3 +462,13 @@ class DagsterImportError(DagsterError):
 
 class ExecutableError(DagsterUserCodeExecutionError):
     """Errors raised during the execution of user-provided functions for a defined Executable."""
+
+
+class DagsterInvalidAddressForAsset(DagsterError):
+    """ IO error raised while operating data assets. """
+
+    def __init__(self, address, msg=None):
+        super(DagsterInvalidAddressForAsset, self).__init__(
+            "Address '{address}' is invalid to load or materialize an asset."
+            "{additional_msg}".format(address=address, additional_msg=msg if msg else "",)
+        )
