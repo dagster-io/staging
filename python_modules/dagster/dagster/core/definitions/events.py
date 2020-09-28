@@ -5,7 +5,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check
-from dagster.core.errors import DagsterInvalidAssetKey
+from dagster.core.errors import DagsterInvalidAssetKey, user_code_error_boundary
 from dagster.serdes import Persistable, whitelist_for_persistence
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -16,16 +16,18 @@ def last_file_comp(path):
     return os.path.basename(os.path.normpath(path))
 
 
-ASSET_KEY_REGEX = re.compile("^[a-zA-Z0-9_]+$")  # alphanumeric, _, -, .
+ASSET_KEY_REGEX = re.compile("^[a-zA-Z0-9_.-]+$")  # alphanumeric, _, -, .
 ASSET_KEY_SPLIT_REGEX = re.compile("[^a-zA-Z0-9_]")
 ASSET_KEY_STRUCTURED_DELIMITER = "."
 
 
 def validate_asset_key_string(s):
-    if not s or not ASSET_KEY_REGEX.match(s):
-        raise DagsterInvalidAssetKey()
-
-    return s
+    with user_code_error_boundary(
+        DagsterInvalidAssetKey,
+        lambda: 'Error occurred when validating asset key "{asset_key}"'.format(asset_key=s),
+    ):
+        assert s and ASSET_KEY_REGEX.match(s)
+        return s
 
 
 def parse_asset_key_string(s):
@@ -33,8 +35,13 @@ def parse_asset_key_string(s):
 
 
 def validate_structured_asset_key(l):
-    if len(l) == 0:
-        raise DagsterInvalidAssetKey()
+    with user_code_error_boundary(
+        DagsterInvalidAssetKey,
+        lambda: 'Error occurred when validating structured asset key "{asset_key}"'.format(
+            asset_key=l
+        ),
+    ):
+        assert len(l) != 0
 
     for s in l:
         validate_asset_key_string(s)
