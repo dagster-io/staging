@@ -200,6 +200,10 @@ class MultiprocessExecutor(Executor):
                     subprocess_error_infos=list(errs.values()),
                 )
 
+            if stopping:
+                # Bubble up the interrupt once we've terminated the subprocesses
+                raise KeyboardInterrupt
+
         yield DagsterEvent.engine_event(
             pipeline_context,
             "Multiprocess executor: parent process exiting after {duration} (pid: {pid})".format(
