@@ -353,19 +353,24 @@ _received_interrupt = {"received": False}
 # interrupts.
 @contextlib.contextmanager
 def delay_interrupts():
-    if not seven.is_main_thread():
-        yield
-    else:
-        original_signal_handler = signal.getsignal(signal.SIGINT)
+    original_signal_handler = signal.getsignal(signal.SIGINT)
 
-        def _new_signal_handler(signo, _):
-            check.invariant(signo == signal.SIGINT)
-            _received_interrupt["received"] = True
+    def _new_signal_handler(signo, _):
+        check.invariant(signo == signal.SIGINT)
+        _received_interrupt["received"] = True
 
+    signal_replaced = False
+
+    try:
         try:
             signal.signal(signal.SIGINT, _new_signal_handler)
-            yield
-        finally:
+            signal_replaced = True
+        except ValueError:
+            # Can't replace signal handlers when not on the main thread, ignore
+            pass
+        yield
+    finally:
+        if signal_replaced:
             signal.signal(signal.SIGINT, original_signal_handler)
             raise_delayed_interrupts()
 
@@ -376,20 +381,25 @@ def delay_interrupts():
 # where an interrupt was received.
 @contextlib.contextmanager
 def raise_interrupts_immediately():
-    if not seven.is_main_thread():
-        yield
-    else:
-        raise_delayed_interrupts()
-        original_signal_handler = signal.getsignal(signal.SIGINT)
+    raise_delayed_interrupts()
+    original_signal_handler = signal.getsignal(signal.SIGINT)
 
-        def _new_signal_handler(signo, _):
-            check.invariant(signo == signal.SIGINT)
-            raise KeyboardInterrupt
+    def _new_signal_handler(signo, _):
+        check.invariant(signo == signal.SIGINT)
+        raise KeyboardInterrupt
 
+    signal_replaced = False
+
+    try:
         try:
             signal.signal(signal.SIGINT, _new_signal_handler)
-            yield
-        finally:
+            signal_replaced = True
+        except ValueError:
+            # Can't replace signal handlers when not on the main thread, ignore
+            pass
+        yield
+    finally:
+        if signal_replaced:
             signal.signal(signal.SIGINT, original_signal_handler)
 
 
