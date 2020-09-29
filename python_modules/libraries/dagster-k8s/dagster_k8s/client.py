@@ -22,7 +22,14 @@ class DagsterK8sError(Exception):
     pass
 
 
+# This should be used when the pipeline status is not in a valid state (ie STARTED) and we should
+# terminate the pipeline
 class DagsterK8sPipelineStatusException(Exception):
+    pass
+
+
+# This should be used when the step has failed in a way such that we should emit a step fail event
+class DagsterK8sStepFailureException(Exception):
     pass
 
 
@@ -66,39 +73,30 @@ class DagsterKubernetesClient:
         check.str_param(job_name, "job_name")
         check.str_param(namespace, "namespace")
 
+        # Collect all the errors so that we can post-process before raising
+
+        errors = []
         try:
-            pod_names = self.get_pod_names_for_job(job_name, namespace)
+            self.batch_api.delete_namespaced_job(name=job_name, namespace=namespace)
+        except Exception as e:  # pylint: disable=broad-except
+            errors.append(e)
 
-            # Collect all the errors so that we can post-process before raising
-            pod_names = self.get_pod_names_for_job(job_name, namespace)
-
-            errors = []
+        pod_names = self.get_pod_names_for_job(job_name, namespace)
+        for pod_name in pod_names:
             try:
-                self.batch_api.delete_namespaced_job(name=job_name, namespace=namespace)
+                self.core_api.delete_namespaced_pod(name=pod_name, namespace=namespace)
             except Exception as e:  # pylint: disable=broad-except
                 errors.append(e)
 
-            for pod_name in pod_names:
-                try:
-                    self.core_api.delete_namespaced_pod(name=pod_name, namespace=namespace)
-                except Exception as e:  # pylint: disable=broad-except
-                    errors.append(e)
-
-            if len(errors) > 0:
-                # Raise first non-expected error. Else, raise first error.
-                for error in errors:
-                    if not (
-                        isinstance(error, kubernetes.client.rest.ApiException)
-                        and error.reason == "Not Found"
-                    ):
-                        raise error
-                raise errors[0]
-
-            return True
-        except kubernetes.client.rest.ApiException as e:
-            if e.reason == "Not Found":
-                return False
-            raise e
+        if len(errors) > 0:
+            # "Not Found" occurs if job is already deleted.
+            for error in errors:
+                if not (
+                    isinstance(error, kubernetes.client.rest.ApiException)
+                    and error.reason == "Not Found"
+                ):
+                    raise error
+        return True
 
     def get_pod_names_for_job(self, job_name, namespace):
         """Get pod names that corresponds to job name
@@ -119,6 +117,9 @@ class DagsterKubernetesClient:
             pod_names.append(item.metadata.name)
 
         return pod_names
+
+    def create_namespaced_job(self, job_body, namespace):
+        return self.batch_api.create_namespaced_job(body=job_body, namespace=namespace)
 
     def wait_for_job_success(
         self,
@@ -174,24 +175,8 @@ class DagsterKubernetesClient:
 
             # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#jobstatus-v1-batch
             status = self.batch_api.read_namespaced_job_status(job_name, namespace=namespace).status
-
             if status.failed and status.failed > 0:
-                pods = self.core_api.list_namespaced_pod(
-                    label_selector="job-name=={}".format(job_name), namespace=namespace
-                )
-                logs = {}
-                for pod in pods.items:
-                    pod_name = pod.metadata.name
-                    try:
-                        logs[pod_name] = self.core_api.read_namespaced_pod_log(
-                            name=pod_name, namespace=namespace
-                        )
-                    except kubernetes.client.rest.ApiException as e:
-                        logs[pod_name] = e
-
-                raise DagsterK8sError(
-                    "Encountered failed job pods with status: {}, and logs: {}".format(status, logs)
-                )
+                raise DagsterK8sStepFailureException()
 
             # done waiting for pod completion
             if status.succeeded == num_pods_to_wait_for:
@@ -203,6 +188,28 @@ class DagsterKubernetesClient:
                     raise DagsterK8sPipelineStatusException()
 
             self.sleeper(wait_time_between_attempts)
+
+    def retrieve_job_logs_by_pod(self, job_name, namespace):
+        logs = {}
+        pods = self.core_api.list_namespaced_pod(
+            label_selector="job-name=={}".format(job_name), namespace=namespace
+        )
+        for pod in pods.items:
+            pod_name = pod.metadata.name
+            try:
+                logs[pod_name] = self.retrieve_pod_logs(pod_name=pod_name, namespace=namespace)
+            except kubernetes.client.rest.ApiException as e:
+                logs[pod_name] = e
+        return logs
+
+    def retrieve_job_logs(self, job_name, namespace):
+        pod_names = self.get_pod_names_in_job(job_name, namespace=namespace)
+
+        logs = []
+        for pod_name in pod_names:
+            raw_logs = self.retrieve_pod_logs(pod_name, namespace=namespace)
+            logs += raw_logs.split("\n")
+        return logs
 
     def retrieve_pod_logs(self, pod_name, namespace):
         """Retrieves the raw pod logs for the pod named `pod_name` from Kubernetes.
@@ -381,7 +388,7 @@ class DagsterKubernetesClient:
                         % (state.terminated.message, str(raw_logs))
                     )
                 else:
-                    self.logger("Pod {pod_name} exitted successfully".format(pod_name=pod_name))
+                    self.logger("Pod {pod_name} exited successfully".format(pod_name=pod_name))
                 break
 
             else:
