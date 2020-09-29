@@ -1,0 +1,323 @@
+from dagster import check, usable_as_dagster_type
+from datetime import datetime, timedelta
+from dateutil import parser
+from typing import Any, Dict, List, Optional
+
+
+class StepTiming:
+    """The timing of an executed step for a dbt node (model).
+
+    Note: Instances of :class:`StepTiming <dagster_dbt.StepTiming>` are intended to be constructed
+    from JSON output from dbt.
+
+    Example:
+        .. code-block:: python
+
+            json_data = {
+                "name": "execute",
+                "started_at": "2020-09-28T17:01:27.496435Z",
+                "completed_at": "2020-09-28T17:01:27.590997Z"
+            }
+
+            step_timing = StepTiming(**json_data)
+    """
+
+    def __init__(self, name: str, started_at: str, completed_at: str, *args, **kwargs):
+        """Constructor
+
+        Args:
+            name (str): The name of the executed step.
+            started_at (str): An ISO string timestamp of when the step started executing.
+            completed_at (str): An ISO string timestamp of when the step completed execution.
+        """
+        check.str_param(name, "name")
+        check.str_param(started_at, "started_at")
+        check.str_param(completed_at, "completed_at")
+
+        self._name = name
+        self._started_at = parser.isoparse(started_at)
+        self._completed_at = parser.isoparse(completed_at)
+
+    @property
+    def name(self) -> str:
+        """str: The name of the step in the executed dbt node (model)."""
+        return self._name
+
+    @property
+    def started_at(self) -> datetime:
+        """:obj:`datetime.datetime`: A timestamp of when the step started executing."""
+        return self._started_at
+
+    @property
+    def completed_at(self) -> datetime:
+        """:obj:`datetime.datetime`: A timestamp of when the step completed execution."""
+        return self._completed_at
+
+    @property
+    def duration(self) -> timedelta:
+        """:obj:`datetime.timedelta`: The execution duration of the step."""
+        return self._completed_at - self._started_at
+
+
+class NodeResult:
+    """The result of executing a dbt node (model).
+
+    Note: Instance of :class:`NodeResult <dagster_dbt.NodeResult>` are intended to be constructed
+    from JSON output from dbt.
+    """
+
+    def __init__(
+        self,
+        node: Dict[str, Any],
+        error: Optional[str],
+        status: str,
+        execution_time: float,
+        thread_id: str,
+        step_timings: List[Dict[str, Any]],
+        table: Optional[Dict[str, Any]] = None,
+        *args,
+        **kwargs,
+    ):
+        """Constructor
+
+        Args:
+            node (Dict): Details about the executed dbt node (model).
+            error (Optional[str]): An error message if an error occurred.
+            status (str): The status message of the executed dbt node (model).
+            execution_time (float): The execution duration (in seconds) of the dbt node (model).
+            thread_id (str): The dbt thread identifier that executed the dbt node (model).
+            step_timings (List[Dict[str, Any]]): The timings for each step in the executed dbt node
+                (model).
+            table (Optional[Dict]): Details about the table/view that is created from executing a
+                `run_sql <https://docs.getdbt.com/reference/commands/rpc#executing-a-query>`_
+                command on an dbt RPC server.
+        """
+        check.dict_param(node, "node", key_type=str)
+        check.opt_str_param(error, "error")
+        check.str_param(status, "status")
+        check.float_param(execution_time, "execution_time")
+        check.str_param(thread_id, "thread_id")
+        check.list_param(step_timings, "step_timings", of_type=Dict)
+        check.opt_list_param(table, "table", of_type=Dict[str, Any])
+
+        self._node = node
+        self._error = error
+        self._status = status
+        self._execution_time = execution_time
+        self._thread_id = thread_id
+        self._step_timings = [StepTiming(**st) for st in step_timings]
+        self._table = table
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> 'NodeResult':
+        """Constructs an instance of :class:`NodeResult <dagster_dbt.NodeResult>` from a dictionary.
+
+        Args:
+            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`NodeResult
+                <dagster_dbt.NodeResult>`.
+
+        Returns:
+            NodeResult: an instance of :class:`NodeResult <dagster_dbt.NodeResult>`.
+        """
+        check.dict_elem(d, "node")
+        check.opt_str_elem(d, "error")
+        check.str_elem(d, "status")
+        # check.float_elem(d, "execution_time") TODO[Bob]: Implement `check.float_elem`.
+        check.str_elem(d, "thread_id")
+        check.list_elem(d, "timing")
+        check.is_list(d["timing"], of_type=Dict)
+        check.opt_dict_elem(d, "table")
+
+        return cls(step_timings=d.get("timing"), **d)
+
+    @property
+    def node(self) -> Dict[str, Any]:
+        """Dict[str, Any]: Details about the executed dbt node (model)."""
+        return self._node
+
+    def error(self) -> Optional[str]:
+        """Optional[str]: An error message if an error occurred.
+        """
+        return self._error
+
+    @property
+    def status(self) -> str:
+        """str: The status message of the executed dbt node (model)."""
+        return self._status
+
+    @property
+    def execution_time(self):
+        """float: The execution duration (in seconds) of the dbt node (model)."""
+        return self._execution_time
+
+    @property
+    def thread_id(self) -> str:
+        """str: The dbt thread identifier that executed dbt node (model)."""
+        return self._status
+
+    @property
+    def timing(self) -> List[StepTiming]:
+        """List[StepTiming]: A list of :class:`StepTiming <dagster_dbt.StepTiming>`s for each step
+        in the executed dbt node (model)."""
+        return self._timing
+
+    @property
+    def table(self) -> Optional[Dict[str, Any]]:
+        """Optional[Dict[str, Any]]: Details about the table/view that was created by the executed
+        dbt node (model). This field is populated when running the `compile_sql
+        <https://docs.getdbt.com/reference/commands/rpc#executing-a-query>`_ method on a dbt RPC
+        server.
+        """
+        return self._table
+
+
+class RunResult:
+    """The results of executing a dbt command.
+
+    We recommend that you construct an instance of :class:`RunResult <dagster_dbt.RunResult>` by
+    using the class method :func:`from_dict <dagster_dbt.RunResult.from_dict>`.
+
+    When using the dbt CLI, run results are typically parsed from ``target/run_results.json``.
+    """
+
+    def __init__(
+        self,
+        logs: List[Dict[str, Any]],
+        results: List[Dict[str, Any]],
+        generated_at: str,
+        elapsed_time: float,
+        *args,
+        **kwargs,
+    ):
+        """Constructor
+
+        Args:
+            results (List[Dict[str, Any]]): Details about each executed dbt node (model) in the run.
+            generated_at (str): An ISO string timestamp of when the run result was generated by dbt.
+            elapsed_time (flaot): The execution duration (in seconds) of the run.
+        """
+        check.list_param(logs, "logs", of_type=Dict)
+        check.list_param(results, "results", of_type=Dict)
+        check.str_param(generated_at, "generated_at")
+        check.float_param(elapsed_time, "elapsed_time")
+
+        self._logs = logs
+        self._results = [NodeResult.from_dict(d) for d in results]
+        self._generated_at = parser.isoparse(generated_at)
+        self._elapsed_time = elapsed_time
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> 'RunResult':
+        """Constructs an instance of :class:`RunResult <dagster_dbt.RunResult>` from a dictionary.
+
+        Args:
+            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`RunResult
+                <dagster_dbt.RunResult>`.
+
+        Returns:
+            RunResult: an instance of :class:`RunResult <dagster_dbt.RunResult>`.
+        """
+        check.list_elem(d, "logs")
+        check.is_list(d["logs"], of_type=Dict)
+        check.list_elem(d, "results")
+        check.is_list(d["results"], of_type=Dict)
+        check.str_elem(d, "generated_at")
+        # check.float_elem(d, "elapsed_time") TODO[Bob]: Implement `check.float_elem`.
+
+        return cls(**d)
+
+    @property
+    def results(self) -> List[NodeResult]:
+        """List[NodeResult]: Details about each dbt node (model) that was executed in the run."""
+        return self._results
+
+    @property
+    def generated_at(self) -> datetime:
+        """datetime.datetime: A timestamp of when the run result was generated."""
+        return self._generated_at
+
+    @property
+    def elapsed_time(self) -> float:
+        """float: The execution duration (in seconds) of the run."""
+        return self._elapsed_time
+
+    def __len__(self) -> int:
+        return len(self._results)
+
+    def __getitem__(self, position) -> NodeResult:
+        return self._results[position]
+
+
+class PolledRunResult(RunResult):
+    """The results of executing a dbt command, along with additional metadata about the dbt process
+    that was run on the dbt RPC server.
+
+    We recommend that you construct an instance of :class:`PolledRunResult
+    <dagster_dbt.PolledRunResult>` by using the class method:func:`from_dict
+    <dagster_dbt.RunResult.from_dict>`.
+
+    When using the dbt RPC server, polled run results are typically parsed from the JSON body of
+    the RPC response.
+    """
+
+    def __init__(self, state: str, start: str, end: str, elapsed: float, *args, **kwargs):
+        """Constructor
+
+        Args:
+            state (str): The state of the polled dbt process.
+            start (str): An ISO string timestamp of when the dbt process started.
+            end (str): An ISO string timestamp of when the dbt process ended.
+            elapsed (float): The duration (in seconds) for which the dbt process was running.
+        """
+        super().__init__(*args, **kwargs)
+
+        check.str_param(state, "state")
+        check.str_param(start, "start")
+        check.str_param(end, "end")
+        check.float_param(elapsed, "elapsed")
+
+        self._state = state
+        self._start = parser.isoparse(start)
+        self._end = parser.isoparse(end)
+        self._elapsed = elapsed
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]) -> 'PolledRunResult':
+        """Constructs an instance of :class:`PolledRunResult <dagster_dbt.PolledRunResult>` from a
+        dictionary.
+
+        Args:
+            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`PolledRunResult
+                <dagster_dbt.PolledRunResult>`.
+
+        Returns:
+            PolledRunResult: an instance of :class:`PolledRunResult <dagster_dbt.PolledRunResult>`.
+        """
+        check.str_elem(d, "state")
+        check.str_elem(d, "start")
+        check.str_elem(d, "end")
+        # check.float_elem(d, "elapsed") TODO[Bob]: Impelement `check.float_elem`.
+
+        RunResult.from_dict(d)  # Run the type checks for parent class, but throw away the instance.
+
+        return cls(**d)
+
+    @property
+    def state(self) -> str:
+        """str: The state of the polled dbt process."""
+        return self._state
+
+    @property
+    def start(self) -> datetime:
+        """datetime.datetime: A timestamp of when the dbt process started."""
+        return self._start
+
+    @property
+    def end(self) -> datetime:
+        """datetime.datetime: A timestamp of when the dbt process ended."""
+        return self._end
+
+    @property
+    def elapsed(self) -> float:
+        """float: The duration (in seconds) for which the dbt process was running."""
+        return self._elapsed

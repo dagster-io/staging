@@ -33,6 +33,12 @@ from .rpc.solids import (
     dbt_rpc_test_and_wait,
 )
 from .rpc.types import DbtRpcPollResult, NodeResult, NodeTiming
+from .results import (
+    NodeResult,
+    PolledRunResult,
+    RunResult,
+    StepTiming,
+)
 from .version import __version__
 
 check_dagster_package_version("dagster-dbt", __version__)
