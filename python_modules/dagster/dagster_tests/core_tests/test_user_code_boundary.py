@@ -109,13 +109,13 @@ def test_user_error_boundary_storage_plugin():
 
         @classmethod
         def set_intermediate_object(
-            cls, intermediate_storage, context, dagster_type, step_output_handle, value
+            cls, intermediate_storage, context, dagster_type, step_output_handle, value, address
         ):
             raise UserError()
 
         @classmethod
         def get_intermediate_object(
-            cls, intermediate_storage, context, dagster_type, step_output_handle
+            cls, intermediate_storage, context, dagster_type, step_output_handle, address
         ):
             raise UserError()
 
