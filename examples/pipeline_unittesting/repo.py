@@ -10,6 +10,7 @@ from dagster import (
 )
 
 
+# start_a313730c029e11eb9eceacde48001122
 @solid
 def add_one(_, num: int) -> int:
     return num + 1
@@ -55,6 +56,9 @@ def emit_events_solid(_, input_num):
 @pipeline
 def emit_events_pipeline():
     emit_events_solid()
+
+
+# end_a313730c029e11eb9eceacde48001122
 
 
 @repository

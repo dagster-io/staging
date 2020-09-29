@@ -1,3 +1,4 @@
+# start_a312e7f4029e11eb8214acde48001122
 from dagster import (
     AssetKey,
     AssetMaterialization,
@@ -42,3 +43,6 @@ def materialization_pipeline():
 @repository
 def materializations_example_repo():
     return [materialization_pipeline]
+
+
+# end_a312e7f4029e11eb8214acde48001122

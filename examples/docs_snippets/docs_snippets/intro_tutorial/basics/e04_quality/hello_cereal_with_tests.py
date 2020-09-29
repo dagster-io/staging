@@ -29,6 +29,7 @@ if __name__ == "__main__":
     assert result.success
 
 
+# start_a30d71c8029e11eb8331acde48001122
 def test_hello_cereal_solid():
     res = execute_solid(hello_cereal)
     assert res.success
@@ -39,3 +40,6 @@ def test_hello_cereal_pipeline():
     res = execute_pipeline(hello_cereal_pipeline)
     assert res.success
     assert len(res.result_for_solid("hello_cereal").output_value()) == 77
+
+
+# end_a30d71c8029e11eb8331acde48001122

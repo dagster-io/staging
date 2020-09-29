@@ -21,6 +21,7 @@ def read_csv(context, csv_path):
     return lines
 
 
+# start_a30f7cca029e11ebac5bacde48001122
 @solid
 def sort_by_calories(context, cereals):
     sorted_cereals = sorted(
@@ -55,6 +56,9 @@ def sort_by_calories(context, cereals):
         ],
     )
     yield Output(None)
+
+
+# end_a30f7cca029e11ebac5bacde48001122
 
 
 @pipeline

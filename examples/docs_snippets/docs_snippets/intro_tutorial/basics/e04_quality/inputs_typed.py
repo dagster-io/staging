@@ -4,6 +4,7 @@ import os
 from dagster import execute_pipeline, pipeline, solid
 
 
+# start_a30da102029e11eb8aadacde48001122
 @solid
 def read_csv(context, csv_path: str):
     csv_path = os.path.join(os.path.dirname(__file__), csv_path)
@@ -12,6 +13,9 @@ def read_csv(context, csv_path: str):
 
     context.log.info("Read {n_lines} lines".format(n_lines=len(lines)))
     return lines
+
+
+# end_a30da102029e11eb8aadacde48001122
 
 
 @solid

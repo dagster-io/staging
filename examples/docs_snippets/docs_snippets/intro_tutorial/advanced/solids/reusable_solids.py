@@ -53,6 +53,7 @@ def split_cereals(context, cereals):
         yield Output(cold_cereals, "cold_cereals")
 
 
+# start_a30eae80029e11eb9a7dacde48001122
 @solid(config_schema=String)
 def sort_cereals_by_calories(context, cereals):
     sorted_cereals = sorted(
@@ -73,6 +74,9 @@ def reusable_solids_pipeline():
     sort_cold_cereals = sort_cereals_by_calories.alias("sort_cold_cereals")
     sort_hot_cereals(hot_cereals)
     sort_cold_cereals(cold_cereals)
+
+
+# end_a30eae80029e11eb9a7dacde48001122
 
 
 if __name__ == "__main__":

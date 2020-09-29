@@ -15,6 +15,7 @@ def process_payroll(_, df):
     return len(df)
 
 
+# start_a3191582029e11eb8a08acde48001122
 @solid(input_defs=[InputDefinition(name="numrows"), InputDefinition(name="expectation")])
 def postprocess_payroll(_, numrows, expectation):
     if expectation["success"]:
@@ -23,9 +24,14 @@ def postprocess_payroll(_, numrows, expectation):
         raise ValueError
 
 
+# end_a3191582029e11eb8a08acde48001122
+
+
+# start_a318d81a029e11ebb641acde48001122
 payroll_expectations = ge_validation_solid_factory(
     datasource_name="getest", suite_name="basic.warning"
 )
+# end_a318d81a029e11ebb641acde48001122
 
 
 @pipeline(
