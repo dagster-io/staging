@@ -5,6 +5,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check
+from dagster.core.definitions.address import Address
 from dagster.core.errors import DagsterInvalidAssetKey
 from dagster.serdes import Persistable, whitelist_for_persistence
 from dagster.utils.backcompat import experimental_arg_warning
@@ -228,7 +229,7 @@ class EventMetadataEntry(
         :py:class:`IntMetadataEntryData`.
 
         Args:
-            value (Optional[int]): The int value contained by this metadata entry. 
+            value (Optional[int]): The int value contained by this metadata entry.
             label (str): Short display label for this metadata entry.
             description (Optional[str]): A human-readable description of this metadata entry.
         """
@@ -368,7 +369,7 @@ class Output(namedtuple("_Output", "value output_name address")):
             cls,
             value,
             check.str_param(output_name, "output_name"),
-            check.opt_str_param(address, "address"),
+            check.opt_inst_param(address, "address", Address),
         )
 
 

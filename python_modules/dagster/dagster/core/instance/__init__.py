@@ -245,6 +245,8 @@ class DagsterInstance:
 
         self._subscribers = defaultdict(list)
 
+        self._external_intermediates = {}
+
     # ctors
 
     @staticmethod
@@ -330,6 +332,13 @@ class DagsterInstance:
     @property
     def root_directory(self):
         return self._local_artifact_storage.base_dir
+
+    @property
+    def external_intermediates(self):
+        # TODO yuhan: handle external intermediates
+        # generate from event logs
+        # OR persist it somewhere so a new run can pick it up
+        return self._external_intermediates
 
     @staticmethod
     def temp_storage():

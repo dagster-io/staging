@@ -3,6 +3,8 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import six
 
 from dagster import check
+from dagster.core.definitions.address import Address
+from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
 from dagster.core.errors import DagsterAddressIOError
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
@@ -104,13 +106,18 @@ class InMemoryIntermediateStorage(IntermediateStorage):
 
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
-    def __init__(self, object_store, root_for_run_id, run_id, type_storage_plugin_registry):
+    def __init__(
+        self, object_store, root_for_run_id, run_id, type_storage_plugin_registry,
+    ):
         self.root_for_run_id = check.callable_param(root_for_run_id, "root_for_run_id")
         self.run_id = check.str_param(run_id, "run_id")
         self.object_store = check.inst_param(object_store, "object_store", ObjectStore)
         self.type_storage_plugin_registry = check.inst_param(
             type_storage_plugin_registry, "type_storage_plugin_registry", TypeStoragePluginRegistry
         )
+        # TODO yuhan: fix bug: reexecution empty
+        # -> instance scope not per run scoped
+        # context.instance.external_intermediates = {}  # step_output_handle -> address
 
     def _get_paths(self, step_output_handle):
         return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
@@ -122,8 +129,8 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         # if the address of the object is provided, we use the address directly; otherwise the
         # system will construct the key from step_output_handle
         if address:
-            check.str_param(address, "address")
-            key = address
+            check.inst_param(address, "address", Address)
+            key = address.path
         else:
             paths = self._get_paths(step_output_handle)
             check.param_invariant(len(paths) > 0, "paths")
@@ -147,14 +154,27 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             # if address is provided, the intermediate could be stored outside so we skip the check
             check.invariant(self.has_intermediate(context, step_output_handle))
 
+        # if the intermediate was stored externally
+        if step_output_handle in context.instance.external_intermediates:
+            # TODO yuhan: handle external intermediates
+            # get path and config from some cache ^
+            _address = context.instance.external_intermediates[step_output_handle]
+            # wrap user code error
+            value = dagster_type.loader.construct_from_config_value(context, _address.config_value)
+            return ObjectStoreOperation(
+                op=ObjectStoreOperationType.GET_OBJECT, key=_address.path, obj=value
+            )
+
+        # START: to deprecate
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).get_intermediate_object(
-                self, context, dagster_type, step_output_handle, address
+                self, context, dagster_type, step_output_handle
             )
         elif dagster_type.name is None:
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
+        # END: to deprecate
 
         return self.get_intermediate_object(dagster_type, step_output_handle, address)
 
@@ -164,9 +184,9 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
 
         # if the address of the object is provided, we use the address directly; otherwise the
         # system will construct the key from step_output_handle
-        if address:
-            check.str_param(address, "address")
-            key = address
+        if address and address.path:
+            check.inst_param(address, "address", Address)
+            key = address.path
         else:
             paths = self._get_paths(step_output_handle)
             check.param_invariant(len(paths) > 0, "paths")
@@ -188,7 +208,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         if address:
             experimental_arg_warning("address", "ObjectStoreIntermediateStorage.set_intermediate")
-            check.str_param(address, "address")
+            check.inst_param(address, "address", Address)
 
         if self.has_intermediate(context, step_output_handle):
             context.log.warning(
@@ -196,14 +216,25 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
                 % (step_output_handle.step_key, step_output_handle.output_name)
             )
 
+        # load to some external address
+        if address and dagster_type.materializer:
+            # wrap user code
+            materializations = dagster_type.materializer.materialize_runtime_values(
+                context, address.config_value, value
+            )
+            context.instance.external_intermediates[step_output_handle] = address
+            return materializations
+
+        # START: to deprecate
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).set_intermediate_object(
-                self, context, dagster_type, step_output_handle, value, address
+                self, context, dagster_type, step_output_handle, value
             )
         elif dagster_type.name is None:
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
+        # END: to deprecate
 
         return self.set_intermediate_object(dagster_type, step_output_handle, value, address)
 
@@ -215,7 +246,10 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         check.param_invariant(len(paths) > 0, "paths")
 
         key = self.object_store.key_for_paths([self.root] + paths)
-        return self.object_store.has_object(key)
+        return (
+            self.object_store.has_object(key)
+            or step_output_handle in context.instance.external_intermediates
+        )
 
     def rm_intermediate(self, context, step_output_handle):
         check.opt_inst_param(context, "context", SystemExecutionContext)
