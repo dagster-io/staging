@@ -67,7 +67,7 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
         for handle in output_handles_to_copy_by_step.get(step.key, []):
             if intermediate_storage.has_intermediate(pipeline_context, handle):
                 continue
-
+            # TODO yuhan: handle external intermediates
             operation = intermediate_storage.copy_intermediate_from_run(
                 pipeline_context, parent_run_id, handle
             )
