@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import pytest
 
 from dagster import Int, Output, execute_pipeline, pipeline, seven, solid
+from dagster.core.definitions.address import Address
 from dagster.core.errors import DagsterAddressIOError
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.plan.objects import StepOutputHandle
@@ -90,23 +91,23 @@ def test_address_operation_using_intermediates_file_system():
             instance.intermediates_directory, run_id="some_run_id"
         )
 
-        object_operation_result = intermediate_storage.set_intermediate_to_address(
+        object_operation_result = intermediate_storage.set_intermediate(
             context=None,
             dagster_type=Int,
             step_output_handle=StepOutputHandle("solid1.compute"),
             value=output_value,
-            address=output_address,
+            address=Address(path=output_address),
         )
 
         assert object_operation_result.key == output_address
         assert object_operation_result.obj == output_value
 
         assert (
-            intermediate_storage.get_intermediate_from_address(
+            intermediate_storage.get_intermediate(
                 context=None,
                 dagster_type=Int,
                 step_output_handle=StepOutputHandle("solid1.compute"),
-                address=output_address,
+                address=Address(path=output_address),
             ).obj
             == output_value
         )
@@ -114,20 +115,20 @@ def test_address_operation_using_intermediates_file_system():
         with pytest.raises(
             DagsterAddressIOError, match="No such file or directory",
         ):
-            intermediate_storage.set_intermediate_to_address(
+            intermediate_storage.set_intermediate(
                 context=None,
                 dagster_type=Int,
                 step_output_handle=StepOutputHandle("solid1.compute"),
                 value=1,
-                address="invalid_address",
+                address=Address(path="invalid_address"),
             )
 
         with pytest.raises(
             DagsterAddressIOError, match="No such file or directory",
         ):
-            intermediate_storage.get_intermediate_from_address(
+            intermediate_storage.get_intermediate(
                 context=None,
                 dagster_type=Int,
                 step_output_handle=StepOutputHandle("solid1.compute"),
-                address=os.path.join(tmpdir_path, "invalid.output"),
+                address=Address(path=os.path.join(tmpdir_path, "invalid.output")),
             )
