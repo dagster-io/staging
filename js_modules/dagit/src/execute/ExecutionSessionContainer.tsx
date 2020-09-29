@@ -334,6 +334,7 @@ export default class ExecutionSessionContainer extends React.Component<
       <SplitPanelContainer
         axis={'vertical'}
         identifier={'execution'}
+        topPane="first"
         firstMinSize={100}
         firstInitialPercent={75}
         first={

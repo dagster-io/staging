@@ -11,6 +11,7 @@ interface SplitPanelContainerProps {
   firstInitialPercent: number;
   firstMinSize?: number;
   second: React.ReactNode;
+  topPane?: 'first' | 'second';
 }
 
 interface SplitPanelContainerState {
@@ -42,11 +43,12 @@ export class SplitPanelContainer extends React.Component<
   };
 
   render() {
-    const {firstMinSize, first, second} = this.props;
+    const {firstMinSize, first, second, topPane} = this.props;
     const {size, resizing} = this.state;
     const axis = this.props.axis || 'horizontal';
 
     const firstPaneStyles: CSSProperties = {flexShrink: 0};
+    const secondPaneStyles: CSSProperties = {flex: 1};
 
     // Note: The divider appears after the first panel, so making the first panel 100% wide
     // hides the divider offscreen. To prevent this, we subtract the divider depth.
@@ -56,6 +58,12 @@ export class SplitPanelContainer extends React.Component<
     } else {
       firstPaneStyles.minHeight = firstMinSize;
       firstPaneStyles.height = `calc(${size}% - ${DIVIDER_THICKNESS}px)`;
+    }
+
+    if (topPane === 'first') {
+      firstPaneStyles.zIndex = 3;
+    } else if (topPane === 'second') {
+      secondPaneStyles.zIndex = 3;
     }
 
     return (
@@ -69,7 +77,7 @@ export class SplitPanelContainer extends React.Component<
           onSetResizing={(resizing) => this.setState({resizing})}
           onMove={this.onChangeSize}
         />
-        <div className="split-panel" style={{flex: 1}}>
+        <div className="split-panel" style={secondPaneStyles}>
           {second}
         </div>
       </Container>
