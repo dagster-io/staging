@@ -157,7 +157,7 @@ class MultiprocessExecutor(Executor):
                                 EngineEventData.engine_error(serializable_error),
                                 step_key=key,
                             )
-                            yield DagsterEvent.step_failure_event(
+                            step_failure_event = DagsterEvent.step_failure_event(
                                 step_context=pipeline_context.for_step(
                                     active_execution.get_step_by_key(key)
                                 ),
@@ -165,6 +165,8 @@ class MultiprocessExecutor(Executor):
                                     error=serializable_error, user_failure_data=None
                                 ),
                             )
+                            active_execution.handle_event(step_failure_event)
+                            yield step_failure_event
                             empty_iters.append(key)
                         except StopIteration:
                             empty_iters.append(key)
