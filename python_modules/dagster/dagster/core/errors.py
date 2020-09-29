@@ -469,3 +469,7 @@ class DagsterAddressIOError(DagsterError):
 
     def __init__(self, msg):
         super(DagsterAddressIOError, self).__init__(msg if msg else "")
+
+
+class DagsterUnknownStepStateError(DagsterError):
+    """When pipeline execution complete with steps in an unknown state"""
