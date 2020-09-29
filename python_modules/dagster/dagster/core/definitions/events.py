@@ -342,7 +342,7 @@ EntryDataUnion = (
 )
 
 
-class Output(namedtuple("_Output", "value output_name address")):
+class Output(namedtuple("_Output", "value output_name address asset_store")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -361,7 +361,9 @@ class Output(namedtuple("_Output", "value output_name address")):
             store/retrieve the outputted value.
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT, address=None):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, address=None, asset_store=None):
+        from dagster.core.storage.asset_store import AssetStore
+
         if address:
             experimental_arg_warning("address", "Output.__new__")
 
@@ -370,6 +372,7 @@ class Output(namedtuple("_Output", "value output_name address")):
             value,
             check.str_param(output_name, "output_name"),
             check.opt_str_param(address, "address"),
+            check.opt_inst_param(asset_store, "asset_store", AssetStore),
         )
 
 
@@ -621,6 +624,34 @@ class RetryRequested(Exception):  # base exception instead?
         super(RetryRequested, self).__init__()
         self.max_retries = check.int_param(max_retries, "max_retries")
         self.seconds_to_wait = check.opt_int_param(seconds_to_wait, "seconds_to_wait")
+
+
+class AddressableAssetOperationType(Enum):
+    SET_ASSET = "SET_ASSET"
+    GET_ASSET = "GET_ASSET"
+
+
+class AddressableAssetOperation(
+    namedtuple("_AddressableAssetOperation", "op address step_output_handle asset_store obj",)
+):
+    """
+    Event related addressableAssets
+    """
+
+    def __new__(cls, op, address, step_output_handle, asset_store, obj=None):
+        from dagster.core.execution.plan.objects import StepOutputHandle
+        from dagster.core.storage.asset_store import AssetAddress, AssetStore
+
+        return super(AddressableAssetOperation, cls).__new__(
+            cls,
+            op=op,
+            address=check.inst_param(address, "address", AssetAddress),
+            step_output_handle=check.inst_param(
+                step_output_handle, "step_output_handle", StepOutputHandle
+            ),
+            asset_store=check.inst_param(asset_store, "asset_store", AssetStore),
+            obj=obj,
+        )
 
 
 class ObjectStoreOperationType(Enum):

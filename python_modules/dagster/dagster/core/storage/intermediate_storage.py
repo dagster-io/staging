@@ -3,10 +3,16 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import six
 
 from dagster import check
-from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
+from dagster.core.definitions.events import (
+    AddressableAssetOperation,
+    AddressableAssetOperationType,
+    ObjectStoreOperation,
+    ObjectStoreOperationType,
+)
 from dagster.core.errors import DagsterAddressIOError
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.storage.asset_store import AssetAddress, AssetStore
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 from dagster.utils.backcompat import experimental
 
@@ -83,10 +89,20 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
 
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
-    def __init__(self, object_store, root_for_run_id, run_id, type_storage_plugin_registry):
+    def __init__(
+        self,
+        object_store,
+        root_for_run_id,
+        run_id,
+        type_storage_plugin_registry,
+        address_store=None,
+    ):
         self.root_for_run_id = check.callable_param(root_for_run_id, "root_for_run_id")
         self.run_id = check.str_param(run_id, "run_id")
         self.object_store = check.inst_param(object_store, "object_store", ObjectStore)
+        self.address_store = check.opt_dict_param(
+            address_store, "address_store", key_type=StepOutputHandle
+        )
         self.type_storage_plugin_registry = check.inst_param(
             type_storage_plugin_registry, "type_storage_plugin_registry", TypeStoragePluginRegistry
         )
@@ -122,6 +138,8 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         check.invariant(self.has_intermediate(context, step_output_handle))
+        if self.has_addressable_asset(step_output_handle):
+            return self.get_addressable_asset(context, step_output_handle)
 
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).get_intermediate_object(
@@ -183,6 +201,8 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
     def has_intermediate(self, context, step_output_handle):
         check.opt_inst_param(context, "context", SystemExecutionContext)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        if self.has_addressable_asset(step_output_handle):
+            return True
         paths = self._get_paths(step_output_handle)
         check.list_param(paths, "paths", of_type=str)
         check.param_invariant(len(paths) > 0, "paths")
@@ -223,6 +243,33 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             dest_key=dst_uri,
             object_store_name=self.object_store.name,
         )
+
+    def get_addressable_asset(self, context, step_output_handle):
+        address, asset_store = self.address_store.get(step_output_handle, None)
+        # TODO yuhan: fire AddressableAssetOperation too
+        check.inst_param(asset_store, "asset_store", AssetStore)
+        check.inst_param(address, "address", AssetAddress)
+        obj = asset_store.get_asset(context, address)
+        return AddressableAssetOperation(
+            AddressableAssetOperationType.GET_ASSET,
+            address,
+            step_output_handle,
+            asset_store,
+            obj=obj,
+        )
+
+    def set_addressable_asset(self, context, asset_store, step_output_handle, value, path):
+        check.inst_param(asset_store, "asset_store", AssetStore)
+        address = asset_store.set_asset(context, value, path)
+        check.inst_param(address, "address", AssetAddress)
+        self.address_store[step_output_handle] = (address, asset_store)
+        return AddressableAssetOperation(
+            AddressableAssetOperationType.SET_ASSET, address, step_output_handle, asset_store
+        )
+
+    def has_addressable_asset(self, step_output_handle):
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        return self.address_store.get(step_output_handle) is not None
 
     @experimental
     def set_intermediate_to_address(
@@ -340,7 +387,9 @@ def build_in_mem_intermediates_storage(run_id, type_storage_plugin_registry=None
     )
 
 
-def build_fs_intermediate_storage(root_for_run_id, run_id, type_storage_plugin_registry=None):
+def build_fs_intermediate_storage(
+    root_for_run_id, run_id, type_storage_plugin_registry=None, address_store=None
+):
     return ObjectStoreIntermediateStorage(
         FilesystemObjectStore(),
         root_for_run_id,
@@ -348,4 +397,5 @@ def build_fs_intermediate_storage(root_for_run_id, run_id, type_storage_plugin_r
         type_storage_plugin_registry
         if type_storage_plugin_registry
         else TypeStoragePluginRegistry(types_to_register=[]),
+        address_store,
     )

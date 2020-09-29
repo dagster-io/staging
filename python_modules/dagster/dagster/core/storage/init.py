@@ -7,6 +7,7 @@ from dagster.core.definitions import (
     PipelineDefinition,
     SystemStorageDefinition,
 )
+from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.type_storage import TypeStoragePluginRegistry
@@ -18,7 +19,7 @@ class InitSystemStorageContext(
         "InitSystemStorageContext",
         (
             "pipeline_def mode_def system_storage_def pipeline_run instance environment_config "
-            "type_storage_plugin_registry resources system_storage_config"
+            "type_storage_plugin_registry resources system_storage_config address_store"
         ),
     )
 ):
@@ -38,6 +39,8 @@ class InitSystemStorageContext(
         system_storage_config (Dict[str, Any]): The system storage-specific configuration data
             provided by the environment config. The schema for this data is defined by the
             ``config_field`` argument to :py:class:`SystemStorageDefinition`.
+        address_store (Dict[StepOutputHandle, Address]): The mapping from step output to
+            address which tracks the addressable assets.
     """
 
     def __new__(
@@ -51,6 +54,7 @@ class InitSystemStorageContext(
         type_storage_plugin_registry,
         resources,
         system_storage_config,
+        address_store,
     ):
         return super(InitSystemStorageContext, cls).__new__(
             cls,
@@ -73,6 +77,9 @@ class InitSystemStorageContext(
             system_storage_config=check.dict_param(
                 system_storage_config, system_storage_config, key_type=str
             ),
+            address_store=check.opt_dict_param(
+                address_store, "address_store", key_type=StepOutputHandle
+            ),
         )
 
 
@@ -81,7 +88,7 @@ class InitIntermediateStorageContext(
         "InitIntermediateStorageContext",
         (
             "pipeline_def mode_def intermediate_storage_def pipeline_run instance environment_config "
-            "type_storage_plugin_registry resources intermediate_storage_config"
+            "type_storage_plugin_registry resources intermediate_storage_config address_store"
         ),
     )
 ):
@@ -101,6 +108,8 @@ class InitIntermediateStorageContext(
         intermediate_storage_config (Dict[str, Any]): The intermediate storage-specific configuration data
             provided by the environment config. The schema for this data is defined by the
             ``config_field`` argument to :py:class:`IntermediateStorageDefinition`.
+        address_store (Dict[StepOutputHandle, Address]): The mapping from step output to
+            address which tracks the addressable assets.
     """
 
     def __new__(
@@ -114,6 +123,7 @@ class InitIntermediateStorageContext(
         type_storage_plugin_registry,
         resources,
         intermediate_storage_config,
+        address_store,
     ):
         return super(InitIntermediateStorageContext, cls).__new__(
             cls,
@@ -135,5 +145,8 @@ class InitIntermediateStorageContext(
             resources=check.not_none_param(resources, "resources"),
             intermediate_storage_config=check.dict_param(
                 intermediate_storage_config, intermediate_storage_config, key_type=str
+            ),
+            address_store=check.opt_dict_param(
+                address_store, "address_store", key_type=StepOutputHandle
             ),
         )

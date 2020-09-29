@@ -174,7 +174,7 @@ class FancyStringGCSTypeStoragePlugin(TypeStoragePlugin):  # pylint:disable=no-i
 
     @classmethod
     def set_intermediate_object(
-        cls, intermediate_storage, context, dagster_type, step_output_handle, value
+        cls, intermediate_storage, context, dagster_type, step_output_handle, value, address=None
     ):
         check.inst_param(intermediate_storage, "intermediate_storage", GCSIntermediateStorage)
         paths = ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
@@ -186,7 +186,7 @@ class FancyStringGCSTypeStoragePlugin(TypeStoragePlugin):  # pylint:disable=no-i
 
     @classmethod
     def get_intermediate_object(
-        cls, intermediate_storage, context, dagster_type, step_output_handle
+        cls, intermediate_storage, context, dagster_type, step_output_handle, address=None
     ):
         check.inst_param(intermediate_storage, "intermediate_storage", GCSIntermediateStorage)
         paths = ["intermediates", step_output_handle.step_key, step_output_handle.output_name]

@@ -492,6 +492,29 @@ class DagsterInstance:
     def get_run_group(self, run_id):
         return self._run_storage.get_run_group(run_id)
 
+    def get_address_store(self, run_id):
+        # from dagster.core.execution.plan.objects import StepOutputHandle
+        from dagster.core.events import AddressableAssetOperationData
+
+        if run_id is None:
+            return
+        event_logs = self.all_logs(run_id)
+
+        address_store = {}
+        for record in event_logs:
+            if not record.is_dagster_event:
+                continue
+
+            if not record.dagster_event.is_addressable_asset_operation:
+                continue
+
+            entry_data = record.dagster_event.event_specific_data
+            if isinstance(entry_data, AddressableAssetOperationData):
+                step_output_handle = entry_data.step_output_handle
+                address_store[step_output_handle] = (entry_data.address, entry_data.asset_store)
+
+        return address_store
+
     def resolve_memoized_execution_plan(self, execution_plan, run_config, mode):
         """
         Returns:
