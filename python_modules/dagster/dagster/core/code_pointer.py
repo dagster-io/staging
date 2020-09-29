@@ -378,6 +378,15 @@ def get_python_file_from_previous_stack_frame():
     return os.path.abspath(python_file)
 
 
+def is_from_ipython_env():
+    try:
+        from IPython import get_ipython
+
+        return get_ipython() is not None
+    except ImportError:
+        return False
+
+
 @whitelist_for_serdes
 class CustomPointer(
     namedtuple(

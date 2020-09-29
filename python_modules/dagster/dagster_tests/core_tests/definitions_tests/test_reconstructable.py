@@ -7,6 +7,7 @@ import pytest
 from dagster import DagsterInvariantViolationError, PipelineDefinition, lambda_solid, pipeline
 from dagster.core.definitions.reconstructable import ReconstructableRepository, reconstructable
 from dagster.core.snap import PipelineSnapshot, create_pipeline_snapshot_id
+from dagster.seven import mock
 
 
 @lambda_solid
@@ -53,6 +54,17 @@ def test_lambda():
         DagsterInvariantViolationError, match="Reconstructable target can not be a lambda"
     ):
         reconstructable(lambda_version)
+
+
+@mock.patch("IPython.get_ipython", return_value=mock.MagicMock())
+def test_ipython_env(_):
+    with pytest.raises(
+        DagsterInvariantViolationError,
+        match=re.escape(
+            "reconstructable() can not reconstruct pipelines from interactive environments"
+        ),
+    ):
+        reconstructable(the_pipeline)
 
 
 def test_manual_instance():
