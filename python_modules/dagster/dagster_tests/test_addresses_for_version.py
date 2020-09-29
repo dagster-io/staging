@@ -90,7 +90,7 @@ def test_address_operation_using_intermediates_file_system():
             instance.intermediates_directory, run_id="some_run_id"
         )
 
-        object_operation_result = intermediate_storage.set_intermediate_to_address(
+        object_operation_result = intermediate_storage.set_intermediate(
             context=None,
             dagster_type=Int,
             step_output_handle=StepOutputHandle("solid1.compute"),
@@ -102,7 +102,7 @@ def test_address_operation_using_intermediates_file_system():
         assert object_operation_result.obj == output_value
 
         assert (
-            intermediate_storage.get_intermediate_from_address(
+            intermediate_storage.get_intermediate(
                 context=None,
                 dagster_type=Int,
                 step_output_handle=StepOutputHandle("solid1.compute"),
@@ -115,7 +115,7 @@ def test_address_operation_using_intermediates_file_system():
             DagsterInvalidAddressForAsset,
             match="Address 'invalid_address' is invalid to load or materialize an asset",
         ):
-            intermediate_storage.set_intermediate_to_address(
+            intermediate_storage.set_intermediate(
                 context=None,
                 dagster_type=Int,
                 step_output_handle=StepOutputHandle("solid1.compute"),
@@ -129,7 +129,7 @@ def test_address_operation_using_intermediates_file_system():
                 os.path.join(tmpdir_path, "invalid.output")
             ),
         ):
-            intermediate_storage.get_intermediate_from_address(
+            intermediate_storage.get_intermediate(
                 context=None,
                 dagster_type=Int,
                 step_output_handle=StepOutputHandle("solid1.compute"),
