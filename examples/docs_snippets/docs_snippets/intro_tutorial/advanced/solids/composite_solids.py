@@ -125,11 +125,15 @@ def join_cereal(
     return joined_cereals
 
 
+# start_a30f1386029e11eb8993acde48001122
 @composite_solid
 def load_cereals() -> DataFrame:
     read_cereals = read_csv.alias("read_cereals")
     read_manufacturers = read_csv.alias("read_manufacturers")
     return join_cereal(read_cereals(), read_manufacturers())
+
+
+# end_a30f1386029e11eb8993acde48001122
 
 
 @pipeline

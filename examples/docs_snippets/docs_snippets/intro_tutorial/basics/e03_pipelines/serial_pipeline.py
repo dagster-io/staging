@@ -1,3 +1,4 @@
+# start_a30b0746029e11ebaf5bacde48001122
 import csv
 import os
 
@@ -38,6 +39,7 @@ def serial_pipeline():
     sort_by_calories(load_cereals())
 
 
+# end_a30b0746029e11ebaf5bacde48001122
 if __name__ == "__main__":
     result = execute_pipeline(serial_pipeline)
     assert result.success

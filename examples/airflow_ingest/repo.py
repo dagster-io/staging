@@ -1,3 +1,4 @@
+# start_a315d30c029e11eb979eacde48001122
 from airflow_ingest.airflow_complex_dag import complex_dag
 from airflow_ingest.airflow_simple_dag import simple_dag
 from dagster_airflow.dagster_pipeline_factory import make_dagster_pipeline_from_airflow_dag
@@ -11,3 +12,6 @@ airflow_complex_dag = make_dagster_pipeline_from_airflow_dag(complex_dag)
 @repository
 def airflow_ingest_example():
     return [airflow_complex_dag, airflow_simple_dag]
+
+
+# end_a315d30c029e11eb979eacde48001122

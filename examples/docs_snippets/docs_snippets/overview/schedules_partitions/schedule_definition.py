@@ -2,12 +2,15 @@ from datetime import datetime
 
 from dagster import daily_schedule, hourly_schedule, monthly_schedule, schedule, weekly_schedule
 
+# start_a3292ef4029e11eba671acde48001122
+
 
 @schedule(
     cron_schedule="0 0 * * *", pipeline_name="my_data_pipeline"
 )  # Executes at 1:00 AM every day
 def my_schedule(_context):
     date = datetime.today().strftime("%Y-%m-%d")
+    # end_a3292ef4029e11eba671acde48001122
     return {"solids": {"process_data_for_date": {"config": {"date": date}}}}
 
 

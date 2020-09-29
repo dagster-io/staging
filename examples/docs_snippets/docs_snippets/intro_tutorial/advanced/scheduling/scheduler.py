@@ -1,3 +1,4 @@
+# start_a30a67f8029e11ebbc52acde48001122
 import csv
 from datetime import datetime, time
 
@@ -13,9 +14,7 @@ def hello_cereal(context, date):
         cereals = [row for row in csv.DictReader(fd)]
 
     context.log.info(
-        "Today is {date}. Found {n_cereals} cereals".format(
-            date=date, n_cereals=len(cereals)
-        )
+        "Today is {date}. Found {n_cereals} cereals".format(date=date, n_cereals=len(cereals))
     )
 
 
@@ -24,19 +23,20 @@ def hello_cereal_pipeline():
     hello_cereal()
 
 
+# end_a30a67f8029e11ebbc52acde48001122
+# start_a30a9f3e029e11ebab34acde48001122
+
+
 @daily_schedule(
     pipeline_name="hello_cereal_pipeline",
     start_date=datetime(2020, 6, 1),
     execution_time=time(6, 45),
 )
 def good_morning_schedule(date):
-    return {
-        "solids": {
-            "hello_cereal": {
-                "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
-            }
-        }
-    }
+    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
+
+
+# end_a30a9f3e029e11ebab34acde48001122
 
 
 @repository
@@ -57,10 +57,4 @@ def weekday_filter():
     should_execute=weekday_filter,
 )
 def good_weekday_morning_schedule(date):
-    return {
-        "solids": {
-            "hello_cereal": {
-                "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
-            }
-        }
-    }
+    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}

@@ -17,6 +17,7 @@ from dagster.seven import mock
 slack_resource_mock = mock.MagicMock()
 
 
+# start_a3166468029e11ebb883acde48001122
 @success_hook(required_resource_keys={"slack"})
 def slack_on_success(context):
     message = "Solid {} finished successfully".format(context.solid.name)
@@ -27,6 +28,9 @@ def slack_on_success(context):
 def slack_on_failure(context):
     message = "Solid {} failed".format(context.solid.name)
     context.resources.slack.chat.post_message(channel="#foo", text=message)
+
+
+# end_a3166468029e11ebb883acde48001122
 
 
 @solid
@@ -50,6 +54,7 @@ mode_defs = [
     ),
     ModeDefinition("prod", resource_defs={"slack": slack_resource}),
 ]
+# start_a316dc54029e11eb89c1acde48001122
 
 
 @slack_on_failure
@@ -58,6 +63,9 @@ def notif_all():
     # the hook "slack_on_failure" is applied on every solid instance within this pipeline
     a()
     b()
+
+
+# end_a316dc54029e11eb89c1acde48001122
 
 
 @pipeline(mode_defs=mode_defs)
