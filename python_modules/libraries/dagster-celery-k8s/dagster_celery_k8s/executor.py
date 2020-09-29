@@ -8,17 +8,22 @@ from dagster_celery.config import DEFAULT_CONFIG, dict_wrapper
 from dagster_celery.core_execution_loop import DELEGATE_MARKER
 from dagster_celery.defaults import broker_url, result_backend
 from dagster_k8s import DagsterK8sJobConfig, construct_dagster_k8s_job
-from dagster_k8s.client import DagsterK8sError, DagsterK8sPipelineStatusException
+from dagster_k8s.client import (
+    DagsterK8sError,
+    DagsterK8sPipelineStatusException,
+    DagsterK8sStepFailureException,
+)
 from dagster_k8s.job import (
     UserDefinedDagsterK8sConfig,
     get_k8s_job_name,
     get_user_defined_k8s_config,
 )
 from dagster_k8s.utils import (
+    create_namespaced_job,
     delete_job,
     filter_dagster_events_from_pod_logs,
-    get_pod_names_in_job,
-    retrieve_pod_logs,
+    retrieve_job_logs,
+    retrieve_job_logs_by_pod,
     wait_for_job_success,
 )
 
@@ -262,6 +267,8 @@ def create_k8s_job_task(celery_app, **task_kwargs):
         check.invariant(
             len(step_keys) == 1, "Celery K8s task executor can only execute 1 step at a time"
         )
+        step_key = step_keys[0]
+
         check.dict_param(run_config, "run_config")
         check.str_param(mode, "mode")
         check.str_param(repo_name, "repo_name")
@@ -302,32 +309,6 @@ def create_k8s_job_task(celery_app, **task_kwargs):
         pipeline_run = instance.get_run_by_id(run_id)
 
         check.invariant(pipeline_run, "Could not load run {}".format(run_id))
-        step_key = step_keys[0]
-
-        celery_worker_name = self.request.hostname
-        celery_pod_name = os.environ.get("HOSTNAME")
-        instance.report_engine_event(
-            "Task for step {step_key} picked up by Celery".format(step_key=step_key),
-            pipeline_run,
-            EngineEventData(
-                [
-                    EventMetadataEntry.text(celery_worker_name, "Celery worker name"),
-                    EventMetadataEntry.text(celery_pod_name, "Celery worker Kubernetes Pod name"),
-                ]
-            ),
-            CeleryK8sJobExecutor,
-            step_key=step_key,
-        )
-
-        if pipeline_run.status != PipelineRunStatus.STARTED:
-            instance.report_engine_event(
-                "Not scheduling step because pipeline run status is not STARTED",
-                pipeline_run,
-                EngineEventData([EventMetadataEntry.text(step_key, "Step key"),]),
-                CeleryK8sJobExecutor,
-                step_key=step_key,
-            )
-            return []
 
         # Ensure we stay below k8s name length limits
         k8s_name_key = get_k8s_job_name(run_id, step_key)
@@ -342,93 +323,104 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             job_name = "dagster-job-%s" % (k8s_name_key)
             pod_name = "dagster-job-%s" % (k8s_name_key)
 
-        input_json = serialize_dagster_namedtuple(
-            ExecuteStepArgs(
-                pipeline_origin=pipeline_origin,
-                pipeline_run_id=run_id,
-                instance_ref=None,
-                mode=mode,
-                step_keys_to_execute=step_keys,
-                run_config=run_config,
-                retries_dict=retries_dict,
+        def report_engine_event_for_step(message, extra_engine_event_data=None):
+            instance.report_engine_event(
+                message,
+                pipeline_run,
+                EngineEventData(
+                    [
+                        EventMetadataEntry.text(step_key, "Step key"),
+                        EventMetadataEntry.text(job_name, "Kubernetes Job Name"),
+                        EventMetadataEntry.text(job_namespace, "Kubernetes Job Namespace"),
+                    ].append(extra_engine_event_data),
+                    error=serializable_error_info_from_exc_info(sys.exc_info()),
+                    marker_end=DELEGATE_MARKER,
+                ),
+                CeleryK8sJobExecutor,
+                step_key=step_key,
+            )
+
+        report_engine_event_for_step(
+            "Task picked up by Celery worker name {} on pod name {}".format(
+                self.request.hostname, os.environ.get("HOSTNAME")
             )
         )
-        command = ["dagster"]
-        args = ["api", "execute_step_with_structured_logs", input_json]
 
-        job = construct_dagster_k8s_job(
-            job_config, command, args, job_name, user_defined_k8s_config, pod_name
-        )
+        try:
+            # Step events generated from this step execution
+            events = []
 
-        # Running list of events generated from this task execution
-        events = []
+            if pipeline_run.status != PipelineRunStatus.STARTED:
+                report_engine_event_for_step(
+                    "Not scheduling step job because pipeline run status is {}, not STARTED".format(
+                        pipeline_run.status
+                    )
+                )
+                return events
 
-        # Post event for starting execution
-        job_name = job.metadata.name
-        engine_event = instance.report_engine_event(
-            "Executing step {} in Kubernetes job {}".format(step_key, job_name),
-            pipeline_run,
-            EngineEventData(
+            input_json = serialize_dagster_namedtuple(
+                ExecuteStepArgs(
+                    pipeline_origin=pipeline_origin,
+                    pipeline_run_id=run_id,
+                    instance_ref=None,
+                    mode=mode,
+                    step_keys_to_execute=step_keys,
+                    run_config=run_config,
+                    retries_dict=retries_dict,
+                )
+            )
+
+            job = construct_dagster_k8s_job(
+                job_config=job_config,
+                command=["dagster"],
+                args=["api", "execute_step_with_structured_logs", input_json],
+                job_name=job_name,
+                user_defined_k8s_config=user_defined_k8s_config,
+                pod_name=pod_name,
+            )
+
+            report_engine_event_for_step(
+                "Executing step {} in Kubernetes job {}".format(step_key, job_name),
                 [
-                    EventMetadataEntry.text(step_key, "Step key"),
-                    EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                    EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
                     EventMetadataEntry.text(job_config.job_image, "Job image"),
                     EventMetadataEntry.text(job_config.image_pull_policy, "Image pull policy"),
-                    EventMetadataEntry.text(
-                        str(job_config.image_pull_secrets), "Image pull secrets"
-                    ),
-                    EventMetadataEntry.text(
-                        str(job_config.service_account_name), "Service account name"
-                    ),
                 ],
-                marker_end=DELEGATE_MARKER,
-            ),
-            CeleryK8sJobExecutor,
-            # validated above that step_keys is length 1, and it is not possible to use ETH or
-            # execution plan in this function (Celery K8s workers should not access to user code)
-            step_key=step_key,
-        )
-        events.append(engine_event)
-        try:
-            kubernetes.client.BatchV1Api().create_namespaced_job(body=job, namespace=job_namespace)
-        except kubernetes.client.rest.ApiException as e:
-            if e.reason == "Conflict":
-                # There is an existing job with the same name so do not procede.
-                instance.report_engine_event(
-                    "Did not create Kubernetes job {} for step {} since job name already "
-                    "exists, exiting.".format(job_name, step_key),
-                    pipeline_run,
-                    EngineEventData(
-                        [
-                            EventMetadataEntry.text(step_key, "Step key"),
-                            EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                            EventMetadataEntry.text(pod_name, "Kubernetes Pod name"),
-                        ],
-                        marker_end=DELEGATE_MARKER,
-                    ),
-                    CeleryK8sJobExecutor,
-                    step_key=step_key,
+            )
+
+            create_namespaced_job(job_body=job, namespace=job_namespace)
+
+            should_terminate_pipeline = False
+            try:
+                wait_for_job_success(
+                    job_name=job_name, namespace=job_namespace, instance=instance, run_id=run_id,
+                )
+            except DagsterK8sPipelineStatusException:  # This occurs when user terminates pipeline
+                report_engine_event_for_step(
+                    "Terminating Kubernetes Job because pipeline run status is not STARTED"
+                )
+                should_terminate_pipeline = True
+
+            if should_terminate_pipeline:
+                delete_job(job_name=job_name, namespace=job_namespace)
+            else:
+                report_engine_event_for_step("Retrieving pod logs")
+                logs = retrieve_job_logs(job_name=job_name, namespace=job_namespace)
+        # Lots of error handling below
+        except kubernetes.client.rest.ApiException as err:
+            if err.reason == "Conflict":
+                report_engine_event_for_step(
+                    "There is an existing Kubernetes Job with the same Job name (exiting).",
                 )
             else:
-                instance.report_engine_event(
-                    "Encountered unexpected error while creating Kubernetes job {} for step {}, "
-                    "exiting.".format(job_name, step_key),
-                    pipeline_run,
-                    EngineEventData(
-                        [EventMetadataEntry.text(step_key, "Step key"),],
-                        error=serializable_error_info_from_exc_info(sys.exc_info()),
-                    ),
-                    CeleryK8sJobExecutor,
-                    step_key=step_key,
+                report_engine_event_for_step(
+                    "Encountered unexpected error from Kubernetes client (exiting).",
                 )
-            return []
-
-        try:
-            wait_for_job_success(
-                job_name=job_name, namespace=job_namespace, instance=instance, run_id=run_id,
+        except DagsterK8sStepFailureException:
+            job_logs_by_pod = retrieve_job_logs_by_pod(job_name=job_name, namespace=job_namespace)
+            report_engine_event_for_step(
+                "Encountered failed job pod with logs {}".format(job_logs_by_pod)
             )
-        except DagsterK8sError as err:
+
             step_failure_event = DagsterEvent(
                 event_type_value=DagsterEventType.STEP_FAILURE.value,
                 pipeline_name=pipeline_run.pipeline_name,
@@ -451,84 +443,13 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             )
             instance.handle_new_event(event_record)
             events.append(step_failure_event)
-        except DagsterK8sPipelineStatusException:
-            instance.report_engine_event(
-                "Terminating Kubernetes Job because pipeline run status is not STARTED",
-                pipeline_run,
-                EngineEventData(
-                    [
-                        EventMetadataEntry.text(step_key, "Step key"),
-                        EventMetadataEntry.text(job_name, "Kubernetes Job name"),
-                        EventMetadataEntry.text(job_namespace, "Kubernetes Job namespace"),
-                    ]
-                ),
-                CeleryK8sJobExecutor,
-                step_key=step_key,
-            )
-            delete_job(job_name=job_name, namespace=job_namespace)
-            return []
-        except kubernetes.client.rest.ApiException as e:
-            instance.report_engine_event(
-                "Encountered unexpected error while waiting on Kubernetes job {} for step {}, "
-                "exiting.".format(job_name, step_key),
-                pipeline_run,
-                EngineEventData(
-                    [EventMetadataEntry.text(step_key, "Step key"),],
-                    error=serializable_error_info_from_exc_info(sys.exc_info()),
-                ),
-                CeleryK8sJobExecutor,
-                step_key=step_key,
-            )
-            return []
-
-        try:
-            pod_names = get_pod_names_in_job(job_name, namespace=job_namespace)
-        except kubernetes.client.rest.ApiException as e:
-            instance.report_engine_event(
-                "Encountered unexpected error retreiving Pods for Kubernetes job {} for step {}, "
-                "exiting.".format(job_name, step_key),
-                pipeline_run,
-                EngineEventData(
-                    [EventMetadataEntry.text(step_key, "Step key"),],
-                    error=serializable_error_info_from_exc_info(sys.exc_info()),
-                ),
-                CeleryK8sJobExecutor,
-                step_key=step_key,
-            )
-            return []
-
-        # Post engine event for log retrieval
-        engine_event = instance.report_engine_event(
-            "Retrieving logs from Kubernetes Job pods",
-            pipeline_run,
-            EngineEventData([EventMetadataEntry.text("\n".join(pod_names), "Pod names")]),
-            CeleryK8sJobExecutor,
-            step_key=step_key,
-        )
-        events.append(engine_event)
-
-        logs = []
-        for pod_name in pod_names:
-            try:
-                raw_logs = retrieve_pod_logs(pod_name, namespace=job_namespace)
-                logs += raw_logs.split("\n")
-            except kubernetes.client.rest.ApiException as e:
-                instance.report_engine_event(
-                    "Encountered unexpected error while fetching pod logs for Kubernetes job {}, "
-                    "Pod name {} for step {}. Will attempt to continue with other pods.".format(
-                        job_name, pod_name, step_key
-                    ),
-                    pipeline_run,
-                    EngineEventData(
-                        [EventMetadataEntry.text(step_key, "Step key"),],
-                        error=serializable_error_info_from_exc_info(sys.exc_info()),
-                    ),
-                    CeleryK8sJobExecutor,
-                    step_key=step_key,
-                )
-
-        events += filter_dagster_events_from_pod_logs(logs)
-        serialized_events = [serialize_dagster_namedtuple(event) for event in events]
-        return serialized_events
+        except (DagsterK8sError, Exception):  # pylint: disable=broad-except
+            report_engine_event_for_step("Encountered unexpected error (exiting)")
+        finally:
+            if logs:
+                events += filter_dagster_events_from_pod_logs(logs)
+            serialized_events = [serialize_dagster_namedtuple(event) for event in events]
+            # must return iterator!
+            return serialized_events  # pylint: disable=W0150
 
     return _execute_step_k8s_job

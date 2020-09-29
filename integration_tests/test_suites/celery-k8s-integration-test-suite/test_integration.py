@@ -383,6 +383,7 @@ def test_execute_on_celery_k8s_with_hard_failure(  # pylint: disable=redefined-o
     step_failure_found = False
     while datetime.datetime.now() < start_time + timeout:
         event_records = dagster_instance.all_logs(run.run_id)
+        print('event_records', event_records)  # pylint: disable=print-call
         for event_record in event_records:
             if event_record.dagster_event:
                 if (
