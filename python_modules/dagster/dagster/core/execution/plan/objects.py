@@ -3,7 +3,7 @@ from enum import Enum
 
 from dagster import check
 from dagster.core.definitions import AssetMaterialization, Materialization, Solid, SolidHandle
-from dagster.core.definitions.events import EventMetadataEntry
+from dagster.core.definitions.events import Address, EventMetadataEntry
 from dagster.core.types.dagster_type import DagsterType
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import merge_dicts
@@ -89,7 +89,7 @@ class StepOutputData(
                 (AssetMaterialization, Materialization),
             ),
             type_check_data=check.opt_inst_param(type_check_data, "type_check_data", TypeCheckData),
-            address=check.opt_str_param(address, "address"),
+            address=check.opt_inst_param(address, "address", Address),
             version=check.opt_str_param(version, "version"),
         )
 

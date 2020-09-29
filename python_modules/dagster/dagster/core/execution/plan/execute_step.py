@@ -338,6 +338,7 @@ def _set_intermediates(step_context, step_output, step_output_handle, output):
         dagster_type=step_output.dagster_type,
         step_output_handle=step_output_handle,
         value=output.value,
+        address=output.address,
     )
     if isinstance(res, ObjectStoreOperation):
         yield DagsterEvent.object_store_operation(

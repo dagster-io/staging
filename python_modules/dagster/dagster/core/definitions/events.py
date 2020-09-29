@@ -228,7 +228,7 @@ class EventMetadataEntry(
         :py:class:`IntMetadataEntryData`.
 
         Args:
-            value (Optional[int]): The int value contained by this metadata entry. 
+            value (Optional[int]): The int value contained by this metadata entry.
             label (str): Short display label for this metadata entry.
             description (Optional[str]): A human-readable description of this metadata entry.
         """
@@ -341,6 +341,20 @@ EntryDataUnion = (
 )
 
 
+class Address(namedtuple("_Output", "path spec")):
+    """TODO.
+    Args:
+        address (str): (Experimental) A string that can be provided to a storage system to
+            store/retrieve the outputted value.
+        spec (str): (Experimental) A dict of the config to materialize the output (TODO)
+    """
+
+    def __new__(cls, path, spec=None):
+        return super(Address, cls).__new__(
+            cls, check.str_param(path, "path"), check.opt_dict_param(spec, "spec"),
+        )
+
+
 class Output(namedtuple("_Output", "value output_name address")):
     """Event corresponding to one of a solid's outputs.
 
@@ -368,7 +382,7 @@ class Output(namedtuple("_Output", "value output_name address")):
             cls,
             value,
             check.str_param(output_name, "output_name"),
-            check.opt_str_param(address, "address"),
+            check.opt_inst_param(address, "address", Address),
         )
 
 
