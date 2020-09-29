@@ -3,11 +3,12 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 import six
 
 from dagster import check
+from dagster.core.definitions.address import Address
 from dagster.core.errors import DagsterAddressIOError
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
-from dagster.utils.backcompat import experimental
+from dagster.utils.backcompat import experimental_arg_warning
 
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
 from .type_storage import TypeStoragePluginRegistry
@@ -15,11 +16,13 @@ from .type_storage import TypeStoragePluginRegistry
 
 class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
     @abstractmethod
-    def get_intermediate(self, context, dagster_type=None, step_output_handle=None):
+    def get_intermediate(self, context, dagster_type=None, step_output_handle=None, address=None):
         pass
 
     @abstractmethod
-    def set_intermediate(self, context, dagster_type=None, step_output_handle=None, value=None):
+    def set_intermediate(
+        self, context, dagster_type=None, step_output_handle=None, value=None, address=None
+    ):
         pass
 
     @abstractmethod
@@ -74,25 +77,37 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
     def _get_paths(self, step_output_handle):
         return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
 
-    def get_intermediate_object(self, dagster_type, step_output_handle):
+    def get_intermediate_object(self, dagster_type, step_output_handle, address=None):
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        paths = self._get_paths(step_output_handle)
-        check.param_invariant(len(paths) > 0, "paths")
 
-        key = self.object_store.key_for_paths([self.root] + paths)
-        return self.object_store.get_object(
-            key, serialization_strategy=dagster_type.serialization_strategy
-        )
+        # if the address of the object is provided, we use the address directly; otherwise the
+        # system will construct the key from step_output_handle
+        if address:
+            check.inst_param(address, "address", Address)
+            key = address.path
+        else:
+            paths = self._get_paths(step_output_handle)
+            check.param_invariant(len(paths) > 0, "paths")
+            key = self.object_store.key_for_paths([self.root] + paths)
 
-    def get_intermediate(
-        self, context, dagster_type=None, step_output_handle=None,
-    ):
+        try:
+            return self.object_store.get_object(
+                key, serialization_strategy=dagster_type.serialization_strategy
+            )
+        except IOError as e:
+            raise DagsterAddressIOError(str(e))
+
+    def get_intermediate(self, context, dagster_type=None, step_output_handle=None, address=None):
         dagster_type = resolve_dagster_type(dagster_type)
         check.opt_inst_param(context, "context", SystemExecutionContext)
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        check.invariant(self.has_intermediate(context, step_output_handle))
+        if address:
+            experimental_arg_warning("address", "ObjectStoreIntermediateStorage.get_intermediate")
+        else:
+            # if address is provided, the intermediate could be stored outside so we skip the check
+            check.invariant(self.has_intermediate(context, step_output_handle))
 
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).get_intermediate_object(
@@ -103,26 +118,39 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
                 dagster_type
             )
 
-        return self.get_intermediate_object(dagster_type, step_output_handle)
+        return self.get_intermediate_object(dagster_type, step_output_handle, address)
 
-    def set_intermediate_object(self, dagster_type, step_output_handle, value):
+    def set_intermediate_object(self, dagster_type, step_output_handle, value, address=None):
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        paths = self._get_paths(step_output_handle)
-        check.param_invariant(len(paths) > 0, "paths")
 
-        key = self.object_store.key_for_paths([self.root] + paths)
-        return self.object_store.set_object(
-            key, value, serialization_strategy=dagster_type.serialization_strategy
-        )
+        # if the address of the object is provided, we use the address directly; otherwise the
+        # system will construct the key from step_output_handle
+        if address and address.path:
+            check.inst_param(address, "address", Address)
+            key = address.path
+        else:
+            paths = self._get_paths(step_output_handle)
+            check.param_invariant(len(paths) > 0, "paths")
+            key = self.object_store.key_for_paths([self.root] + paths)
+
+        try:
+            return self.object_store.set_object(
+                key, value, serialization_strategy=dagster_type.serialization_strategy
+            )
+        except (IOError, OSError) as e:
+            raise DagsterAddressIOError(str(e))
 
     def set_intermediate(
-        self, context, dagster_type=None, step_output_handle=None, value=None,
+        self, context, dagster_type=None, step_output_handle=None, value=None, address=None,
     ):
         dagster_type = resolve_dagster_type(dagster_type)
         check.opt_inst_param(context, "context", SystemExecutionContext)
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        if address:
+            experimental_arg_warning("address", "ObjectStoreIntermediateStorage.set_intermediate")
+            check.inst_param(address, "address", Address)
 
         if self.has_intermediate(context, step_output_handle):
             context.log.warning(
@@ -139,7 +167,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
                 dagster_type
             )
 
-        return self.set_intermediate_object(dagster_type, step_output_handle, value)
+        return self.set_intermediate_object(dagster_type, step_output_handle, value, address)
 
     def has_intermediate(self, context, step_output_handle):
         check.opt_inst_param(context, "context", SystemExecutionContext)
@@ -169,52 +197,6 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         dst = self.object_store.key_for_paths([self.root] + paths)
 
         return self.object_store.cp_object(src, dst)
-
-    @experimental
-    def set_intermediate_to_address(
-        self, context, dagster_type=None, step_output_handle=None, value=None, address=None
-    ):
-        """
-        This is an experimental method.
-        This will likely to be merged into `set_intermediate_object`. To do so, we will need to
-        update the `set_intermediate_object` to take `address` as an arg
-        """
-        dagster_type = resolve_dagster_type(dagster_type)
-        check.opt_inst_param(context, "context", SystemExecutionContext)
-        check.inst_param(dagster_type, "dagster_type", DagsterType)
-        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        check.str_param(address, "address")
-
-        # currently it doesn't support type_storage_plugin_registry
-        try:
-            return self.object_store.set_object(
-                key=address, obj=value, serialization_strategy=dagster_type.serialization_strategy
-            )
-        except IOError as e:
-            raise DagsterAddressIOError(str(e))
-
-    @experimental
-    def get_intermediate_from_address(
-        self, context, dagster_type=None, step_output_handle=None, address=None,
-    ):
-        """
-        This is an experimental method.
-        This will likely to be merged into `get_intermediate_object`. To do so, we will need to
-        update the `get_intermediate_object` to take `address` as an arg
-        """
-        dagster_type = resolve_dagster_type(dagster_type)
-        check.opt_inst_param(context, "context", SystemExecutionContext)
-        check.inst_param(dagster_type, "dagster_type", DagsterType)
-        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        check.str_param(address, "address")
-
-        # currently it doesn't support type_storage_plugin_registry
-        try:
-            return self.object_store.get_object(
-                key=address, serialization_strategy=dagster_type.serialization_strategy
-            )
-        except IOError as e:
-            raise DagsterAddressIOError(str(e))
 
     def uri_for_paths(self, paths, protocol=None):
         check.list_param(paths, "paths", of_type=str)
