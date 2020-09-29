@@ -8,7 +8,7 @@ from collections import namedtuple
 
 import six
 
-from dagster import check
+from dagster import check, seven
 from dagster.core.errors import DagsterImportError, DagsterInvariantViolationError
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.serdes import whitelist_for_serdes
@@ -376,6 +376,15 @@ def get_python_file_from_previous_stack_frame():
 
     python_file = previous_stack_frame[1]
     return os.path.abspath(python_file)
+
+
+def is_from_ipython_env():
+    try:
+        from IPython import get_ipython
+
+        return get_ipython() is not None
+    except seven.ModuleNotFoundError:
+        return False
 
 
 @whitelist_for_serdes
