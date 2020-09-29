@@ -75,7 +75,7 @@ def execute_on_thread(pipeline_name, done, tempdir=None, tags=None):
 @contextmanager
 def start_celery_worker(queue=None):
     runner = CliRunner()
-    runargs = ["worker", "start", "-d"]
+    runargs = ["worker", "start", "-A", "dagster_celery.app", "-d"]
     if queue:
         runargs += ["-q", queue]
     result = runner.invoke(main, runargs)
