@@ -1,0 +1,56 @@
+from dagster_dbt import RunResult, PolledRunResult
+
+RUN_RESULT_DICT = {
+    "logs": [],
+    "results": [
+        {
+            "node": {},
+            "error": None,
+            "status": "CREATE VIEW",
+            "execution_time": 1.1,
+            "thread_id": "Thread-1",
+            "timing": [
+                {
+                    "name": "compile",
+                    "started_at": "2020-09-28T17:00:18.426563Z",
+                    "completed_at": "2020-09-28T17:00:18.447900Z",
+                },
+                {
+                    "name": "execute",
+                    "started_at": "2020-09-28T17:00:18.448162Z",
+                    "completed_at": "2020-09-28T17:00:18.521685Z",
+                },
+            ],
+        },
+        {
+            "node": {},
+            "error": "This is a test error message on a dbt node.",
+            "status": "ERROR",
+            "execution_time": 1.1,
+            "thread_id": "Thread-2",
+            "timing": [],
+        },
+    ],
+    "generated_at": "2020-09-28T17:00:18.746001Z",
+    "elapsed_time": 1.1,
+}
+
+POLLED_RUN_RESULT_DICT = {
+    **RUN_RESULT_DICT,
+    "state": "success",
+    "start": "2020-09-28T17:10:56.070900Z",
+    "end": "2020-09-28T17:10:58.116186Z",
+    "elapsed": 2.045286,
+}
+
+
+class TestRunResult:
+    def test_from_dict(self):
+        rr = RunResult.from_dict(RUN_RESULT_DICT)
+        assert len(rr) == len(RUN_RESULT_DICT["results"])
+
+
+class TestPolledRunResult:
+    def test_from_dict(self):
+        prr = PolledRunResult.from_dict(POLLED_RUN_RESULT_DICT)
+        assert len(prr) == len(POLLED_RUN_RESULT_DICT["results"])
