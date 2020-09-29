@@ -1,3 +1,4 @@
+from .address import Address
 from .config import ConfigMapping
 from .decorators import (
     composite_solid,
