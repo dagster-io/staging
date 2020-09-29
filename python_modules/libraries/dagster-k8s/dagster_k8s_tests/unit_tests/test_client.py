@@ -381,7 +381,7 @@ def test_wait_for_ready_but_terminated():
         mock_client.logger,
         [
             'Waiting for pod "%s"' % pod_name,
-            "Pod {pod_name} exitted successfully".format(pod_name=pod_name),
+            "Pod {pod_name} exited successfully".format(pod_name=pod_name),
         ],
     )
 
@@ -448,7 +448,7 @@ def test_wait_for_termination_ready_then_terminate():
         mock_client.logger,
         [
             'Waiting for pod "%s"' % pod_name,
-            "Pod {pod_name} exitted successfully".format(pod_name=pod_name),
+            "Pod {pod_name} exited successfully".format(pod_name=pod_name),
         ],
     )
 
