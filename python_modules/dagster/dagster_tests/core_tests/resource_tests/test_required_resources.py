@@ -399,7 +399,13 @@ def define_plugin_pipeline(
 
         @classmethod
         def set_intermediate_object(
-            cls, intermediate_storage, context, dagster_type, step_output_handle, value
+            cls,
+            intermediate_storage,
+            context,
+            dagster_type,
+            step_output_handle,
+            value,
+            address=None,
         ):
             assert context.resources.a == "A"
             return intermediate_storage.set_intermediate_object(
@@ -408,7 +414,7 @@ def define_plugin_pipeline(
 
         @classmethod
         def get_intermediate_object(
-            cls, intermediate_storage, context, dagster_type, step_output_handle
+            cls, intermediate_storage, context, dagster_type, step_output_handle, address=None
         ):
             assert context.resources.a == "A"
             return intermediate_storage.get_intermediate_object(dagster_type, step_output_handle)
