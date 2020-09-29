@@ -9,6 +9,7 @@ import styled from 'styled-components';
 
 import {useRepositorySelector} from 'src/DagsterRepositoryContext';
 import {Loading} from 'src/Loading';
+import {explorerPathFromString} from 'src/PipelinePathUtils';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {PartitionView} from 'src/partitions/PartitionView';
 import {PartitionsBackfill} from 'src/partitions/PartitionsBackfill';
@@ -22,10 +23,11 @@ type PartitionSet = PipelinePartitionsRootQuery_partitionSetsOrError_PartitionSe
 export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps<{
   pipelinePath: string;
 }>> = ({location, match}) => {
-  const pipelineName = match.params.pipelinePath.split(':')[0];
+  const {pipelineName} = explorerPathFromString(match.params.pipelinePath);
   useDocumentTitle(`Pipeline: ${pipelineName}`);
 
   const repositorySelector = useRepositorySelector();
+  debugger;
   const queryResult = useQuery<PipelinePartitionsRootQuery>(PIPELINE_PARTITIONS_ROOT_QUERY, {
     variables: {repositorySelector, pipelineName},
     fetchPolicy: 'network-only',

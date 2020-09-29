@@ -10,6 +10,7 @@ import styled from 'styled-components/macro';
 import {usePipelineSelector} from 'src/DagsterRepositoryContext';
 import {RowColumn, RowContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
+import {explorerPathFromString} from 'src/PipelinePathUtils';
 import {Timestamp} from 'src/TimeComponents';
 import {PipelineGraph} from 'src/graph/PipelineGraph';
 import {SVGViewport} from 'src/graph/SVGViewport';
@@ -32,7 +33,7 @@ type Schedule = PipelineOverviewQuery_pipelineSnapshotOrError_PipelineSnapshot_s
 export const PipelineOverviewRoot: React.FunctionComponent<RouteComponentProps<{
   pipelinePath: string;
 }>> = ({match}) => {
-  const pipelineName = match.params.pipelinePath.split(':')[0];
+  const {pipelineName} = explorerPathFromString(match.params.pipelinePath);
   useDocumentTitle(`Pipeline: ${pipelineName}`);
 
   const pipelineSelector = usePipelineSelector(pipelineName);
