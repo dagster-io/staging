@@ -4,6 +4,7 @@ from collections import namedtuple
 import pytest
 from dagster_k8s.client import (
     DagsterK8sError,
+    DagsterK8sStepFailureException,
     DagsterKubernetesClient,
     KubernetesWaitingReasons,
     WaitForPodState,
@@ -124,7 +125,7 @@ def test_timed_out_while_waiting_for_launch():
 
 
 def test_timed_out_while_waiting_for_job_to_complete():
-    mock_client = create_mocked_client(timer=create_timing_out_timer(num_good_ticks=1))
+    mock_client = create_mocked_client(timer=create_timing_out_timer(num_good_ticks=2))
 
     job_name = "a_job"
     namespace = "a_namespace"
@@ -155,7 +156,7 @@ def test_job_failed():
     failed_job = V1Job(metadata=a_job_metadata, status=V1JobStatus(failed=1, succeeded=0))
     mock_client.batch_api.read_namespaced_job_status.side_effect = [failed_job]
 
-    with pytest.raises(DagsterK8sError) as exc_info:
+    with pytest.raises(DagsterK8sStepFailureException) as exc_info:
         mock_client.wait_for_job_success(job_name, namespace)
 
     assert "Encountered failed job pods with status" in str(exc_info.value)
@@ -381,7 +382,7 @@ def test_wait_for_ready_but_terminated():
         mock_client.logger,
         [
             'Waiting for pod "%s"' % pod_name,
-            "Pod {pod_name} exitted successfully".format(pod_name=pod_name),
+            "Pod {pod_name} exited successfully".format(pod_name=pod_name),
         ],
     )
 
@@ -448,7 +449,7 @@ def test_wait_for_termination_ready_then_terminate():
         mock_client.logger,
         [
             'Waiting for pod "%s"' % pod_name,
-            "Pod {pod_name} exitted successfully".format(pod_name=pod_name),
+            "Pod {pod_name} exited successfully".format(pod_name=pod_name),
         ],
     )
 
