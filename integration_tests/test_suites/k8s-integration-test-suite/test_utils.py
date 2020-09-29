@@ -2,7 +2,7 @@ import time
 
 import kubernetes
 import pytest
-from dagster_k8s.client import DagsterK8sError, WaitForPodState
+from dagster_k8s.client import DagsterK8sError, DagsterK8sStepFailureException, WaitForPodState
 from dagster_k8s.utils import retrieve_pod_logs, wait_for_job_success, wait_for_pod
 from dagster_k8s_test_infra.helm import test_namespace
 
@@ -114,7 +114,7 @@ def test_wait_for_job(cluster_provider):  # pylint: disable=unused-argument
                 wait_for_job_success('sayhi2', namespace=namespace, wait_timeout=1)
 
             with pytest.raises(
-                DagsterK8sError, match='Encountered failed job pods with status:',
+                DagsterK8sStepFailureException, match='Encountered failed job pods with status:',
             ):
                 api.create_namespaced_job(
                     body=construct_job_manifest('fail', 'echo "whoops!"; exit 1'),
