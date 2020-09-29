@@ -31,8 +31,10 @@ export enum LogLevel {
 
 export enum ObjectStoreOperationType {
   CP_OBJECT = "CP_OBJECT",
+  GET_EXTERNAL_OBJECT = "GET_EXTERNAL_OBJECT",
   GET_OBJECT = "GET_OBJECT",
   RM_OBJECT = "RM_OBJECT",
+  SET_EXTERNAL_OBJECT = "SET_EXTERNAL_OBJECT",
   SET_OBJECT = "SET_OBJECT",
 }
 

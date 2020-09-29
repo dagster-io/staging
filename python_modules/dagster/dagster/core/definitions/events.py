@@ -5,6 +5,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check
+from dagster.core.definitions.address import Address
 from dagster.core.errors import DagsterInvalidAssetKey
 from dagster.serdes import Persistable, whitelist_for_persistence
 from dagster.utils.backcompat import experimental_arg_warning
@@ -164,6 +165,21 @@ class EventMetadataEntry(
         return EventMetadataEntry(label, description, PathMetadataEntryData(path))
 
     @staticmethod
+    def address(address, label, step_output_handle=None, description=None):
+        """Static constructor for a metadata entry containing a path as
+        :py:class:`AddressMetadataEntryData`.
+
+        Args:
+            address (Optional[str]): The address contained by this metadata entry.
+            label (str): Short display label for this metadata entry.
+            step_output_handle
+            description (Optional[str]): A human-readable description of this metadata entry.
+        """
+        return EventMetadataEntry(
+            label, description, AddressMetadataEntryData(address, step_output_handle)
+        )
+
+    @staticmethod
     def fspath(path, label=None, description=None):
         """Static constructor for a metadata entry containing a filesystem path as
         :py:class:`PathMetadataEntryData`.
@@ -278,6 +294,27 @@ class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path"), Persis
 
 
 @whitelist_for_persistence
+class AddressMetadataEntryData(
+    namedtuple("_AddressMetadataEntryData", "address step_output_handle"), Persistable
+):
+    """Container class for address metadata entry data.
+
+    Args:
+        address (Optional[str]): The path as a string.
+        step_output_handle
+    """
+
+    def __new__(cls, address, step_output_handle=None):
+        from dagster.core.execution.plan.objects import StepOutputHandle
+
+        return super(AddressMetadataEntryData, cls).__new__(
+            cls,
+            check.opt_inst_param(address, "address", Address),
+            check.opt_inst_param(step_output_handle, "step_output_handle", StepOutputHandle),
+        )
+
+
+@whitelist_for_persistence
 class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data"), Persistable):
     """Container class for JSON metadata entry data.
 
@@ -333,6 +370,7 @@ EntryDataUnion = (
     TextMetadataEntryData,
     UrlMetadataEntryData,
     PathMetadataEntryData,
+    AddressMetadataEntryData,
     JsonMetadataEntryData,
     MarkdownMetadataEntryData,
     PythonArtifactMetadataEntryData,
@@ -368,7 +406,7 @@ class Output(namedtuple("_Output", "value output_name address")):
             cls,
             value,
             check.str_param(output_name, "output_name"),
-            check.opt_str_param(address, "address"),
+            check.opt_inst_param(address, "address", Address),
         )
 
 
@@ -624,7 +662,9 @@ class RetryRequested(Exception):  # base exception instead?
 
 class ObjectStoreOperationType(Enum):
     SET_OBJECT = "SET_OBJECT"
+    SET_EXTERNAL_OBJECT = "SET_EXTERNAL_OBJECT"
     GET_OBJECT = "GET_OBJECT"
+    GET_EXTERNAL_OBJECT = "GET_EXTERNAL_OBJECT"
     RM_OBJECT = "RM_OBJECT"
     CP_OBJECT = "CP_OBJECT"
 
@@ -632,7 +672,7 @@ class ObjectStoreOperationType(Enum):
 class ObjectStoreOperation(
     namedtuple(
         "_ObjectStoreOperation",
-        "op key dest_key obj serialization_strategy_name object_store_name value_name",
+        "op key dest_key obj serialization_strategy_name object_store_name value_name address step_output_handle",
     )
 ):
     """This event is used internally by Dagster machinery when values are written to and read from
@@ -649,6 +689,8 @@ class ObjectStoreOperation(
             employed by the operation
         object_store_name (Optional[str]): The name of the object store that performed the
             operation.
+        address
+        step_output_handle
     """
 
     def __new__(
@@ -660,7 +702,11 @@ class ObjectStoreOperation(
         serialization_strategy_name=None,
         object_store_name=None,
         value_name=None,
+        address=None,
+        step_output_handle=None,
     ):
+        from dagster.core.execution.plan.objects import StepOutputHandle
+
         return super(ObjectStoreOperation, cls).__new__(
             cls,
             op=op,
@@ -672,6 +718,10 @@ class ObjectStoreOperation(
             ),
             object_store_name=check.opt_str_param(object_store_name, "object_store_name"),
             value_name=check.opt_str_param(value_name, "value_name"),
+            address=check.opt_inst_param(address, "address", Address),
+            step_output_handle=check.opt_inst_param(
+                step_output_handle, "step_output_handle", StepOutputHandle
+            ),
         )
 
     @classmethod
@@ -686,6 +736,8 @@ class ObjectStoreOperation(
                     "serialization_strategy_name": inst.serialization_strategy_name,
                     "object_store_name": inst.object_store_name,
                     "value_name": inst.value_name,
+                    "address": inst.address,
+                    "step_output_handle": inst.step_output_handle,
                 },
                 **kwargs
             )

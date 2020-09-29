@@ -137,23 +137,25 @@ def test_spark_data_frame_serialization_s3_file_handle(s3_bucket, spark_config):
 
 def test_spark_dataframe_output_csv():
     spark = SparkSession.builder.getOrCreate()
-    num_df = (
-        spark.read.format("csv")
-        .options(header="true", inferSchema="true")
-        .load(file_relative_path(__file__, "num.csv"))
+
+    @solid(
+        input_defs=[InputDefinition("num_df", DataFrame)],
+        output_defs=[OutputDefinition(DataFrame)],
+        required_resource_keys={"pyspark"},
     )
-
-    assert num_df.collect() == [Row(num1=1, num2=2)]
-
-    @solid
-    def emit(_):
+    def emit(_, num_df):
+        assert num_df.collect() == [Row(num1=1, num2=2)]
         return num_df
 
-    @solid(input_defs=[InputDefinition("df", DataFrame)], output_defs=[OutputDefinition(DataFrame)])
+    @solid(
+        input_defs=[InputDefinition("df", DataFrame)],
+        output_defs=[OutputDefinition(DataFrame)],
+        required_resource_keys={"pyspark"},
+    )
     def passthrough_df(_context, df):
         return df
 
-    @pipeline
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"pyspark": pyspark_resource})])
     def passthrough():
         passthrough_df(emit())
 
@@ -163,16 +165,25 @@ def test_spark_dataframe_output_csv():
             passthrough,
             run_config={
                 "solids": {
+                    "emit": {
+                        "inputs": {
+                            "num_df": {
+                                "csv": {
+                                    "path": file_relative_path(__file__, "num.csv"),
+                                    "header": True,
+                                    "inferSchema": True,
+                                }
+                            }
+                        }
+                    },
                     "passthrough_df": {
-                        "outputs": [{"result": {"csv": {"path": file_name, "header": True}}}]
-                    }
+                        "outputs": [{"result": {"csv": {"path": file_name, "header": True}}}],
+                    },
                 },
             },
         )
 
-        from_file_df = (
-            spark.read.format("csv").options(header="true", inferSchema="true").load(file_name)
-        )
+        from_file_df = spark.read.format("csv").options(header="true").load(file_name)
 
         assert (
             result.result_for_solid("passthrough_df").output_value().collect()
