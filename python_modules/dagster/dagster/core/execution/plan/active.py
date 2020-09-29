@@ -1,6 +1,7 @@
 import time
 
 from dagster import check
+from dagster.core.errors import DagsterUnknownStepStateError
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.retries import Retries
 
@@ -37,6 +38,9 @@ class ActiveExecution(object):
         self._success = set()
         self._failed = set()
         self._skipped = set()
+
+        # if communication is lost with step compute they are marked as failed but also tracked here
+        self._lost_steps = set()
 
         # Start the show by loading _executable with the set of _pending steps that have no deps
         self._update()
@@ -147,10 +151,10 @@ class ActiveExecution(object):
     def skipped_step_events_iterator(self, pipeline_context):
         """Process all steps that can be skipped by repeated calls to get_steps_to_skip
         """
-        failed_or_skipped_steps = self._skipped.union(self._failed)
 
         steps_to_skip = self.get_steps_to_skip()
         while steps_to_skip:
+            failed_or_skipped_steps = self._skipped.union(self._failed)
             for step in steps_to_skip:
                 step_context = pipeline_context.for_step(step)
                 failed_inputs = []
@@ -160,7 +164,7 @@ class ActiveExecution(object):
                     )
 
                 step_context.log.info(
-                    "Dependencies for step {step} failed: {failed_inputs}. Not executing.".format(
+                    "Dependencies for step {step} failed or skipped: {failed_inputs}. Not executing.".format(
                         step=step.key, failed_inputs=failed_inputs
                     )
                 )
@@ -242,11 +246,12 @@ class ActiveExecution(object):
                     key=step_key
                 )
             )
+            self._lost_steps.add(step_key)
             self.mark_failed(step_key)
 
     @property
     def is_complete(self):
-        return (
+        plan_complete = (
             len(self._pending) == 0
             and len(self._in_flight) == 0
             and len(self._executable) == 0
@@ -254,3 +259,12 @@ class ActiveExecution(object):
             and len(self._pending_retry) == 0
             and len(self._waiting_to_retry) == 0
         )
+        if plan_complete and len(self._lost_steps) > 0:
+            raise DagsterUnknownStepStateError(
+                "Execution of pipeline completed with steps {step_list} in an unknown state to this process.\n"
+                "This was likely caused by losing communication with the process performing step execution.".format(
+                    step_list=self._lost_steps
+                )
+            )
+
+        return plan_complete
