@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from dagster import check
+from dagster.core.definitions.events import AddressMetadataEntryData
 from dagster.core.errors import DagsterInvariantViolationError, DagsterRunNotFoundError
 from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.events.log import EventRecord
@@ -58,16 +59,20 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
         output_handles_from_previous_run
     )
     output_handles_to_copy_by_step = defaultdict(list)
+    external_intermediates_from_previous_run = external_intermediates_from_event_logs(
+        parent_run_logs
+    )
     for handle in output_handles_to_copy:
         output_handles_to_copy_by_step[handle.step_key].append(handle)
 
     intermediate_storage = pipeline_context.intermediate_storage
+    # TODO yuhan: move this mutation to eariler in the stack to ensure immutability
+    intermediate_storage.set_external_intermediates(external_intermediates_from_previous_run)
     for step in execution_plan.topological_steps():
         step_context = pipeline_context.for_step(step)
         for handle in output_handles_to_copy_by_step.get(step.key, []):
             if intermediate_storage.has_intermediate(pipeline_context, handle):
                 continue
-
             operation = intermediate_storage.copy_intermediate_from_run(
                 pipeline_context, parent_run_id, handle
             )
@@ -84,7 +89,23 @@ def is_intermediate_storage_write_event(record):
 
     write_ops = (
         ObjectStoreOperationType.SET_OBJECT.value,
+        ObjectStoreOperationType.SET_EXTERNAL_OBJECT.value,
         ObjectStoreOperationType.CP_OBJECT.value,
+    )
+    return (
+        record.dagster_event.event_type_value == DagsterEventType.OBJECT_STORE_OPERATION.value
+        and record.dagster_event.event_specific_data.op in write_ops
+    )
+
+
+def is_intermediate_storage_external_event(record):
+    check.inst_param(record, "record", EventRecord)
+    if not record.is_dagster_event:
+        return False
+
+    write_ops = (
+        ObjectStoreOperationType.SET_EXTERNAL_OBJECT.value,
+        ObjectStoreOperationType.GET_EXTERNAL_OBJECT.value,
     )
     return (
         record.dagster_event.event_type_value == DagsterEventType.OBJECT_STORE_OPERATION.value
@@ -125,3 +146,29 @@ def output_handles_from_execution_plan(execution_plan):
                 if step_input.source_handles:
                     output_handles_for_current_run.update(step_input.source_handles)
     return output_handles_for_current_run
+
+
+def external_intermediates_from_event_logs(event_logs):
+    external_intermediates_from_previous_run = {}
+    for record in event_logs:
+        if not is_intermediate_storage_external_event(record):
+            continue
+
+        if (
+            not record.dagster_event.event_specific_data
+            or not record.dagster_event.event_specific_data.metadata_entries
+        ):
+            continue
+
+        for entry in record.dagster_event.event_specific_data.metadata_entries:
+            if isinstance(entry.entry_data, AddressMetadataEntryData):
+                step_output_handle = entry.entry_data.step_output_handle or StepOutputHandle(
+                    record.dagster_event.step_key,
+                    record.dagster_event.event_specific_data.value_name,
+                )
+                external_intermediates_from_previous_run[
+                    step_output_handle
+                ] = entry.entry_data.address
+                break
+
+    return external_intermediates_from_previous_run
