@@ -338,11 +338,17 @@ def _set_intermediates(step_context, step_output, step_output_handle, output):
         dagster_type=step_output.dagster_type,
         step_output_handle=step_output_handle,
         value=output.value,
+        address=output.address,
     )
-    if isinstance(res, ObjectStoreOperation):
-        yield DagsterEvent.object_store_operation(
-            step_context, ObjectStoreOperation.serializable(res, value_name=output.output_name)
-        )
+    if res:
+        for evt in res:
+            if isinstance(evt, ObjectStoreOperation):
+                yield DagsterEvent.object_store_operation(
+                    step_context,
+                    ObjectStoreOperation.serializable(evt, value_name=output.output_name),
+                )
+            elif isinstance(evt, AssetMaterialization):
+                yield DagsterEvent.step_materialization(step_context, evt)
 
 
 def _create_output_materializations(step_context, output_name, value):
