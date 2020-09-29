@@ -12,7 +12,7 @@ from dagster import check
 from dagster.core.errors import DagsterImportError, DagsterInvariantViolationError
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.serdes import whitelist_for_serdes
-from dagster.seven import get_import_error_message, import_module_from_path
+from dagster.seven import ModuleNotFoundError, get_import_error_message, import_module_from_path
 from dagster.utils import alter_sys_path, load_yaml_from_path
 
 
@@ -376,6 +376,15 @@ def get_python_file_from_previous_stack_frame():
 
     python_file = previous_stack_frame[1]
     return os.path.abspath(python_file)
+
+
+def is_from_ipython_env():
+    try:
+        from IPython import get_ipython
+
+        return get_ipython() is not None
+    except ModuleNotFoundError:
+        return False
 
 
 @whitelist_for_serdes
