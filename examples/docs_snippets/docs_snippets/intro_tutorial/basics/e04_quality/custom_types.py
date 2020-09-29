@@ -3,11 +3,13 @@ import os
 
 from dagster import DagsterType, execute_pipeline, pipeline, solid
 
+# start_a30e13e4029e11ebb15eacde48001122
 SimpleDataFrame = DagsterType(
     name="SimpleDataFrame",
     type_check_fn=lambda _, value: isinstance(value, list),
     description="A naive representation of a data frame, e.g., as returned by csv.DictReader.",
 )
+# end_a30e13e4029e11ebb15eacde48001122
 
 
 @solid

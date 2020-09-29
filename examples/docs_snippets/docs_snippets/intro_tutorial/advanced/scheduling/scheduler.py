@@ -1,3 +1,4 @@
+# start_a30a67f8029e11ebbc52acde48001122
 import csv
 from datetime import datetime, time
 
@@ -24,6 +25,10 @@ def hello_cereal_pipeline():
     hello_cereal()
 
 
+# end_a30a67f8029e11ebbc52acde48001122
+# start_a30a9f3e029e11ebab34acde48001122
+
+
 @daily_schedule(
     pipeline_name="hello_cereal_pipeline",
     start_date=datetime(2020, 6, 1),
@@ -36,6 +41,7 @@ def good_morning_schedule(date):
                 "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
             }
         }
+        # end_a30a9f3e029e11ebab34acde48001122
     }
 
 

@@ -49,11 +49,13 @@ TELEMETRY_VERSION = "0.2"
 
 # When adding to TELEMETRY_WHITELISTED_FUNCTIONS, please also update the literalinclude in
 # docs/next/src/pages/install/index.mdx
+# start_a311ca5c029e11ebb660acde48001122
 TELEMETRY_WHITELISTED_FUNCTIONS = {
     "execute_execute_command",
     "_logged_execute_pipeline",
     "execute_launch_command",
 }
+# end_a311ca5c029e11ebb660acde48001122
 
 
 def telemetry_wrapper(f):

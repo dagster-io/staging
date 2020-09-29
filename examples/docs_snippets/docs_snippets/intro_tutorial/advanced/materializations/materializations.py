@@ -21,7 +21,9 @@ def read_csv(context, csv_path):
     return lines
 
 
+# start_a30f7cca029e11ebac5bacde48001122
 @solid
+# start_a30f4070029e11eba353acde48001122
 def sort_by_calories(context, cereals):
     sorted_cereals = sorted(
         cereals, key=lambda cereal: int(cereal["calories"])
@@ -45,6 +47,7 @@ def sort_by_calories(context, cereals):
         writer = csv.DictWriter(fd, fieldnames)
         writer.writeheader()
         writer.writerows(sorted_cereals)
+    # end_a30f4070029e11eba353acde48001122
     yield AssetMaterialization(
         asset_key="sorted_cereals_csv",
         description="Cereals data frame sorted by caloric content",
@@ -53,6 +56,7 @@ def sort_by_calories(context, cereals):
                 sorted_cereals_csv_path, "sorted_cereals_csv_path"
             )
         ],
+        # end_a30f7cca029e11ebac5bacde48001122
     )
     yield Output(None)
 

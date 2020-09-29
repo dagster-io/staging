@@ -6,6 +6,7 @@ from pandas import DataFrame, read_csv
 from dagster import OutputDefinition, pipeline, solid
 from dagster.utils import script_relative_path
 
+# start_a3213c26029e11eb8ec1acde48001122
 TripDataFrame = create_dagster_pandas_dataframe_type(
     name="TripDataFrame",
     columns=[
@@ -20,6 +21,8 @@ TripDataFrame = create_dagster_pandas_dataframe_type(
         PandasColumn.boolean_column("was_member"),
     ],
 )
+# end_a3213c26029e11eb8ec1acde48001122
+# start_a3219b3a029e11eb952dacde48001122
 
 
 @solid(output_defs=[OutputDefinition(name="trip_dataframe", dagster_type=TripDataFrame)])
@@ -27,6 +30,7 @@ def load_trip_dataframe(_) -> DataFrame:
     return read_csv(
         script_relative_path("./ebike_trips.csv"),
         parse_dates=["start_time", "end_time"],
+        # end_a3219b3a029e11eb952dacde48001122
         date_parser=lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f"),
     )
 

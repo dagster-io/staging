@@ -146,6 +146,7 @@ def modes_pipeline():
 
 
 if __name__ == "__main__":
+    # start_a30d19f8029e11eba7f0acde48001122
     run_config = {
         "solids": {
             "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
@@ -156,3 +157,4 @@ if __name__ == "__main__":
         pipeline=modes_pipeline, mode="unittest", run_config=run_config,
     )
     assert result.success
+# end_a30d19f8029e11eba7f0acde48001122

@@ -9,6 +9,7 @@ def get_database_connection():
     return Database()
 
 
+# start_a31359c6029e11eba9d9acde48001122
 @solid
 def create_table_1(_) -> Nothing:
     get_database_connection().execute("create table_1 as select * from some_source_table")
@@ -22,6 +23,9 @@ def create_table_2(_):
 @pipeline
 def my_pipeline():
     create_table_2(create_table_1())
+
+
+# end_a31359c6029e11eba9d9acde48001122
 
 
 @repository
