@@ -4,11 +4,12 @@ import * as querystring from 'query-string';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
 import {__RouterContext as RouterContext} from 'react-router';
-import {RouteComponentProps} from 'react-router-dom';
+import {Redirect, RouteComponentProps} from 'react-router-dom';
 import styled from 'styled-components';
 
 import {useRepositorySelector} from 'src/DagsterRepositoryContext';
 import {Loading} from 'src/Loading';
+import {explorerPathFromString} from 'src/PipelinePathUtils';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {PartitionView} from 'src/partitions/PartitionView';
 import {PartitionsBackfill} from 'src/partitions/PartitionsBackfill';
@@ -22,10 +23,11 @@ type PartitionSet = PipelinePartitionsRootQuery_partitionSetsOrError_PartitionSe
 export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps<{
   pipelinePath: string;
 }>> = ({location, match}) => {
-  const pipelineName = match.params.pipelinePath.split(':')[0];
+  const {pipelineName, snapshotId} = explorerPathFromString(match.params.pipelinePath);
   useDocumentTitle(`Pipeline: ${pipelineName}`);
 
   const repositorySelector = useRepositorySelector();
+  debugger;
   const queryResult = useQuery<PipelinePartitionsRootQuery>(PIPELINE_PARTITIONS_ROOT_QUERY, {
     variables: {repositorySelector, pipelineName},
     fetchPolicy: 'network-only',
@@ -41,6 +43,10 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
   const [selected, setSelected] = React.useState<PartitionSet | undefined>();
   const [showLoader, setShowLoader] = React.useState<boolean>(false);
   const [runTags, setRunTags] = React.useState<{[key: string]: string}>({});
+
+  if (snapshotId) {
+    return <Redirect to={`/pipeline/${pipelineName}/partitions`} />;
+  }
 
   return (
     <Loading queryResult={queryResult}>
