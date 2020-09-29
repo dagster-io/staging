@@ -130,14 +130,10 @@ def normalize_calories(context, cereals):
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            name="unittest",
-            resource_defs={"warehouse": local_sqlite_warehouse_resource},
+            name="unittest", resource_defs={"warehouse": local_sqlite_warehouse_resource},
         ),
         ModeDefinition(
-            name="dev",
-            resource_defs={
-                "warehouse": sqlalchemy_postgres_warehouse_resource
-            },
+            name="dev", resource_defs={"warehouse": sqlalchemy_postgres_warehouse_resource},
         ),
     ]
 )
@@ -146,13 +142,11 @@ def modes_pipeline():
 
 
 if __name__ == "__main__":
+    # start_modes_main
     run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        },
+        "solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}},
         "resources": {"warehouse": {"config": {"conn_str": ":memory:"}}},
     }
-    result = execute_pipeline(
-        pipeline=modes_pipeline, mode="unittest", run_config=run_config,
-    )
+    result = execute_pipeline(pipeline=modes_pipeline, mode="unittest", run_config=run_config,)
     assert result.success
+# end_modes_main
