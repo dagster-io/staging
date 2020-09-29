@@ -8,7 +8,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import ObjectStoreOperation
+from dagster.core.definitions.events import AddressableAssetOperation, ObjectStoreOperation
 from dagster.core.errors import (
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
@@ -252,10 +252,16 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
             inputs[input_name] = input_value.obj
         elif isinstance(input_value, MultipleStepOutputsListWrapper):
             for op in input_value:
-                yield DagsterEvent.object_store_operation(
-                    step_context, ObjectStoreOperation.serializable(op, value_name=input_name)
-                )
+                if isinstance(input_value, ObjectStoreOperation):
+                    yield DagsterEvent.object_store_operation(
+                        step_context, ObjectStoreOperation.serializable(op, value_name=input_name)
+                    )
+                elif isinstance(input_value, AddressableAssetOperation):
+                    yield DagsterEvent.addressable_asset_operation(step_context, input_value)
             inputs[input_name] = [op.obj for op in input_value]
+        elif isinstance(input_value, AddressableAssetOperation):
+            yield DagsterEvent.addressable_asset_operation(step_context, input_value)
+            inputs[input_name] = input_value.obj
         else:
             inputs[input_name] = input_value
 
@@ -319,18 +325,30 @@ def _create_step_events_for_output(step_context, output):
 
 
 def _set_intermediates(step_context, step_output, step_output_handle, output, version):
-    res = step_context.intermediate_storage.set_intermediate(
-        context=step_context,
-        dagster_type=step_output.dagster_type,
-        step_output_handle=step_output_handle,
-        value=output.value,
-        version=version,
-    )
+    if output.asset_store and output.address:
+        res = step_context.intermediate_storage.set_addressable_asset(
+            context=step_context,
+            asset_store=output.asset_store,
+            step_output_handle=step_output_handle,
+            value=output.value,
+            path=output.address,
+        )
+    else:
+        res = step_context.intermediate_storage.set_intermediate(
+            context=step_context,
+            dagster_type=step_output.dagster_type,
+            step_output_handle=step_output_handle,
+            value=output.value,
+            version=version,
+        )
 
     if isinstance(res, ObjectStoreOperation):
         yield DagsterEvent.object_store_operation(
             step_context, ObjectStoreOperation.serializable(res, value_name=output.output_name),
         )
+
+    if isinstance(res, AddressableAssetOperation):
+        yield DagsterEvent.addressable_asset_operation(step_context, res)
 
 
 def _create_output_materializations(step_context, output_name, value):

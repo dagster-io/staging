@@ -50,6 +50,7 @@ def build_intermediate_storage_from_object_store(
         type_storage_plugin_registry=init_context.type_storage_plugin_registry
         if init_context.type_storage_plugin_registry
         else TypeStoragePluginRegistry(types_to_register=[]),
+        address_store=init_context.address_store,
     )
 
 
@@ -115,6 +116,7 @@ def fs_system_storage(init_context):
             root_for_run_id=lambda _: override_dir,
             run_id=init_context.pipeline_run.run_id,
             type_storage_plugin_registry=init_context.type_storage_plugin_registry,
+            address_store=init_context.address_store,
         )
     else:
         file_manager = LocalFileManager.for_instance(
@@ -124,6 +126,7 @@ def fs_system_storage(init_context):
             init_context.instance.intermediates_directory,
             run_id=init_context.pipeline_run.run_id,
             type_storage_plugin_registry=init_context.type_storage_plugin_registry,
+            address_store=init_context.address_store,
         )
 
     return SystemStorageData(file_manager=file_manager, intermediate_storage=intermediate_storage,)

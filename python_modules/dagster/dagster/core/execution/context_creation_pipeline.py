@@ -107,7 +107,7 @@ class ContextCreationData(
         "_ContextCreationData",
         "pipeline environment_config pipeline_run mode_def system_storage_def "
         "intermediate_storage_def executor_def instance resource_keys_to_init "
-        "execution_plan",
+        "execution_plan address_store",
     )
 ):
     @property
@@ -139,6 +139,7 @@ def create_context_creation_data(
             execution_plan, system_storage_def, intermediate_storage_def
         ),
         execution_plan=execution_plan,
+        address_store=instance.get_address_store(pipeline_run.parent_run_id),
     )
 
 
@@ -397,11 +398,12 @@ def create_system_storage_data(
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 
-    environment_config, pipeline_def, system_storage_def, pipeline_run = (
+    environment_config, pipeline_def, system_storage_def, pipeline_run, address_store = (
         context_creation_data.environment_config,
         context_creation_data.pipeline_def,
         context_creation_data.system_storage_def,
         context_creation_data.pipeline_run,
+        context_creation_data.address_store,
     )
 
     system_storage_data = (
@@ -422,6 +424,7 @@ def create_system_storage_data(
                 resources=scoped_resources_builder.build(
                     context_creation_data.system_storage_def.required_resource_keys,
                 ),
+                address_store=address_store,
             )
         )
     )
@@ -434,11 +437,12 @@ def create_intermediate_storage(
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 
-    environment_config, pipeline_def, intermediate_storage_def, pipeline_run = (
+    environment_config, pipeline_def, intermediate_storage_def, pipeline_run, address_store = (
         context_creation_data.environment_config,
         context_creation_data.pipeline_def,
         context_creation_data.intermediate_storage_def,
         context_creation_data.pipeline_run,
+        context_creation_data.address_store,
     )
     intermediate_storage_data = (
         intermediate_storage_data
@@ -458,6 +462,7 @@ def create_intermediate_storage(
                 resources=scoped_resources_builder.build(
                     context_creation_data.intermediate_storage_def.required_resource_keys,
                 ),
+                address_store=address_store,
             )
         )
     )
