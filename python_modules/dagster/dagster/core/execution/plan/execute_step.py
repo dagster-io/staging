@@ -8,6 +8,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
+from dagster.core.definitions.address import Address
 from dagster.core.errors import (
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
@@ -28,7 +29,7 @@ from dagster.core.execution.plan.objects import (
     TypeCheckData,
 )
 from dagster.core.execution.resolve_versions import resolve_step_output_versions
-from dagster.core.storage.object_store import ObjectStoreOperation
+from dagster.core.storage.object_store import ObjectStoreOperation, ObjectStoreOperationType
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.utils import iterate_with_context, raise_interrupts_immediately
 from dagster.utils.timing import time_execution_scope
@@ -321,10 +322,10 @@ def _create_step_events_for_output(step_context, output):
 
     step_output_handle = StepOutputHandle.from_step(step=step, output_name=output.output_name)
 
-    for evt in _set_intermediates(step_context, step_output, step_output_handle, output):
+    for evt in _create_output_materializations(step_context, output.output_name, output.value):
         yield evt
 
-    for evt in _create_output_materializations(step_context, output.output_name, output.value):
+    for evt in _set_intermediates(step_context, step_output, step_output_handle, output):
         yield evt
 
 
@@ -334,7 +335,9 @@ def _set_intermediates(step_context, step_output, step_output_handle, output):
         dagster_type=step_output.dagster_type,
         step_output_handle=step_output_handle,
         value=output.value,
+        address=output.address,
     )
+
     if isinstance(res, ObjectStoreOperation):
         yield DagsterEvent.object_store_operation(
             step_context, ObjectStoreOperation.serializable(res, value_name=output.output_name)
@@ -358,6 +361,8 @@ def _create_output_materializations(step_context, output_name, value):
             config_output_name, output_spec = list(output_spec.items())[0]
             if config_output_name == output_name:
                 step_output = step.step_output_named(output_name)
+                address = Address(config_value=output_spec)
+                step_output_handle = StepOutputHandle(step_context.step.key, step_output.name)
                 with user_code_error_boundary(
                     DagsterTypeMaterializationError,
                     msg_fn=lambda: """Error occurred during output materialization:
@@ -372,9 +377,26 @@ def _create_output_materializations(step_context, output_name, value):
                         solid=step_context.solid.name,
                     ),
                 ):
-                    materializations = step_output.dagster_type.materializer.materialize_runtime_values(
-                        step_context, output_spec, value
+                    materializations = step_context.intermediate_storage.set_intermediate(
+                        context=step_context,
+                        dagster_type=step_output.dagster_type,
+                        step_output_handle=step_output_handle,
+                        value=value,
+                        address=address,
                     )
+                # yield "set external object" operation event for cross-run intermediate storage
+                yield DagsterEvent.object_store_operation(
+                    step_context,
+                    ObjectStoreOperation.serializable(
+                        ObjectStoreOperation(
+                            op=ObjectStoreOperationType.SET_EXTERNAL_OBJECT,
+                            key=address.key,
+                            address=address,
+                            step_output_handle=step_output_handle,
+                        ),
+                        value_name=step_output.name,
+                    ),
+                )
 
                 for materialization in materializations:
                     if not isinstance(materialization, (AssetMaterialization, Materialization)):

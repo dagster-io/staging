@@ -780,7 +780,12 @@ class DagsterEvent(
                 op=object_store_operation_result.op,
                 value_name=value_name,
                 metadata_entries=[
-                    EventMetadataEntry.path(object_store_operation_result.key, label="key")
+                    EventMetadataEntry.path(object_store_operation_result.key, label="key"),
+                    EventMetadataEntry.address(
+                        address=object_store_operation_result.address,
+                        label="address",
+                        step_output_handle=object_store_operation_result.step_output_handle,
+                    ),
                 ],
             ),
             message=message,
