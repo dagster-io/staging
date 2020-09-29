@@ -462,3 +462,7 @@ class DagsterImportError(DagsterError):
 
 class ExecutableError(DagsterUserCodeExecutionError):
     """Errors raised during the execution of user-provided functions for a defined Executable."""
+
+
+class DagsterUnknownStepStateError(DagsterError):
+    """When pipeline execution complete with steps in an unknown state"""
