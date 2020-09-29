@@ -19,14 +19,14 @@ class TypeStoragePlugin(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
     @classmethod
     @abstractmethod
     def set_intermediate_object(
-        cls, intermediate_storage, context, dagster_type, step_output_handle, value
+        cls, intermediate_storage, context, dagster_type, step_output_handle, value, address=None
     ):
         raise NotImplementedError()
 
     @classmethod
     @abstractmethod
     def get_intermediate_object(
-        cls, intermediate_storage, context, dagster_type, step_output_handle
+        cls, intermediate_storage, context, dagster_type, step_output_handle, address=None
     ):
         raise NotImplementedError()
 
