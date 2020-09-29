@@ -14,12 +14,26 @@ def retrieve_pod_logs(pod_name, namespace):
     return DagsterKubernetesClient.production_client().retrieve_pod_logs(pod_name, namespace)
 
 
+def retrieve_job_logs(job_name, namespace):
+    return DagsterKubernetesClient.production_client().retrieve_job_logs(job_name, namespace)
+
+
+def retrieve_job_logs_by_pod(job_name, namespace):
+    return DagsterKubernetesClient.production_client().retrieve_job_logs_by_pod(job_name, namespace)
+
+
 def get_pod_names_in_job(job_name, namespace):
     return DagsterKubernetesClient.production_client().get_pod_names_in_job(job_name, namespace)
 
 
 def delete_job(job_name, namespace):
     return DagsterKubernetesClient.production_client().delete_job(job_name, namespace)
+
+
+def create_namespaced_job(
+    job_body, namespace,
+):
+    return DagsterKubernetesClient.production_client().create_namespaced_job(job_body, namespace)
 
 
 def wait_for_job_success(
