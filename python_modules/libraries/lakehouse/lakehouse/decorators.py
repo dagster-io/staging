@@ -1,3 +1,5 @@
+from typing import Callable, Dict, List, Optional, Tuple, Type, Union
+
 from dagster import check
 from dagster.seven import funcsigs
 
@@ -128,21 +130,23 @@ def computed_table(
     return _computed_table
 
 
-def _deps_by_arg_name(input_assets, fn, num_base_args):
-    """
-    Args:
-        input_assets (Optional[Union[List[Asset], Dict[str, Asset]]])
-        fn (Callable)
-
-    Returns (Dict[str, AssetDependency])
-    """
+def _deps_by_arg_name(
+    input_assets: Optional[Union[List[Asset], Dict[str, Asset]]], fn: Callable, num_base_args
+) -> Dict[str, AssetDependency]:
     kwarg_types = _infer_kwarg_types(fn)
-    input_kwarg_types = kwarg_types[num_base_args:]
+
+    # allow optional "context" argument
+    input_kwarg_types = [
+        (name, annotated_type)
+        for name, annotated_type in kwarg_types[num_base_args:]
+        if name != "context"
+    ]
     if isinstance(input_assets, list):
         check.invariant(
             len(input_kwarg_types) == len(input_assets) + num_base_args,
             f'For {fn.__name__}, input_assets length "{len(input_assets)}"" must match number of '
-            f'keyword args "{len(kwarg_types)}" plus number of base args "{num_base_args}".',
+            f'keyword args "{len(kwarg_types)}", plus number of base args "{num_base_args}",'
+            " plus optional context arg.",
         )
         return {
             kwarg: AssetDependency(input_asset, annotated_type)
@@ -153,7 +157,8 @@ def _deps_by_arg_name(input_assets, fn, num_base_args):
         input_asset_keys = list(input_assets.keys())
         check.invariant(
             input_kwarg_names == input_asset_keys,
-            f"input_assets keys {input_asset_keys} must match keyword args {input_kwarg_names}",
+            f"input_assets keys {input_asset_keys} must match keyword args {input_kwarg_names},"
+            f' plus number of base args "{num_base_args}", plus optional context arg.',
         )
         return {
             kwarg: AssetDependency(input_assets[kwarg], annotated_type)
@@ -163,12 +168,12 @@ def _deps_by_arg_name(input_assets, fn, num_base_args):
         check.failed("input_assets must be a list or a dict")
 
 
-def _infer_kwarg_types(fn):
+def _infer_kwarg_types(fn: Callable) -> List[Tuple[str, Type]]:
     signature = funcsigs.signature(fn)
     params = signature.parameters.values()
     return [(param.name, param.annotation) for param in params]
 
 
-def _infer_output_type(fn):
+def _infer_output_type(fn: Callable) -> Type:
     signature = funcsigs.signature(fn)
     return signature.return_annotation

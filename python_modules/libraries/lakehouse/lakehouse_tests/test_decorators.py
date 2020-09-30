@@ -175,3 +175,31 @@ def test_version():
         return "a"
 
     assert casset.computation.version == "some_version"
+
+
+def test_context_no_deps():
+    source_asset1 = source_asset(storage_key="filesystem", path=("a", "b"))
+
+    @computed_asset(storage_key="filesystem", input_assets={"a_": source_asset1})
+    def casset(context, a_: int) -> str:
+        context.info.log("This")
+        return str(a_)
+
+    assert casset.computation
+    assert casset.path == ("casset",)
+    assert casset.computation.output_in_memory_type == str
+    assert list(casset.computation.deps.keys()) == ["a_"]
+    assert casset.computation.deps["a_"].in_memory_type == int
+    assert casset.computation.deps["a_"].asset == source_asset1
+
+
+def test_context_single_dep():
+    @computed_asset(storage_key="filesystem")
+    def casset(context) -> str:
+        context.info.log("This")
+        return "a"
+
+    assert casset.computation
+    assert casset.path == ("casset",)
+    assert casset.computation.output_in_memory_type == str
+    assert len(casset.computation.deps.keys()) == 0
