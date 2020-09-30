@@ -105,7 +105,7 @@ def test_wait_for_job(cluster_provider):  # pylint: disable=unused-argument
             wait_for_job_success('sayhi1', namespace=namespace)
 
             with pytest.raises(
-                DagsterK8sError, match='Timed out while waiting for job to complete'
+                DagsterK8sError, match='Timed out while waiting for job sayhi2 to complete'
             ):
                 api.create_namespaced_job(
                     body=construct_job_manifest('sayhi2', 'sleep 5; echo "hello world"'),
