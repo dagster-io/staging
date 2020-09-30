@@ -1,9 +1,10 @@
-from dagster import solid, pipeline, String, Field, execute_pipeline, InputDefinition
-from pyspark.sql import DataFrame, SparkSession, Window
-from pyspark.sql.functions import udf, max, col, concat, lit
-from pyspark.sql.types import DateType
-import pandas as pd
 import os
+
+from pyspark.sql import SparkSession, Window
+from pyspark.sql.functions import col, concat, lit
+from pyspark.sql.functions import max as pyspark_max
+
+from dagster import Field, InputDefinition, String, pipeline, solid
 
 
 def create_spark_session():
@@ -31,7 +32,7 @@ def get_max_temp_per_station(context):
     tmpf_df = df_from_csv(fpath)
     w = Window.partitionBy("station")
     max_df = (
-        tmpf_df.withColumn("maxTmpf", max("tmpf").over(w))
+        tmpf_df.withColumn("maxTmpf", pyspark_max("tmpf").over(w))
         .where(col("tmpf") == col("maxTmpf"))
         .drop("maxTmpf")
     )
