@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { PipelineSelector } from "./globalTypes";
+import { PipelineSelector } from "src/types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: SidebarTabbedContainerSolidQuery

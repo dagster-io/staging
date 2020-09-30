@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { ObjectStoreOperationType } from "./globalTypes";
+import { ObjectStoreOperationType } from "src/types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: RunMetadataProviderMessageFragment

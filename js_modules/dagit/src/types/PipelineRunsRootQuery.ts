@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { PipelineRunsFilter, PipelineRunStatus } from "./globalTypes";
+import { PipelineRunsFilter, PipelineRunStatus } from "src/types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: PipelineRunsRootQuery
