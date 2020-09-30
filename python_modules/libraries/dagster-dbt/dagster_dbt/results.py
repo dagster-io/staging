@@ -1,7 +1,7 @@
 from dagster import check, usable_as_dagster_type
 from datetime import datetime, timedelta
 from dateutil import parser
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 class StepTiming:
@@ -70,7 +70,7 @@ class NodeResult:
         self,
         node: Dict[str, Any],
         error: Optional[str],
-        status: str,
+        status: Union[str, int],
         execution_time: float,
         thread_id: str,
         step_timings: List[Dict[str, Any]],
@@ -83,7 +83,7 @@ class NodeResult:
         Args:
             node (Dict): Details about the executed dbt node (model).
             error (Optional[str]): An error message if an error occurred.
-            status (str): The status message of the executed dbt node (model).
+            status (str | int): The status of the executed dbt node (model).
             execution_time (float): The execution duration (in seconds) of the dbt node (model).
             thread_id (str): The dbt thread identifier that executed the dbt node (model).
             step_timings (List[Dict[str, Any]]): The timings for each step in the executed dbt node
@@ -94,7 +94,6 @@ class NodeResult:
         """
         check.dict_param(node, "node", key_type=str)
         check.opt_str_param(error, "error")
-        check.str_param(status, "status")
         check.float_param(execution_time, "execution_time")
         check.str_param(thread_id, "thread_id")
         check.list_param(step_timings, "step_timings", of_type=Dict)
@@ -121,7 +120,6 @@ class NodeResult:
         """
         check.dict_elem(d, "node")
         check.opt_str_elem(d, "error")
-        check.str_elem(d, "status")
         # check.float_elem(d, "execution_time") TODO[Bob]: Implement `check.float_elem`.
         check.str_elem(d, "thread_id")
         check.list_elem(d, "timing")
@@ -141,8 +139,8 @@ class NodeResult:
         return self._error
 
     @property
-    def status(self) -> str:
-        """str: The status message of the executed dbt node (model)."""
+    def status(self) -> Union[str, int]:
+        """str | int: The status of the executed dbt node (model)."""
         return self._status
 
     @property
