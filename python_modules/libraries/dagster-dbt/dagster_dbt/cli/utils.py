@@ -10,6 +10,14 @@ from dagster import check
 from ..errors import DagsterDbtFatalCliRuntimeError, DagsterDbtHandledCliRuntimeError
 
 
+# This function is copied from `dagster-shell`, which itself is copied from the Airflow bash
+# operator. According to
+# https://github.com/apache/airflow/commit/ca961042c146d49504e00e4abefc7779f0747782
+# Python 2.7 would override the default signal handling for subprocesses. `pre_exec` is used to
+# restore default signal handling behavior.
+#
+# Given that `dagster-dbt` is expected to only run on Python 3+, `pre_exec` may be deprecated and
+# removed.
 def pre_exec():
     # Restore default signal disposition and invoke setsid
     for sig in ("SIGPIPE", "SIGXFZ", "SIGXFSZ"):
