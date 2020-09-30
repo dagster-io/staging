@@ -1,11 +1,15 @@
 import logging
+import sys
 import time
+from contextlib import contextmanager
 from enum import Enum
 
 import kubernetes
 import six
+from six import raise_from
 
 from dagster import DagsterInstance, check
+from dagster.core.errors import _add_inner_exception_for_py2
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 
 DEFAULT_WAIT_TIMEOUT = 86400.0  # 1 day
@@ -22,8 +26,80 @@ class DagsterK8sError(Exception):
     pass
 
 
+class DagsterK8sTimeoutError(DagsterK8sError):
+    pass
+
+
+class DagsterK8sUnrecoverableError(Exception):
+    pass
+
+
+class DagsterK8sUnrecoverableAPIError(Exception):
+    def __init__(self, *args, **kwargs):
+        k8s_api_exception = check.inst_param(
+            kwargs.pop("k8s_api_exception"), "k8s_api_exception", Exception
+        )
+        original_exc_info = check.tuple_param(kwargs.pop("original_exc_info"), "original_exc_info")
+
+        check.invariant(original_exc_info[0] is not None)
+        msg = _add_inner_exception_for_py2(args[0], original_exc_info)
+        super(DagsterK8sUnrecoverableAPIError, self).__init__(msg, *args[1:], **kwargs)
+
+        self.user_exception = check.opt_inst_param(
+            k8s_api_exception, "k8s_api_exception", Exception
+        )
+        self.original_exc_info = original_exc_info
+
+
 class DagsterK8sPipelineStatusException(Exception):
     pass
+
+
+WHITELISTED_TRANSIENT_K8S_STATUS_CODES = [
+    429,  # Too many requests
+    504,  # Status server timeout
+]
+
+WHITELISTED_TRANSIENT_K8S_API_ERRORS = {504: ["Gateway Timeout"]}
+
+
+@contextmanager
+def k8s_api_retry_boundary(
+    msg_fn=lambda: "Unexpected error encounted in K8s API Client",
+    error_cls=DagsterK8sUnrecoverableAPIError,
+    max_retries=1,
+    timeout=10,
+    raise_on_error=True,
+):
+    retries = max_retries
+    while retries > 0:
+        retries -= 1
+
+        try:
+            yield
+            break
+        except kubernetes.client.rest.ApiException as e:
+            # Only catch whitelisted ApiExceptions
+            whitelisted = False
+            status = e.status
+
+            # Check if the status code is generally whitelisted
+            if status in WHITELISTED_TRANSIENT_K8S_STATUS_CODES:
+                whitelisted = True
+
+            # Check if the status code + reason is whitelisted
+            if status in WHITELISTED_TRANSIENT_K8S_API_ERRORS:
+                reason = e.reason
+                if reason in WHITELISTED_TRANSIENT_K8S_API_ERRORS[status]:
+                    whitelisted = True
+
+            # If there are remaining retries, swallow the error
+            if whitelisted and retries > 0:
+                time.sleep(timeout)
+            elif raise_on_error:
+                raise_from(
+                    error_cls(msg_fn(), user_exception=e, original_exc_info=sys.exc_info(),), e,
+                )
 
 
 class KubernetesWaitingReasons:
@@ -152,51 +228,60 @@ class DagsterKubernetesClient:
         job = None
         start = self.timer()
 
-        # Ensure we found the job that we launched
+        # Wait for job to launch
         while not job:
             if self.timer() - start > wait_timeout:
+                raise DagsterK8sTimeoutError(
+                    "Timed out while waiting for job {job_name}"
+                    " to launch".format(job_name=job_name)
+                )
 
-                raise DagsterK8sError("Timed out while waiting for job to launch")
-
-            jobs = self.batch_api.list_namespaced_job(namespace=namespace)
-            job = next((j for j in jobs.items if j.metadata.name == job_name), None)
+            # Get all jobs in the namespace and find the matching job
+            # TODO: report all retries
+            # TODO: get recoverable http errors
+            # TODO: transient API error retry exceed
+            with k8s_api_retry_boundary(max_retries=3, raise_on_error=False):
+                jobs = self.batch_api.list_namespaced_job(namespace=namespace)
+                job = next((j for j in jobs.items if j.metadata.name == job_name), None)
 
             if not job:
                 self.logger('Job "{job_name}" not yet launched, waiting'.format(job_name=job_name))
                 self.sleeper(wait_time_between_attempts)
 
-        # Wait for job completed status
+        # Wait for the job status to be completed. We check the status every
+        # wait_time_between_attempts seconds
         while True:
             if self.timer() - start > wait_timeout:
-                raise DagsterK8sError("Timed out while waiting for job to complete")
-
-            # See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.11/#jobstatus-v1-batch
-            status = self.batch_api.read_namespaced_job_status(job_name, namespace=namespace).status
-
-            if status.failed and status.failed > 0:
-                pods = self.core_api.list_namespaced_pod(
-                    label_selector="job-name=={}".format(job_name), namespace=namespace
-                )
-                logs = {}
-                for pod in pods.items:
-                    pod_name = pod.metadata.name
-                    try:
-                        logs[pod_name] = self.core_api.read_namespaced_pod_log(
-                            name=pod_name, namespace=namespace
-                        )
-                    except kubernetes.client.rest.ApiException as e:
-                        logs[pod_name] = e
-
-                raise DagsterK8sError(
-                    "Encountered failed job pods with status: {}, and logs: {}".format(status, logs)
+                raise DagsterK8sTimeoutError(
+                    "Timed out while waiting for job {job_name}"
+                    " to complete".format(job_name=job_name)
                 )
 
-            # done waiting for pod completion
+            # Reads the status of the specified job. Returns a V1Job object that
+            # we need to read the status off of.
+            status = None
+            with k8s_api_retry_boundary(max_retries=3):
+                job = self.batch_api.read_namespaced_job_status(job_name, namespace=namespace)
+                status = job.status
+
+            # status.succeeded represents the number of pods which reached phase Succeeded.
             if status.succeeded == num_pods_to_wait_for:
                 break
 
+            # status.failed represents the number of pods which reached phase Failed.
+            if status.failed and status.failed > 0:
+                raise DagsterK8sUnrecoverableError(
+                    "Encountered failed job pods for job {job_name} with status: {status}".format(
+                        job_name=job_name, status=status
+                    )
+                )
+
             if instance and run_id:
-                pipeline_run_status = instance.get_run_by_id(run_id).status
+                pipeline_run = instance.get_run_by_id(run_id)
+                if not pipeline_run:
+                    raise DagsterK8sPipelineStatusException()
+
+                pipeline_run_status = pipeline_run.status
                 if pipeline_run_status != PipelineRunStatus.STARTED:
                     raise DagsterK8sPipelineStatusException()
 
