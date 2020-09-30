@@ -75,6 +75,9 @@ class NodeResult:
         thread_id: str,
         step_timings: List[Dict[str, Any]],
         table: Optional[Dict[str, Any]] = None,
+        fail: Optional[Any] = None,
+        warn: Optional[Any] = None,
+        skip: Optional[Any] = None,
         *args,
         **kwargs,
     ):
@@ -83,6 +86,9 @@ class NodeResult:
         Args:
             node (Dict): Details about the executed dbt node (model).
             error (Optional[str]): An error message if an error occurred.
+            fail (Optional[Any]): The ``fail`` field from the results of the executed dbt node.
+            warn (Optional[Any]): The ``warn`` field from the results of the executed dbt node.
+            skip (Optional[Any]): The ``skip`` field from the results of the executed dbt node.
             status (str | int): The status of the executed dbt node (model).
             execution_time (float): The execution duration (in seconds) of the dbt node (model).
             thread_id (str): The dbt thread identifier that executed the dbt node (model).
@@ -106,6 +112,9 @@ class NodeResult:
         self._thread_id = thread_id
         self._step_timings = [StepTiming(**st) for st in step_timings]
         self._table = table
+        self._fail = fail
+        self._warn = warn
+        self._skip = skip
 
     @classmethod
     def from_dict(cls, d: Dict[str, Any]) -> 'NodeResult':
@@ -133,9 +142,9 @@ class NodeResult:
         """Dict[str, Any]: Details about the executed dbt node (model)."""
         return self._node
 
+    @property
     def error(self) -> Optional[str]:
-        """Optional[str]: An error message if an error occurred.
-        """
+        """Optional[str]: An error message if an error occurred."""
         return self._error
 
     @property
@@ -154,10 +163,10 @@ class NodeResult:
         return self._status
 
     @property
-    def timing(self) -> List[StepTiming]:
+    def step_timings(self) -> List[StepTiming]:
         """List[StepTiming]: A list of :class:`StepTiming <dagster_dbt.StepTiming>`s for each step
         in the executed dbt node (model)."""
-        return self._timing
+        return self._step_timings
 
     @property
     def table(self) -> Optional[Dict[str, Any]]:
@@ -167,6 +176,21 @@ class NodeResult:
         server.
         """
         return self._table
+
+    @property
+    def fail(self) -> Optional[Any]:
+        """Optional[Any]: The ``fail`` field from the results of the executed dbt node."""
+        return self._fail
+
+    @property
+    def warn(self) -> Optional[Any]:
+        """Optional[Any]: The ``warn`` field from the results of the executed dbt node."""
+        return self._warn
+
+    @property
+    def skip(self) -> Optional[Any]:
+        """Optional[Any]: The ``skip`` field from the results of the executed dbt node."""
+        return self._skip
 
 
 class RunResult:

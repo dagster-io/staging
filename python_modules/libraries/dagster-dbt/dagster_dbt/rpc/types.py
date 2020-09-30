@@ -10,6 +10,7 @@ from dagster import check, usable_as_dagster_type
 from ..results import RunResult
 
 
+@usable_as_dagster_type
 class PolledRunResult(RunResult):
     """The results of executing a dbt command, along with additional metadata about the dbt process
     that was run on the dbt RPC server.
