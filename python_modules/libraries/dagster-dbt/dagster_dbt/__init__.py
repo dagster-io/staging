@@ -8,7 +8,7 @@ from .cli.solids import (
     dbt_cli_snapshot_freshness,
     dbt_cli_test,
 )
-from .cli.types import DbtCliResult, DbtCliStatsResult
+from .cli.types import CliRunResult, DbtCliResult, DbtCliStatsResult
 from .errors import (
     DagsterDbtCliRuntimeError,
     DagsterDbtError,
@@ -32,10 +32,9 @@ from .rpc.solids import (
     dbt_rpc_test,
     dbt_rpc_test_and_wait,
 )
-from .rpc.types import DbtRpcPollResult, NodeResult, NodeTiming
+from .rpc.types import DbtRpcPollResult, NodeResult, NodeTiming, PolledRunResult
 from .results import (
     NodeResult,
-    PolledRunResult,
     RunResult,
     StepTiming,
 )
