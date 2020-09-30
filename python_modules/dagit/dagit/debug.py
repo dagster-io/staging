@@ -33,7 +33,7 @@ def dagit_debug_command(input_file):
     host_dagit_ui_with_workspace(
         workspace=Workspace([]),
         instance=instance,
-        port=DEFAULT_DAGIT_PORT,
+        port=3333,
         port_lookup=True,
         host=DEFAULT_DAGIT_HOST,
         path_prefix="",
