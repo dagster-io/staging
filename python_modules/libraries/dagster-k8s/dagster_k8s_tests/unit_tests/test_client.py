@@ -120,7 +120,7 @@ def test_timed_out_while_waiting_for_launch():
     with pytest.raises(DagsterK8sError) as exc_info:
         mock_client.wait_for_job_success("a_job", "a_namespace")
 
-    assert str(exc_info.value) == "Timed out while waiting for job to launch"
+    assert str(exc_info.value) == "Timed out while waiting for job a_job to launch"
 
 
 def test_timed_out_while_waiting_for_job_to_complete():
@@ -137,7 +137,7 @@ def test_timed_out_while_waiting_for_job_to_complete():
     with pytest.raises(DagsterK8sError) as exc_info:
         mock_client.wait_for_job_success(job_name, namespace)
 
-    assert str(exc_info.value) == "Timed out while waiting for job to complete"
+    assert str(exc_info.value) == "Timed out while waiting for job a_job to complete"
 
 
 def test_job_failed():
@@ -158,7 +158,7 @@ def test_job_failed():
     with pytest.raises(DagsterK8sError) as exc_info:
         mock_client.wait_for_job_success(job_name, namespace)
 
-    assert "Encountered failed job pods with status" in str(exc_info.value)
+    assert "Encountered failed job pods for job a_job with status" in str(exc_info.value)
 
 
 def test_long_running_job():
