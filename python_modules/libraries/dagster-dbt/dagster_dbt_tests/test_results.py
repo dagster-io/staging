@@ -35,22 +35,8 @@ RUN_RESULT_DICT = {
     "elapsed_time": 1.1,
 }
 
-POLLED_RUN_RESULT_DICT = {
-    **RUN_RESULT_DICT,
-    "state": "success",
-    "start": "2020-09-28T17:10:56.070900Z",
-    "end": "2020-09-28T17:10:58.116186Z",
-    "elapsed": 2.045286,
-}
-
 
 class TestRunResult:
     def test_from_dict(self):
         rr = RunResult.from_dict(RUN_RESULT_DICT)
         assert len(rr) == len(RUN_RESULT_DICT["results"])
-
-
-class TestPolledRunResult:
-    def test_from_dict(self):
-        prr = PolledRunResult.from_dict(POLLED_RUN_RESULT_DICT)
-        assert len(prr) == len(POLLED_RUN_RESULT_DICT["results"])
