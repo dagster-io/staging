@@ -26,7 +26,7 @@ from dagster import (
     solid,
 )
 
-from ..errors import DagsterDbtUnexpectedRpcPollOutput
+from ..errors import DagsterDbtUnexpectedRpcPollOutputError
 from .types import DbtRpcPollResult
 from .utils import log_rpc, raise_for_rpc_error
 
@@ -158,17 +158,17 @@ def unwrap_result(dbt_rpc_poll_generator) -> DbtRpcPollResult:
         output = x
 
     if output is None:
-        raise DagsterDbtUnexpectedRpcPollOutput(
+        raise DagsterDbtUnexpectedRpcPollOutputError(
             description="dbt_rpc_poll yielded None as its last value. Expected value of type Output containing DbtRpcPollResult.",
         )
 
     if not isinstance(output, Output):
-        raise DagsterDbtUnexpectedRpcPollOutput(
+        raise DagsterDbtUnexpectedRpcPollOutputError(
             description=f"dbt_rpc_poll yielded value of type {type(output)} as its last value. Expected value of type Output containing DbtRpcPollResult.",
         )
 
     if not isinstance(output.value, DbtRpcPollResult):
-        raise DagsterDbtUnexpectedRpcPollOutput(
+        raise DagsterDbtUnexpectedRpcPollOutputError(
             description=f"dbt_rpc_poll yielded Output containing {type(output.value)}. Expected DbtRpcPollResult.",
         )
 

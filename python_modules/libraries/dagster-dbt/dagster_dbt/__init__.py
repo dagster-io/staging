@@ -1,6 +1,7 @@
 from dagster.core.utils import check_dagster_package_version
 
-from .cli.solids import (
+from .cli import (
+    CliRunResult,
     dbt_cli_compile,
     dbt_cli_run,
     dbt_cli_run_operation,
@@ -8,14 +9,14 @@ from .cli.solids import (
     dbt_cli_snapshot_freshness,
     dbt_cli_test,
 )
-from .cli.types import CliRunResult, DbtCliResult, DbtCliStatsResult
 from .errors import (
     DagsterDbtCliRuntimeError,
     DagsterDbtError,
     DagsterDbtFatalCliRuntimeError,
     DagsterDbtHandledCliRuntimeError,
+    DagsterDbtCliRunResultsNotFoundError,
     DagsterDbtUnexpectedCliOutputError,
-    DagsterDbtUnexpectedRpcPollOutput,
+    DagsterDbtUnexpectedRpcPollOutputError,
 )
 from .rpc.resources import DbtRpcClient, dbt_rpc_resource, local_dbt_rpc_resource
 from .rpc.solids import (
@@ -43,12 +44,11 @@ from .version import __version__
 check_dagster_package_version("dagster-dbt", __version__)
 
 __all__ = [
+    "CliRunResult",
     "DagsterDbtCliRuntimeError",
     "DagsterDbtError",
     "DagsterDbtFatalCliRuntimeError",
     "DagsterDbtHandledCliRuntimeError",
-    "DbtCliResult",
-    "DbtCliStatsResult",
     "DbtRpcClient",
     "DbtRpcPollResult",
     "create_dbt_rpc_run_sql_solid",
