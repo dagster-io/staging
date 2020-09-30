@@ -1,17 +1,21 @@
-import {Colors} from '@blueprintjs/core';
+import {Colors, Button, ButtonGroup} from '@blueprintjs/core';
 import gql from 'graphql-tag';
+import {uniq} from 'lodash';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
-import {Line} from 'react-chartjs-2';
+import {Line, ChartComponentProps} from 'react-chartjs-2';
 import styled from 'styled-components';
 
 import {Header, Legend, LegendColumn, RowColumn, RowContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
 import {Timestamp} from 'src/TimeComponents';
 import {colorHash} from 'src/Util';
+import {AssetPartitionMatrix} from 'src/assets/AssetPartitionMatrix';
 import {
-  AssetQuery_assetOrError_Asset_graphMaterializations,
+  AssetQuery,
+  AssetQueryVariables,
   AssetQuery_assetOrError_Asset_lastMaterializations,
+  AssetQuery_assetOrError_Asset_historicalMaterializations,
 } from 'src/assets/types/AssetQuery';
 import {AssetsRootQuery_assetsOrError_AssetConnection_nodes_key} from 'src/assets/types/AssetsRootQuery';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
@@ -22,15 +26,16 @@ import {titleForRun} from 'src/runs/RunUtils';
 import {PipelineRunStatus} from 'src/types/globalTypes';
 
 type AssetKey = AssetsRootQuery_assetsOrError_AssetConnection_nodes_key;
-type GraphMaterialization = AssetQuery_assetOrError_Asset_graphMaterializations;
 type LastMaterialization = AssetQuery_assetOrError_Asset_lastMaterializations;
 
-export const AssetRoot = ({assetKey}: {assetKey: AssetKey}) => {
+export const AssetRoot: React.FunctionComponent<{assetKey: AssetKey}> = ({assetKey}) => {
   const assetPath = assetKey.path.join('.');
   useDocumentTitle(`Asset: ${assetPath}`);
-  const queryResult = useQuery(ASSET_QUERY, {
+
+  const queryResult = useQuery<AssetQuery, AssetQueryVariables>(ASSET_QUERY, {
     variables: {assetKey: {path: assetKey.path}},
   });
+
   return (
     <Loading queryResult={queryResult}>
       {({assetOrError}) => {
@@ -46,14 +51,27 @@ export const AssetRoot = ({assetKey}: {assetKey: AssetKey}) => {
         }
 
         const lastMaterialization = assetOrError.lastMaterializations[0];
+        const partitionsPresent =
+          uniq(assetOrError.historicalMaterializations.map((m) => m.partition)).length > 1;
+
         return (
           <Container>
             <AssetLastMaterialization assetMaterialization={lastMaterialization} />
+            {partitionsPresent && (
+              <div>
+                <Header>Partition Coverage</Header>
+                <AssetPartitionMatrix values={assetOrError.historicalMaterializations} />
+              </div>
+            )}
             <div>
               <Header>Recent Runs</Header>
               <RunTable runs={assetOrError.runs} onSetFilter={(_) => {}} />
             </div>
-            <AssetValueGraph assetKey={assetKey} values={assetOrError.graphMaterializations} />
+            <AssetValueGraph
+              partitionsPresent={partitionsPresent}
+              assetKey={assetKey}
+              values={assetOrError.historicalMaterializations}
+            />
           </Container>
         );
       }}
@@ -61,17 +79,16 @@ export const AssetRoot = ({assetKey}: {assetKey: AssetKey}) => {
   );
 };
 
-const AssetLastMaterialization = ({
-  assetMaterialization,
-}: {
+const AssetLastMaterialization: React.FunctionComponent<{
   assetMaterialization: LastMaterialization;
-}) => {
+}> = ({assetMaterialization}) => {
   const run =
     assetMaterialization.runOrError.__typename === 'PipelineRun'
       ? assetMaterialization.runOrError
       : undefined;
   const {runId, materialization, timestamp} = assetMaterialization.materializationEvent;
   const metadataEntries = materialization.metadataEntries;
+
   return (
     <Section>
       <Header>Last Materialization Event</Header>
@@ -119,16 +136,25 @@ const AssetLastMaterialization = ({
   );
 };
 
-const AssetValueGraph = (props: any) => {
+const AssetValueGraph: React.FunctionComponent<{
+  assetKey: AssetKey;
+  partitionsPresent: boolean;
+  values: AssetQuery_assetOrError_Asset_historicalMaterializations[];
+}> = (props) => {
+  const [xAxis, setXAxis] = React.useState<'time' | 'partition'>('time');
   const dataByLabel = {};
-  props.values.forEach((graphMaterialization: GraphMaterialization) => {
+
+  props.values.forEach((graphMaterialization) => {
     const timestamp = graphMaterialization.materializationEvent.timestamp;
+    const partition = graphMaterialization.partition;
+    if (xAxis === 'partition' && !partition) {
+      return;
+    }
+
     graphMaterialization.materializationEvent.materialization.metadataEntries.forEach((entry) => {
       if (entry.__typename === 'EventFloatMetadataEntry') {
-        dataByLabel[entry.label] = [
-          ...(dataByLabel[entry.label] || []),
-          {x: parseInt(timestamp, 10), y: entry.value},
-        ];
+        const x = xAxis === 'time' ? parseInt(timestamp, 10) : partition;
+        dataByLabel[entry.label] = [...(dataByLabel[entry.label] || []), {x: x, y: entry.value}];
       }
     });
   });
@@ -137,7 +163,7 @@ const AssetValueGraph = (props: any) => {
     return null;
   }
 
-  const graphData = {
+  const graphData: ChartComponentProps['data'] = {
     datasets: Object.keys(dataByLabel).map((label) => ({
       label,
       data: dataByLabel[label],
@@ -145,15 +171,26 @@ const AssetValueGraph = (props: any) => {
       backgroundColor: 'rgba(0,0,0,0)',
     })),
   };
-  const options = {
-    title: {display: true, text: `${props.assetPath} values`},
+  const options: ChartComponentProps['options'] = {
+    title: {display: true, text: `${props.assetKey.path.join('.')} values`},
     scales: {
       yAxes: [{scaleLabel: {display: true, labelString: 'Value'}}],
       xAxes: [
-        {
-          type: 'time',
-          scaleLabel: {display: true, labelString: 'Execution time'},
-        },
+        xAxis === 'time'
+          ? {
+              type: 'time',
+              scaleLabel: {
+                display: true,
+                labelString: 'Execution time',
+              },
+            }
+          : {
+              type: 'series',
+              scaleLabel: {
+                display: true,
+                labelString: 'Partition Name',
+              },
+            },
       ],
     },
     legend: {
@@ -163,7 +200,22 @@ const AssetValueGraph = (props: any) => {
   };
   return (
     <div style={{marginTop: 30}}>
-      <Header>Recent Values</Header>
+      <div style={{display: 'flex'}}>
+        <Header>Recent Values</Header>
+        <div style={{flex: 1}} />
+        <ButtonGroup>
+          <Button active={xAxis === 'time'} onClick={() => setXAxis('time')}>
+            By Execution Time
+          </Button>
+          <Button
+            active={xAxis === 'partition'}
+            onClick={() => setXAxis('partition')}
+            disabled={!props.partitionsPresent}
+          >
+            By Partition
+          </Button>
+        </ButtonGroup>
+      </div>
       <Line data={graphData} height={100} options={options} />
     </div>
   );
@@ -181,6 +233,30 @@ const Container = styled.div`
   margin: 20px;
 `;
 
+const AssetValueGraphFragment = gql`
+  fragment AssetValueGraphFragment on AssetMaterialization {
+    materializationEvent {
+      timestamp
+      materialization {
+        metadataEntries {
+          ...MetadataEntryFragment
+        }
+      }
+    }
+  }
+`;
+
+const AssetPartitionGridFragment = gql`
+  fragment AssetPartitionGridFragment on AssetMaterialization {
+    partition
+    runOrError {
+      ... on PipelineRun {
+        pipelineSnapshotId
+      }
+    }
+  }
+`;
+
 export const ASSET_QUERY = gql`
   query AssetQuery($assetKey: AssetKeyInput!) {
     assetOrError(assetKey: $assetKey) {
@@ -188,15 +264,9 @@ export const ASSET_QUERY = gql`
         key {
           path
         }
-        graphMaterializations: assetMaterializations {
-          materializationEvent {
-            timestamp
-            materialization {
-              metadataEntries {
-                ...MetadataEntryFragment
-              }
-            }
-          }
+        historicalMaterializations: assetMaterializations {
+          ...AssetValueGraphFragment
+          ...AssetPartitionGridFragment
         }
         lastMaterializations: assetMaterializations(limit: 1) {
           runOrError {
@@ -225,6 +295,8 @@ export const ASSET_QUERY = gql`
       }
     }
   }
+  ${AssetValueGraphFragment}
+  ${AssetPartitionGridFragment}
   ${MetadataEntry.fragments.MetadataEntryFragment}
   ${RunTable.fragments.RunTableRunFragment}
 `;
