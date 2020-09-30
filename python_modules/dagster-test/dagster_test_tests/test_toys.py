@@ -7,6 +7,7 @@ from dagster_test.toys.log_spew import log_spew
 from dagster_test.toys.many_events import many_events
 from dagster_test.toys.resources import resource_pipeline
 from dagster_test.toys.sleepy import sleepy_pipeline
+from dagster_test.toys.pyspark_assets.pysypark_assets_pipeline import pyspark_assets_pipeline
 
 from dagster import (
     DagsterInvariantViolationError,
@@ -40,6 +41,41 @@ def test_resource_pipeline_no_config():
 def test_resource_pipeline_with_config():
     result = execute_pipeline(resource_pipeline, run_config={"resources": {"R1": {"config": 2}}})
     assert result.result_for_solid("one").output_value() == 3
+
+
+def test_pyspark_assets_pipeline():
+    run_config = {
+        "solids": {
+            "get_max_temp_per_station": {
+                "config": {
+                    "dir": "python_modules/dagster-test/dagster_test/toys/pyspark_assets/asset_pipeline_files",
+                    "temperature_file": "temperature.csv",
+                    "dummy_val": "foo",
+                }
+            },
+            "get_consolidated_location": {
+                "config": {
+                    "dir": "python_modules/dagster-test/dagster_test/toys/pyspark_assets/asset_pipeline_files",
+                    "station_file": "stations.csv",
+                    "dummy_val": "foo",
+                }
+            },
+            "combine_dfs": {
+                "config": {
+                    "dummy_val": "foo",
+                    "dir": "python_modules/dagster-test/dagster_test/toys/pyspark_assets/asset_pipeline_files",
+                }
+            },
+            "pretty_output": {
+                "config": {
+                    "dummy_val": "foo",
+                    "dir": "python_modules/dagster-test/dagster_test/toys/pyspark_assets/asset_pipeline_files",
+                }
+            },
+        }
+    }
+    result = execute_pipeline(pyspark_assets_pipeline, run_config=run_config,)
+    assert result.success
 
 
 def test_error_monster_success():
