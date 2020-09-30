@@ -13,6 +13,7 @@ from dagster import (
     SolidDefinition,
     check,
 )
+from dagster.seven import funcsigs
 
 from .asset import Asset
 from .queryable_asset_set import QueryableAssetSet
@@ -281,6 +282,9 @@ class Lakehouse:
             if asset.partitions:
                 kwargs["partitions"] = context.solid_config["partitions"]
 
+            if has_context_arg(asset.computation.compute_fn):
+                kwargs["context"] = context
+
             result = asset.computation.compute_fn(**kwargs)
 
             output_storage = getattr(context.resources, asset.storage_key)
@@ -295,3 +299,9 @@ class Lakehouse:
         described in detail at https://docs.dagster.io/overview/solid-selection.
         """
         return self._assets.query_assets(query)
+
+
+def has_context_arg(fn):
+    signature = funcsigs.signature(fn)
+    params = signature.parameters.values()
+    return any(param.name == "context" for param in params)

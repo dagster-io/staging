@@ -210,3 +210,13 @@ def test_yields_materialization(basic_lakehouse_single_asset_pipeline):
     materialization = materialization_events[0].event_specific_data.materialization
     assert materialization.asset_key.path == ["apple", "banana"]
     assert materialization.label == "apple.banana"
+
+
+def test_context(basic_lakehouse):
+    @computed_asset(storage_key="storage1")
+    def return_one_asset(context) -> int:
+        context.log.info("some info")
+        return 1
+
+    pipeline = basic_lakehouse.build_pipeline_definition("some_pipeline", [return_one_asset])
+    execute_pipeline(pipeline, mode="dev")
