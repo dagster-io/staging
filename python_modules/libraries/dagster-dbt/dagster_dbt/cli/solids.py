@@ -1,3 +1,5 @@
+import os
+import json
 from dagster import (
     AssetMaterialization,
     EventMetadataEntry,
@@ -12,13 +14,16 @@ from dagster import (
 )
 from dagster.config.field import Field
 from dagster.utils.backcompat import experimental
+from typing import Dict
 
-from .types import DbtCliResult, DbtCliStatsResult
-from .utils import execute_dbt, get_run_results
+from ..errors import DagsterDbtCliRunResultsNotFoundError
+from .types import CliRunResult
+from .utils import execute_cli, extract_summary, parse_run_results
 
 DEFAULT_DBT_EXECUTABLE = "dbt"
 
-# the following config items correspond to flags that apply to all CLI commands
+# The following config fields correspond to flags that apply to all dbt CLI commands. For details
+# on dbt CLI flags, see
 # https://github.com/fishtown-analytics/dbt/blob/dev/marian-anderson/core/dbt/main.py#L260-L329
 CLI_COMMON_FLAGS_CONFIG_SCHEMA = {
     "project-dir": Field(
@@ -54,10 +59,9 @@ CLI_COMMON_FLAGS_CONFIG_SCHEMA = {
     ),
 }
 
-# the following are all the config items common to all CLI solids/commands, comprised of the
-# base flags applicable to each command and other values that shouldn't be auto-converted to flags
-CLI_CONFIG_SCHEMA = {
-    **CLI_COMMON_FLAGS_CONFIG_SCHEMA,
+# The following config fields correspond to options that apply to all CLI solids, but should not be
+# formatted as CLI flags.
+CLI_COMMON_OPTIONS_CONFIG_SCHEMA = {
     "warn-error": Field(
         config=bool,
         is_required=False,
@@ -78,6 +82,8 @@ CLI_CONFIG_SCHEMA = {
     ),
 }
 
+CLI_CONFIG_SCHEMA = {**CLI_COMMON_FLAGS_CONFIG_SCHEMA, **CLI_COMMON_OPTIONS_CONFIG_SCHEMA}
+
 CLI_COMMON_FLAGS = set(CLI_COMMON_FLAGS_CONFIG_SCHEMA.keys())
 
 
@@ -92,7 +98,7 @@ def passthrough_flags_only(solid_config, additional_flags):
 @solid(
     description="A solid to invoke dbt run via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliStatsResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=CliRunResult)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "threads": Field(
@@ -129,9 +135,9 @@ def passthrough_flags_only(solid_config, additional_flags):
     tags={"kind": "dbt"},
 )
 @experimental
-def dbt_cli_run(context) -> DbtCliStatsResult:
+def dbt_cli_run(context) -> CliRunResult:
     """This solid executes ``dbt run`` via the dbt CLI."""
-    logs, raw_output, return_code = execute_dbt(
+    cli_results = execute_cli(
         context.solid_config["dbt_executable"],
         command=("run",),
         flags_dict=passthrough_flags_only(
@@ -141,40 +147,24 @@ def dbt_cli_run(context) -> DbtCliStatsResult:
         warn_error=context.solid_config["warn-error"],
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
-
-    run_results = get_run_results(logs)
+    run_results = parse_run_results(context.solid_config["project-dir"])
+    cli_run_results = {**run_results, **cli_results}
 
     yield AssetMaterialization(
-        asset_key="dbt_cli_run-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
-        description="The output of a shell execution of `dbt run`.",
+        asset_key="dbt_run_cli_run_results",
+        description="TODO",
         metadata_entries=[
-            EventMetadataEntry.float(
-                label="return_code",
-                value=float(return_code),
-                description="The return code of a shell exeuction of `dbt run`.",
-            ),
-            EventMetadataEntry.json(
-                label="run_results",
-                data=run_results,
-                description="The summarized results of a shell execution of `dbt run`.",
-            ),
-            EventMetadataEntry.text(
-                label="raw_output",
-                text=raw_output,
-                description="The raw output of a shell execution of `dbt run`.",
-            ),
+            EventMetadataEntry.json(cli_run_results, label="CLI Run Results", description="TODO")
         ],
     )
 
-    yield Output(
-        DbtCliStatsResult(logs=logs, raw_output=raw_output, return_code=return_code, **run_results)
-    )
+    yield Output(CliRunResult.from_dict(cli_run_results))
 
 
 @solid(
     description="A solid to invoke dbt test via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliStatsResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=CliRunResult)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "data": Field(
@@ -216,9 +206,9 @@ def dbt_cli_run(context) -> DbtCliStatsResult:
     },
 )
 @experimental
-def dbt_cli_test(context) -> DbtCliStatsResult:
+def dbt_cli_test(context) -> CliRunResult:
     """This solid executes ``dbt test`` via the dbt CLI."""
-    logs, raw_output, return_code = execute_dbt(
+    cli_results = execute_cli(
         context.solid_config["dbt_executable"],
         command=("test",),
         flags_dict=passthrough_flags_only(
@@ -228,40 +218,24 @@ def dbt_cli_test(context) -> DbtCliStatsResult:
         warn_error=context.solid_config["warn-error"],
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
-
-    run_results = get_run_results(logs)
+    run_results = parse_run_results(context.solid_config["project-dir"])
+    cli_run_results = {**run_results, **cli_results}
 
     yield AssetMaterialization(
-        asset_key="dbt_cli_test-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
-        description="The output of a shell execution of `dbt test`.",
+        asset_key="dbt_test_cli_run_results",
+        description="TODO",
         metadata_entries=[
-            EventMetadataEntry.float(
-                label="return_code",
-                value=float(return_code),
-                description="The return code of a shell exeuction of `dbt test`.",
-            ),
-            EventMetadataEntry.json(
-                label="run_results",
-                data=run_results,
-                description="The summarized results of a shell execution of `dbt test`.",
-            ),
-            EventMetadataEntry.text(
-                label="raw_output",
-                text=raw_output,
-                description="The raw output of a shell execution of `dbt test`.",
-            ),
+            EventMetadataEntry.json(cli_run_results, label="CLI Run Results", description="TODO")
         ],
     )
 
-    yield Output(
-        DbtCliStatsResult(logs=logs, raw_output=raw_output, return_code=return_code, **run_results)
-    )
+    yield Output(CliRunResult.from_dict(cli_run_results))
 
 
 @solid(
     description="A solid to invoke dbt snapshot via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=Dict)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "threads": Field(
@@ -285,9 +259,9 @@ def dbt_cli_test(context) -> DbtCliStatsResult:
     },
 )
 @experimental
-def dbt_cli_snapshot(context) -> DbtCliResult:
+def dbt_cli_snapshot(context) -> Dict:
     """This solid executes ``dbt snapshot`` via the dbt CLI."""
-    logs, raw_output, return_code = execute_dbt(
+    cli_results = execute_cli(
         context.solid_config["dbt_executable"],
         command=("snapshot",),
         flags_dict=passthrough_flags_only(context.solid_config, ("threads", "models", "exclude")),
@@ -297,29 +271,20 @@ def dbt_cli_snapshot(context) -> DbtCliResult:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_cli_snapshot-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
-        description="The output of a shell execution of `dbt snapshot`.",
+        asset_key="dbt_snapshot_cli_results",
+        description="TODO",
         metadata_entries=[
-            EventMetadataEntry.float(
-                label="return_code",
-                value=float(return_code),
-                description="The return code of a shell exeuction of `dbt snapshot`.",
-            ),
-            EventMetadataEntry.text(
-                label="raw_output",
-                text=raw_output,
-                description="The raw output of a shell execution of `dbt snapshot`.",
-            ),
+            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
         ],
     )
 
-    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
+    yield Output(cli_results)
 
 
 @solid(
     description="A solid to invoke dbt run-operation via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=Dict)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "macro": Field(
@@ -334,9 +299,9 @@ def dbt_cli_snapshot(context) -> DbtCliResult:
     },
 )
 @experimental
-def dbt_cli_run_operation(context) -> DbtCliResult:
+def dbt_cli_run_operation(context) -> Dict:
     """This solid executes ``dbt run-operation`` via the dbt CLI."""
-    logs, raw_output, return_code = execute_dbt(
+    cli_results = execute_cli(
         context.solid_config["dbt_executable"],
         command=("run-operation", context.solid_config["macro"]),
         flags_dict=passthrough_flags_only(context.solid_config, ("args",)),
@@ -346,29 +311,20 @@ def dbt_cli_run_operation(context) -> DbtCliResult:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_cli_run_operation-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
-        description="The output of a shell execution of `dbt run-operation`.",
+        asset_key="dbt_run_operation_cli_results",
+        description="TODO",
         metadata_entries=[
-            EventMetadataEntry.float(
-                label="return_code",
-                value=float(return_code),
-                description="The return code of a shell exeuction of `dbt run-operation`.",
-            ),
-            EventMetadataEntry.text(
-                label="raw_output",
-                text=raw_output,
-                description="The raw output of a shell execution of `dbt run-operation`.",
-            ),
+            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
         ],
     )
 
-    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
+    yield Output(cli_results)
 
 
 @solid(
     description="A solid to invoke dbt source snapshot-freshness via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=Dict)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "select": Field(
@@ -391,9 +347,9 @@ def dbt_cli_run_operation(context) -> DbtCliResult:
     },
 )
 @experimental
-def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
+def dbt_cli_snapshot_freshness(context) -> Dict:
     """This solid executes ``dbt source snapshot-freshness`` via the dbt CLI."""
-    logs, raw_output, return_code = execute_dbt(
+    cli_results = execute_cli(
         context.solid_config["dbt_executable"],
         command=("source", "snapshot-freshness"),
         flags_dict=passthrough_flags_only(context.solid_config, ("select", "output", "threads")),
@@ -403,29 +359,20 @@ def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_cli_snapshot_freshness-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
-        description="The output of a shell execution of `dbt source snapshot-freshness`.",
+        asset_key="dbt_source_snapshot-freshness_cli_results",
+        description="TODO",
         metadata_entries=[
-            EventMetadataEntry.float(
-                label="return_code",
-                value=float(return_code),
-                description="The return code of a shell exeuction of `dbt source snapshot-freshness`.",
-            ),
-            EventMetadataEntry.text(
-                label="raw_output",
-                text=raw_output,
-                description="The raw output of a shell execution of `dbt source snapshot-freshness`.",
-            ),
+            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
         ],
     )
 
-    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
+    yield Output(cli_results)
 
 
 @solid(
     description="A solid to invoke dbt compile via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=Dict)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "parse-only": Field(config=bool, is_required=False, default_value=False,),
@@ -474,9 +421,9 @@ def dbt_cli_snapshot_freshness(context) -> DbtCliResult:
     },
 )
 @experimental
-def dbt_cli_compile(context) -> DbtCliResult:
+def dbt_cli_compile(context) -> Dict:
     """This solid executes ``dbt compile`` via the dbt CLI."""
-    logs, raw_output, return_code = execute_dbt(
+    cli_results = execute_cli(
         context.solid_config["dbt_executable"],
         command=("compile",),
         flags_dict=passthrough_flags_only(
@@ -498,20 +445,11 @@ def dbt_cli_compile(context) -> DbtCliResult:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_cli_compile-shell_output",  # TODO: Perhaps derive asset key from CLI flags?
-        description="The output of a shell execution of `dbt compile`.",
+        asset_key="dbt_compile_cli_results",
+        description="TODO",
         metadata_entries=[
-            EventMetadataEntry.float(
-                label="return_code",
-                value=float(return_code),
-                description="The return code of a shell exeuction of `dbt compile`.",
-            ),
-            EventMetadataEntry.text(
-                label="raw_output",
-                text=raw_output,
-                description="The raw output of a shell execution of `dbt compile`.",
-            ),
+            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
         ],
     )
 
-    yield Output(DbtCliResult(logs=logs, raw_output=raw_output, return_code=return_code))
+    yield Output(cli_results)
