@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import pytz
 from dateutil import parser
@@ -22,7 +22,7 @@ class RpcRunResult(RunResult):
     the RPC response.
     """
 
-    def __init__(self, state: str, start: str, end: str, elapsed: float, *args, **kwargs):
+    def __init__(self, *args, state: str, start: str, end: str, elapsed: float, **kwargs):
         """Constructor
 
         Args:
