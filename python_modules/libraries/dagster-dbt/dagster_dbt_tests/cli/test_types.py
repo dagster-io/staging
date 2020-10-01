@@ -1,6 +1,6 @@
 from dagster_dbt import CliRunResult
 
-from ..test_results import RUN_RESULT_DICT
+from ..test_types import RUN_RESULT_DICT
 
 CLI_RUN_RESULT_DICT = {
     "return_code": 0,
