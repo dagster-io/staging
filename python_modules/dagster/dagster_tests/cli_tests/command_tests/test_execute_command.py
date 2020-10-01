@@ -18,6 +18,24 @@ from .test_cli_commands import (
 )
 
 
+def test_execute_versioned_command():
+    runner = CliRunner()
+
+    with instance_for_test():
+        add_result = runner_pipeline_execute(
+            runner,
+            [
+                "-f",
+                file_relative_path(__file__, "test_memoized_development_cli.py"),
+                "-p",
+                "basic_pipeline",
+                "--tags",
+                '{"dagster/is_memoized_run": "true"}',
+            ],
+        )
+        assert add_result
+
+
 def test_execute_mode_command():
     runner = CliRunner()
 
