@@ -1,5 +1,75 @@
 # Changelog
 
+## 0.9.12
+
+**Breaking Changes**
+
+- Dagster now warns when a solid, pipeline, or other definition is created with an invalid name (for example, a Python keyword). This warning will become an error in the 0.9.13 release.
+
+**Community Contributions**
+
+- Added an int type to `EventMetadataEntry` (Thanks @ChocoletMousse (https://github.com/ChocoletMousse)!)
+- Added a `build_composite_solid_definition` method to Lakehouse (Thanks @sd2k ((https://github.com/sd2k)!)
+- Improved broken link detection in Dagster docs (Thanks @keyz (https://github.com/dagster-io/dagster/commits?author=keyz)!)
+
+**New**
+
+- Improvements to log filtering on Run view in Dagit
+- Improvements to instance level scheduler page
+- Log engine events when pipeline termination is initiated
+
+**Bugfixes**
+
+- Syntax errors in user code now display the file and line number with the error in Dagit.
+- Dask executor no longer fails when using intermediate_storage
+- Fixes an issue using `build_reconstructable_pipeline`
+- In the Celery K8s executor, we now mark the step as failed when the step job fails
+- Changed the `DagsterInvalidAssetKey` error so that it no longer fails upon being thrown.
+
+**Documentation**
+
+- Added API docs for dagster-dbt experimental library.
+- Fixed some cosmetic issues with docs.dagster.io.
+- Added code snippets from Solids examples to test path, and fixed some inconsistencies regarding parameter ordering.
+- Changed to using markers instead of exact line numbers to mark out code snippets
+
+
+## 0.9.11
+
+**Breaking Changes**
+- [dagster-dask] Removed the compute option from Dask DataFrame materialization configs for all output types. Setting this option to False (default True) would result in a future that is never computed, leading to missing materializations
+
+**Community Contributions**
+- Added a Dask resource (Thanks @kinghuang (https://github.com/kinghuang)!)
+
+**New**
+- Console log messages are now streamlined to live on a single line per message
+- Added better messaging around $DAGSTER_HOME if it is not set or improperly setup when starting up a Dagster instance
+- Tools for exporting a file for debugging a run have been added:
+  - `dagster debug export` - a new CLI entry added for exporting a run by id to a file
+  - `dagit-debug` - a new CLI added for loading dagit with a run to debug
+  - dagit now has a button to download the debug file for a run via the action menu on the runs page
+- The `dagster api grpc` command now defaults to the current working directory if none is specified.
+- Added retries to dagster-postgres connections
+- Fixed faulty warning message when invoking the same solid multiple times in the same context
+- Added ability to specify custom liveness probe for celery workers in kubernetes deployment
+
+**Bugfixes**
+- Fixed a bug where Dagster types like List/Set/Tuple/Dict/Optional were not displaying properly on dagit logs
+- Fixed endless spinners on `dagit --empty-workspace`
+- Fixed incorrect snapshot banner on pipeline view
+- Fixed visual overlapping of overflowing dagit logs
+- Fixed a bug where hanging runs when executing against a gRPC server could cause the Runs page to be unable to load
+- Fixed a bug in celery integration where celery tasks could return None when an iterable is expected, causing errors in the celery execution loop.
+
+**Experimental**
+- [lakehouse] Each time a Lakehouse solid updates an asset, it automatically generates an AssetMaterialization event
+- [lakehouse] Lakehouse computed_assets now accept a version argument that describes the version of the computation
+- Setting the “dagster/is_memoized_run” tag to true will cause the run to skip any steps whose versions match the versions of outputs produced in prior runs.
+- [dagster-dbt] Solids for running dbt CLI commands
+- Added extensive documentation to illuminate how versions are computed
+- Added versions for step inputs from config, default values, and from other step outputs
+
 ## 0.9.10
 
 **Breaking Changes**
