@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional
 
 from dagster import check, usable_as_dagster_type
 
-from ..errors import DagsterDbtCliRunResultsNotFoundError
 from ..types import RunResult
 
 
