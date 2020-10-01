@@ -1,7 +1,9 @@
-from dagster import check, usable_as_dagster_type
 from datetime import datetime, timedelta
-from dateutil import parser
 from typing import Any, Dict, List, Optional, Union
+
+from dateutil import parser
+
+from dagster import check, usable_as_dagster_type
 
 
 class StepTiming:

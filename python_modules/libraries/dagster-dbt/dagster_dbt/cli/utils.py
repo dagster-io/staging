@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 from dagster import check
 
-from ..errors import DagsterDbtFatalCliRuntimeError, DagsterDbtHandledCliRuntimeError
+from ..errors import DagsterDbtCliFatalRuntimeError, DagsterDbtCliHandledRuntimeError
 
 
 # This function is copied from `dagster-shell`, which itself is copied from the Airflow bash
@@ -93,10 +93,10 @@ def execute_cli(
     log.info("dbt exited with return code {return_code}".format(return_code=return_code))
 
     if return_code == 2:
-        raise DagsterDbtFatalCliRuntimeError(logs=logs, raw_output=proc_out.decode())
+        raise DagsterDbtCliFatalRuntimeError(logs=logs, raw_output=proc_out.decode())
 
     if return_code == 1 and not ignore_handled_error:
-        raise DagsterDbtHandledCliRuntimeError(logs=logs, raw_output=proc_out.decode())
+        raise DagsterDbtCliHandledRuntimeError(logs=logs, raw_output=proc_out.decode())
 
     return {
         "return_code": return_code,
