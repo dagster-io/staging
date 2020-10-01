@@ -1,6 +1,6 @@
 from dagster_dbt import RpcRunResult
 
-from ..test_results import RUN_RESULT_DICT
+from ..test_types import RUN_RESULT_DICT
 
 POLLED_RUN_RESULT_DICT = {
     **RUN_RESULT_DICT,

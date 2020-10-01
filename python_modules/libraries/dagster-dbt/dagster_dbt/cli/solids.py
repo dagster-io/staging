@@ -1,5 +1,7 @@
-import os
 import json
+import os
+from typing import Dict
+
 from dagster import (
     AssetMaterialization,
     EventMetadataEntry,
@@ -14,7 +16,6 @@ from dagster import (
 )
 from dagster.config.field import Field
 from dagster.utils.backcompat import experimental
-from typing import Dict
 
 from ..errors import DagsterDbtCliRunResultsNotFoundError
 from .types import CliRunResult
