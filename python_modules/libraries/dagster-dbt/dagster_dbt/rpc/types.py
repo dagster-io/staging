@@ -44,7 +44,7 @@ class RpcRunResult(RunResult):
         self._elapsed = elapsed
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'RpcRunResult':
+    def from_dict(cls, d: Dict[str, Any]) -> "RpcRunResult":
         """Constructs an instance of :class:`RpcRunResult <dagster_dbt.RpcRunResult>` from a
         dictionary.
 
