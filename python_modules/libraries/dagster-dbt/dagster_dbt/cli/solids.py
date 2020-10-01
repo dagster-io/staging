@@ -1,5 +1,3 @@
-import json
-import os
 from typing import Dict
 
 from dagster import (
@@ -17,9 +15,8 @@ from dagster import (
 from dagster.config.field import Field
 from dagster.utils.backcompat import experimental
 
-from ..errors import DagsterDbtCliRunResultsNotFoundError
 from .types import CliRunResult
-from .utils import execute_cli, extract_summary, parse_run_results
+from .utils import execute_cli, parse_run_results
 
 DEFAULT_DBT_EXECUTABLE = "dbt"
 
