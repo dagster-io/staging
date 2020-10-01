@@ -4,7 +4,7 @@ from typing import Any, Dict, Tuple
 import pytest
 from dagster_dbt import (
     DbtRpcClient,
-    PolledRunResult,
+    RpcRunResult,
     dbt_rpc_run,
     dbt_rpc_run_and_wait,
     dbt_rpc_test,
@@ -27,13 +27,13 @@ from dagster import (
 
 def output_for_solid_executed_with_rpc_resource(
     a_solid, rpc_resource=local_dbt_rpc_resource
-) -> Tuple[SolidExecutionResult, PolledRunResult]:
+) -> Tuple[SolidExecutionResult, RpcRunResult]:
     mode_def = ModeDefinition(resource_defs={"dbt_rpc": rpc_resource})  # use config defaults
     solid_result = execute_solid(a_solid, mode_def)
 
     assert solid_result.success
     output = solid_result.output_value()
-    assert isinstance(output, PolledRunResult)
+    assert isinstance(output, RpcRunResult)
     return solid_result, output
 
 
