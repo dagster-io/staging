@@ -1,0 +1,16 @@
+solids:
+  create_nothing_1:
+    config:
+      input_str: apple
+  create_nothing_2:
+    config:
+      input_str: apple
+  take_nothing_1:
+    config:
+      input_str: apple
+  take_nothing_2:
+    config:
+      input_str: apple
+  take_nothing_two_inputs:
+    config:
+      input_str: apple
