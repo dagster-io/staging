@@ -33,7 +33,7 @@ from .rpc.solids import (
     dbt_rpc_test,
     dbt_rpc_test_and_wait,
 )
-from .rpc.types import DbtRpcPollResult, NodeResult, NodeTiming, PolledRunResult
+from .rpc.types import DbtRpcPollResult, NodeResult, NodeTiming, RpcRunResult
 from .results import (
     NodeResult,
     RunResult,

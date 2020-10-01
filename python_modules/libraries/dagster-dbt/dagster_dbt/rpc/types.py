@@ -11,13 +11,13 @@ from ..results import RunResult
 
 
 @usable_as_dagster_type
-class PolledRunResult(RunResult):
+class RpcRunResult(RunResult):
     """The results of executing a dbt command, along with additional metadata about the dbt process
     that was run on the dbt RPC server.
 
-    We recommend that you construct an instance of :class:`PolledRunResult
-    <dagster_dbt.PolledRunResult>` by using the class method:func:`from_dict
-    <dagster_dbt.PolledRunResult.from_dict>`.
+    We recommend that you construct an instance of :class:`RpcRunResult
+    <dagster_dbt.RpcRunResult>` by using the class method:func:`from_dict
+    <dagster_dbt.RpcRunResult.from_dict>`.
 
     When using the dbt RPC server, polled run results are typically parsed from the JSON body of
     the RPC response.
@@ -45,16 +45,16 @@ class PolledRunResult(RunResult):
         self._elapsed = elapsed
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'PolledRunResult':
-        """Constructs an instance of :class:`PolledRunResult <dagster_dbt.PolledRunResult>` from a
+    def from_dict(cls, d: Dict[str, Any]) -> 'RpcRunResult':
+        """Constructs an instance of :class:`RpcRunResult <dagster_dbt.RpcRunResult>` from a
         dictionary.
 
         Args:
-            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`PolledRunResult
-                <dagster_dbt.PolledRunResult>`.
+            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`RpcRunResult
+                <dagster_dbt.RpcRunResult>`.
 
         Returns:
-            PolledRunResult: an instance of :class:`PolledRunResult <dagster_dbt.PolledRunResult>`.
+            RpcRunResult: an instance of :class:`RpcRunResult <dagster_dbt.RpcRunResult>`.
         """
         check.str_elem(d, "state")
         check.str_elem(d, "start")
