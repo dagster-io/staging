@@ -18,7 +18,7 @@ from dagster import (
 from dagster.core.definitions import InputDefinition
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
-from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.execution.plan.objects import StepInput, StepInputSourceType, StepOutputHandle
 from dagster.core.execution.resolve_versions import (
     join_and_hash,
     resolve_config_version,
@@ -28,6 +28,7 @@ from dagster.core.execution.resolve_versions import (
 )
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.system_config.objects import EnvironmentConfig
+from dagster.core.types.dagster_type import create_string_type
 from dagster.seven import mock
 
 
@@ -55,6 +56,25 @@ def test_resolve_config_version():
     assert resolve_config_version({"a": {"b": "c"}, "d": "e"}) == join_and_hash(
         "a" + join_and_hash("b" + join_and_hash("c")), "d" + join_and_hash("e")
     )
+
+
+def test_is_from_cached_output():
+    handle = StepOutputHandle("foo", "bar")
+    s = StepInput(
+        "hello",
+        dagster_type=create_string_type("stringtype"),
+        source_type=StepInputSourceType.SINGLE_OUTPUT,
+        source_handles=[StepOutputHandle("foo", "bar")],
+        addresses={handle: "baz"},
+    )
+    assert s.addresses == {handle: "baz"}
+    s = StepInput(
+        "hello",
+        dagster_type=create_string_type("stringtype"),
+        source_type=StepInputSourceType.SINGLE_OUTPUT,
+        source_handles=[StepOutputHandle("foo", "bar")],
+    )
+    assert not s.addresses
 
 
 @solid(version="42")
