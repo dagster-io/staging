@@ -25,6 +25,7 @@ class DbtRpcClient:
         port: int = 8580,
         jsonrpc_version: str = "2.0",
         logger: Optional[Any] = None,
+        **_,
     ):
         """Constructor
 
