@@ -1,4 +1,4 @@
-from dagster_dbt import PolledRunResult
+from dagster_dbt import RpcRunResult
 
 from ..test_results import RUN_RESULT_DICT
 
@@ -11,7 +11,7 @@ POLLED_RUN_RESULT_DICT = {
 }
 
 
-class TestPolledRunResult:
+class TestRpcRunResult:
     def test_from_dict(self):
-        prr = PolledRunResult.from_dict(POLLED_RUN_RESULT_DICT)
+        prr = RpcRunResult.from_dict(POLLED_RUN_RESULT_DICT)
         assert len(prr) == len(POLLED_RUN_RESULT_DICT["results"])

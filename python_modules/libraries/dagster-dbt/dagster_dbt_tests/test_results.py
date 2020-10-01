@@ -1,4 +1,4 @@
-from dagster_dbt import RunResult, PolledRunResult
+from dagster_dbt import RunResult, RpcRunResult
 
 RUN_RESULT_DICT = {
     "logs": [],
