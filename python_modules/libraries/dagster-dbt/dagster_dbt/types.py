@@ -246,7 +246,6 @@ class RunResult:
         check.list_elem(d, "results")
         check.is_list(d["results"], of_type=Dict)
         check.str_elem(d, "generated_at")
-        print("Elapsed Time:" + str(d.get("elapsed_time")))
         # check.float_elem(d, "elapsed_time") TODO[Bob]: Implement `check.float_elem`.
 
         return cls(**d)
