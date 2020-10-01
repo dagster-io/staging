@@ -7,7 +7,11 @@ from typing import Any, Dict, List, Tuple
 
 from dagster import check
 
-from ..errors import DagsterDbtCliFatalRuntimeError, DagsterDbtCliHandledRuntimeError
+from ..errors import (
+    DagsterDbtCliFatalRuntimeError,
+    DagsterDbtCliHandledRuntimeError,
+    DagsterDbtCliRunResultsNotFoundError,
+)
 
 
 # This function is copied from `dagster-shell`, which itself is copied from the Airflow bash

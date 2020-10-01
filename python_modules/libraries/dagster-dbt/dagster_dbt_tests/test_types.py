@@ -1,4 +1,4 @@
-from dagster_dbt import RpcRunResult, RunResult
+from dagster_dbt import RunResult
 
 RUN_RESULT_DICT = {
     "logs": [],
