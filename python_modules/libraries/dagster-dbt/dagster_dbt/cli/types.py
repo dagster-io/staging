@@ -1,7 +1,8 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from dagster import check, usable_as_dagster_type
 
+from ..errors import DagsterDbtCliRunResultsNotFoundError
 from ..types import RunResult
 
 
@@ -24,6 +25,7 @@ class CliRunResult(RunResult):
 
     def __init__(
         self,
+        *args,
         return_code: int,
         raw_output: str,
         num_pass: Optional[int] = None,
@@ -31,7 +33,6 @@ class CliRunResult(RunResult):
         num_error: Optional[int] = None,
         num_skip: Optional[int] = None,
         num_total: Optional[int] = None,
-        *args,
         **kwargs
     ):
         """Constructor

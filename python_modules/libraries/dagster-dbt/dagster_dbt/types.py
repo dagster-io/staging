@@ -24,7 +24,7 @@ class StepTiming:
             step_timing = StepTiming(**json_data)
     """
 
-    def __init__(self, name: str, started_at: str, completed_at: str, *args, **kwargs):
+    def __init__(self, *, name: str, started_at: str, completed_at: str, **_):
         """Constructor
 
         Args:
@@ -70,6 +70,7 @@ class NodeResult:
 
     def __init__(
         self,
+        *,
         node: Dict[str, Any],
         error: Optional[str],
         status: Union[str, int],
@@ -80,8 +81,7 @@ class NodeResult:
         fail: Optional[Any] = None,
         warn: Optional[Any] = None,
         skip: Optional[Any] = None,
-        *args,
-        **kwargs,
+        **_,
     ):
         """Constructor
 
@@ -206,12 +206,12 @@ class RunResult:
 
     def __init__(
         self,
+        *,
         logs: List[Dict[str, Any]],
         results: List[Dict[str, Any]],
         generated_at: str,
         elapsed_time: float,
-        *args,
-        **kwargs,
+        **_,
     ):
         """Constructor
 
