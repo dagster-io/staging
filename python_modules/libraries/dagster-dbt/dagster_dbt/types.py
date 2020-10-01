@@ -72,10 +72,10 @@ class NodeResult:
         self,
         *,
         node: Dict[str, Any],
-        error: Optional[str],
-        status: Union[str, int],
-        execution_time: float,
-        thread_id: str,
+        error: Optional[str] = None,
+        status: Optional[Union[str, int]] = None,
+        execution_time: Optional[float] = None,
+        thread_id: Optional[str] = None,
         step_timings: List[Dict[str, Any]],
         table: Optional[Dict[str, Any]] = None,
         fail: Optional[Any] = None,
@@ -102,8 +102,8 @@ class NodeResult:
         """
         check.dict_param(node, "node", key_type=str)
         check.opt_str_param(error, "error")
-        check.float_param(execution_time, "execution_time")
-        check.str_param(thread_id, "thread_id")
+        check.opt_float_param(execution_time, "execution_time")
+        check.opt_str_param(thread_id, "thread_id")
         check.list_param(step_timings, "step_timings", of_type=Dict)
         check.opt_list_param(table, "table", of_type=Dict[str, Any])
 
@@ -119,7 +119,7 @@ class NodeResult:
         self._skip = skip
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'NodeResult':
+    def from_dict(cls, d: Dict[str, Any]) -> "NodeResult":
         """Constructs an instance of :class:`NodeResult <dagster_dbt.NodeResult>` from a dictionary.
 
         Args:
@@ -132,7 +132,7 @@ class NodeResult:
         check.dict_elem(d, "node")
         check.opt_str_elem(d, "error")
         # check.float_elem(d, "execution_time") TODO[Bob]: Implement `check.float_elem`.
-        check.str_elem(d, "thread_id")
+        check.opt_str_elem(d, "thread_id")
         check.list_elem(d, "timing")
         check.is_list(d["timing"], of_type=Dict)
         check.opt_dict_elem(d, "table")
@@ -150,18 +150,18 @@ class NodeResult:
         return self._error
 
     @property
-    def status(self) -> Union[str, int]:
-        """str | int: The status of the executed dbt node (model)."""
+    def status(self) -> Optional[Union[str, int]]:
+        """Optional[str | int]: The status of the executed dbt node (model)."""
         return self._status
 
     @property
-    def execution_time(self):
-        """float: The execution duration (in seconds) of the dbt node (model)."""
+    def execution_time(self) -> Optional[float]:
+        """Optional[float]: The execution duration (in seconds) of the dbt node (model)."""
         return self._execution_time
 
     @property
-    def thread_id(self) -> str:
-        """str: The dbt thread identifier that executed dbt node (model)."""
+    def thread_id(self) -> Optional[str]:
+        """Optional[str]: The dbt thread identifier that executed dbt node (model)."""
         return self._status
 
     @property
@@ -210,7 +210,7 @@ class RunResult:
         logs: List[Dict[str, Any]],
         results: List[Dict[str, Any]],
         generated_at: str,
-        elapsed_time: float,
+        elapsed_time: Optional[float] = None,
         **_,
     ):
         """Constructor
@@ -223,7 +223,7 @@ class RunResult:
         check.list_param(logs, "logs", of_type=Dict)
         check.list_param(results, "results", of_type=Dict)
         check.str_param(generated_at, "generated_at")
-        check.float_param(elapsed_time, "elapsed_time")
+        check.opt_float_param(elapsed_time, "elapsed_time")
 
         self._logs = logs
         self._results = [NodeResult.from_dict(d) for d in results]
@@ -231,7 +231,7 @@ class RunResult:
         self._elapsed_time = elapsed_time
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'RunResult':
+    def from_dict(cls, d: Dict[str, Any]) -> "RunResult":
         """Constructs an instance of :class:`RunResult <dagster_dbt.RunResult>` from a dictionary.
 
         Args:
@@ -246,6 +246,7 @@ class RunResult:
         check.list_elem(d, "results")
         check.is_list(d["results"], of_type=Dict)
         check.str_elem(d, "generated_at")
+        print("Elapsed Time:" + str(d.get("elapsed_time")))
         # check.float_elem(d, "elapsed_time") TODO[Bob]: Implement `check.float_elem`.
 
         return cls(**d)
@@ -261,8 +262,8 @@ class RunResult:
         return self._generated_at
 
     @property
-    def elapsed_time(self) -> float:
-        """float: The execution duration (in seconds) of the run."""
+    def elapsed_time(self) -> Optional[float]:
+        """Optional[float]: The execution duration (in seconds) of the run."""
         return self._elapsed_time
 
     def __len__(self) -> int:

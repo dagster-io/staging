@@ -64,7 +64,7 @@ class CliRunResult(RunResult):
         self._num_total = num_total
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> 'CliRunResult':
+    def from_dict(cls, d: Dict[str, Any]) -> "CliRunResult":
         """Constructs an instance of :class:`CliRunResult <dagster_dbt.CliRunResult>` from a
         dictionary.
 
