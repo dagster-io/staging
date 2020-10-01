@@ -8,7 +8,7 @@ class DagsterDbtError(Failure, metaclass=ABCMeta):
     """The base exception of the ``dagster-dbt`` library."""
 
 
-class DagsterDbtUnexpectedCliOutputError(DagsterDbtError):
+class DagsterDbtCliUnexpectedOutputError(DagsterDbtError):
     """Represents an error when parsing the output of a dbt CLI command."""
 
     invalid_line_nos: List[int]
@@ -49,21 +49,21 @@ class DagsterDbtCliRuntimeError(DagsterDbtError, metaclass=ABCMeta):
         )
 
 
-class DagsterDbtHandledCliRuntimeError(DagsterDbtCliRuntimeError):
+class DagsterDbtCliHandledRuntimeError(DagsterDbtCliRuntimeError):
     """Represents a model error reported by the dbt CLI at runtime (return code 1)."""
 
     def __init__(self, logs: List[Dict[str, Any]], raw_output: str):
         super().__init__("Handled error in the dbt CLI (return code 1)", logs, raw_output)
 
 
-class DagsterDbtFatalCliRuntimeError(DagsterDbtCliRuntimeError):
+class DagsterDbtCliFatalRuntimeError(DagsterDbtCliRuntimeError):
     """Represents a fatal error in the dbt CLI (return code 2)."""
 
     def __init__(self, logs: List[Dict[str, Any]], raw_output: str):
         super().__init__("Fatal error in the dbt CLI (return code 2)", logs, raw_output)
 
 
-class DagsterDbtUnexpectedRpcPollOutputError(DagsterDbtError):
+class DagsterDbtRpcUnexpectedPollOutputError(DagsterDbtError):
     """Represents an unexpected response when polling the dbt RPC server."""
 
 

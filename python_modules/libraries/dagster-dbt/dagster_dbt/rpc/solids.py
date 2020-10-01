@@ -3,7 +3,6 @@ import time
 from typing import Callable, Iterator, Optional
 
 import pandas as pd
-from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster_pandas import DataFrame
 
 from dagster import (
@@ -26,8 +25,9 @@ from dagster import (
     check,
     solid,
 )
+from dagster.core.execution.context.compute import SolidExecutionContext
 
-from ..errors import DagsterDbtUnexpectedRpcPollOutputError
+from ..errors import DagsterDbtRpcUnexpectedPollOutputError
 from .types import RpcRunResult
 from .utils import log_rpc, raise_for_rpc_error
 
@@ -153,17 +153,17 @@ def unwrap_result(poll_rpc_generator) -> RpcRunResult:
         output = x
 
     if output is None:
-        raise DagsterDbtUnexpectedRpcPollOutputError(
+        raise DagsterDbtRpcUnexpectedPollOutputError(
             description="poll_rpc yielded None as its last value. Expected value of type Output containing RpcRunResult.",
         )
 
     if not isinstance(output, Output):
-        raise DagsterDbtUnexpectedRpcPollOutputError(
+        raise DagsterDbtRpcUnexpectedPollOutputError(
             description=f"poll_rpc yielded value of type {type(output)} as its last value. Expected value of type Output containing RpcRunResult.",
         )
 
     if not isinstance(output.value, RpcRunResult):
-        raise DagsterDbtUnexpectedRpcPollOutputError(
+        raise DagsterDbtRpcUnexpectedPollOutputError(
             description=f"poll_rpc yielded Output containing {type(output.value)}. Expected RpcRunResult.",
         )
 

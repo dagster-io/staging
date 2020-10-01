@@ -1,10 +1,12 @@
-from base64 import standard_b64encode as b64
 import json
 import platform
-import requests
 import sys
-from typing import Any, Dict, List, Optional
 import uuid
+from base64 import standard_b64encode as b64
+from typing import Any, Dict, List, Optional
+
+import requests
+
 from dagster import Field, IntSource, RetryRequested, StringSource, check, resource
 
 from .utils import is_fatal_code

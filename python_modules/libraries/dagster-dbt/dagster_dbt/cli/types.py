@@ -1,10 +1,8 @@
 from typing import Any, Dict, List, Optional
 
-import attr
-
 from dagster import check, usable_as_dagster_type
 
-from ..results import RunResult
+from ..types import RunResult
 
 
 @usable_as_dagster_type
