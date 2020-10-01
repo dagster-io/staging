@@ -115,6 +115,13 @@ def versioned_pipeline_expected_step2_output_version():
     return join_and_hash(step2_version + "result")
 
 
+def test_build_memoized_plan():
+    speculative_execution_plan = create_execution_plan(versioned_pipeline)
+    speculative_execution_plan.build_memoized_plan(
+        ["versioned_solid_no_input.compute", "versioned_solid_takes_input.compute"], {}
+    )
+
+
 def test_resolve_step_versions_no_external_dependencies():
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
     versions = resolve_step_versions(speculative_execution_plan)
@@ -171,21 +178,28 @@ def test_default_unmemoized_steps():
             "must have a version."
         ),
     ):
-        instance.resolve_unmemoized_steps(speculative_execution_plan, run_config={}, mode="default")
+        instance.resolve_memoized_execution_plan(
+            speculative_execution_plan, run_config={}, mode="default"
+        )
 
 
-def test_resolve_unmemoized_steps_no_stored_results():
+def test_resolve_memoized_execution_plan_no_stored_results():
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
 
     instance = DagsterInstance.ephemeral()
     instance.get_addresses_for_step_output_versions = mock.MagicMock(return_value={})
 
-    assert set(
-        instance.resolve_unmemoized_steps(speculative_execution_plan, run_config={}, mode="default")
-    ) == {"versioned_solid_no_input.compute", "versioned_solid_takes_input.compute"}
+    memoized_execution_plan = instance.resolve_memoized_execution_plan(
+        speculative_execution_plan, run_config={}, mode="default"
+    )
+
+    assert set(memoized_execution_plan.step_keys_to_execute) == {
+        "versioned_solid_no_input.compute",
+        "versioned_solid_takes_input.compute",
+    }
 
 
-def test_resolve_unmemoized_steps_yes_stored_results():
+def test_resolve_memoized_execution_plan_yes_stored_results():
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
     step_output_handle = StepOutputHandle("versioned_solid_no_input.compute", "result")
 
@@ -194,12 +208,22 @@ def test_resolve_unmemoized_steps_yes_stored_results():
         return_value={(versioned_pipeline.name, step_output_handle): "some_address"}
     )
 
-    assert instance.resolve_unmemoized_steps(
+    memoized_execution_plan = instance.resolve_memoized_execution_plan(
         speculative_execution_plan, run_config={}, mode="default"
-    ) == ["versioned_solid_takes_input.compute"]
+    )
+
+    assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input.compute"]
+
+    expected_handle = StepOutputHandle(
+        step_key="versioned_solid_no_input.compute", output_name="result"
+    )
+
+    assert memoized_execution_plan.step_dict["versioned_solid_takes_input.compute"].step_input_dict[
+        "intput"
+    ].addresses == {expected_handle: "some_address"}
 
 
-def test_resolve_unmemoized_steps_partial_versioning():
+def test_resolve_memoized_execution_plan_partial_versioning():
     speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
     step_output_handle = StepOutputHandle("versioned_solid_no_input.compute", "result")
 
@@ -208,9 +232,9 @@ def test_resolve_unmemoized_steps_partial_versioning():
         return_value={(partially_versioned_pipeline.name, step_output_handle): "some_address"}
     )
 
-    assert instance.resolve_unmemoized_steps(
+    assert instance.resolve_memoized_execution_plan(
         speculative_execution_plan, run_config={}, mode="default"
-    ) == ["solid_takes_input.compute"]
+    ).step_keys_to_execute == ["solid_takes_input.compute"]
 
 
 def test_versioned_execution_plan_no_external_dependencies():  # TODO: flesh out this test once version storage has been implemented

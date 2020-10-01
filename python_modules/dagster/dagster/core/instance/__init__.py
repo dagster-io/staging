@@ -491,11 +491,10 @@ class DagsterInstance:
     def get_run_group(self, run_id):
         return self._run_storage.get_run_group(run_id)
 
-    def resolve_unmemoized_steps(self, execution_plan, run_config, mode):
+    def resolve_memoized_execution_plan(self, execution_plan, run_config, mode):
         """
         Returns:
-            List[str]: Step keys for all steps that don't have existing results stored for their
-                versions.
+            ExecutionPlan: Execution plan configured to only run unmemoized steps.
         """
         pipeline_name = execution_plan.pipeline.get_definition().name
         step_output_versions = resolve_step_output_versions(
@@ -515,13 +514,15 @@ class DagsterInstance:
             }
         )
 
-        return list(
+        step_keys_to_execute = list(
             {
                 step_output_handle.step_key
                 for step_output_handle in step_output_versions.keys()
                 if (pipeline_name, step_output_handle) not in step_output_addresses
             }
         )
+
+        return execution_plan.build_memoized_plan(step_keys_to_execute, step_output_addresses)
 
     def create_run_for_pipeline(
         self,
@@ -584,15 +585,16 @@ class DagsterInstance:
                     "pipeline runs."
                 )
 
-            step_keys_to_execute = self.resolve_unmemoized_steps(
+            subsetted_execution_plan = self.resolve_memoized_execution_plan(
                 full_execution_plan, run_config=run_config, mode=mode,
             )  # TODO: tighter integration with existing step_keys_to_execute functionality
-
-        subsetted_execution_plan = (
-            full_execution_plan.build_subset_plan(step_keys_to_execute)
-            if step_keys_to_execute
-            else full_execution_plan
-        )
+            step_keys_to_execute = subsetted_execution_plan.step_keys_to_execute
+        else:
+            subsetted_execution_plan = (
+                full_execution_plan.build_subset_plan(step_keys_to_execute)
+                if step_keys_to_execute
+                else full_execution_plan
+            )
 
         return self.create_run(
             pipeline_name=pipeline_def.name,
