@@ -71,7 +71,7 @@ By default, every untyped value in Dagster is assigned the catch-all type <PyObj
 This means that any errors in the config won't be surfaced until the pipeline
 is executed.
 
-For example, when we execute our pipeline with this config, it'll fail at runtime:
+For example, when we execute our pipeline with this config (you can add it to Dagit Playground and launch execution), it'll fail at runtime:
 
 ```YAML literalinclude caption=inputs_env_bad.yaml
 file:/docs_snippets/docs_snippets/intro_tutorial/basics/e04_quality/inputs_env_bad.yaml
@@ -101,6 +101,6 @@ lines:7-15
 By using typed input, we can catch this error prior to execution, and reduce the surface area
 we need to test.
 
-![inputs_figure_seven.png](/assets/images/tutorial/inputs_figure_seven.png)
+![inputs_typed_error_message.png](/assets/images/tutorial/inputs_typed_error_message.png)
 
 <br />
