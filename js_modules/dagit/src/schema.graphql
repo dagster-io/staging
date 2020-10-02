@@ -28,7 +28,7 @@ input AssetKeyInput {
 type AssetMaterialization {
   materializationEvent: StepMaterializationEvent!
   runOrError: PipelineRunOrError!
-  partitionName: String
+  partition: String
 }
 
 union AssetOrError = Asset | AssetsNotSupportedError

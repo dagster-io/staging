@@ -39,7 +39,7 @@ GET_ASSET_MATERIALIZATION_WITH_PARTITION = """
         assetOrError(assetKey: $assetKey) {
             ... on Asset {
                 assetMaterializations(limit: 1) {
-                    partitionName
+                    partition
                     materializationEvent {
                         materialization {
                             label

@@ -214,7 +214,7 @@ def solid_asset_b(_, num):
 
 @solid
 def solid_partitioned_asset(_):
-    yield AssetMaterialization(asset_key="a", partition_name="partition_1")
+    yield AssetMaterialization(asset_key="a", partition="partition_1")
     yield Output(1)
 
 
