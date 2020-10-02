@@ -143,12 +143,6 @@ def test_wait_for_job_success_with_api_errors_retry_limit_exceeded():
     with pytest.raises(DagsterK8sAPIRetryLimitExceeded) as exc_info:
         mock_client.wait_for_job_success("a_job", "a_namespace")
 
-    assert "Retry limit of {limit} exceeded: " "Unexpected error encountered in Kubernetes API Client.".format(
-        limit=3
-    ) in str(
-        exc_info.value
-    )
-
     # logger should not have been called
     assert not mock_client.logger.mock_calls
     # sleeper should not have been called
