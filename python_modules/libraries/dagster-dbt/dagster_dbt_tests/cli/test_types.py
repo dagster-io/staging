@@ -3,6 +3,7 @@ from dagster_dbt import CliRunResult
 from ..test_types import RUN_RESULT_DICT
 
 CLI_RUN_RESULT_DICT = {
+    "command": "dbt run",
     "return_code": 0,
     "raw_output": "The raw output (stdout).",
     **RUN_RESULT_DICT,

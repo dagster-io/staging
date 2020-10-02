@@ -71,7 +71,8 @@ def execute_cli(
         command_list.append(str(value))
 
     # Execute the dbt CLI command in a subprocess.
-    log.info(f"Executing command: $ {' '.join(command_list)}")
+    command = ' '.join(command_list)
+    log.info(f"Executing command: $ {command}")
 
     return_code = 0
     try:
@@ -103,6 +104,7 @@ def execute_cli(
         raise DagsterDbtCliHandledRuntimeError(logs=logs, raw_output=proc_out.decode())
 
     return {
+        "command": command,
         "return_code": return_code,
         "logs": logs,
         "raw_output": proc_out.decode(),

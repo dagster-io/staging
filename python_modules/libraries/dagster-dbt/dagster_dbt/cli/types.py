@@ -25,6 +25,7 @@ class CliRunResult(RunResult):
     def __init__(
         self,
         *args,
+        command: str,
         return_code: int,
         raw_output: str,
         num_pass: Optional[int] = None,
@@ -37,6 +38,7 @@ class CliRunResult(RunResult):
         """Constructor
 
         Args:
+            command (str): The full shell command that was executed.
             return_code (int): The return code of the dbt CLI process.
             raw_output (str): The raw output (``stdout``) of the dbt CLI process.
             num_pass (Optional[int]): The number of dbt nodes (models) that passed.
@@ -47,6 +49,7 @@ class CliRunResult(RunResult):
         """
         super().__init__(*args, **kwargs)
 
+        check.str_param(command, "command")
         check.int_param(return_code, "return_code")
         check.str_param(raw_output, "raw_output")
         check.opt_int_param(num_pass, "num_pass")
@@ -55,6 +58,7 @@ class CliRunResult(RunResult):
         check.opt_int_param(num_skip, "num_skip")
         check.opt_int_param(num_total, "num_total")
 
+        self._command = command
         self._return_code = return_code
         self._raw_output = raw_output
         self._num_pass = num_pass
@@ -88,8 +92,13 @@ class CliRunResult(RunResult):
         return cls(**d)
 
     @property
-    def return_code(self) -> str:
-        """str: The return code of the dbt CLI process."""
+    def command(self) -> str:
+        """str: The full shell command that was executed."""
+        return self._command
+
+    @property
+    def return_code(self) -> int:
+        """int: The return code of the dbt CLI process."""
         return self._return_code
 
     @property
