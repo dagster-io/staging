@@ -415,25 +415,30 @@ def _get_code_pointer_dict_from_kwargs(kwargs):
     module_name = kwargs.get("module_name")
     working_directory = get_working_directory_from_kwargs(kwargs)
     attribute = kwargs.get("attribute")
-    loadable_targets = get_loadable_targets(python_file, module_name, working_directory, attribute)
     if python_file:
+        _check_cli_arguments_none(kwargs, "module_name")
         return {
             repository_def_from_target_def(
                 loadable_target.target_definition
             ).name: CodePointer.from_python_file(
                 python_file, loadable_target.attribute, working_directory
             )
-            for loadable_target in loadable_targets
+            for loadable_target in get_loadable_targets(
+                python_file, module_name, working_directory, attribute
+            )
         }
     elif module_name:
+        _check_cli_arguments_none(kwargs, "python_file", "working_directory")
         return {
             repository_def_from_target_def(
                 loadable_target.target_definition
             ).name: CodePointer.from_module(module_name, loadable_target.attribute)
-            for loadable_target in loadable_targets
+            for loadable_target in get_loadable_targets(
+                python_file, module_name, working_directory, attribute
+            )
         }
     else:
-        check.failed("invalid")
+        check.failed("Must specify a Python file or module name")
 
 
 def get_working_directory_from_kwargs(kwargs):
@@ -452,12 +457,14 @@ def get_repository_python_origin_from_kwargs(kwargs):
     # (e.g. to log an origin ID for an error message)
     if kwargs.get("attribute") and not provided_repo_name:
         if kwargs.get("python_file"):
+            _check_cli_arguments_none(kwargs, "module_name")
             code_pointer = CodePointer.from_python_file(
                 kwargs.get("python_file"),
                 kwargs.get("attribute"),
                 get_working_directory_from_kwargs(kwargs),
             )
         elif kwargs.get("module_name"):
+            _check_cli_arguments_none(kwargs, "python_file", "working_directory")
             code_pointer = CodePointer.from_module(
                 kwargs.get("module_name"), kwargs.get("attribute"),
             )
