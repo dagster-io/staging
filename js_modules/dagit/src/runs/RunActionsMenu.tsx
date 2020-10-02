@@ -44,8 +44,6 @@ export const RunActionsMenu: React.FunctionComponent<{
 
   const runConfigYaml = data?.pipelineRunOrError?.runConfigYaml;
   const repoContext = React.useContext(DagsterRepositoryContext);
-  const repositoryLocation = repoContext?.repositoryLocation;
-  const repository = repoContext?.repository;
 
   const infoReady = called ? !loading : false;
   return (
@@ -64,13 +62,14 @@ export const RunActionsMenu: React.FunctionComponent<{
             }
           />
           <MenuDivider />
-          {repository ? (
+          {repoContext ? (
             <>
               <Tooltip
                 content={OPEN_PLAYGROUND_UNKNOWN}
                 position={Position.BOTTOM}
                 disabled={infoReady}
                 wrapperTagName="div"
+                targetTagName="div"
               >
                 <MenuItem
                   text="Open in Playground..."
@@ -89,6 +88,7 @@ export const RunActionsMenu: React.FunctionComponent<{
                 position={Position.BOTTOM}
                 disabled={infoReady}
                 wrapperTagName="div"
+                targetTagName="div"
               >
                 <MenuItem
                   text="Re-execute"
@@ -99,8 +99,8 @@ export const RunActionsMenu: React.FunctionComponent<{
                       variables: getReexecutionVariables({
                         run: {...run, runConfigYaml},
                         style: {type: 'all'},
-                        repositoryLocationName: repositoryLocation?.name,
-                        repositoryName: repository?.name,
+                        repositoryLocationName: repoContext.repositoryLocation?.name,
+                        repositoryName: repoContext.repository?.name,
                       }),
                     });
                     handleLaunchResult(run.pipelineName, result, {openInNewWindow: false});

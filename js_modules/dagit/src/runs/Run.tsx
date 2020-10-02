@@ -223,18 +223,18 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
     LaunchPipelineReexecution,
     LaunchPipelineReexecutionVariables
   >(LAUNCH_PIPELINE_REEXECUTION_MUTATION);
-  const {repositoryLocation, repository} = React.useContext(DagsterRepositoryContext);
+  const repoContext = React.useContext(DagsterRepositoryContext);
   const splitPanelContainer = React.createRef<SplitPanelContainer>();
 
   const onLaunch = async (style: ReExecutionStyle) => {
-    if (!run || run.pipeline.__typename === 'UnknownPipeline') {
+    if (!run || run.pipeline.__typename === 'UnknownPipeline' || !repoContext) {
       return;
     }
     const variables = getReexecutionVariables({
       run,
       style,
-      repositoryLocationName: repositoryLocation?.name,
-      repositoryName: repository?.name,
+      repositoryLocationName: repoContext.repositoryLocation?.name,
+      repositoryName: repoContext.repository?.name,
     });
     const result = await launchPipelineReexecution({variables});
     handleLaunchResult(run.pipeline.name, result, {openInNewWindow: false});

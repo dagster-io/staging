@@ -158,7 +158,7 @@ export const RunActionButtons: React.FunctionComponent<RunActionButtonsProps> = 
         small={true}
         primary={primary}
         options={options}
-        title={`Launch Re-execution (${primary.scope})`}
+        title={primary.scope === '*' ? `Re-execute All (*)` : `Re-execute (${primary.scope})`}
         tooltip={pipelineError?.tooltip}
         icon={pipelineError?.icon}
         disabled={!!pipelineError}
@@ -179,7 +179,7 @@ function usePipelineAvailabilityErrorForRun(
   const currentRepository = useRepository();
   const {options: repositoryOptions} = useRepositoryOptions();
 
-  if (!run) {
+  if (!run || !currentRepository) {
     return null;
   }
 
