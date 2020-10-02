@@ -83,6 +83,6 @@ Errors
 
 .. autoexception:: DagsterDbtHandledCliRuntimeError
 
-.. autoexception:: DagsterDbtUnexpectedCliOutputErro
+.. autoexception:: DagsterDbtUnexpectedCliOutputError
 
 .. autoexception:: DagsterDbtUnexpectedRpcPollOutput
