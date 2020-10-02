@@ -4,17 +4,16 @@ import {useHistory, useRouteMatch} from 'react-router';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {DagsterRepoOption} from '../DagsterRepositoryContext';
-import {ShortcutHandler} from '../ShortcutHandler';
-import {TimezonePicker} from '../TimeComponents';
-import {WebsocketStatus} from '../WebsocketStatus';
-import navBarImage from '../images/nav-logo-icon.png';
-import navTitleImage from '../images/nav-title.png';
-
-import {InstanceDetailsLink} from './InstanceDetailsLink';
-import {RepositoryContentList} from './RepositoryContentList';
-import {RepositoryPicker} from './RepositoryPicker';
-import {SchedulesList} from './SchedulesList';
+import {DagsterRepoOption} from 'src/DagsterRepositoryContext';
+import {ShortcutHandler} from 'src/ShortcutHandler';
+import {TimezonePicker} from 'src/TimeComponents';
+import {WebsocketStatus} from 'src/WebsocketStatus';
+import navBarImage from 'src/images/nav-logo-icon.png';
+import navTitleImage from 'src/images/nav-title.png';
+import {InstanceDetailsLink} from 'src/nav/InstanceDetailsLink';
+import {RepositoryContentList} from 'src/nav/RepositoryContentList';
+import {RepositoryPicker} from 'src/nav/RepositoryPicker';
+import {SchedulesList} from 'src/nav/SchedulesList';
 
 const KEYCODE_FOR_1 = 49;
 
@@ -40,12 +39,18 @@ const INSTANCE_TABS = [
 ];
 
 interface LeftNavProps {
+  loading: boolean;
   options: DagsterRepoOption[];
   repo: DagsterRepoOption | null;
   setRepo: (repo: DagsterRepoOption) => void;
 }
 
-export const LeftNav: React.FunctionComponent<LeftNavProps> = ({options, repo, setRepo}) => {
+export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
+  loading,
+  options,
+  repo,
+  setRepo,
+}) => {
   const history = useHistory();
   const match = useRouteMatch<
     | {selector: string; tab: string; rootTab: undefined}
@@ -95,7 +100,7 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({options, repo, s
           minHeight: 0,
         }}
       >
-        <RepositoryPicker options={options} repo={repo} setRepo={setRepo} />
+        <RepositoryPicker loading={loading} options={options} repo={repo} setRepo={setRepo} />
         {repo && (
           <div style={{display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0}}>
             <ItemHeader>Pipelines & Solids:</ItemHeader>

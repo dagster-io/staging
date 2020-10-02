@@ -12,6 +12,7 @@ from dagster.core.host_representation.repository_location import GrpcServerRepos
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRunStatus
+from dagster.core.storage.tags import GRPC_INFO_TAG
 from dagster.core.test_utils import (
     instance_for_test,
     poll_for_event,
@@ -20,6 +21,7 @@ from dagster.core.test_utils import (
 )
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
+from dagster.utils import find_free_port, merge_dicts
 
 
 @solid
@@ -370,6 +372,7 @@ def test_terminated_run(get_external_pipeline):  # pylint: disable=redefined-out
                 "PIPELINE_START",
                 "ENGINE_EVENT",
                 "STEP_START",
+                "ENGINE_EVENT",
                 "STEP_FAILURE",
                 "PIPELINE_FAILURE",
                 "ENGINE_EVENT",
@@ -516,3 +519,61 @@ def test_not_initialized():  # pylint: disable=redefined-outer-name
     assert run_launcher.join() is None
     assert run_launcher.can_terminate(run_id) is False
     assert run_launcher.terminate(run_id) is False
+
+
+def test_server_down():
+    with grpc_instance() as instance:
+        repo_yaml = file_relative_path(__file__, "repo.yaml")
+        recon_repo = ReconstructableRepository.from_legacy_repository_yaml(repo_yaml)
+        loadable_target_origin = recon_repo.get_origin().loadable_target_origin
+        server_process = GrpcServerProcess(
+            loadable_target_origin=loadable_target_origin, max_workers=4, force_port=True
+        )
+
+        with server_process.create_ephemeral_client() as api_client:
+            repository_location = GrpcServerRepositoryLocation(
+                RepositoryLocationHandle.create_grpc_server_location(
+                    location_name="test",
+                    port=api_client.port,
+                    socket=api_client.socket,
+                    host=api_client.host,
+                )
+            )
+
+            external_pipeline = repository_location.get_repository(
+                "nope"
+            ).get_full_external_pipeline("sleepy_pipeline")
+
+            pipeline_run = instance.create_run_for_pipeline(
+                pipeline_def=sleepy_pipeline, run_config=None
+            )
+
+            launcher = instance.run_launcher
+
+            launcher.launch_run(instance, pipeline_run, external_pipeline)
+
+            poll_for_step_start(instance, pipeline_run.run_id)
+
+            assert launcher.can_terminate(pipeline_run.run_id)
+
+            original_run_tags = instance.get_run_by_id(pipeline_run.run_id).tags[GRPC_INFO_TAG]
+
+            # Replace run tags with an invalid port
+            instance.add_run_tags(
+                pipeline_run.run_id,
+                {
+                    GRPC_INFO_TAG: seven.json.dumps(
+                        merge_dicts({"host": "localhost"}, {"port": find_free_port()})
+                    )
+                },
+            )
+
+            assert not launcher.can_terminate(pipeline_run.run_id)
+
+            instance.add_run_tags(
+                pipeline_run.run_id, {GRPC_INFO_TAG: original_run_tags,},
+            )
+
+            assert launcher.terminate(pipeline_run.run_id)
+
+        server_process.wait()

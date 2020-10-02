@@ -1,9 +1,8 @@
 import {Button, Classes, Dialog} from '@blueprintjs/core';
 import * as React from 'react';
 
-import {HighlightedCodeBlock} from '../HighlightedCodeBlock';
-
-import {IPluginSidebarProps} from '.';
+import {HighlightedCodeBlock} from 'src/HighlightedCodeBlock';
+import {IPluginSidebarProps} from 'src/plugins';
 
 export class SidebarComponent extends React.Component<IPluginSidebarProps> {
   state = {
@@ -27,7 +26,9 @@ export class SidebarComponent extends React.Component<IPluginSidebarProps> {
   render() {
     const metadata = this.props.definition.metadata;
     const sql = metadata.find((m) => m.key === 'sql');
-    if (!sql) return <span />;
+    if (!sql) {
+      return <span />;
+    }
 
     return (
       <div>

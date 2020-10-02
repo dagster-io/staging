@@ -20,7 +20,7 @@ from dagster import (
     solid,
     usable_as_dagster_type,
 )
-from dagster.core.definitions.executable import InMemoryExecutablePipeline
+from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.api import execute_run
 from dagster.core.storage.type_storage import TypeStoragePlugin
 from dagster.core.types.dagster_type import create_any_type
@@ -132,7 +132,7 @@ def test_execution_plan_subset_strict_resources():
         pipeline_def, step_keys_to_execute=["consumes_resource_b.compute"],
     )
 
-    result = execute_run(InMemoryExecutablePipeline(pipeline_def), pipeline_run, instance)
+    result = execute_run(InMemoryPipeline(pipeline_def), pipeline_run, instance)
 
     assert result.success
 
@@ -251,7 +251,7 @@ def test_execution_plan_subset_strict_resources_within_composite():
         pipeline_def, step_keys_to_execute=["wraps_b.consumes_resource_b.compute"],
     )
 
-    result = execute_run(InMemoryExecutablePipeline(pipeline_def), pipeline_run, instance)
+    result = execute_run(InMemoryPipeline(pipeline_def), pipeline_run, instance)
 
     assert result.success
 
@@ -302,7 +302,7 @@ def test_execution_plan_subset_with_aliases():
     )
 
     result = execute_run(
-        InMemoryExecutablePipeline(selective_init_test_pipeline_with_alias), pipeline_run, instance
+        InMemoryPipeline(selective_init_test_pipeline_with_alias), pipeline_run, instance
     )
 
     assert result.success
@@ -623,3 +623,19 @@ def test_custom_type_with_resource_dependent_type_check():
 
     sufficiently_required_pipeline = define_type_check_pipeline(should_require_resources=True)
     assert execute_pipeline(sufficiently_required_pipeline).success
+
+
+def test_resource_no_version():
+    @resource
+    def no_version_resource(_):
+        pass
+
+    assert no_version_resource.version == None
+
+
+def test_resource_passed_version():
+    @resource(version="42")
+    def passed_version_resource(_):
+        pass
+
+    assert passed_version_resource.version == "42"

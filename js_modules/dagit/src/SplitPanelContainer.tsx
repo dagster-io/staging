@@ -94,7 +94,9 @@ export class PanelDivider extends React.Component<IDividerProps> {
 
     const onMouseMove = (event: MouseEvent) => {
       const parent = this.ref.current?.closest('#split-panel-container');
-      if (!parent) return;
+      if (!parent) {
+        return;
+      }
       const parentRect = parent.getBoundingClientRect();
 
       const firstPanelPercent =
@@ -168,7 +170,9 @@ export const SecondPanelToggle = ({container, axis}: PanelToggleProps) => {
       title={'Toggle Second Pane'}
       icon={axis === 'vertical' ? 'add-row-bottom' : 'add-column-right'}
       onClick={() => {
-        if (!container.current) return;
+        if (!container.current) {
+          return;
+        }
         const current = container.current.state.size;
         if (current < 90) {
           setPrevSize(current);
@@ -244,5 +248,6 @@ const Container = styled.div<{
     flex-direction: column;
     display: flex;
     min-${({axis}) => (axis === 'vertical' ? 'height' : 'width')}: 0;
+    z-index: 0;
   }
 `;

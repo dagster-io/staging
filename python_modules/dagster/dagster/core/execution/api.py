@@ -1,9 +1,10 @@
+import sys
 from contextlib import contextmanager
 
 from dagster import check
-from dagster.core.definitions import ExecutablePipeline, PipelineDefinition, SystemStorageData
-from dagster.core.definitions.executable import InMemoryExecutablePipeline
+from dagster.core.definitions import IPipeline, PipelineDefinition, SystemStorageData
 from dagster.core.definitions.pipeline import PipelineSubsetDefinition
+from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
@@ -18,6 +19,7 @@ from dagster.core.telemetry import log_repo_stats, telemetry_wrapper
 from dagster.core.utils import str_format_set
 from dagster.utils import merge_dicts
 from dagster.utils.backcompat import canonicalize_backcompat_args
+from dagster.utils.error import serializable_error_info_from_exc_info
 
 from .context_creation_pipeline import (
     ExecutionContextManager,
@@ -31,14 +33,14 @@ from .results import PipelineExecutionResult
 # | function name               | operates over      | sync  | supports    | creates new PipelineRun |
 # |                             |                    |       | reexecution | in instance             |
 # | --------------------------- | ------------------ | ----- | ----------- | ----------------------- |
-# | execute_pipeline_iterator   | ExecutablePipeline | async | no          | yes                     |
-# | execute_pipeline            | ExecutablePipeline | sync  | no          | yes                     |
+# | execute_pipeline_iterator   | IPipeline | async | no          | yes                     |
+# | execute_pipeline            | IPipeline | sync  | no          | yes                     |
 # | execute_run_iterator        | PipelineRun        | async | (1)         | no                      |
 # | execute_run                 | PipelineRun        | sync  | (1)         | no                      |
 # | execute_plan_iterator       | ExecutionPlan      | async | (2)         | no                      |
 # | execute_plan                | ExecutionPlan      | sync  | (2)         | no                      |
-# | reexecute_pipeline          | ExecutablePipeline | sync  | yes         | yes                     |
-# | reexecute_pipeline_iterator | ExecutablePipeline | async | yes         | yes                     |
+# | reexecute_pipeline          | IPipeline | sync  | yes         | yes                     |
+# | reexecute_pipeline_iterator | IPipeline | async | yes         | yes                     |
 #
 # Notes on reexecution support:
 # (1) The appropriate bits must be set on the PipelineRun passed to this function. Specifically,
@@ -48,10 +50,15 @@ from .results import PipelineExecutionResult
 
 
 def execute_run_iterator(pipeline, pipeline_run, instance):
-    check.inst_param(pipeline, "pipeline", ExecutablePipeline)
+    check.inst_param(pipeline, "pipeline", IPipeline)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     check.inst_param(instance, "instance", DagsterInstance)
-    check.invariant(pipeline_run.status == PipelineRunStatus.NOT_STARTED)
+    check.invariant(
+        pipeline_run.status == PipelineRunStatus.NOT_STARTED,
+        desc="Pipeline run {} ({}) in state {}, expected PipelineRunStatus.NOT_STARTED".format(
+            pipeline_run.pipeline_name, pipeline_run.run_id, pipeline_run.status
+        ),
+    )
 
     if pipeline_run.solids_to_execute:
         pipeline_def = pipeline.get_definition()
@@ -99,7 +106,7 @@ def execute_run(pipeline, pipeline_run, instance, raise_on_error=False):
     Synchronous version of execute_run_iterator.
 
     Args:
-        pipeline (ExecutablePipeline): The pipeline to execute.
+        pipeline (IPipeline): The pipeline to execute.
         pipeline_run (PipelineRun): The run to execute
         instance (DagsterInstance): The instance in which the run has been created.
         raise_on_error (Optional[bool]): Whether or not to raise exceptions when they occur.
@@ -110,17 +117,21 @@ def execute_run(pipeline, pipeline_run, instance, raise_on_error=False):
     """
     if isinstance(pipeline, PipelineDefinition):
         raise DagsterInvariantViolationError(
-            "execute_run requires an ExecutablePipeline but received a PipelineDefinition "
+            "execute_run requires an IPipeline but received a PipelineDefinition "
             "directly instead. To support hand-off to other processes provide a "
             "ReconstructablePipeline which can be done using reconstructable(). For in "
-            "process only execution you can use InMemoryExecutablePipeline."
+            "process only execution you can use InMemoryPipeline."
         )
 
-    check.inst_param(pipeline, "pipeline", ExecutablePipeline)
+    check.inst_param(pipeline, "pipeline", IPipeline)
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     check.inst_param(instance, "instance", DagsterInstance)
-    check.invariant(pipeline_run.status == PipelineRunStatus.NOT_STARTED)
-
+    check.invariant(
+        pipeline_run.status == PipelineRunStatus.NOT_STARTED,
+        desc="Pipeline run {} ({}) in state {}, expected PipelineRunStatus.NOT_STARTED".format(
+            pipeline_run.pipeline_name, pipeline_run.run_id, pipeline_run.status
+        ),
+    )
     pipeline_def = pipeline.get_definition()
     if pipeline_run.solids_to_execute:
         if isinstance(pipeline_def, PipelineSubsetDefinition):
@@ -198,7 +209,7 @@ def execute_pipeline_iterator(
     way is appropriate.
 
     Parameters:
-        pipeline (Union[ExecutablePipeline, PipelineDefinition]): The pipeline to execute.
+        pipeline (Union[IPipeline, PipelineDefinition]): The pipeline to execute.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
             as a dict.
         mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``
@@ -276,7 +287,7 @@ def execute_pipeline(
     scripts.
 
     Parameters:
-        pipeline (Union[ExecutablePipeline, PipelineDefinition]): The pipeline to execute.
+        pipeline (Union[IPipeline, PipelineDefinition]): The pipeline to execute.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
             as a dict.
         mode (Optional[str]): The name of the pipeline mode to use. You may not set both ``mode``
@@ -380,7 +391,7 @@ def reexecute_pipeline(
     scripts.
 
     Parameters:
-        pipeline (Union[ExecutablePipeline, PipelineDefinition]): The pipeline to execute.
+        pipeline (Union[IPipeline, PipelineDefinition]): The pipeline to execute.
         parent_run_id (str): The id of the previous run to reexecute. The run must exist in the
             instance.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
@@ -480,7 +491,7 @@ def reexecute_pipeline_iterator(
     way is appropriate.
 
     Parameters:
-        pipeline (Union[ExecutablePipeline, PipelineDefinition]): The pipeline to execute.
+        pipeline (Union[IPipeline, PipelineDefinition]): The pipeline to execute.
         parent_run_id (str): The id of the previous run to reexecute. The run must exist in the
             instance.
         run_config (Optional[dict]): The environment configuration that parametrizes this run,
@@ -610,9 +621,9 @@ def execute_plan(
 def _check_pipeline(pipeline):
     # backcompat
     if isinstance(pipeline, PipelineDefinition):
-        pipeline = InMemoryExecutablePipeline(pipeline)
+        pipeline = InMemoryPipeline(pipeline)
 
-    check.inst_param(pipeline, "pipeline", ExecutablePipeline)
+    check.inst_param(pipeline, "pipeline", IPipeline)
     return pipeline
 
 
@@ -632,29 +643,6 @@ def create_execution_plan(pipeline, run_config=None, mode=None, step_keys_to_exe
     )
 
 
-class BoolRef:
-    def __init__(self, value):
-        self.value = value
-
-
-def _core_execution_iterator(pipeline_context, execution_plan, steps_started, pipeline_success_ref):
-    try:
-        for event in pipeline_context.executor.execute(pipeline_context, execution_plan):
-            if event.is_step_start:
-                steps_started.add(event.step_key)
-            if event.is_step_success:
-                if event.step_key not in steps_started:
-                    pipeline_success_ref.value = False
-                else:
-                    steps_started.remove(event.step_key)
-            if event.is_step_failure:
-                pipeline_success_ref.value = False
-            yield event
-    except (Exception, KeyboardInterrupt):
-        pipeline_success_ref.value = False
-        raise  # finally block will run before this is re-raised
-
-
 def _pipeline_execution_iterator(pipeline_context, execution_plan):
     """A complete execution of a pipeline. Yields pipeline start, success,
     and failure events.
@@ -668,27 +656,37 @@ def _pipeline_execution_iterator(pipeline_context, execution_plan):
 
     yield DagsterEvent.pipeline_start(pipeline_context)
 
-    steps_started = set([])
-    pipeline_success_ref = BoolRef(True)
+    pipeline_exception_info = None
+    failed_steps = []
     generator_closed = False
     try:
-        for event in _core_execution_iterator(
-            pipeline_context, execution_plan, steps_started, pipeline_success_ref
-        ):
+        for event in pipeline_context.executor.execute(pipeline_context, execution_plan):
+            if event.is_step_failure:
+                failed_steps.append(event.step_key)
+
             yield event
     except GeneratorExit:
         # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
         # (see https://amir.rachum.com/blog/2017/03/03/generator-cleanup/).
         generator_closed = True
-        pipeline_success_ref.value = False
+        pipeline_exception_info = serializable_error_info_from_exc_info(sys.exc_info())
         raise
+    except (Exception, KeyboardInterrupt):  # pylint: disable=broad-except
+        pipeline_exception_info = serializable_error_info_from_exc_info(sys.exc_info())
+        raise  # finally block will run before this is re-raised
     finally:
-        if steps_started:
-            pipeline_success_ref.value = False
-        if pipeline_success_ref.value:
-            event = DagsterEvent.pipeline_success(pipeline_context)
+        if pipeline_exception_info:
+            event = DagsterEvent.pipeline_failure(
+                pipeline_context,
+                "An exception was thrown during execution.",
+                pipeline_exception_info,
+            )
+        elif failed_steps:
+            event = DagsterEvent.pipeline_failure(
+                pipeline_context, "Steps failed: {}.".format(failed_steps),
+            )
         else:
-            event = DagsterEvent.pipeline_failure(pipeline_context)
+            event = DagsterEvent.pipeline_success(pipeline_context)
         if not generator_closed:
             yield event
 

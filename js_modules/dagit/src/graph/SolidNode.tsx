@@ -1,15 +1,15 @@
 import gql from 'graphql-tag';
 import * as React from 'react';
 
-import PipelineColorScale from './PipelineColorScale';
-import {SVGFlowLayoutRect, SVGMonospaceText} from './SVGComponents';
-import {SolidConfigPort} from './SolidConfigPort';
-import {SolidIOBox, metadataForIO} from './SolidIOBox';
-import SolidTags, {ISolidTag} from './SolidTags';
-import {IFullSolidLayout} from './getFullSolidLayout';
-import {Edge} from './highlighting';
-import {SolidNodeDefinitionFragment} from './types/SolidNodeDefinitionFragment';
-import {SolidNodeInvocationFragment} from './types/SolidNodeInvocationFragment';
+import PipelineColorScale from 'src/graph/PipelineColorScale';
+import {SVGFlowLayoutRect, SVGMonospaceText} from 'src/graph/SVGComponents';
+import {SolidConfigPort} from 'src/graph/SolidConfigPort';
+import {SolidIOBox, metadataForIO} from 'src/graph/SolidIOBox';
+import SolidTags, {ISolidTag} from 'src/graph/SolidTags';
+import {IFullSolidLayout} from 'src/graph/getFullSolidLayout';
+import {Edge} from 'src/graph/highlighting';
+import {SolidNodeDefinitionFragment} from 'src/graph/types/SolidNodeDefinitionFragment';
+import {SolidNodeInvocationFragment} from 'src/graph/types/SolidNodeInvocationFragment';
 
 interface ISolidNodeProps {
   layout: IFullSolidLayout;
@@ -141,17 +141,30 @@ export default class SolidNode extends React.Component<ISolidNodeProps> {
   };
 
   shouldComponentUpdate(prevProps: ISolidNodeProps) {
-    if (prevProps.dim !== this.props.dim) return true;
-    if (prevProps.selected !== this.props.selected) return true;
-    if (prevProps.focused !== this.props.focused) return true;
-    if (prevProps.minified !== this.props.minified) return true;
-    if (prevProps.highlightedEdges !== this.props.highlightedEdges) return true;
-    if (prevProps.layout !== this.props.layout) return true;
+    if (prevProps.dim !== this.props.dim) {
+      return true;
+    }
+    if (prevProps.selected !== this.props.selected) {
+      return true;
+    }
+    if (prevProps.focused !== this.props.focused) {
+      return true;
+    }
+    if (prevProps.minified !== this.props.minified) {
+      return true;
+    }
+    if (prevProps.highlightedEdges !== this.props.highlightedEdges) {
+      return true;
+    }
+    if (prevProps.layout !== this.props.layout) {
+      return true;
+    }
     if (
       (prevProps.invocation && prevProps.invocation.name) !==
       (this.props.invocation && this.props.invocation.name)
-    )
+    ) {
       return true;
+    }
     return false;
   }
 

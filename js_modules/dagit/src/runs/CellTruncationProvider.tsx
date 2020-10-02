@@ -2,7 +2,7 @@ import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {showCustomAlert} from '../CustomAlertProvider';
+import {showCustomAlert} from 'src/CustomAlertProvider';
 
 const OverflowFade = styled.div`
   position: absolute;
@@ -81,7 +81,7 @@ export class CellTruncationProvider extends React.Component<
   };
 
   render() {
-    const {style} = this.props;
+    const style = {...this.props.style, overflow: 'hidden'};
 
     return (
       <div style={style}>

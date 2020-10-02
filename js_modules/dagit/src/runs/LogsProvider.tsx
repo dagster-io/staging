@@ -3,14 +3,13 @@ import gql from 'graphql-tag';
 import * as querystring from 'query-string';
 import * as React from 'react';
 
-import {DirectGraphQLSubscription} from '../DirectGraphQLSubscription';
-import {TokenizingFieldValue, tokenizedValuesFromString} from '../TokenizingField';
-import {PipelineRunStatus} from '../types/globalTypes';
-
-import {Run} from './Run';
-import {PipelineRunLogsSubscription} from './types/PipelineRunLogsSubscription';
-import {PipelineRunLogsSubscriptionStatusFragment} from './types/PipelineRunLogsSubscriptionStatusFragment';
-import {RunPipelineRunEventFragment} from './types/RunPipelineRunEventFragment';
+import {DirectGraphQLSubscription} from 'src/DirectGraphQLSubscription';
+import {TokenizingFieldValue, tokenizedValuesFromString} from 'src/TokenizingField';
+import {Run} from 'src/runs/Run';
+import {PipelineRunLogsSubscription} from 'src/runs/types/PipelineRunLogsSubscription';
+import {PipelineRunLogsSubscriptionStatusFragment} from 'src/runs/types/PipelineRunLogsSubscriptionStatusFragment';
+import {RunPipelineRunEventFragment} from 'src/runs/types/RunPipelineRunEventFragment';
+import {PipelineRunStatus} from 'src/types/globalTypes';
 
 export enum LogLevel {
   DEBUG = 'DEBUG',
@@ -64,8 +63,9 @@ interface LogsFilterProviderProps {
   filter: LogFilter;
   selectedSteps: string[];
   children: (props: {
-    allNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
+    hasTextFilter: boolean;
     filteredNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
+    textMatchNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
     loaded: boolean;
   }) => React.ReactChild;
 }
@@ -191,8 +191,9 @@ export class LogsProvider extends React.Component<
 
     if (nodes === null) {
       return this.props.children({
-        allNodes: [],
+        hasTextFilter: false,
         filteredNodes: [],
+        textMatchNodes: [],
         loaded: false,
       });
     }
@@ -201,30 +202,41 @@ export class LogsProvider extends React.Component<
 
     const filteredNodes = nodes.filter((node) => {
       const l = node.__typename === 'LogMessageEvent' ? node.level : 'EVENT';
-
-      if (!filter.levels[l]) return false;
-      if (filter.since && Number(node.timestamp) < filter.since) return false;
-
-      return (
-        filter.values.length === 0 ||
-        filter.values.every((f) => {
-          if (f.token === 'query') {
-            return node.stepKey && selectedSteps.includes(node.stepKey);
-          }
-          if (f.token === 'step') {
-            return node.stepKey && node.stepKey === f.value;
-          }
-          if (f.token === 'type') {
-            return node.__typename.toLowerCase().includes(f.value);
-          }
-          return node.message.toLowerCase().includes(f.value.toLowerCase());
-        })
-      );
+      if (!filter.levels[l]) {
+        return false;
+      }
+      if (filter.since && Number(node.timestamp) < filter.since) {
+        return false;
+      }
+      return true;
     });
 
+    const hasTextFilter = !!(filter.values.length && filter.values[0].value !== '');
+
+    const textMatchNodes = hasTextFilter
+      ? filteredNodes.filter((node) => {
+          return (
+            filter.values.length > 0 &&
+            filter.values.every((f) => {
+              if (f.token === 'query') {
+                return node.stepKey && selectedSteps.includes(node.stepKey);
+              }
+              if (f.token === 'step') {
+                return node.stepKey && node.stepKey === f.value;
+              }
+              if (f.token === 'type') {
+                return node.__typename.toLowerCase().includes(f.value);
+              }
+              return node.message.toLowerCase().includes(f.value.toLowerCase());
+            })
+          );
+        })
+      : [];
+
     return this.props.children({
-      allNodes: nodes,
+      hasTextFilter,
       filteredNodes,
+      textMatchNodes,
       loaded: true,
     });
   }

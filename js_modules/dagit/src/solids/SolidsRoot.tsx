@@ -7,23 +7,22 @@ import {RouteComponentProps} from 'react-router';
 import {AutoSizer, CellMeasurer, CellMeasurerCache, List} from 'react-virtualized';
 import styled from 'styled-components/macro';
 
-import {DagsterRepositoryContext, useRepositorySelector} from '../DagsterRepositoryContext';
-import Loading from '../Loading';
-import SolidTypeSignature from '../SolidTypeSignature';
-import {SplitPanelContainer} from '../SplitPanelContainer';
+import {DagsterRepositoryContext, useRepositorySelector} from 'src/DagsterRepositoryContext';
+import Loading from 'src/Loading';
+import SolidTypeSignature from 'src/SolidTypeSignature';
+import {SplitPanelContainer} from 'src/SplitPanelContainer';
 import {
   SuggestionProvider,
   TokenizingField,
   TokenizingFieldValue,
   stringFromValue,
   tokenizedValuesFromString,
-} from '../TokenizingField';
-
-import {SolidDetailScrollContainer, UsedSolidDetails} from './SolidDetailsRoot';
+} from 'src/TokenizingField';
+import {SolidDetailScrollContainer, UsedSolidDetails} from 'src/solids/SolidDetailsRoot';
 import {
   SolidsRootQuery,
   SolidsRootQuery_repositoryOrError_Repository_usedSolids,
-} from './types/SolidsRootQuery';
+} from 'src/solids/types/SolidsRootQuery';
 
 function flatUniq(arrs: string[][]) {
   const results: {[key: string]: boolean} = {};
@@ -92,10 +91,10 @@ function filterSolidsWithSearch(solids: Solid[], search: TokenizingFieldValue[])
 type SolidsRootProps = RouteComponentProps<{name: string}>;
 
 export const SolidsRoot: React.FunctionComponent<SolidsRootProps> = (props) => {
-  const {repositoryLocation, repository} = React.useContext(DagsterRepositoryContext);
+  const repoContext = React.useContext(DagsterRepositoryContext);
   const repositorySelector = useRepositorySelector();
   const queryResult = useQuery<SolidsRootQuery>(SOLIDS_ROOT_QUERY, {
-    skip: !repository || !repositoryLocation,
+    skip: !repoContext?.repository || !repoContext?.repositoryLocation,
     variables: {repositorySelector},
   });
   return (

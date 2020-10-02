@@ -1,6 +1,5 @@
 import os
 import queue
-import signal
 import subprocess
 import sys
 import threading
@@ -30,7 +29,7 @@ from dagster.core.origin import PipelineOrigin, RepositoryGrpcServerOrigin, Repo
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 from dagster.serdes.ipc import IPCErrorMessage, open_ipc_subprocess
-from dagster.seven import multiprocessing
+from dagster.seven import kill_process, multiprocessing
 from dagster.utils import find_free_port, safe_tempfile_path_unmanaged
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_repository_from_origin
@@ -41,10 +40,10 @@ from .impl import (
     RunInSubprocessComplete,
     StartRunInSubprocessSuccessful,
     execute_run_in_subprocess,
+    get_external_executable_params,
     get_external_execution_plan_snapshot,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
-    get_external_triggered_execution_params,
     start_run_in_subprocess,
 )
 from .types import (
@@ -54,8 +53,8 @@ from .types import (
     CancelExecutionResult,
     ExecuteRunArgs,
     ExecutionPlanSnapshotArgs,
+    ExternalExecutableArgs,
     ExternalScheduleExecutionArgs,
-    ExternalTriggeredExecutionArgs,
     GetCurrentImageResult,
     ListRepositoriesResponse,
     LoadableRepositorySymbol,
@@ -90,7 +89,7 @@ class LazyRepositorySymbolsAndCodePointers:
         self._loadable_repository_symbols = None
         self._code_pointers_by_repo_name = None
 
-    def _load(self):
+    def load(self):
         self._loadable_repository_symbols = load_loadable_repository_symbols(
             self._loadable_target_origin
         )
@@ -101,14 +100,14 @@ class LazyRepositorySymbolsAndCodePointers:
     @property
     def loadable_repository_symbols(self):
         if self._loadable_repository_symbols is None:
-            self._load()
+            self.load()
 
         return self._loadable_repository_symbols
 
     @property
     def code_pointers_by_repo_name(self):
         if self._code_pointers_by_repo_name is None:
-            self._load()
+            self.load()
 
         return self._code_pointers_by_repo_name
 
@@ -165,6 +164,7 @@ class DagsterApiServer(DagsterApiServicer):
         loadable_target_origin=None,
         heartbeat=False,
         heartbeat_timeout=30,
+        lazy_load_user_code=False,
     ):
         super(DagsterApiServer, self).__init__()
 
@@ -194,6 +194,8 @@ class DagsterApiServer(DagsterApiServicer):
         self._repository_symbols_and_code_pointers = LazyRepositorySymbolsAndCodePointers(
             loadable_target_origin
         )
+        if not lazy_load_user_code:
+            self._repository_symbols_and_code_pointers.load()
 
         self.__last_heartbeat_time = time.time()
         if heartbeat:
@@ -245,7 +247,7 @@ class DagsterApiServer(DagsterApiServicer):
 
                     # the process failed to handle the KeyboardInterrupt cleanly after termination.
                     # Inform the system and mark the run as failed.
-                    os.kill(process.pid, signal.SIGKILL)
+                    kill_process(process)
 
                     with DagsterInstance.from_ref(instance_ref) as instance:
                         runs_to_clear.append(run_id)
@@ -582,24 +584,18 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
-    def ExternalTriggerExecutionParams(self, request, _context):
-        external_triggered_execution_args = deserialize_json_to_dagster_namedtuple(
-            request.serialized_external_triggered_execution_args
+    def ExternalExecutableParams(self, request, _context):
+        external_executable_args = deserialize_json_to_dagster_namedtuple(
+            request.serialized_external_executable_args
         )
         check.inst_param(
-            external_triggered_execution_args,
-            "external_triggered_execution_args",
-            ExternalTriggeredExecutionArgs,
+            external_executable_args, "external_executable_args", ExternalExecutableArgs,
         )
 
-        recon_repo = self._recon_repository_from_origin(
-            external_triggered_execution_args.repository_origin
-        )
-        return api_pb2.ExternalTriggerExecutionParamsReply(
+        recon_repo = self._recon_repository_from_origin(external_executable_args.repository_origin)
+        return api_pb2.ExternalExecutableParamsReply(
             serialized_external_execution_params_or_external_execution_params_error_data=serialize_dagster_namedtuple(
-                get_external_triggered_execution_params(
-                    recon_repo, external_triggered_execution_args
-                )
+                get_external_executable_params(recon_repo, external_executable_args)
             )
         )
 
@@ -912,6 +908,7 @@ class DagsterGrpcServer(object):
         loadable_target_origin=None,
         heartbeat=False,
         heartbeat_timeout=30,
+        lazy_load_user_code=False,
     ):
         check.opt_str_param(host, "host")
         check.opt_int_param(port, "port")
@@ -945,6 +942,7 @@ class DagsterGrpcServer(object):
             loadable_target_origin=loadable_target_origin,
             heartbeat=heartbeat,
             heartbeat_timeout=heartbeat_timeout,
+            lazy_load_user_code=lazy_load_user_code,
         )
 
         add_DagsterApiServicer_to_server(self._servicer, self.server)
@@ -1035,10 +1033,17 @@ def wait_for_grpc_server(server_process, timeout=3):
                 return False
         else:
             return True
+    return False
 
 
 def open_server_process(
-    port, socket, loadable_target_origin=None, max_workers=1, heartbeat=False, heartbeat_timeout=30
+    port,
+    socket,
+    loadable_target_origin=None,
+    max_workers=1,
+    heartbeat=False,
+    heartbeat_timeout=30,
+    lazy_load_user_code=False,
 ):
     check.invariant((port or socket) and not (port and socket), "Set only port or socket")
     check.opt_inst_param(loadable_target_origin, "loadable_target_origin", LoadableTargetOrigin)
@@ -1057,6 +1062,7 @@ def open_server_process(
         + ["-n", str(max_workers)]
         + (["--heartbeat"] if heartbeat else [])
         + (["--heartbeat-timeout", str(heartbeat_timeout)] if heartbeat_timeout else [])
+        + (["--lazy-load-user-code"] if lazy_load_user_code else [])
     )
 
     if loadable_target_origin:
@@ -1091,7 +1097,9 @@ def open_server_process(
         return None
 
 
-def open_server_process_on_dynamic_port(max_retries=10, loadable_target_origin=None, max_workers=1):
+def open_server_process_on_dynamic_port(
+    max_retries=10, loadable_target_origin=None, max_workers=1, lazy_load_user_code=False
+):
     server_process = None
     retries = 0
     while server_process is None and retries < max_retries:
@@ -1102,6 +1110,7 @@ def open_server_process_on_dynamic_port(max_retries=10, loadable_target_origin=N
                 socket=None,
                 loadable_target_origin=loadable_target_origin,
                 max_workers=max_workers,
+                lazy_load_user_code=lazy_load_user_code,
             )
         except CouldNotBindGrpcServerToAddress:
             pass
@@ -1130,6 +1139,7 @@ class GrpcServerProcess(object):
         max_workers=1,
         heartbeat=False,
         heartbeat_timeout=30,
+        lazy_load_user_code=False,
     ):
         self.port = None
         self.socket = None
@@ -1142,6 +1152,7 @@ class GrpcServerProcess(object):
         check.bool_param(heartbeat, "heartbeat")
         check.int_param(heartbeat_timeout, "heartbeat_timeout")
         check.invariant(heartbeat_timeout > 0, "heartbeat_timeout must be greater than 0")
+        check.bool_param(lazy_load_user_code, "lazy_load_user_code")
         check.invariant(
             max_workers > 1 if heartbeat else True,
             "max_workers must be greater than 1 if heartbeat is True",
@@ -1152,6 +1163,7 @@ class GrpcServerProcess(object):
                 max_retries=max_retries,
                 loadable_target_origin=loadable_target_origin,
                 max_workers=max_workers,
+                lazy_load_user_code=lazy_load_user_code,
             )
         else:
             self.socket = safe_tempfile_path_unmanaged()
@@ -1163,6 +1175,7 @@ class GrpcServerProcess(object):
                 max_workers=max_workers,
                 heartbeat=heartbeat,
                 heartbeat_timeout=heartbeat_timeout,
+                lazy_load_user_code=lazy_load_user_code,
             )
 
         if self.server_process is None:

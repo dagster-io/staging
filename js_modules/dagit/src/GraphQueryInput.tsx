@@ -5,7 +5,7 @@ import {isEqual} from 'lodash';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {GraphQueryItem} from './GraphQueryImpl';
+import {GraphQueryItem} from 'src/GraphQueryImpl';
 
 interface GraphQueryInputProps {
   items: GraphQueryItem[];
@@ -38,7 +38,9 @@ const placeholderTextForItems = (base: string, items: GraphQueryItem[]) => {
   const seed = items.length % 3;
 
   let placeholder = base;
-  if (items.length === 0) return placeholder;
+  if (items.length === 0) {
+    return placeholder;
+  }
 
   const ranked = items.map<{
     incount: number;

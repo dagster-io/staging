@@ -2,15 +2,15 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
 
-import PythonErrorInfo from './PythonErrorInfo';
-import {RepositoryInformationFragment} from './RepositoryInformation';
-import {InstanceExecutableQuery} from './types/InstanceExecutableQuery';
+import PythonErrorInfo from 'src/PythonErrorInfo';
+import {RepositoryInformationFragment} from 'src/RepositoryInformation';
+import {InstanceExecutableQuery} from 'src/types/InstanceExecutableQuery';
 import {
   RootRepositoriesQuery,
   RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes,
   RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_location,
-} from './types/RootRepositoriesQuery';
-import {RepositorySelector} from './types/globalTypes';
+} from 'src/types/RootRepositoriesQuery';
+import {RepositorySelector} from 'src/types/globalTypes';
 
 export type Repository = RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes;
 export type RepositoryLocation = RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_location;
@@ -33,7 +33,7 @@ export const repositorySelectorFromDagsterRepoOption = (
 
 const LAST_REPO_KEY = 'dagit.last-repo';
 
-export const DagsterRepositoryContext = React.createContext<DagsterRepoOption>(
+export const DagsterRepositoryContext = React.createContext<DagsterRepoOption | null>(
   new Error('DagsterRepositoryContext should never be uninitialized') as any,
 );
 
@@ -78,16 +78,16 @@ export const isRepositoryOptionEqual = (a: DagsterRepoOption, b: DagsterRepoOpti
  * and coercing the response to the DagsterRepoOption[] type.
  */
 export const useRepositoryOptions = () => {
-  const {data} = useQuery<RootRepositoriesQuery>(ROOT_REPOSITORIES_QUERY, {
+  const {data, loading} = useQuery<RootRepositoriesQuery>(ROOT_REPOSITORIES_QUERY, {
     fetchPolicy: 'cache-and-network',
   });
 
   let options: DagsterRepoOption[] = [];
   if (!data || !data.repositoriesOrError) {
-    return {options, error: null};
+    return {options, loading, error: null};
   }
   if (data.repositoriesOrError.__typename === 'PythonError') {
-    return {options, error: data.repositoriesOrError};
+    return {options, loading, error: data.repositoriesOrError};
   }
 
   options = data.repositoriesOrError.nodes.map((repository) => ({
@@ -95,7 +95,7 @@ export const useRepositoryOptions = () => {
     repositoryLocation: repository.location,
   }));
 
-  return {error: null, options};
+  return {error: null, loading, options};
 };
 
 /**
@@ -133,26 +133,19 @@ export const useCurrentRepositoryState = (options: DagsterRepoOption[]) => {
 export const useRepositorySelector = (): RepositorySelector => {
   const repository = useRepository();
   return {
-    repositoryLocationName: repository.location.name,
-    repositoryName: repository.name,
+    repositoryLocationName: repository?.location.name || '',
+    repositoryName: repository?.name || '',
   };
 };
 
 export const useRepository = () => {
-  const {repository, repositoryLocation} = React.useContext(DagsterRepositoryContext);
-
-  if (!repository || !repositoryLocation) {
-    // use legacy fields
-    throw Error('no legacy repository');
-  }
-
-  return repository;
+  const repoContext = React.useContext(DagsterRepositoryContext);
+  return repoContext?.repository;
 };
 
 export const useActivePipelineForName = (pipelineName: string) => {
   const repository = useRepository();
-  const {pipelines} = repository;
-  return pipelines.find((pipeline) => pipeline.name === pipelineName);
+  return repository?.pipelines.find((pipeline) => pipeline.name === pipelineName) || null;
 };
 
 export const usePipelineSelector = (pipelineName: string, solidSelection?: string[]) => {

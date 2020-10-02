@@ -29,7 +29,8 @@ reusable. Consider the following more generic solid:
 
 ```python literalinclude showLines startLine=7 caption=inputs.py
 file:/docs_snippets/docs_snippets/intro_tutorial/basics/e02_solids/inputs.py
-lines:7-15
+startAfter:start_inputs_marker_0
+endBefore:end_inputs_marker_0
 ```
 
 Here, rather than hard-coding the value of `dataset_path`, we use an input, `csv_path`. It's easy to
@@ -66,12 +67,13 @@ displayText="execute_pipeline()" />function. Pipeline run config is specified by
 argument to this function, which must be a dict.
 
 This dict contains all of the user-provided configuration with which to execute a pipeline. As such,
-it can have [a lot of sections](/_apidocs/execution####config_schema), but we'll only use one of
+it can have [a lot of sections](/_apidocs/execution), but we'll only use one of
 them here: per-solid configuration, which is specified under the key `solids`:
 
 ```python literalinclude showLines startLine=41 caption=inputs.py
 file:/docs_snippets/docs_snippets/intro_tutorial/basics/e02_solids/inputs.py
-lines:42-46
+startAfter:start_inputs_main
+endBefore:end_inputs_main
 dedent:4
 ```
 

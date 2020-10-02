@@ -3,15 +3,14 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {DirectGraphQLSubscription} from '../DirectGraphQLSubscription';
-import {IStepState} from '../RunMetadataProvider';
-import {RunContext} from '../runs/RunContext';
-import {ComputeIOType} from '../types/globalTypes';
-
-import {ComputeLogContent} from './ComputeLogContent';
-import {ComputeLogContentFileFragment} from './types/ComputeLogContentFileFragment';
-import {ComputeLogsSubscription} from './types/ComputeLogsSubscription';
-import {ComputeLogsSubscriptionFragment} from './types/ComputeLogsSubscriptionFragment';
+import {DirectGraphQLSubscription} from 'src/DirectGraphQLSubscription';
+import {IStepState} from 'src/RunMetadataProvider';
+import {ComputeLogContent} from 'src/runs/ComputeLogContent';
+import {RunContext} from 'src/runs/RunContext';
+import {ComputeLogContentFileFragment} from 'src/runs/types/ComputeLogContentFileFragment';
+import {ComputeLogsSubscription} from 'src/runs/types/ComputeLogsSubscription';
+import {ComputeLogsSubscriptionFragment} from 'src/runs/types/ComputeLogsSubscriptionFragment';
+import {ComputeIOType} from 'src/types/globalTypes';
 
 const MAX_STREAMING_LOG_BYTES = 5242880; // 5 MB
 
@@ -211,7 +210,9 @@ export class ComputeLogsProvider extends React.Component<
   };
 
   merge(a: ComputeLogContentFileFragment | null, b: ComputeLogContentFileFragment | null) {
-    if (!b) return a;
+    if (!b) {
+      return a;
+    }
     let data = a?.data;
     if (a?.data && b?.data) {
       data = this.slice(a.data + b.data);

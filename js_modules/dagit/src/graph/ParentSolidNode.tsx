@@ -2,16 +2,20 @@ import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {SolidNameOrPath} from '../PipelineExplorer';
-import {titleOfIO} from '../Util';
-
-import {ExternalConnectionNode} from './ExternalConnectionNode';
-import {MappingLine} from './MappingLine';
-import {SVGLabeledRect} from './SVGComponents';
-import {PARENT_IN, PARENT_OUT, SolidIOBox, metadataForCompositeParentIO} from './SolidIOBox';
-import {IFullPipelineLayout} from './getFullSolidLayout';
-import {Edge} from './highlighting';
-import {PipelineGraphSolidFragment} from './types/PipelineGraphSolidFragment';
+import {SolidNameOrPath} from 'src/PipelineExplorer';
+import {titleOfIO} from 'src/Util';
+import {ExternalConnectionNode} from 'src/graph/ExternalConnectionNode';
+import {MappingLine} from 'src/graph/MappingLine';
+import {SVGLabeledRect} from 'src/graph/SVGComponents';
+import {
+  PARENT_IN,
+  PARENT_OUT,
+  SolidIOBox,
+  metadataForCompositeParentIO,
+} from 'src/graph/SolidIOBox';
+import {IFullPipelineLayout} from 'src/graph/getFullSolidLayout';
+import {Edge} from 'src/graph/highlighting';
+import {PipelineGraphSolidFragment} from 'src/graph/types/PipelineGraphSolidFragment';
 
 interface ParentSolidNodeProps {
   layout: IFullPipelineLayout;
@@ -58,7 +62,9 @@ export const ParentSolidNode: React.FunctionComponent<ParentSolidNodeProps> = (p
       />
       {def.inputMappings.map(({definition, mappedInput}, idx) => {
         const destination = layout.solids[mappedInput.solid.name];
-        if (!destination) return <g />;
+        if (!destination) {
+          return <g />;
+        }
         const sourcePort = parentLayout.inputs[definition.name].port;
         const trgtPort = destination.inputs[mappedInput.definition.name].port;
 
@@ -76,7 +82,9 @@ export const ParentSolidNode: React.FunctionComponent<ParentSolidNodeProps> = (p
       })}
       {def.outputMappings.map(({definition, mappedOutput}, idx) => {
         const destination = layout.solids[mappedOutput.solid.name];
-        if (!destination) return <g />;
+        if (!destination) {
+          return <g />;
+        }
         const sourcePort = parentLayout.outputs[definition.name].port;
         const trgtPort = destination.outputs[mappedOutput.definition.name].port;
 

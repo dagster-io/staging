@@ -122,9 +122,7 @@ def initialize_step_context(scratch_dir, instance):
         pass
     pipeline_context = initialization_manager.get_context()
 
-    active_execution = plan.start(retries=Retries(RetryMode.DISABLED))
-    step = active_execution.get_next_step()
-    step_context = pipeline_context.for_step(step)
+    step_context = pipeline_context.for_step(plan.get_step_by_key("return_two.compute"))
     return step_context
 
 
@@ -182,7 +180,7 @@ def test_launcher_requests_retry():
             mode=mode,
             run_config=make_run_config(tmpdir, mode),
         )
-        assert not result.success
+        assert result.success
         assert result.result_for_solid("return_two").output_value() == 2
         assert result.result_for_solid("add_one").output_value() == 3
         for step_key, events in result.events_by_step_key.items():

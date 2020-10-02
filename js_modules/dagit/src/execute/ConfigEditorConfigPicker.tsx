@@ -1,6 +1,7 @@
 import {
   Button,
   HTMLInputProps,
+  Icon,
   IInputGroupProps,
   Intent,
   Menu,
@@ -15,23 +16,22 @@ import {WithApolloClient, useQuery, withApollo} from 'react-apollo';
 import * as ReactDOM from 'react-dom';
 import styled from 'styled-components';
 
-import {showCustomAlert} from '../CustomAlertProvider';
-import {useRepositorySelector} from '../DagsterRepositoryContext';
-import {IExecutionSession} from '../LocalStorage';
-import PythonErrorInfo from '../PythonErrorInfo';
-import {ShortcutHandler} from '../ShortcutHandler';
-import {PythonErrorFragment} from '../types/PythonErrorFragment';
-import {RepositorySelector} from '../types/globalTypes';
-
-import {ConfigEditorGeneratorPartitionSetsFragment_results} from './types/ConfigEditorGeneratorPartitionSetsFragment';
+import {showCustomAlert} from 'src/CustomAlertProvider';
+import {useRepositorySelector} from 'src/DagsterRepositoryContext';
+import {IExecutionSession} from 'src/LocalStorage';
+import PythonErrorInfo from 'src/PythonErrorInfo';
+import {ShortcutHandler} from 'src/ShortcutHandler';
+import {ConfigEditorGeneratorPartitionSetsFragment_results} from 'src/execute/types/ConfigEditorGeneratorPartitionSetsFragment';
 import {
   ConfigEditorGeneratorPipelineFragment,
   ConfigEditorGeneratorPipelineFragment_presets,
-} from './types/ConfigEditorGeneratorPipelineFragment';
+} from 'src/execute/types/ConfigEditorGeneratorPipelineFragment';
 import {
   ConfigPartitionsQuery,
   ConfigPartitionsQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results,
-} from './types/ConfigPartitionsQuery';
+} from 'src/execute/types/ConfigPartitionsQuery';
+import {PythonErrorFragment} from 'src/types/PythonErrorFragment';
+import {RepositorySelector} from 'src/types/globalTypes';
 
 type Pipeline = ConfigEditorGeneratorPipelineFragment;
 type Preset = ConfigEditorGeneratorPipelineFragment_presets;
@@ -208,11 +208,16 @@ export const ConfigEditorPartitionPicker: React.FunctionComponent<ConfigEditorPa
       fetchPolicy: 'network-only',
     });
 
-    const partitions: Partition[] =
-      data?.partitionSetOrError.__typename === 'PartitionSet' &&
-      data?.partitionSetOrError.partitionsOrError.__typename === 'Partitions'
-        ? data.partitionSetOrError.partitionsOrError.results
-        : [];
+    const [sortOrder, setSortOrder] = React.useState('asc');
+
+    const partitions: Partition[] = React.useMemo(() => {
+      const retrieved =
+        data?.partitionSetOrError.__typename === 'PartitionSet' &&
+        data?.partitionSetOrError.partitionsOrError.__typename === 'Partitions'
+          ? data.partitionSetOrError.partitionsOrError.results
+          : [];
+      return sortOrder === 'asc' ? retrieved : [...retrieved].reverse();
+    }, [data, sortOrder]);
 
     const error: PythonErrorFragment | null =
       data?.partitionSetOrError.__typename === 'PartitionSet' &&
@@ -222,10 +227,22 @@ export const ConfigEditorPartitionPicker: React.FunctionComponent<ConfigEditorPa
 
     const selected = partitions.find((p) => p.name === value);
 
+    const onClickSort = React.useCallback((event) => {
+      event.preventDefault();
+      setSortOrder((order) => (order === 'asc' ? 'desc' : 'asc'));
+    }, []);
+
+    const rightElement = partitions.length ? (
+      <Button text={undefined} minimal onMouseDown={onClickSort}>
+        <Icon icon={sortOrder === 'asc' ? 'sort-alphabetical' : 'sort-alphabetical-desc'} />
+      </Button>
+    ) : undefined;
+
     const inputProps: IInputGroupProps & HTMLInputProps = {
       placeholder: 'Partition',
       style: {width: 180},
       intent: (loading ? !!value : !!selected) ? Intent.NONE : Intent.DANGER,
+      rightElement,
     };
 
     // If we are loading the partitions and do NOT have any cached data to display,
@@ -404,7 +421,9 @@ export const ConfigEditorConfigGeneratorPicker: React.FunctionComponent<ConfigEd
 );
 
 function activateSelect(select: Select<any> | null) {
-  if (!select) return;
+  if (!select) {
+    return;
+  }
   // eslint-disable-next-line react/no-find-dom-node
   const selectEl = ReactDOM.findDOMNode(select) as HTMLElement;
   const btnEl = selectEl.querySelector('button');

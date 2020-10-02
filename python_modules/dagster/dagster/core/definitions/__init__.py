@@ -2,6 +2,7 @@ from .config import ConfigMapping
 from .decorators import (
     composite_solid,
     daily_schedule,
+    executable,
     failure_hook,
     hook,
     hourly_schedule,
@@ -12,7 +13,6 @@ from .decorators import (
     schedule,
     solid,
     success_hook,
-    triggered_execution,
     weekly_schedule,
 )
 from .dependency import (
@@ -41,7 +41,7 @@ from .events import (
     TypeCheck,
     UrlMetadataEntryData,
 )
-from .executable import ExecutablePipeline
+from .executable import ExecutableContext, ExecutableDefinition
 from .executor import (
     ExecutorDefinition,
     default_executors,
@@ -57,6 +57,7 @@ from .mode import ModeDefinition
 from .output import OutputDefinition, OutputMapping
 from .partition import Partition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
+from .pipeline_base import IPipeline
 from .preset import PresetDefinition
 from .reconstructable import (
     ReconstructablePipeline,
@@ -70,4 +71,3 @@ from .schedule import ScheduleDefinition, ScheduleExecutionContext
 from .solid import CompositeSolidDefinition, ISolidDefinition, SolidDefinition
 from .solid_container import IContainSolids, create_execution_structure
 from .system_storage import SystemStorageData, SystemStorageDefinition, system_storage
-from .trigger import TriggeredExecutionContext, TriggeredExecutionDefinition

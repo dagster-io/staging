@@ -171,12 +171,13 @@ export class Run extends React.Component<RunProps, RunState> {
           filter={logsFilter}
           selectedSteps={selection.keys}
         >
-          {({filteredNodes, allNodes, loaded}) => (
+          {({filteredNodes, hasTextFilter, textMatchNodes, loaded}) => (
             <RunWithData
               run={run}
               runId={runId}
               filteredNodes={filteredNodes}
-              allNodes={allNodes}
+              hasTextFilter={hasTextFilter}
+              textMatchNodes={textMatchNodes}
               logsLoading={!loaded}
               logsFilter={logsFilter}
               selection={selection}
@@ -195,8 +196,9 @@ interface RunWithDataProps {
   run?: RunFragment;
   runId: string;
   selection: StepSelection;
-  allNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
   filteredNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
+  hasTextFilter: boolean;
+  textMatchNodes: (RunPipelineRunEventFragment & {clientsideKey: string})[];
   logsFilter: LogFilter;
   logsLoading: boolean;
   onSetLogsFilter: (v: LogFilter) => void;
@@ -207,14 +209,16 @@ interface RunWithDataProps {
 const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   run,
   runId,
-  allNodes,
   filteredNodes,
+  hasTextFilter,
+  textMatchNodes,
   logsFilter,
   logsLoading,
   selection,
   onSetLogsFilter,
   onSetSelection,
 }) => {
+  const [hideNonMatches, setHideNonMatches] = React.useState(true);
   const [launchPipelineReexecution] = useMutation<
     LaunchPipelineReexecution,
     LaunchPipelineReexecutionVariables
@@ -223,8 +227,9 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
   const splitPanelContainer = React.createRef<SplitPanelContainer>();
 
   const onLaunch = async (style: ReExecutionStyle) => {
-    if (!run || run.pipeline.__typename === 'UnknownPipeline') return;
-
+    if (!run || run.pipeline.__typename === 'UnknownPipeline') {
+      return;
+    }
     const variables = getReexecutionVariables({
       run,
       style,
@@ -266,8 +271,10 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
     });
   };
 
+  const onHideNonMatches = (checked: boolean) => setHideNonMatches(checked);
+
   return (
-    <RunMetadataProvider logs={allNodes}>
+    <RunMetadataProvider logs={filteredNodes}>
       {(metadata) => (
         <SplitPanelContainer
           ref={splitPanelContainer}
@@ -313,14 +320,17 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
             <LogsContainer>
               <LogsToolbar
                 filter={logsFilter}
+                hideNonMatches={hideNonMatches}
+                onHideNonMatches={onHideNonMatches}
                 onSetFilter={onSetLogsFilter}
                 steps={Object.keys(metadata.steps)}
                 metadata={metadata}
               />
               <LogsScrollingTable
-                nodes={filteredNodes}
+                filteredNodes={hasTextFilter && hideNonMatches ? textMatchNodes : filteredNodes}
+                textMatchNodes={textMatchNodes}
                 loading={logsLoading}
-                filterKey={JSON.stringify(logsFilter)}
+                filterKey={`${JSON.stringify(logsFilter)}-${JSON.stringify(hideNonMatches)}`}
                 metadata={metadata}
               />
             </LogsContainer>

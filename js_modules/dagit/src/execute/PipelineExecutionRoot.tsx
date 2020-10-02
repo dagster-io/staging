@@ -1,35 +1,40 @@
+import {NonIdealState} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import gql from 'graphql-tag';
 import * as React from 'react';
 import {Query} from 'react-apollo';
 import {RouteComponentProps} from 'react-router-dom';
 
-import {usePipelineSelector, useRepositorySelector} from '../DagsterRepositoryContext';
+import {
+  usePipelineSelector,
+  useRepositoryOptions,
+  useRepositorySelector,
+} from 'src/DagsterRepositoryContext';
 import {
   IExecutionSessionChanges,
   applyChangesToSession,
   applyCreateSession,
   useStorage,
-} from '../LocalStorage';
-
+} from 'src/LocalStorage';
 import ExecutionSessionContainer, {
   ExecutionSessionContainerError,
   ExecutionSessionContainerLoading,
-} from './ExecutionSessionContainer';
-import {ExecutionTabs} from './ExecutionTabs';
+} from 'src/execute/ExecutionSessionContainer';
+import {ExecutionTabs} from 'src/execute/ExecutionTabs';
 import {
   PipelineExecutionConfigSchemaQuery,
   PipelineExecutionConfigSchemaQueryVariables,
-} from './types/PipelineExecutionConfigSchemaQuery';
+} from 'src/execute/types/PipelineExecutionConfigSchemaQuery';
 import {
   PipelineExecutionRootQuery,
   PipelineExecutionRootQueryVariables,
-} from './types/PipelineExecutionRootQuery';
+} from 'src/execute/types/PipelineExecutionRootQuery';
 
 export const PipelineExecutionRoot: React.FunctionComponent<RouteComponentProps<{
   pipelinePath: string;
 }>> = ({match}) => {
   const pipelineName = match.params.pipelinePath.split(':')[0];
+  const {loading} = useRepositoryOptions();
   const {repositoryName, repositoryLocationName} = useRepositorySelector();
   const [data, onSave] = useStorage(repositoryName, pipelineName);
 
@@ -39,6 +44,21 @@ export const PipelineExecutionRoot: React.FunctionComponent<RouteComponentProps<
   const onSaveSession = (session: string, changes: IExecutionSessionChanges) => {
     onSave(applyChangesToSession(data, session, changes));
   };
+
+  if (loading) {
+    return <ExecutionSessionContainerLoading />;
+  }
+
+  // No repository, we're in an empty workspace.
+  if (!repositoryLocationName || !repositoryName) {
+    return (
+      <NonIdealState
+        title="Pipeline Not Found"
+        icon={IconNames.FLOW_BRANCH}
+        description="Cannot load playground without pipeline"
+      />
+    );
+  }
 
   return (
     <>

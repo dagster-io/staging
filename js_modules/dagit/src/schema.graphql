@@ -829,6 +829,7 @@ type PipelineFailureEvent implements MessageEvent & PipelineEvent {
   stepKey: String
   solidHandleID: String
   pipelineName: String!
+  error: PythonError
 }
 
 type PipelineInitFailureEvent implements MessageEvent & PipelineEvent {
@@ -1268,6 +1269,7 @@ type ScheduleState {
   stats: ScheduleTickStatsSnapshot!
   logsPath: String!
   runningScheduleCount: Int!
+  repositoryOrigin: RepositoryOrigin!
   repositoryOriginId: String!
   id: ID!
 }
@@ -1424,7 +1426,7 @@ union TriggerMutationResult = TriggerExecutionSuccess | InvalidStepError | Inval
 input TriggerSelector {
   repositoryName: String!
   repositoryLocationName: String!
-  triggerName: String!
+  executableName: String!
 }
 
 type TypeCheck implements DisplayableEvent {

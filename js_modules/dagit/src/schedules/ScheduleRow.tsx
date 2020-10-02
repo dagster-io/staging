@@ -1,11 +1,11 @@
 import {useMutation, useQuery} from '@apollo/react-hooks';
 import {
   Button,
+  Callout,
   Code,
   Icon,
   Intent,
   Menu,
-  MenuDivider,
   MenuItem,
   Popover,
   PopoverInteractionKind,
@@ -15,15 +15,18 @@ import {
   Tag,
   Tooltip,
 } from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
 import cronstrue from 'cronstrue';
 import gql from 'graphql-tag';
 import * as qs from 'query-string';
 import * as React from 'react';
+import {useState} from 'react';
 import {Link, useHistory, useRouteMatch} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {showCustomAlert} from '../CustomAlertProvider';
-import {ConfirmationOptions, useConfirmation} from '../CustomConfirmationProvider';
+import {ButtonLink} from 'src/ButtonLink';
+import {showCustomAlert} from 'src/CustomAlertProvider';
+import {ConfirmationOptions, useConfirmation} from 'src/CustomConfirmationProvider';
 import {
   DagsterRepoOption,
   repositorySelectorFromDagsterRepoOption,
@@ -31,24 +34,30 @@ import {
   useCurrentRepositoryState,
   useRepositoryOptions,
   useScheduleSelector,
-} from '../DagsterRepositoryContext';
-import {HighlightedCodeBlock} from '../HighlightedCodeBlock';
-import {RowColumn, RowContainer} from '../ListComponents';
-import {Legend, LegendColumn} from '../ListComponents';
-import PythonErrorInfo from '../PythonErrorInfo';
-import {assertUnreachable} from '../Util';
-import {RunStatus} from '../runs/RunStatusDots';
-import {titleForRun} from '../runs/RunUtils';
-import {ScheduleStatus, ScheduleTickStatus} from '../types/globalTypes';
-
-import {ReconcileButton} from './ReconcileButton';
+} from 'src/DagsterRepositoryContext';
+import {HighlightedCodeBlock} from 'src/HighlightedCodeBlock';
+import {RowColumn, RowContainer, ScrollingRowColumn} from 'src/ListComponents';
+import {Legend, LegendColumn} from 'src/ListComponents';
+import PythonErrorInfo from 'src/PythonErrorInfo';
+import {RepositoryOriginInformation} from 'src/RepositoryInformation';
+import {assertUnreachable} from 'src/Util';
+import {RunStatus} from 'src/runs/RunStatusDots';
+import {titleForRun} from 'src/runs/RunUtils';
+import {ReconcileButton} from 'src/schedules/ReconcileButton';
 import {
   ScheduleDefinitionFragment,
   ScheduleDefinitionFragment_scheduleState_ticks_tickSpecificData,
-} from './types/ScheduleDefinitionFragment';
-import {ScheduleStateFragment} from './types/ScheduleStateFragment';
-import {StartSchedule, StartSchedule_startSchedule_PythonError} from './types/StartSchedule';
-import {StopSchedule, StopSchedule_stopRunningSchedule_PythonError} from './types/StopSchedule';
+} from 'src/schedules/types/ScheduleDefinitionFragment';
+import {ScheduleStateFragment} from 'src/schedules/types/ScheduleStateFragment';
+import {
+  StartSchedule,
+  StartSchedule_startSchedule_PythonError,
+} from 'src/schedules/types/StartSchedule';
+import {
+  StopSchedule,
+  StopSchedule_stopRunningSchedule_PythonError,
+} from 'src/schedules/types/StopSchedule';
+import {ScheduleStatus, ScheduleTickStatus} from 'src/types/globalTypes';
 
 type TickSpecificData = ScheduleDefinitionFragment_scheduleState_ticks_tickSpecificData | null;
 
@@ -393,7 +402,15 @@ export const ScheduleRow: React.FunctionComponent<{
                     config: runConfigYaml,
                   })}`}
                 />
-                <MenuDivider />
+
+                {schedule.partitionSet?.name ? (
+                  <MenuItem
+                    text="View Partition History..."
+                    icon="multi-select"
+                    target="_blank"
+                    href={`/pipeline/${pipelineName}/partitions`}
+                  />
+                ) : null}
               </Menu>
             )
           }
@@ -451,11 +468,11 @@ export const ScheduleStateRow: React.FunctionComponent<{
     onCompleted: displayScheduleMutationErrors,
   });
 
-  const {options} = useRepositoryOptions();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_, setRepo] = useCurrentRepositoryState(options);
   const history = useHistory();
   const confirm = useConfirmation();
+  const {options} = useRepositoryOptions();
+  const [, setRepo] = useCurrentRepositoryState(options);
+  const [showRepositoryOrigin, setShowRepositoryOrigin] = useState(false);
 
   const {
     status,
@@ -465,17 +482,14 @@ export const ScheduleStateRow: React.FunctionComponent<{
     runs,
     runsCount,
     scheduleOriginId,
+    repositoryOrigin,
   } = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
 
-  const goToRepositorySchedules = () => {
-    if (!dagsterRepoOption) return;
-    setRepo(dagsterRepoOption);
-    history.push(`/schedules`);
-  };
-
   const goToSchedule = () => {
-    if (!dagsterRepoOption) return;
+    if (!dagsterRepoOption) {
+      return;
+    }
     setRepo(dagsterRepoOption);
     history.push(`/schedules/${scheduleName}`);
   };
@@ -537,19 +551,29 @@ export const ScheduleStateRow: React.FunctionComponent<{
           />
         </RowColumn>
       )}
-      <RowColumn style={{flex: 1.4}}>
-        <div>{scheduleName}</div>
-        {dagsterRepoOption && (
-          <div style={{marginTop: 10}}>
-            <Button onClick={goToRepositorySchedules} small={true}>
-              Go to repository schedules
-            </Button>{' '}
-            <Button onClick={goToSchedule} small={true}>
-              Go to schedule page
-            </Button>
+
+      {dagsterRepoOption ? (
+        <RowColumn style={{flex: 1.4}}>
+          <ButtonLink onClick={goToSchedule}>{scheduleName}</ButtonLink>
+        </RowColumn>
+      ) : (
+        <ScrollingRowColumn style={{flex: 3}}>
+          <div style={{display: 'flex', alignItems: 'base'}}>
+            <div>{scheduleName}</div>
+            <ButtonLink onClick={() => setShowRepositoryOrigin(!showRepositoryOrigin)}>
+              show info{' '}
+              <Icon
+                icon={showRepositoryOrigin ? IconNames.CHEVRON_DOWN : IconNames.CHEVRON_RIGHT}
+              />
+            </ButtonLink>
           </div>
-        )}
-      </RowColumn>
+          {showRepositoryOrigin && (
+            <Callout style={{marginTop: 10}}>
+              <RepositoryOriginInformation origin={repositoryOrigin} />
+            </Callout>
+          )}
+        </ScrollingRowColumn>
+      )}
       <RowColumn
         style={{
           maxWidth: 150,

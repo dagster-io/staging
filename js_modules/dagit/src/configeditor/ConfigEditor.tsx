@@ -1,20 +1,20 @@
 import 'codemirror';
-import 'codemirror/lib/codemirror.css';
-import 'codemirror/theme/material.css';
-import 'codemirror/addon/hint/show-hint';
-import 'codemirror/addon/hint/show-hint.css';
 import 'codemirror/addon/comment/comment';
+import 'codemirror/addon/dialog/dialog';
 import 'codemirror/addon/fold/foldgutter';
 import 'codemirror/addon/fold/foldgutter.css';
 import 'codemirror/addon/fold/indent-fold';
+import 'codemirror/addon/hint/show-hint';
+import 'codemirror/addon/hint/show-hint.css';
+import 'codemirror/addon/lint/lint.css';
+import 'codemirror/addon/search/jump-to-line';
 import 'codemirror/addon/search/search';
 import 'codemirror/addon/search/searchcursor';
-import 'codemirror/addon/search/jump-to-line';
-import 'codemirror/addon/dialog/dialog';
-import './codemirror-yaml/lint'; // Patch lint
-import 'codemirror/addon/lint/lint.css';
 import 'codemirror/keymap/sublime';
-import './codemirror-yaml/mode';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/material.css';
+import 'src/configeditor/codemirror-yaml/lint'; // Patch lint
+import 'src/configeditor/codemirror-yaml/mode';
 
 import {Editor} from 'codemirror';
 import * as React from 'react';
@@ -22,17 +22,16 @@ import {Controlled as CodeMirrorReact} from 'react-codemirror2';
 import {createGlobalStyle} from 'styled-components/macro';
 import * as yaml from 'yaml';
 
-import {debounce} from '../Util';
-
+import {debounce} from 'src/Util';
 import {
   YamlModeValidateFunction,
   expandAutocompletionContextAtCursor,
   findRangeInDocumentFromPath,
-} from './codemirror-yaml/mode';
+} from 'src/configeditor/codemirror-yaml/mode';
 import {
   ConfigEditorRunConfigSchemaFragment,
   ConfigEditorRunConfigSchemaFragment_allConfigTypes,
-} from './types/ConfigEditorRunConfigSchemaFragment';
+} from 'src/configeditor/types/ConfigEditorRunConfigSchemaFragment';
 
 export function isHelpContextEqual(
   prev: ConfigEditorHelpContext | null,
@@ -95,8 +94,12 @@ export class ConfigEditor extends React.Component<ConfigEditorProps> {
   _editor?: Editor;
 
   componentDidUpdate(prevProps: ConfigEditorProps) {
-    if (!this._editor) return;
-    if (prevProps.runConfigSchema === this.props.runConfigSchema) return;
+    if (!this._editor) {
+      return;
+    }
+    if (prevProps.runConfigSchema === this.props.runConfigSchema) {
+      return;
+    }
     this.performInitialPass();
   }
 
@@ -115,7 +118,9 @@ export class ConfigEditor extends React.Component<ConfigEditorProps> {
   // Public API
 
   moveCursor = (line: number, ch: number) => {
-    if (!this._editor) return;
+    if (!this._editor) {
+      return;
+    }
     this._editor.setCursor(line, ch, {scroll: false});
     const {clientHeight} = this._editor.getScrollInfo();
     const {left, top} = this._editor.cursorCoords(true, 'local');
@@ -131,11 +136,15 @@ export class ConfigEditor extends React.Component<ConfigEditorProps> {
   };
 
   moveCursorToPath = (path: string[]) => {
-    if (!this._editor) return;
+    if (!this._editor) {
+      return;
+    }
     const codeMirrorDoc = this._editor.getDoc();
     const yamlDoc = yaml.parseDocument(this.props.configCode);
     const range = findRangeInDocumentFromPath(yamlDoc, path, 'key');
-    if (!range) return;
+    if (!range) {
+      return;
+    }
     const from = codeMirrorDoc.posFromIndex(range ? range.start : 0) as CodeMirror.Position;
     this.moveCursor(from.line, from.ch);
   };

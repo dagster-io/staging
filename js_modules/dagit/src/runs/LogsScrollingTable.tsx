@@ -6,14 +6,14 @@ import * as ReactDOM from 'react-dom';
 import {CellMeasurer, CellMeasurerCache, List, ListRowProps} from 'react-virtualized';
 import styled from 'styled-components/macro';
 
-import {IRunMetadataDict} from '../RunMetadataProvider';
-
-import * as LogsRow from './LogsRow';
-import {ColumnWidthsProvider, Headers} from './LogsScrollingTableHeader';
-import {LogsScrollingTableMessageFragment} from './types/LogsScrollingTableMessageFragment';
+import {IRunMetadataDict} from 'src/RunMetadataProvider';
+import * as LogsRow from 'src/runs/LogsRow';
+import {ColumnWidthsProvider, Headers} from 'src/runs/LogsScrollingTableHeader';
+import {LogsScrollingTableMessageFragment} from 'src/runs/types/LogsScrollingTableMessageFragment';
 
 interface ILogsScrollingTableProps {
-  nodes?: (LogsScrollingTableMessageFragment & {clientsideKey: string})[];
+  filteredNodes?: (LogsScrollingTableMessageFragment & {clientsideKey: string})[];
+  textMatchNodes?: (LogsScrollingTableMessageFragment & {clientsideKey: string})[];
   loading: boolean;
 
   // We use this string to know whether the changes to `nodes` require us to
@@ -84,7 +84,8 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
   cache = new CellMeasurerCache({
     defaultHeight: 30,
     fixedWidth: true,
-    keyMapper: (rowIndex) => (this.props.nodes ? this.props.nodes[rowIndex].clientsideKey : ''),
+    keyMapper: (rowIndex) =>
+      this.props.filteredNodes ? this.props.filteredNodes[rowIndex].clientsideKey : '',
   });
 
   isAtBottomOrZero = true;
@@ -95,7 +96,9 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
   }
 
   componentDidUpdate(prevProps: ILogsScrollingTableSizedProps) {
-    if (!this.list.current) return;
+    if (!this.list.current) {
+      return;
+    }
 
     if (this.props.width !== prevProps.width) {
       this.didResize();
@@ -131,8 +134,12 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
         lastHeight = null;
         return;
       }
-      if (rowgroupEl.style.height === lastHeight) return;
-      if (!this.isAtBottomOrZero) return;
+      if (rowgroupEl.style.height === lastHeight) {
+        return;
+      }
+      if (!this.isAtBottomOrZero) {
+        return;
+      }
 
       lastHeight = rowgroupEl.style.height;
       el.scrollTop = el.scrollHeight - el.clientHeight;
@@ -145,7 +152,9 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
   }
 
   onScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (!this.list.current) return;
+    if (!this.list.current) {
+      return;
+    }
 
     const {scrollTop, scrollHeight, clientHeight} = e.target as Element;
     const atTopAndStarting = scrollTop === 0 && scrollHeight <= clientHeight;
@@ -156,11 +165,17 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
   };
 
   rowRenderer = ({parent, index, style}: ListRowProps) => {
-    if (!this.props.nodes) return;
-    const node = this.props.nodes[index];
+    if (!this.props.filteredNodes) {
+      return;
+    }
+    const node = this.props.filteredNodes[index];
+    const textMatch = !!this.props.textMatchNodes?.includes(node);
+
     const metadata = this.props.metadata;
-    if (!node) return <span />;
-    const isLastRow = index === this.props.nodes.length - 1;
+    if (!node) {
+      return <span />;
+    }
+    const isLastRow = index === this.props.filteredNodes.length - 1;
     const lastRowStyles = isLastRow
       ? {
           borderBottom: `1px solid ${Colors.LIGHT_GRAY3}`,
@@ -173,12 +188,14 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
           <LogsRow.Unstructured
             node={node}
             style={{...style, width: this.props.width, ...lastRowStyles}}
+            textMatch={textMatch}
           />
         ) : (
           <LogsRow.Structured
             node={node}
             metadata={metadata}
             style={{...style, width: this.props.width, ...lastRowStyles}}
+            textMatch={textMatch}
           />
         )}
       </CellMeasurer>
@@ -186,16 +203,17 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
   };
 
   noContentRenderer = () => {
-    if (this.props.nodes) {
+    if (this.props.filteredNodes) {
       return <NonIdealState icon={IconNames.CONSOLE} title="No logs to display" />;
     }
     return <span />;
   };
 
   render() {
+    const {filteredNodes, height, loading, width} = this.props;
     return (
       <div onScroll={this.onScroll}>
-        {this.props.loading && (
+        {loading && (
           <ListEmptyState>
             <NonIdealState icon={<Spinner size={24} />} title="Fetching logs..." />
           </ListEmptyState>
@@ -203,12 +221,12 @@ class LogsScrollingTableSized extends React.Component<ILogsScrollingTableSizedPr
         <List
           ref={this.list}
           deferredMeasurementCache={this.cache}
-          rowCount={this.props.nodes ? this.props.nodes.length : 0}
+          rowCount={filteredNodes?.length || 0}
           noContentRenderer={this.noContentRenderer}
           rowHeight={this.cache.rowHeight}
           rowRenderer={this.rowRenderer}
-          width={this.props.width}
-          height={this.props.height}
+          width={width}
+          height={height}
           overscanRowCount={10}
           style={{paddingBottom: 100}}
         />
@@ -257,7 +275,9 @@ class AutoSizer extends React.Component<{
   measure() {
     // eslint-disable-next-line react/no-find-dom-node
     const el = ReactDOM.findDOMNode(this);
-    if (!el || !(el instanceof HTMLElement)) return;
+    if (!el || !(el instanceof HTMLElement)) {
+      return;
+    }
     if (el.clientWidth !== this.state.width || el.clientHeight !== this.state.height) {
       this.setState({width: el.clientWidth, height: el.clientHeight});
     }

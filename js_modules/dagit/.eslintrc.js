@@ -15,13 +15,22 @@ module.exports = {
     },
   },
   rules: {
+    curly: 'error',
     'import/order': [
       'error',
-      {alphabetize: {order: 'asc', caseInsensitive: false}, 'newlines-between': 'always'},
+      {
+        alphabetize: {order: 'asc', caseInsensitive: false},
+        'newlines-between': 'always',
+      },
     ],
+    'no-restricted-imports': ['error', {patterns: ['./*', '../*']}],
+    'react/prefer-stateless-function': 'error',
     'react/prop-types': 'off',
     'react/display-name': 'off',
-    '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_'}],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      {argsIgnorePattern: '^_', ignoreRestSiblings: true},
+    ],
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-member-accessibility': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',
@@ -36,6 +45,7 @@ module.exports = {
     'react-hooks/exhaustive-deps': 'warn',
   },
   settings: {
+    'import/internal-regex': '^src/',
     react: {
       version: 'detect', // Tells eslint-plugin-react to automatically detect the version of React to use
     },

@@ -2,35 +2,35 @@ import {NonIdealState, Spinner} from '@blueprintjs/core';
 import * as React from 'react';
 import {BrowserRouter, Redirect, Route, Switch} from 'react-router-dom';
 
-import CustomAlertProvider from './CustomAlertProvider';
-import {CustomConfirmationProvider} from './CustomConfirmationProvider';
-import {CustomTooltipProvider} from './CustomTooltipProvider';
+import CustomAlertProvider from 'src/CustomAlertProvider';
+import {CustomConfirmationProvider} from 'src/CustomConfirmationProvider';
+import {CustomTooltipProvider} from 'src/CustomTooltipProvider';
 import {
   DagsterRepositoryContext,
   useCurrentRepositoryState,
   useRepositoryOptions,
-} from './DagsterRepositoryContext';
-import {APP_PATH_PREFIX} from './DomUtils';
-import {FeatureFlagsRoot} from './FeatureFlagsRoot';
-import {InstanceDetailsRoot} from './InstanceDetailsRoot';
-import {PipelineExplorerRoot} from './PipelineExplorerRoot';
-import {PipelineRunsRoot} from './PipelineRunsRoot';
-import PythonErrorInfo from './PythonErrorInfo';
-import {TimezoneProvider} from './TimeComponents';
-import {AssetsRoot} from './assets/AssetsRoot';
-import {PipelineExecutionRoot} from './execute/PipelineExecutionRoot';
-import {PipelineExecutionSetupRoot} from './execute/PipelineExecutionSetupRoot';
-import {LeftNav} from './nav/LeftNav';
-import {PipelineNav} from './nav/PipelineNav';
-import {PipelinePartitionsRoot} from './partitions/PipelinePartitionsRoot';
-import {PipelineOverviewRoot} from './pipelines/PipelineOverviewRoot';
-import {RunRoot} from './runs/RunRoot';
-import {RunsRoot} from './runs/RunsRoot';
-import {ScheduleRoot} from './schedules/ScheduleRoot';
-import {SchedulerRoot} from './schedules/SchedulerRoot';
-import {SchedulesRoot} from './schedules/SchedulesRoot';
-import {SolidDetailsRoot} from './solids/SolidDetailsRoot';
-import {SolidsRoot} from './solids/SolidsRoot';
+} from 'src/DagsterRepositoryContext';
+import {APP_PATH_PREFIX} from 'src/DomUtils';
+import {FeatureFlagsRoot} from 'src/FeatureFlagsRoot';
+import {InstanceDetailsRoot} from 'src/InstanceDetailsRoot';
+import {PipelineExplorerRoot} from 'src/PipelineExplorerRoot';
+import {PipelineRunsRoot} from 'src/PipelineRunsRoot';
+import PythonErrorInfo from 'src/PythonErrorInfo';
+import {TimezoneProvider} from 'src/TimeComponents';
+import {AssetsRoot} from 'src/assets/AssetsRoot';
+import {PipelineExecutionRoot} from 'src/execute/PipelineExecutionRoot';
+import {PipelineExecutionSetupRoot} from 'src/execute/PipelineExecutionSetupRoot';
+import {LeftNav} from 'src/nav/LeftNav';
+import {PipelineNav} from 'src/nav/PipelineNav';
+import {PipelinePartitionsRoot} from 'src/partitions/PipelinePartitionsRoot';
+import {PipelineOverviewRoot} from 'src/pipelines/PipelineOverviewRoot';
+import {RunRoot} from 'src/runs/RunRoot';
+import {RunsRoot} from 'src/runs/RunsRoot';
+import {ScheduleRoot} from 'src/schedules/ScheduleRoot';
+import {SchedulerRoot} from 'src/schedules/SchedulerRoot';
+import {SchedulesRoot} from 'src/schedules/SchedulesRoot';
+import {SolidDetailsRoot} from 'src/solids/SolidDetailsRoot';
+import {SolidsRoot} from 'src/solids/SolidsRoot';
 
 const AppRoutes = () => (
   <Switch>
@@ -78,8 +78,8 @@ const AppRoutes = () => (
 
     <DagsterRepositoryContext.Consumer>
       {(context) =>
-        context.repository?.pipelines.length ? (
-          <Redirect to={`/pipeline/${context.repository.pipelines[0].name}/`} />
+        context?.repository?.pipelines.length ? (
+          <Redirect to={`/pipeline/${context?.repository.pipelines[0].name}/`} />
         ) : (
           <Route render={() => <NonIdealState title="No pipelines" />} />
         )
@@ -89,31 +89,41 @@ const AppRoutes = () => (
 );
 
 export const App: React.FunctionComponent = () => {
-  const {options, error} = useRepositoryOptions();
+  const {options, loading, error} = useRepositoryOptions();
   const [repo, setRepo] = useCurrentRepositoryState(options);
+
+  const content = () => {
+    if (error) {
+      return (
+        <PythonErrorInfo
+          contextMsg={`${error.__typename} encountered when loading pipelines:`}
+          error={error}
+          centered={true}
+        />
+      );
+    }
+
+    if (loading) {
+      return <NonIdealState icon={<Spinner size={24} />} />;
+    }
+
+    return (
+      <CustomConfirmationProvider>
+        <DagsterRepositoryContext.Provider value={repo}>
+          <AppRoutes />
+          <CustomTooltipProvider />
+          <CustomAlertProvider />
+        </DagsterRepositoryContext.Provider>
+      </CustomConfirmationProvider>
+    );
+  };
 
   return (
     <div style={{display: 'flex', height: '100%'}}>
       <BrowserRouter basename={APP_PATH_PREFIX}>
         <TimezoneProvider>
-          <LeftNav options={options} repo={repo} setRepo={setRepo} />
-          {error ? (
-            <PythonErrorInfo
-              contextMsg={`${error.__typename} encountered when loading pipelines:`}
-              error={error}
-              centered={true}
-            />
-          ) : repo ? (
-            <CustomConfirmationProvider>
-              <DagsterRepositoryContext.Provider value={repo}>
-                <AppRoutes />
-                <CustomTooltipProvider />
-                <CustomAlertProvider />
-              </DagsterRepositoryContext.Provider>
-            </CustomConfirmationProvider>
-          ) : (
-            <NonIdealState icon={<Spinner size={24} />} />
-          )}
+          <LeftNav options={options} loading={loading} repo={repo} setRepo={setRepo} />
+          {content()}
         </TimezoneProvider>
       </BrowserRouter>
     </div>

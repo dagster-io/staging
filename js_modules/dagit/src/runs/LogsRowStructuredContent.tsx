@@ -1,19 +1,22 @@
 import {Colors, Intent, Tag} from '@blueprintjs/core';
 import * as React from 'react';
 
-import {AssetsSupported} from '../AssetsSupported';
-import {IRunMetadataDict} from '../RunMetadataProvider';
-import {assertUnreachable} from '../Util';
-import {PythonErrorFragment} from '../types/PythonErrorFragment';
-
-import {ComputeLogLink} from './ComputeLogModal';
-import {EventTypeColumn} from './LogsRowComponents';
-import {LogRowStructuredContentTable, MetadataEntries, MetadataEntryLink} from './MetadataEntry';
+import {AssetsSupported} from 'src/AssetsSupported';
+import {IRunMetadataDict} from 'src/RunMetadataProvider';
+import {assertUnreachable} from 'src/Util';
+import {ComputeLogLink} from 'src/runs/ComputeLogModal';
+import {EventTypeColumn} from 'src/runs/LogsRowComponents';
+import {
+  LogRowStructuredContentTable,
+  MetadataEntries,
+  MetadataEntryLink,
+} from 'src/runs/MetadataEntry';
 import {
   LogsRowStructuredFragment,
   LogsRowStructuredFragment_StepMaterializationEvent_materialization,
-} from './types/LogsRowStructuredFragment';
-import {MetadataEntryFragment} from './types/MetadataEntryFragment';
+} from 'src/runs/types/LogsRowStructuredFragment';
+import {MetadataEntryFragment} from 'src/runs/types/MetadataEntryFragment';
+import {PythonErrorFragment} from 'src/types/PythonErrorFragment';
 
 interface IStructuredContentProps {
   node: LogsRowStructuredFragment;
@@ -146,6 +149,16 @@ export const LogsRowStructuredContent: React.FunctionComponent<IStructuredConten
     case 'HookErroredEvent':
       return <FailureContent eventType="Hook Failed" error={node.error} />;
     case 'PipelineFailureEvent':
+      if (node.pipelineFailureError) {
+        return (
+          <FailureContent
+            message={node.message}
+            error={node.pipelineFailureError}
+            eventType="Pipeline Failed"
+          />
+        );
+      }
+
       return (
         <DefaultContent message={node.message} eventType="Pipeline Failed" eventIntent="danger" />
       );

@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import {SVGFlowLayoutFiller, SVGFlowLayoutRect, SVGMonospaceText} from './SVGComponents';
+import {SVGFlowLayoutFiller, SVGFlowLayoutRect, SVGMonospaceText} from 'src/graph/SVGComponents';
 
 export interface ISolidTag {
   label: string;
@@ -16,9 +16,15 @@ interface ISolidTagsProps {
 }
 
 function hueForTag(text = '') {
-  if (text === 'ipynb') return 25;
-  if (text === 'snowflake') return 197;
-  if (text === 'pyspark' || text === 'spark') return 30;
+  if (text === 'ipynb') {
+    return 25;
+  }
+  if (text === 'snowflake') {
+    return 197;
+  }
+  if (text === 'pyspark' || text === 'spark') {
+    return 30;
+  }
   return (
     text
       .split('')

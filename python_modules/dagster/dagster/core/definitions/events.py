@@ -16,7 +16,7 @@ def last_file_comp(path):
     return os.path.basename(os.path.normpath(path))
 
 
-ASSET_KEY_REGEX = re.compile("^[a-zA-Z0-9_]+$")  # alphanumeric, _, -, .
+ASSET_KEY_REGEX = re.compile("^[a-zA-Z0-9_.-]+$")  # alphanumeric, _, -, .
 ASSET_KEY_SPLIT_REGEX = re.compile("[^a-zA-Z0-9_]")
 ASSET_KEY_STRUCTURED_DELIMITER = "."
 
@@ -220,8 +220,19 @@ class EventMetadataEntry(
             label (str): Short display label for this metadata entry.
             description (Optional[str]): A human-readable description of this metadata entry.
         """
-        check.opt_float_param(value, "value")
         return EventMetadataEntry(label, description, FloatMetadataEntryData(value))
+
+    @staticmethod
+    def int(value, label, description=None):
+        """Static constructor for a metadata entry containing int as
+        :py:class:`IntMetadataEntryData`.
+
+        Args:
+            value (Optional[int]): The int value contained by this metadata entry.
+            label (str): Short display label for this metadata entry.
+            description (Optional[str]): A human-readable description of this metadata entry.
+        """
+        return EventMetadataEntry(label, description, IntMetadataEntryData(value))
 
 
 @whitelist_for_persistence
@@ -307,10 +318,15 @@ class PythonArtifactMetadataEntryData(
 @whitelist_for_persistence
 class FloatMetadataEntryData(namedtuple("_FloatMetadataEntryData", "value"), Persistable):
     def __new__(cls, value):
-        check.opt_float_param(value, "value")
         return super(FloatMetadataEntryData, cls).__new__(
             cls, check.opt_float_param(value, "value")
         )
+
+
+@whitelist_for_persistence
+class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value"), Persistable):
+    def __new__(cls, value):
+        return super(IntMetadataEntryData, cls).__new__(cls, check.opt_int_param(value, "value"))
 
 
 EntryDataUnion = (
@@ -321,6 +337,7 @@ EntryDataUnion = (
     MarkdownMetadataEntryData,
     PythonArtifactMetadataEntryData,
     FloatMetadataEntryData,
+    IntMetadataEntryData,
 )
 
 

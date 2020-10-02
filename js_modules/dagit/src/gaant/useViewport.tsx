@@ -1,7 +1,7 @@
 import animate from 'amator';
 import * as React from 'react';
 
-import {GaantViewport} from './Constants';
+import {GaantViewport} from 'src/gaant/Constants';
 
 /**
  * useViewport is a React hook that exposes a viewport (top/left/width/height)
@@ -105,7 +105,9 @@ export const useViewport = () => {
   // (eg the parent is showing a loading state). This means it may be undefined during our initial render
   // and we need to measure it when it's actually assigned a value.
   const setRef = React.useCallback((el: any) => {
-    if (el === ref.current) return;
+    if (el === ref.current) {
+      return;
+    }
     ref.current = el;
     measureRef();
   }, []);

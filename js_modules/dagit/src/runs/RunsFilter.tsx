@@ -4,17 +4,16 @@ import * as React from 'react';
 import {QueryResult, useQuery} from 'react-apollo';
 import {__RouterContext as RouterContext} from 'react-router';
 
-import {DagsterRepositoryContext, useRepositorySelector} from '../DagsterRepositoryContext';
+import {DagsterRepositoryContext, useRepositorySelector} from 'src/DagsterRepositoryContext';
 import {
   SuggestionProvider,
   TokenizingField,
   TokenizingFieldValue,
   stringFromValue,
   tokenizedValuesFromString,
-} from '../TokenizingField';
-import {PipelineRunStatus, PipelineRunsFilter} from '../types/globalTypes';
-
-import {RunsSearchSpaceQuery} from './types/RunsSearchSpaceQuery';
+} from 'src/TokenizingField';
+import {RunsSearchSpaceQuery} from 'src/runs/types/RunsSearchSpaceQuery';
+import {PipelineRunStatus, PipelineRunsFilter} from 'src/types/globalTypes';
 
 export type RunFilterTokenType = 'id' | 'status' | 'pipeline' | 'tag';
 
@@ -64,7 +63,9 @@ export function useRunFiltering(enabledFilters?: RunFilterTokenType[]) {
 }
 
 export function runsFilterForSearchTokens(search: TokenizingFieldValue[]) {
-  if (!search[0]) return {};
+  if (!search[0]) {
+    return {};
+  }
 
   const obj: PipelineRunsFilter = {};
 
@@ -143,13 +144,13 @@ export const RunsFilter: React.FunctionComponent<RunsFilterProps> = ({
   onChange,
   enabledFilters,
 }) => {
-  const {repositoryLocation, repository} = React.useContext(DagsterRepositoryContext);
+  const repoContext = React.useContext(DagsterRepositoryContext);
   const repositorySelector = useRepositorySelector();
   const suggestions = searchSuggestionsForRuns(
     useQuery<RunsSearchSpaceQuery>(RUNS_SEARCH_SPACE_QUERY, {
       fetchPolicy: 'cache-and-network',
-      skip: !repository || !repositoryLocation,
-      variables: {repositorySelector},
+      skip: !repoContext?.repository || !repoContext?.repositoryLocation,
+      variables: repoContext?.repository ? {repositorySelector} : {},
     }),
     enabledFilters,
   );

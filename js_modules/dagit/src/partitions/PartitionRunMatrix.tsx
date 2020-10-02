@@ -6,25 +6,22 @@ import * as React from 'react';
 import {useQuery} from 'react-apollo';
 import styled from 'styled-components/macro';
 
-import {useRepositorySelector} from '../DagsterRepositoryContext';
-import {filterByQuery} from '../GraphQueryImpl';
-import {GraphQueryInput} from '../GraphQueryInput';
-import {Timestamp} from '../TimeComponents';
+import {useRepositorySelector} from 'src/DagsterRepositoryContext';
+import {filterByQuery} from 'src/GraphQueryImpl';
+import {GraphQueryInput} from 'src/GraphQueryInput';
+import {Timestamp} from 'src/TimeComponents';
 import {
   TokenizingField,
   TokenizingFieldValue,
   stringFromValue,
   tokenizedValuesFromString,
-} from '../TokenizingField';
-import {formatStepKey} from '../Util';
-import {OptionsDivider} from '../VizComponents';
-import {GaantChartLayout} from '../gaant/Constants';
-import {GaantChartMode} from '../gaant/GaantChart';
-import {buildLayout} from '../gaant/GaantChartLayout';
-import {useViewport} from '../gaant/useViewport';
-import {RunTable} from '../runs/RunTable';
-import {StepEventStatus} from '../types/globalTypes';
-
+} from 'src/TokenizingField';
+import {formatStepKey} from 'src/Util';
+import {OptionsDivider} from 'src/VizComponents';
+import {GaantChartLayout} from 'src/gaant/Constants';
+import {GaantChartMode} from 'src/gaant/GaantChart';
+import {buildLayout} from 'src/gaant/GaantChartLayout';
+import {useViewport} from 'src/gaant/useViewport';
 import {
   GridColumn,
   GridFloatingContainer,
@@ -32,13 +29,15 @@ import {
   LeftLabel,
   TopLabel,
   TopLabelTilted,
-} from './RunMatrixUtils';
-import {PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results} from './types/PartitionLongitudinalQuery';
+} from 'src/partitions/RunMatrixUtils';
+import {PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results} from 'src/partitions/types/PartitionLongitudinalQuery';
 import {
   PartitionRunMatrixPipelineQuery,
   PartitionRunMatrixPipelineQueryVariables,
   PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles,
-} from './types/PartitionRunMatrixPipelineQuery';
+} from 'src/partitions/types/PartitionRunMatrixPipelineQuery';
+import {RunTable} from 'src/runs/RunTable';
+import {StepEventStatus} from 'src/types/globalTypes';
 
 type Partition = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results;
 type SolidHandle = PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles;
@@ -308,7 +307,9 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
   let [minUnix, maxUnix] = [Date.now() / 1000, 1];
   for (const partition of partitionColumns) {
     for (const step of partition.steps) {
-      if (step.unix === 0) continue;
+      if (step.unix === 0) {
+        continue;
+      }
       [minUnix, maxUnix] = [Math.min(minUnix, step.unix), Math.max(maxUnix, step.unix)];
     }
   }
@@ -623,7 +624,9 @@ const SliceSlider: React.FunctionComponent<{
           </span>
         )}
         onChange={(values: number[]) => {
-          if (timeout.current) clearTimeout(timeout.current);
+          if (timeout.current) {
+            clearTimeout(timeout.current);
+          }
           timeout.current = setTimeout(() => onChange(delta * values[0] + minUnix), 10);
         }}
       >

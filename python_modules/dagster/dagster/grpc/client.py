@@ -21,8 +21,8 @@ from .types import (
     CancelExecutionRequest,
     ExecuteRunArgs,
     ExecutionPlanSnapshotArgs,
+    ExternalExecutableArgs,
     ExternalScheduleExecutionArgs,
-    ExternalTriggeredExecutionArgs,
     PartitionArgs,
     PartitionNamesArgs,
     PartitionSetExecutionParamArgs,
@@ -66,10 +66,10 @@ class DagsterGrpcClient(object):
         else:
             self._server_address = "unix:" + os.path.abspath(socket)
 
-    def _query(self, method, request_type, **kwargs):
+    def _query(self, method, request_type, timeout=None, **kwargs):
         with grpc.insecure_channel(self._server_address) as channel:
             stub = DagsterApiStub(channel)
-            response = getattr(stub, method)(request_type(**kwargs))
+            response = getattr(stub, method)(request_type(**kwargs), timeout=timeout)
         # TODO need error handling here
         return response
 
@@ -239,18 +239,16 @@ class DagsterGrpcClient(object):
             res.serialized_external_schedule_execution_data_or_external_schedule_execution_error
         )
 
-    def external_trigger_execution_params(self, external_triggered_execution_args):
+    def external_executable_params(self, external_executable_args):
         check.inst_param(
-            external_triggered_execution_args,
-            "external_triggered_execution_args",
-            ExternalTriggeredExecutionArgs,
+            external_executable_args, "external_executable_args", ExternalExecutableArgs,
         )
 
         res = self._query(
-            "ExternalTriggerExecutionParams",
-            api_pb2.ExternalTriggerExecutionParamsRequest,
-            serialized_external_triggered_execution_args=serialize_dagster_namedtuple(
-                external_triggered_execution_args
+            "ExternalExecutableParams",
+            api_pb2.ExternalExecutableParamsRequest,
+            serialized_external_executable_args=serialize_dagster_namedtuple(
+                external_executable_args
             ),
         )
 
@@ -326,8 +324,8 @@ class DagsterGrpcClient(object):
                 )
                 raise exc
 
-    def shutdown_server(self):
-        res = self._query("ShutdownServer", api_pb2.Empty)
+    def shutdown_server(self, timeout=15):
+        res = self._query("ShutdownServer", api_pb2.Empty, timeout=timeout)
         return deserialize_json_to_dagster_namedtuple(res.serialized_shutdown_server_result)
 
     def cancel_execution(self, cancel_execution_request):
@@ -345,7 +343,7 @@ class DagsterGrpcClient(object):
 
         return deserialize_json_to_dagster_namedtuple(res.serialized_cancel_execution_result)
 
-    def can_cancel_execution(self, can_cancel_execution_request):
+    def can_cancel_execution(self, can_cancel_execution_request, timeout=None):
         check.inst_param(
             can_cancel_execution_request, "can_cancel_execution_request", CanCancelExecutionRequest,
         )
@@ -353,6 +351,7 @@ class DagsterGrpcClient(object):
         res = self._query(
             "CanCancelExecution",
             api_pb2.CanCancelExecutionRequest,
+            timeout=timeout,
             serialized_can_cancel_execution_request=serialize_dagster_namedtuple(
                 can_cancel_execution_request
             ),
@@ -365,7 +364,6 @@ class DagsterGrpcClient(object):
 
         with DagsterInstance.from_ref(execute_run_args.instance_ref) as instance:
             try:
-                pipeline_run = instance.get_run_by_id(execute_run_args.pipeline_run_id)
                 res = self._query(
                     "StartRun",
                     api_pb2.StartRunRequest,
@@ -374,6 +372,7 @@ class DagsterGrpcClient(object):
                 return deserialize_json_to_dagster_namedtuple(res.serialized_start_run_result)
 
             except Exception:  # pylint: disable=bare-except
+                pipeline_run = instance.get_run_by_id(execute_run_args.pipeline_run_id)
                 instance.report_engine_event(
                     message="Unexpected error in IPC client",
                     pipeline_run=pipeline_run,
@@ -435,5 +434,6 @@ def ephemeral_grpc_api_client(
         force_port=force_port,
         max_retries=max_retries,
         max_workers=max_workers,
+        lazy_load_user_code=True,
     ).create_ephemeral_client() as client:
         yield client

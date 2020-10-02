@@ -3,15 +3,14 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {SolidNameOrPath} from '../PipelineExplorer';
-
-import {ParentSolidNode, SVGLabeledParentRect} from './ParentSolidNode';
-import SVGViewport, {DETAIL_ZOOM, SVGViewportInteractor} from './SVGViewport';
-import {SolidLinks} from './SolidLinks';
-import SolidNode from './SolidNode';
-import {IFullPipelineLayout, IFullSolidLayout, ILayout} from './getFullSolidLayout';
-import {Edge, isHighlighted, isSolidHighlighted} from './highlighting';
-import {PipelineGraphSolidFragment} from './types/PipelineGraphSolidFragment';
+import {SolidNameOrPath} from 'src/PipelineExplorer';
+import {ParentSolidNode, SVGLabeledParentRect} from 'src/graph/ParentSolidNode';
+import SVGViewport, {DETAIL_ZOOM, SVGViewportInteractor} from 'src/graph/SVGViewport';
+import {SolidLinks} from 'src/graph/SolidLinks';
+import SolidNode from 'src/graph/SolidNode';
+import {IFullPipelineLayout, IFullSolidLayout, ILayout} from 'src/graph/getFullSolidLayout';
+import {Edge, isHighlighted, isSolidHighlighted} from 'src/graph/highlighting';
+import {PipelineGraphSolidFragment} from 'src/graph/types/PipelineGraphSolidFragment';
 
 const NoOp = () => {};
 
@@ -54,7 +53,9 @@ function computeSolidPrefixBoundingBoxes(layout: IFullPipelineLayout) {
 
   for (const key of Object.keys(layout.solids)) {
     const parts = key.split('.');
-    if (parts.length === 1) continue;
+    if (parts.length === 1) {
+      continue;
+    }
     for (let ii = 1; ii < parts.length; ii++) {
       const base = parts.slice(0, ii).join('.');
       groups[base] = groups[base] || [];
@@ -69,7 +70,9 @@ function computeSolidPrefixBoundingBoxes(layout: IFullPipelineLayout) {
     const depth = base.split('.').length;
     const margin = 5 + (maxDepth - depth) * 5;
 
-    if (group.length === 1) continue;
+    if (group.length === 1) {
+      continue;
+    }
     const x1 = Math.min(...group.map((l) => l.x)) - margin;
     const x2 = Math.max(...group.map((l) => l.x + l.width)) + margin;
     const y1 = Math.min(...group.map((l) => l.y)) - margin;
@@ -248,7 +251,9 @@ export default class PipelineGraph extends React.Component<IPipelineGraphProps> 
 
   closestSolidInDirection = (dir: string): string | undefined => {
     const {layout, selectedSolid} = this.props;
-    if (!selectedSolid) return;
+    if (!selectedSolid) {
+      return;
+    }
 
     const current = layout.solids[selectedSolid.name];
     const center = (solid: IFullSolidLayout): {x: number; y: number} => ({
@@ -288,10 +293,14 @@ export default class PipelineGraph extends React.Component<IPipelineGraphProps> 
   };
 
   onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.target && (e.target as HTMLElement).nodeName === 'INPUT') return;
+    if (e.target && (e.target as HTMLElement).nodeName === 'INPUT') {
+      return;
+    }
 
     const dir = {37: 'left', 38: 'up', 39: 'right', 40: 'down'}[e.keyCode];
-    if (!dir) return;
+    if (!dir) {
+      return;
+    }
 
     const nextSolid = this.closestSolidInDirection(dir);
     if (nextSolid && this.props.onClickSolid) {

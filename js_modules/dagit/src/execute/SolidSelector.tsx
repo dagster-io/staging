@@ -1,22 +1,21 @@
-import {Colors, Intent} from '@blueprintjs/core';
+import {Colors, Intent, Popover} from '@blueprintjs/core';
 import gql from 'graphql-tag';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
 import styled from 'styled-components/macro';
 
-import {usePipelineSelector} from '../DagsterRepositoryContext';
-import {filterByQuery} from '../GraphQueryImpl';
-import {GraphQueryInput} from '../GraphQueryInput';
-import {ShortcutHandler} from '../ShortcutHandler';
-import PipelineGraph from '../graph/PipelineGraph';
-import SVGViewport from '../graph/SVGViewport';
-import {getDagrePipelineLayout} from '../graph/getFullSolidLayout';
-
+import {usePipelineSelector} from 'src/DagsterRepositoryContext';
+import {filterByQuery} from 'src/GraphQueryImpl';
+import {GraphQueryInput} from 'src/GraphQueryInput';
+import {ShortcutHandler} from 'src/ShortcutHandler';
 import {
   SolidSelectorQuery,
   SolidSelectorQuery_pipelineOrError,
   SolidSelectorQuery_pipelineOrError_Pipeline_solids,
-} from './types/SolidSelectorQuery';
+} from 'src/execute/types/SolidSelectorQuery';
+import PipelineGraph from 'src/graph/PipelineGraph';
+import SVGViewport from 'src/graph/SVGViewport';
+import {getDagrePipelineLayout} from 'src/graph/getFullSolidLayout';
 
 interface ISolidSelectorProps {
   pipelineName: string;
@@ -125,7 +124,9 @@ export default (props: ISolidSelectorProps) => {
       : pipelineErrorMessage;
 
   const onCommitPendingValue = (applied: string) => {
-    if (data?.pipelineOrError.__typename !== 'Pipeline') return;
+    if (data?.pipelineOrError.__typename !== 'Pipeline') {
+      return;
+    }
 
     if (applied === '') {
       applied = '*';
@@ -146,49 +147,52 @@ export default (props: ISolidSelectorProps) => {
 
   return (
     <div style={{position: 'relative'}}>
-      <ShortcutHandler shortcutLabel={'⌥S'} shortcutFilter={(e) => e.keyCode === 83 && e.altKey}>
-        <GraphQueryInput
-          width={(pending !== '*' && pending !== '') || focused ? 350 : 90}
-          intent={errorMessage ? Intent.DANGER : Intent.NONE}
-          items={
-            data?.pipelineOrError.__typename === 'Pipeline' ? data?.pipelineOrError.solids : []
-          }
-          value={pending}
-          placeholder="Type a Solid Subset"
-          onChange={setPending}
-          onBlur={(pending) => {
-            onCommitPendingValue(pending);
-            setFocused(false);
-          }}
-          onFocus={() => setFocused(true)}
-          onKeyDown={(e) => {
-            if (e.isDefaultPrevented()) {
-              return;
+      <Popover
+        autoFocus={false}
+        isOpen={focused}
+        minimal
+        modifiers={{arrow: {enabled: false}, offset: {enabled: true, offset: '0, 8px'}}}
+        position="bottom-left"
+      >
+        <ShortcutHandler shortcutLabel={'⌥S'} shortcutFilter={(e) => e.keyCode === 83 && e.altKey}>
+          <GraphQueryInput
+            width={(pending !== '*' && pending !== '') || focused ? 350 : 90}
+            intent={errorMessage ? Intent.DANGER : Intent.NONE}
+            items={
+              data?.pipelineOrError.__typename === 'Pipeline' ? data?.pipelineOrError.solids : []
             }
-            if (e.key === 'Enter' || e.key === 'Return' || e.key === 'Escape') {
-              e.currentTarget.blur();
-            }
-          }}
-        />
-      </ShortcutHandler>
-      {focused && data?.pipelineOrError && (
-        <SolidSelectorModal
-          pipelineOrError={data?.pipelineOrError}
-          errorMessage={errorMessage}
-          queryResultSolids={queryResultSolids}
-        />
-      )}
+            value={pending}
+            placeholder="Type a Solid Subset"
+            onChange={setPending}
+            onBlur={(pending) => {
+              onCommitPendingValue(pending);
+              setFocused(false);
+            }}
+            onFocus={() => setFocused(true)}
+            onKeyDown={(e) => {
+              if (e.isDefaultPrevented()) {
+                return;
+              }
+              if (e.key === 'Enter' || e.key === 'Return' || e.key === 'Escape') {
+                e.currentTarget.blur();
+              }
+            }}
+          />
+        </ShortcutHandler>
+        {data?.pipelineOrError && (
+          <SolidSelectorModal
+            pipelineOrError={data?.pipelineOrError}
+            errorMessage={errorMessage}
+            queryResultSolids={queryResultSolids}
+          />
+        )}
+      </Popover>
     </div>
   );
 };
 
 const SolidSelectorModalContainer = styled.div`
-  position: absolute;
   border-radius: 4px;
-  box-shadow: 0 3px 20px rgba(0, 0, 0, 0.2), 0 2px 2px rgba(0, 0, 0, 0.3);
-  z-index: 10;
-  top: 45px;
-  left: 0;
   width: 60vw;
   height: 60vh;
   background: ${Colors.WHITE};

@@ -1,32 +1,22 @@
 import {Icon} from '@blueprintjs/core';
 import gql from 'graphql-tag';
-import * as querystring from 'query-string';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
 import {RouteComponentProps} from 'react-router';
-import {__RouterContext as RouterContext} from 'react-router';
 import {Link} from 'react-router-dom';
 
-import {useScheduleSelector} from '../DagsterRepositoryContext';
-import {Header, ScrollContainer} from '../ListComponents';
-import Loading from '../Loading';
-import {PartitionView} from '../partitions/PartitionView';
-
-import {ScheduleRow, ScheduleRowHeader} from './ScheduleRow';
-import {SCHEDULE_DEFINITION_FRAGMENT, SchedulerTimezoneNote} from './ScheduleUtils';
-import {ScheduleRootQuery} from './types/ScheduleRootQuery';
+import {useScheduleSelector} from 'src/DagsterRepositoryContext';
+import {Header, ScrollContainer} from 'src/ListComponents';
+import Loading from 'src/Loading';
+import {ScheduleRow, ScheduleRowHeader} from 'src/schedules/ScheduleRow';
+import {SCHEDULE_DEFINITION_FRAGMENT, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
+import {ScheduleRootQuery} from 'src/schedules/types/ScheduleRootQuery';
 
 export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
   scheduleName: string;
-}>> = ({match, location}) => {
+}>> = ({match}) => {
   const {scheduleName} = match.params;
   const scheduleSelector = useScheduleSelector(scheduleName);
-  const {history} = React.useContext(RouterContext);
-  const qs = querystring.parse(location.search);
-  const cursor = (qs.cursor as string) || undefined;
-  const setCursor = (cursor: string | undefined) => {
-    history.push({search: `?${querystring.stringify({...qs, cursor})}`});
-  };
   const queryResult = useQuery<ScheduleRootQuery>(SCHEDULE_ROOT_QUERY, {
     variables: {
       scheduleSelector,
@@ -38,11 +28,8 @@ export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
 
   return (
     <Loading queryResult={queryResult} allowStaleData={true}>
-      {(result) => {
-        const {scheduleDefinitionOrError} = result;
-
+      {({scheduleDefinitionOrError}) => {
         if (scheduleDefinitionOrError.__typename === 'ScheduleDefinition') {
-          const partitionSetName = scheduleDefinitionOrError.partitionSet?.name;
           return (
             <ScrollContainer>
               <div style={{display: 'flex'}}>
@@ -56,14 +43,6 @@ export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
               </div>
               <ScheduleRowHeader schedule={scheduleDefinitionOrError} />
               <ScheduleRow schedule={scheduleDefinitionOrError} />
-              {partitionSetName ? (
-                <PartitionView
-                  pipelineName={scheduleDefinitionOrError.pipelineName}
-                  partitionSetName={partitionSetName}
-                  cursor={cursor}
-                  setCursor={setCursor}
-                />
-              ) : null}
             </ScrollContainer>
           );
         } else {

@@ -116,7 +116,7 @@ class DagsterExecutionStepNotFoundError(DagsterError):
 
 
 class DagsterRunNotFoundError(DagsterError):
-    """Thrown when re-execution is attempted but the original run cannot be found."""
+    """Thrown when a run cannot be found in run storage."""
 
     def __init__(self, *args, **kwargs):
         self.invalid_run_id = check.str_param(kwargs.pop("invalid_run_id"), "invalid_run_id")
@@ -448,7 +448,7 @@ class PartitionExecutionError(DagsterUserCodeExecutionError):
     """Errors raised during the execution of user-provided functions of a partition set schedule."""
 
 
-class DagsterInvalidAssetKey(DagsterUserCodeExecutionError):
+class DagsterInvalidAssetKey(DagsterError):
     """ Error raised by invalid asset key """
 
 
@@ -460,5 +460,20 @@ class DagsterImportError(DagsterError):
     """ Import error raised while importing user-code. """
 
 
-class TriggeredExecutionError(DagsterUserCodeExecutionError):
-    """Errors raised during the execution of user-provided functions for a triggered execution."""
+class ExecutableError(DagsterUserCodeExecutionError):
+    """Errors raised during the execution of user-provided functions for a defined Executable."""
+
+
+class DagsterAddressIOError(DagsterError):
+    """ IO error raised while operating data assets. """
+
+    def __init__(self, msg):
+        super(DagsterAddressIOError, self).__init__(msg if msg else "")
+
+
+class DagsterUnknownStepStateError(DagsterError):
+    """When pipeline execution complete with steps in an unknown state"""
+
+
+class DagsterIncompleteExecutionPlanError(DagsterError):
+    """When pipeline execution completes with an active execution in an incomplete state"""

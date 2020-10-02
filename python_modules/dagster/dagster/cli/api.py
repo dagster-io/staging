@@ -13,6 +13,7 @@ from dagster import check, seven
 from dagster.cli.workspace.cli_target import (
     get_repository_location_from_kwargs,
     get_repository_origin_from_kwargs,
+    get_working_directory_from_kwargs,
     python_origin_target_argument,
     repository_target_argument,
 )
@@ -58,10 +59,10 @@ from dagster.core.storage.tags import check_tags
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc import DagsterGrpcServer
 from dagster.grpc.impl import (
+    get_external_executable_params,
     get_external_execution_plan_snapshot,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
-    get_external_triggered_execution_params,
     get_partition_config,
     get_partition_names,
     get_partition_set_execution_param_data,
@@ -71,8 +72,8 @@ from dagster.grpc.types import (
     ExecuteRunArgs,
     ExecuteStepArgs,
     ExecutionPlanSnapshotArgs,
+    ExternalExecutableArgs,
     ExternalScheduleExecutionArgs,
-    ExternalTriggeredExecutionArgs,
     ListRepositoriesInput,
     ListRepositoriesResponse,
     LoadableRepositorySymbol,
@@ -277,17 +278,17 @@ def schedule_execution_data_command(args):
 
 
 @unary_api_cli_command(
-    name="trigger_execution_params",
+    name="executable_params",
     help_str=(
         "[INTERNAL] Return the execution params for a triggered execution. This is an internal "
         "utility. Users should generally not invoke this command interactively."
     ),
-    input_cls=ExternalTriggeredExecutionArgs,
+    input_cls=ExternalExecutableArgs,
     output_cls=(ExternalExecutionParamsData, ExternalExecutionParamsErrorData),
 )
-def trigger_execution_params_command(args):
+def executable_params_command(args):
     recon_repo = recon_repository_from_origin(args.repository_origin)
-    return get_external_triggered_execution_params(recon_repo, args)
+    return get_external_executable_params(recon_repo, args)
 
 
 @whitelist_for_serdes
@@ -502,7 +503,16 @@ def _schedule_tick_state(instance, stream, tick_data):
     type=click.INT,
     required=False,
     default=30,
-    help="Timout after which to shutdown if --heartbeat is set and a heartbeat is not received",
+    help="Timeout after which to shutdown if --heartbeat is set and a heartbeat is not received",
+)
+@click.option(
+    "--lazy-load-user-code",
+    is_flag=True,
+    required=False,
+    default=False,
+    help="Wait until the first LoadRepositories call to actually load the repositoriies, instead of"
+    "waiting to load them when the server is launched. Useful for surfacing errors when the server "
+    "is managed directly from Dagit",
 )
 @python_origin_target_argument
 def grpc_command(
@@ -512,6 +522,7 @@ def grpc_command(
     max_workers=1,
     heartbeat=False,
     heartbeat_timeout=30,
+    lazy_load_user_code=False,
     **kwargs
 ):
     if seven.IS_WINDOWS and port is None:
@@ -526,7 +537,7 @@ def grpc_command(
         loadable_target_origin = LoadableTargetOrigin(
             executable_path=sys.executable,
             attribute=kwargs["attribute"],
-            working_directory=kwargs["working_directory"],
+            working_directory=get_working_directory_from_kwargs(kwargs),
             module_name=kwargs["module_name"],
             python_file=kwargs["python_file"],
         )
@@ -539,6 +550,7 @@ def grpc_command(
         max_workers=max_workers,
         heartbeat=heartbeat,
         heartbeat_timeout=heartbeat_timeout,
+        lazy_load_user_code=lazy_load_user_code,
     )
 
     server.serve()
@@ -727,7 +739,7 @@ def create_api_cli_group():
     group.add_command(partition_names_command)
     group.add_command(partition_set_execution_param_command)
     group.add_command(schedule_execution_data_command)
-    group.add_command(trigger_execution_params_command)
+    group.add_command(executable_params_command)
     group.add_command(launch_scheduled_execution)
     group.add_command(grpc_command)
     return group

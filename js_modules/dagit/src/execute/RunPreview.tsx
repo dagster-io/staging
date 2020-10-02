@@ -3,21 +3,20 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {ButtonLink} from '../ButtonLink';
-import {showCustomAlert} from '../CustomAlertProvider';
-import {useConfirmation} from '../CustomConfirmationProvider';
-import PythonErrorInfo from '../PythonErrorInfo';
-import {SplitPanelContainer} from '../SplitPanelContainer';
-import {errorStackToYamlPath} from '../configeditor/ConfigEditorUtils';
+import {ButtonLink} from 'src/ButtonLink';
+import {showCustomAlert} from 'src/CustomAlertProvider';
+import {useConfirmation} from 'src/CustomConfirmationProvider';
+import PythonErrorInfo from 'src/PythonErrorInfo';
+import {SplitPanelContainer} from 'src/SplitPanelContainer';
+import {errorStackToYamlPath} from 'src/configeditor/ConfigEditorUtils';
 import {
   ConfigEditorRunConfigSchemaFragment,
   ConfigEditorRunConfigSchemaFragment_allConfigTypes_CompositeConfigType,
-} from '../configeditor/types/ConfigEditorRunConfigSchemaFragment';
-
+} from 'src/configeditor/types/ConfigEditorRunConfigSchemaFragment';
 import {
   RunPreviewValidationFragment,
   RunPreviewValidationFragment_PipelineConfigValidationInvalid_errors,
-} from './types/RunPreviewValidationFragment';
+} from 'src/execute/types/RunPreviewValidationFragment';
 
 type ValidationError = RunPreviewValidationFragment_PipelineConfigValidationInvalid_errors;
 type ValidationErrorOrNode = ValidationError | React.ReactNode;
@@ -214,11 +213,15 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
     } = {};
 
     const root = allConfigTypes.find((t) => t.key === rootConfigType.key);
-    if (root?.__typename !== 'CompositeConfigType') return children;
+    if (root?.__typename !== 'CompositeConfigType') {
+      return children;
+    }
 
     root.fields.forEach((field) => {
       const allConfigVersion = allConfigTypes.find((t) => t.key === field.configTypeKey);
-      if (allConfigVersion?.__typename !== 'CompositeConfigType') return;
+      if (allConfigVersion?.__typename !== 'CompositeConfigType') {
+        return;
+      }
       children[field.name] = allConfigVersion;
     });
 
@@ -579,8 +582,12 @@ function truncateErrorMessage(message: string) {
 }
 
 function pathExistsInObject(path: string[], object: any): boolean {
-  if (!object || typeof object !== 'object') return false;
-  if (path.length === 0) return true;
+  if (!object || typeof object !== 'object') {
+    return false;
+  }
+  if (path.length === 0) {
+    return true;
+  }
   const [first, ...rest] = path;
   return pathExistsInObject(rest, object[first]);
 }

@@ -5,17 +5,18 @@ import sys
 from datetime import datetime
 
 from dagster import check
-from dagster.core.definitions import ScheduleExecutionContext, TriggeredExecutionContext
+from dagster.core.definitions import ExecutableContext, ScheduleExecutionContext
 from dagster.core.definitions.reconstructable import (
     ReconstructablePipeline,
     ReconstructableRepository,
 )
 from dagster.core.errors import (
     DagsterInvalidSubsetError,
+    DagsterRunNotFoundError,
     DagsterSubprocessError,
+    ExecutableError,
     PartitionExecutionError,
     ScheduleExecutionError,
-    TriggeredExecutionError,
     user_code_error_boundary,
 )
 from dagster.core.events import EngineEventData
@@ -42,8 +43,8 @@ from dagster.core.snap.execution_plan_snapshot import (
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.grpc.types import (
     ExecutionPlanSnapshotArgs,
+    ExternalExecutableArgs,
     ExternalScheduleExecutionArgs,
-    ExternalTriggeredExecutionArgs,
     PartitionArgs,
     PartitionNamesArgs,
     ScheduleExecutionDataMode,
@@ -111,12 +112,23 @@ def _run_in_subprocess(
         instance = DagsterInstance.from_ref(execute_run_args.instance_ref)
         pipeline_run = instance.get_run_by_id(execute_run_args.pipeline_run_id)
 
+        if not pipeline_run:
+            raise DagsterRunNotFoundError(
+                "gRPC server could not load run {run_id} in order to execute it. Make sure that the gRPC server has access to your run storage.".format(
+                    run_id=execute_run_args.pipeline_run_id
+                ),
+                invalid_run_id=execute_run_args.pipeline_run_id,
+            )
+
         pid = os.getpid()
 
     except:  # pylint: disable=bare-except
+        serializable_error_info = serializable_error_info_from_exc_info(sys.exc_info())
         event = IPCErrorMessage(
-            serializable_error_info=serializable_error_info_from_exc_info(sys.exc_info()),
-            message="Error during RPC setup for ExecuteRun",
+            serializable_error_info=serializable_error_info,
+            message="Error during RPC setup for executing run: {message}".format(
+                message=serializable_error_info.message
+            ),
         )
         subprocess_status_handler(event)
         subprocess_status_handler(RunInSubprocessComplete())
@@ -269,50 +281,33 @@ def get_external_schedule_execution(recon_repo, external_schedule_execution_args
             )
 
 
-def get_external_triggered_execution_params(recon_repo, external_triggered_execution_args):
+def get_external_executable_params(recon_repo, external_executable_args):
     check.inst_param(recon_repo, "recon_repo", ReconstructableRepository)
     check.inst_param(
-        external_triggered_execution_args,
-        "external_triggered_execution_args",
-        ExternalTriggeredExecutionArgs,
+        external_executable_args, "external_executable_args", ExternalExecutableArgs,
     )
     definition = recon_repo.get_definition()
-    triggered_execution_def = definition.get_triggered_execution_def(
-        external_triggered_execution_args.trigger_name
-    )
-    with DagsterInstance.from_ref(external_triggered_execution_args.instance_ref) as instance:
-        context = TriggeredExecutionContext(instance)
+    executable_def = definition.get_executable_def(external_executable_args.name)
+    with DagsterInstance.from_ref(external_executable_args.instance_ref) as instance:
+        context = ExecutableContext(instance)
 
         try:
             with user_code_error_boundary(
-                TriggeredExecutionError,
-                lambda: "Error occured during the execution of should_execute_fn for triggered "
-                "execution {name}".format(name=triggered_execution_def.name),
-            ):
-                should_execute = triggered_execution_def.should_execute(context)
-                if not should_execute:
-                    return ExternalExecutionParamsData(
-                        run_config=None, tags=None, should_execute=False
-                    )
-
-            with user_code_error_boundary(
-                TriggeredExecutionError,
+                ExecutableError,
                 lambda: "Error occured during the execution of run_config_fn for triggered "
-                "execution {name}".format(name=triggered_execution_def.name),
+                "execution {name}".format(name=executable_def.name),
             ):
-                run_config = triggered_execution_def.get_run_config(context)
+                run_config = executable_def.get_run_config(context)
 
             with user_code_error_boundary(
-                TriggeredExecutionError,
+                ExecutableError,
                 lambda: "Error occured during the execution of tags_fn for triggered "
-                "execution {name}".format(name=triggered_execution_def.name),
+                "execution {name}".format(name=executable_def.name),
             ):
-                tags = triggered_execution_def.get_tags(context)
+                tags = executable_def.get_tags(context)
 
-            return ExternalExecutionParamsData(
-                run_config=run_config, tags=tags, should_execute=should_execute
-            )
-        except TriggeredExecutionError:
+            return ExternalExecutionParamsData(run_config=run_config, tags=tags)
+        except ExecutableError:
             return ExternalExecutionParamsErrorData(
                 serializable_error_info_from_exc_info(sys.exc_info())
             )

@@ -21,7 +21,7 @@ from dagster.core.errors import (
     DagsterRunAlreadyExists,
     DagsterRunConflict,
 )
-from dagster.core.execution.resolve_versions import join_and_hash, resolve_step_versions
+from dagster.core.execution.resolve_versions import join_and_hash, resolve_step_output_versions
 from dagster.core.storage.migration.utils import upgrading_instance
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
@@ -51,29 +51,40 @@ def _is_memoized_run(tags):
     return tags is not None and MEMOIZED_RUN_TAG in tags and tags.get(MEMOIZED_RUN_TAG) == "true"
 
 
-def _fake_output_address(_version_list):
-    # Placeholder function until actual version storage has been implemented
-    return {}
-
-
 def _dagster_home():
     dagster_home_path = os.getenv("DAGSTER_HOME")
 
     if not dagster_home_path:
         raise DagsterInvariantViolationError(
-            "DAGSTER_HOME is not set, check is_dagster_home_set before invoking."
+            (
+                "The environment variable $DAGSTER_HOME is not set. Dagster requires this "
+                "environment variable to be set to an existing directory in your filesystem "
+                "that contains your dagster instance configuration file (dagster.yaml).\n"
+                "You can resolve this error by exporting the environment variable."
+                "For example, you can run the following command in your shell or "
+                "include it in your shell configuration file:\n"
+                '\texport DAGSTER_HOME="~/dagster_home"'
+            )
         )
 
     dagster_home_path = os.path.expanduser(dagster_home_path)
 
     if not os.path.isabs(dagster_home_path):
         raise DagsterInvariantViolationError(
-            "DAGSTER_HOME must be absolute path: {}".format(dagster_home_path)
+            (
+                '$DAGSTER_HOME "{}" must be an absolute path. Dagster requires this '
+                "environment variable to be set to an existing directory in your filesystem that"
+                "contains your dagster instance configuration file (dagster.yaml)."
+            ).format(dagster_home_path)
         )
 
     if not (os.path.exists(dagster_home_path) and os.path.isdir(dagster_home_path)):
         raise DagsterInvariantViolationError(
-            'DAGSTER_HOME "{}" is not a folder or does not exist!'.format(dagster_home_path)
+            (
+                '$DAGSTER_HOME "{}" is not a directory or does not exist. Dagster requires this '
+                "environment variable to be set to an existing directory in your filesystem that "
+                "contains your dagster instance configuration file (dagster.yaml)."
+            ).format(dagster_home_path)
         )
 
     return dagster_home_path
@@ -237,7 +248,7 @@ class DagsterInstance:
     # ctors
 
     @staticmethod
-    def ephemeral(tempdir=None):
+    def ephemeral(tempdir=None, preload=None):
         from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
         from dagster.core.storage.event_log import InMemoryEventLogStorage
         from dagster.core.storage.root import LocalArtifactStorage
@@ -250,8 +261,8 @@ class DagsterInstance:
         return DagsterInstance(
             InstanceType.EPHEMERAL,
             local_artifact_storage=LocalArtifactStorage(tempdir),
-            run_storage=InMemoryRunStorage(),
-            event_storage=InMemoryEventLogStorage(),
+            run_storage=InMemoryRunStorage(preload=preload),
+            event_storage=InMemoryEventLogStorage(preload=preload),
             compute_log_manager=NoOpComputeLogManager(),
             run_launcher=SyncInMemoryRunLauncher(),
         )
@@ -345,7 +356,7 @@ class DagsterInstance:
 
     def info_str(self):
 
-        settings = self._settings if self._settings else None
+        settings = self._settings if self._settings else {}
 
         return (
             "local_artifact_storage:\n{artifact}\n"
@@ -435,6 +446,7 @@ class DagsterInstance:
 
     def dispose(self):
         self._run_storage.dispose()
+        self._run_launcher.dispose()
         self._event_storage.dispose()
 
     # run storage
@@ -479,23 +491,38 @@ class DagsterInstance:
     def get_run_group(self, run_id):
         return self._run_storage.get_run_group(run_id)
 
-    def resolve_unmemoized_steps(self, speculative_execution_plan, step_versions):
-        unmemoized_steps = []
+    def resolve_unmemoized_steps(self, execution_plan, run_config, mode):
+        """
+        Returns:
+            List[str]: Step keys for all steps that don't have existing results stored for their
+                versions.
+        """
+        pipeline_name = execution_plan.pipeline.get_definition().name
+        step_output_versions = resolve_step_output_versions(
+            execution_plan, run_config=run_config, mode=mode
+        )
 
-        for step in speculative_execution_plan.topological_steps():
-            step_version = step_versions[step.key]
-            output_versions = [
-                join_and_hash([name, step_version]) for name in step.step_output_dict.keys()
-            ]
+        for step_output_handle, version in step_output_versions.items():
+            if version is None:
+                raise DagsterInvariantViolationError(
+                    "While creating a memoized pipeline run, a version is None for step "
+                    "{step_output}. Versions must be non-null values when running a memoized "
+                    "pipeline.".format(step_output=step_output_handle.step_key)
+                )
+        step_output_addresses = self.get_addresses_for_step_output_versions(
+            {
+                (pipeline_name, step_output_handle): version
+                for step_output_handle, version in step_output_versions.items()
+            }
+        )
 
-            addresses = _fake_output_address(
-                output_versions
-            )  # TODO: replace with real version storage once that has landed.
-
-            if any([not version in addresses for version in output_versions]):
-                unmemoized_steps.append(step.key)
-
-        return unmemoized_steps
+        return list(
+            {
+                step_output_handle.step_key
+                for step_output_handle in step_output_versions.keys()
+                if (pipeline_name, step_output_handle) not in step_output_addresses
+            }
+        )
 
     def create_run_for_pipeline(
         self,
@@ -529,7 +556,7 @@ class DagsterInstance:
 
         if solids_to_execute:
             if isinstance(pipeline_def, PipelineSubsetDefinition):
-                # for the case when pipeline_def is created by ExecutablePipeline or ExternalPipeline
+                # for the case when pipeline_def is created by IPipeline or ExternalPipeline
                 check.invariant(
                     solids_to_execute == pipeline_def.solids_to_execute,
                     "Cannot create a PipelineRun from pipeline subset {pipeline_solids_to_execute} "
@@ -544,6 +571,13 @@ class DagsterInstance:
                     solids_to_execute=solids_to_execute
                 )
 
+        full_execution_plan = execution_plan or create_execution_plan(
+            pipeline_def, run_config=run_config, mode=mode,
+        )
+        check.invariant(
+            len(full_execution_plan.step_keys_to_execute) == len(full_execution_plan.steps)
+        )
+
         if _is_memoized_run(tags):
             if step_keys_to_execute:
                 raise DagsterInvariantViolationError(
@@ -551,25 +585,15 @@ class DagsterInstance:
                     "pipeline runs."
                 )
 
-            speculative_execution_plan = create_execution_plan(
-                pipeline_def, run_config=run_config, mode=mode,
-            )
-
-            step_versions = resolve_step_versions(
-                speculative_execution_plan=speculative_execution_plan,
-            )
-
             step_keys_to_execute = self.resolve_unmemoized_steps(
-                speculative_execution_plan, step_versions
+                full_execution_plan, run_config=run_config, mode=mode,
             )  # TODO: tighter integration with existing step_keys_to_execute functionality
 
-        if execution_plan is None:
-            execution_plan = create_execution_plan(
-                pipeline_def,
-                run_config=run_config,
-                mode=mode,
-                step_keys_to_execute=step_keys_to_execute,
-            )
+        subsetted_execution_plan = (
+            full_execution_plan.build_subset_plan(step_keys_to_execute)
+            if step_keys_to_execute
+            else full_execution_plan
+        )
 
         return self.create_run(
             pipeline_name=pipeline_def.name,
@@ -585,7 +609,7 @@ class DagsterInstance:
             parent_run_id=parent_run_id,
             pipeline_snapshot=pipeline_def.get_pipeline_snapshot(),
             execution_plan_snapshot=snapshot_from_execution_plan(
-                execution_plan, pipeline_def.get_pipeline_snapshot_id()
+                subsetted_execution_plan, pipeline_def.get_pipeline_snapshot_id()
             ),
             parent_pipeline_snapshot=pipeline_def.get_parent_pipeline_snapshot(),
         )
@@ -978,7 +1002,7 @@ class DagsterInstance:
         from dagster.core.events.log import DagsterEventRecord
 
         check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
-        message = "This pipeline run has been marked as failed from outside the execution context"
+        message = "This pipeline run has been marked as failed from outside the execution context."
 
         dagster_event = DagsterEvent(
             event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
@@ -995,6 +1019,7 @@ class DagsterInstance:
             timestamp=time.time(),
             dagster_event=dagster_event,
         )
+
         self.handle_new_event(event_record)
         return dagster_event
 
@@ -1042,7 +1067,7 @@ class DagsterInstance:
 
     def running_schedule_count(self, schedule_origin_id):
         if self._scheduler:
-            return self._scheduler.running_schedule_count(schedule_origin_id)
+            return self._scheduler.running_schedule_count(self, schedule_origin_id)
         return 0
 
     def scheduler_debug_info(self):
@@ -1104,6 +1129,9 @@ class DagsterInstance:
 
     def get_schedule_ticks(self, schedule_origin_id):
         return self._schedule_storage.get_schedule_ticks(schedule_origin_id)
+
+    def get_latest_tick(self, schedule_origin_id):
+        return self._schedule_storage.get_latest_tick(schedule_origin_id)
 
     def get_schedule_tick_stats(self, schedule_origin_id):
         return self._schedule_storage.get_schedule_tick_stats(schedule_origin_id)

@@ -7,18 +7,19 @@ import {
   DagsterRepoOption,
   isRepositoryOptionEqual,
   useDagitExecutablePath,
-} from '../DagsterRepositoryContext';
-import {RepositoryInformation} from '../RepositoryInformation';
-
-import {ReloadRepositoryLocationButton} from './ReloadRepositoryLocationButton';
+} from 'src/DagsterRepositoryContext';
+import {RepositoryInformation} from 'src/RepositoryInformation';
+import {ReloadRepositoryLocationButton} from 'src/nav/ReloadRepositoryLocationButton';
 
 interface RepositoryPickerProps {
+  loading: boolean;
   options: DagsterRepoOption[];
   repo: DagsterRepoOption | null;
   setRepo: (repo: DagsterRepoOption) => void;
 }
 
 export const RepositoryPicker: React.FunctionComponent<RepositoryPickerProps> = ({
+  loading,
   repo,
   setRepo,
   options,
@@ -30,6 +31,23 @@ export const RepositoryPicker: React.FunctionComponent<RepositoryPickerProps> = 
   const selectOption = (repo: DagsterRepoOption) => {
     setRepo(repo);
     history.push('/');
+  };
+
+  const titleContents = () => {
+    if (repo) {
+      return (
+        <>
+          {repo.repository.name}
+          <Icon icon="caret-down" style={{opacity: 0.9, marginLeft: 3}} />
+        </>
+      );
+    }
+
+    if (loading) {
+      return <Spinner size={16} />;
+    }
+
+    return <NoReposFound>No repositories found</NoReposFound>;
   };
 
   return (
@@ -61,16 +79,7 @@ export const RepositoryPicker: React.FunctionComponent<RepositoryPickerProps> = 
       <RepositoryPickerFlexContainer>
         <div style={{flex: 1, minWidth: 0}}>
           <div style={{fontSize: 10.5, color: Colors.GRAY1, userSelect: 'none'}}>REPOSITORY</div>
-          <RepoTitle>
-            {repo ? (
-              <>
-                {repo.repository.name}
-                <Icon icon="caret-down" style={{opacity: 0.9, marginLeft: 3}} />
-              </>
-            ) : (
-              <Spinner size={16} />
-            )}
-          </RepoTitle>
+          <RepoTitle>{titleContents()}</RepoTitle>
         </div>
         {repo?.repositoryLocation.isReloadSupported && (
           <ReloadRepositoryLocationButton location={repo.repositoryLocation.name} />
@@ -98,4 +107,10 @@ const RepositoryPickerFlexContainer = styled.div`
   &:hover {
     background: ${Colors.BLACK};
   }
+`;
+
+const NoReposFound = styled.div`
+  color: ${Colors.GRAY3};
+  font-size: 12px;
+  margin-top: 8px;
 `;

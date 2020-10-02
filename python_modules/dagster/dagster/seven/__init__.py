@@ -213,6 +213,17 @@ def wait_for_process(process, timeout=None):
             raise Exception("Timed out waiting for process to finish")
 
 
+def kill_process(process):
+    if not isinstance(process, multiprocessing.Process):
+        raise Exception("invalid process argument passed to kill_process")
+
+    if sys.version_info >= (3, 7):
+        # Kill added in 3.7
+        process.kill()
+    else:
+        process.terminate()
+
+
 # https://stackoverflow.com/a/58437485/324449
 def is_module_available(module_name):
     if sys.version_info <= (3, 3):
@@ -303,3 +314,10 @@ def is_main_thread():
         return isinstance(
             threading.current_thread(), threading._MainThread  # pylint: disable=W0212
         )
+
+
+def get_import_error_message(import_error):
+    if sys.version_info.major >= 3:
+        return import_error.msg
+    else:
+        return str(import_error)
