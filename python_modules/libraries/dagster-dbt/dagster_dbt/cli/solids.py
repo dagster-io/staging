@@ -150,10 +150,8 @@ def dbt_cli_run(context) -> CliRunResult:
 
     yield AssetMaterialization(
         asset_key="dbt_run_cli_run_results",
-        description="TODO",
-        metadata_entries=[
-            EventMetadataEntry.json(cli_run_results, label="CLI Run Results", description="TODO")
-        ],
+        description="Metadata about the CLI execution of `dbt run`.",
+        metadata_entries=[EventMetadataEntry.json(cli_run_results, label="CLI Results")],
     )
 
     yield Output(CliRunResult.from_dict(cli_run_results))
@@ -221,10 +219,8 @@ def dbt_cli_test(context) -> CliRunResult:
 
     yield AssetMaterialization(
         asset_key="dbt_test_cli_run_results",
-        description="TODO",
-        metadata_entries=[
-            EventMetadataEntry.json(cli_run_results, label="CLI Run Results", description="TODO")
-        ],
+        description="Metadata about the CLI execution of `dbt test`.",
+        metadata_entries=[EventMetadataEntry.json(cli_run_results, label="CLI Results")],
     )
 
     yield Output(CliRunResult.from_dict(cli_run_results))
@@ -270,10 +266,8 @@ def dbt_cli_snapshot(context) -> Dict:
 
     yield AssetMaterialization(
         asset_key="dbt_snapshot_cli_results",
-        description="TODO",
-        metadata_entries=[
-            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
-        ],
+        description="Metadata about the CLI execution of `dbt snapshot`.",
+        metadata_entries=[EventMetadataEntry.json(cli_results, label="CLI Results")],
     )
 
     yield Output(cli_results)
@@ -310,9 +304,11 @@ def dbt_cli_run_operation(context) -> Dict:
 
     yield AssetMaterialization(
         asset_key="dbt_run_operation_cli_results",
-        description="TODO",
+        description="Metadata about the CLI execution of `dbt run-operation`.",
         metadata_entries=[
-            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
+            EventMetadataEntry.json(
+                cli_results, label="CLI Results", description="Metadata in JSON",
+            )
         ],
     )
 
@@ -358,10 +354,8 @@ def dbt_cli_snapshot_freshness(context) -> Dict:
 
     yield AssetMaterialization(
         asset_key="dbt_source_snapshot-freshness_cli_results",
-        description="TODO",
-        metadata_entries=[
-            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
-        ],
+        description="Metadata about the CLI execution of `dbt source snapshot-freshness`.",
+        metadata_entries=[EventMetadataEntry.json(cli_results, label="CLI Results")],
     )
 
     yield Output(cli_results)
@@ -444,10 +438,8 @@ def dbt_cli_compile(context) -> Dict:
 
     yield AssetMaterialization(
         asset_key="dbt_compile_cli_results",
-        description="TODO",
-        metadata_entries=[
-            EventMetadataEntry.json(cli_results, label="CLI Results", description="TODO")
-        ],
+        description="Metadata about the CLI execution of `dbt compile`.",
+        metadata_entries=[EventMetadataEntry.json(cli_results, label="CLI Results")],
     )
 
     yield Output(cli_results)
