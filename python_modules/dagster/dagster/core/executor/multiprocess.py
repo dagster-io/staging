@@ -180,9 +180,7 @@ class MultiprocessExecutor(Executor):
                             active_execution.verify_complete(pipeline_context, key)
 
                         # process skips from failures or uncovered inputs
-                        for event in active_execution.skipped_step_events_iterator(
-                            pipeline_context
-                        ):
+                        for event in active_execution.plan_events_iterator(pipeline_context):
                             yield event
 
                     # In the very small chance that we get interrupted in this coordination section and not
