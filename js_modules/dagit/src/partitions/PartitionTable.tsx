@@ -1,3 +1,4 @@
+import {ChartOptions} from 'chart.js';
 import * as React from 'react';
 import {Line, ChartData} from 'react-chartjs-2';
 import {createGlobalStyle} from 'styled-components/macro';
@@ -60,7 +61,7 @@ export const PartitionTable: React.FunctionComponent<{
   const graphData = {
     labels: Object.keys(runsByPartitionName),
     datasets,
-  } as ChartData<Chart.ChartData>;
+  } as ChartData<any>;
 
   const onPointClick = (events: any[]) => {
     const [element] = events.slice().reverse();
@@ -73,7 +74,7 @@ export const PartitionTable: React.FunctionComponent<{
     }
   };
 
-  const options: Chart.ChartOptions = {
+  const options: ChartOptions = {
     title: {display: true, text: title},
     scales: {
       yAxes: [
