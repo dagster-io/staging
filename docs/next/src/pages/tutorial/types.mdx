@@ -253,7 +253,12 @@ of <PyObject module="dagster" object="EventMetadataEntry" /> objects. You should
 constructors on <PyObject module="dagster" object="EventMetadataEntry" /> to construct these
 objects, which are flexible enough to support arbitrary metadata in JSON or Markdown format.
 
-Dagit knows how to display and archive structured metadata of this kind for future review:
+Dagit knows how to display and archive structured metadata of this kind for future review 
+(Remember to provide the config):
+
+```YAML literalinclude caption=custom_type_input.yaml
+file:/docs_snippets/docs_snippets/intro_tutorial/basics/e04_quality/custom_type_input.yaml
+```
 
 ![custom_types_figure_two.png](/assets/images/tutorial/custom_types_figure_two.png)
 
