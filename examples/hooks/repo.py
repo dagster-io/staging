@@ -43,6 +43,7 @@ def b(_):
     raise Exception()
 
 
+# start_repo_marker_3
 mode_defs = [
     ModeDefinition(
         "dev",
@@ -54,6 +55,7 @@ mode_defs = [
     ),
     ModeDefinition("prod", resource_defs={"slack": slack_resource}),
 ]
+# end_repo_marker_3
 # start_repo_marker_1
 
 
@@ -67,7 +69,7 @@ def notif_all():
 
 # end_repo_marker_1
 
-
+# start_repo_marker_2
 @pipeline(mode_defs=mode_defs)
 def selective_notif():
     # only solid "a" triggers hooks: a slack message will be sent when it fails or succeeds
@@ -76,12 +78,17 @@ def selective_notif():
     b()
 
 
+# end_repo_marker_2
+
+
 @repository
 def repo():
     return [notif_all, selective_notif]
 
 
 if __name__ == "__main__":
+    # start_repo_marker_4
     with open(file_relative_path(__file__, "prod.yaml"), "r",) as fd:
         run_config = yaml.safe_load(fd.read())
     result = execute_pipeline(notif_all, run_config=run_config, mode="prod")
+    # end_repo_marker_4
