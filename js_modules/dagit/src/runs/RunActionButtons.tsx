@@ -3,14 +3,13 @@ import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import {useMutation} from 'react-apollo';
 
-import {useRepository, useRepositoryOptions} from '../DagsterRepositoryContext';
-import {SharedToaster} from '../DomUtils';
-import {IStepState} from '../RunMetadataProvider';
-import {LaunchButtonConfiguration, LaunchButtonDropdown} from '../execute/LaunchButton';
-import {PipelineRunStatus} from '../types/globalTypes';
-
-import {StepSelection} from './Run';
-import {CANCEL_MUTATION, ReExecutionStyle} from './RunUtils';
+import {useRepository, useRepositoryOptions} from 'src/DagsterRepositoryContext';
+import {SharedToaster} from 'src/DomUtils';
+import {IStepState} from 'src/RunMetadataProvider';
+import {LaunchButtonConfiguration, LaunchButtonDropdown} from 'src/execute/LaunchButton';
+import {StepSelection} from 'src/runs/Run';
+import {CANCEL_MUTATION, ReExecutionStyle} from 'src/runs/RunUtils';
+import {PipelineRunStatus} from 'src/types/globalTypes';
 
 // Descriptions of re-execute options
 export const REEXECUTE_PIPELINE_UNKNOWN =

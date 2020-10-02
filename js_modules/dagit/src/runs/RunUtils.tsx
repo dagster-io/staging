@@ -3,22 +3,21 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import * as yaml from 'yaml';
 
-import {showCustomAlert} from '../CustomAlertProvider';
-import {APP_PATH_PREFIX} from '../DomUtils';
-import {filterByQuery} from '../GraphQueryImpl';
-import PythonErrorInfo from '../PythonErrorInfo';
-import {Timestamp, TimezoneContext, timestampToString} from '../TimeComponents';
-import {formatElapsedTime} from '../Util';
-import {toGraphQueryItems} from '../gaant/GaantChart';
-import {ExecutionParams} from '../types/globalTypes';
-
-import {StepSelection} from './Run';
-import {LaunchPipelineExecution} from './types/LaunchPipelineExecution';
-import {LaunchPipelineReexecution} from './types/LaunchPipelineReexecution';
-import {RunActionMenuFragment} from './types/RunActionMenuFragment';
-import {RunFragment} from './types/RunFragment';
-import {RunTableRunFragment} from './types/RunTableRunFragment';
-import {RunTimeFragment} from './types/RunTimeFragment';
+import {showCustomAlert} from 'src/CustomAlertProvider';
+import {APP_PATH_PREFIX} from 'src/DomUtils';
+import {filterByQuery} from 'src/GraphQueryImpl';
+import PythonErrorInfo from 'src/PythonErrorInfo';
+import {Timestamp, TimezoneContext, timestampToString} from 'src/TimeComponents';
+import {formatElapsedTime} from 'src/Util';
+import {toGraphQueryItems} from 'src/gaant/GaantChart';
+import {StepSelection} from 'src/runs/Run';
+import {LaunchPipelineExecution} from 'src/runs/types/LaunchPipelineExecution';
+import {LaunchPipelineReexecution} from 'src/runs/types/LaunchPipelineReexecution';
+import {RunActionMenuFragment} from 'src/runs/types/RunActionMenuFragment';
+import {RunFragment} from 'src/runs/types/RunFragment';
+import {RunTableRunFragment} from 'src/runs/types/RunTableRunFragment';
+import {RunTimeFragment} from 'src/runs/types/RunTimeFragment';
+import {ExecutionParams} from 'src/types/globalTypes';
 
 export function subsetTitleForRun(run: {tags: {key: string; value: string}[]}) {
   const stepsTag = run.tags.find((t) => t.key === 'dagster/step_selection');
