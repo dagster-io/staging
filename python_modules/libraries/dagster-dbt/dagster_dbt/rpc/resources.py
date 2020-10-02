@@ -449,7 +449,7 @@ def dbt_rpc_resource(context) -> DbtRpcClient:
 @resource(
     description="A resource representing a dbt RPC client that is configured for 0.0.0.0:8580",
 )
-def local_dbt_rpc_resource(context) -> DbtRpcClient:
+def local_dbt_rpc_resource(_context) -> DbtRpcClient:
     """This resource defines a dbt RPC client that is configured for ``0.0.0.0:8580``.
 
     Returns:
