@@ -72,6 +72,16 @@ def versioned_pipeline():
     return versioned_solid_takes_input(versioned_solid_no_input())
 
 
+@solid
+def solid_takes_input(_, intput):
+    return 2 * intput
+
+
+@pipeline
+def partially_versioned_pipeline():
+    return solid_takes_input(versioned_solid_no_input())
+
+
 def versioned_pipeline_expected_step1_version():
     solid1_def_version = versioned_solid_no_input.version
     solid1_config_version = resolve_config_version(None)
@@ -188,6 +198,20 @@ def test_resolve_unmemoized_steps_yes_stored_results():
     assert instance.resolve_unmemoized_steps(
         speculative_execution_plan, run_config={}, mode="default"
     ) == ["versioned_solid_takes_input.compute"]
+
+
+def test_resolve_unmemoized_steps_partial_versioning():
+    speculative_execution_plan = create_execution_plan(partially_versioned_pipeline)
+    step_output_handle = StepOutputHandle("versioned_solid_no_input.compute", "result")
+
+    instance = DagsterInstance.ephemeral()
+    instance.get_addresses_for_step_output_versions = mock.MagicMock(
+        return_value={(partially_versioned_pipeline.name, step_output_handle): "some_address"}
+    )
+
+    assert instance.resolve_unmemoized_steps(
+        speculative_execution_plan, run_config={}, mode="default"
+    ) == ["solid_takes_input.compute"]
 
 
 def test_versioned_execution_plan_no_external_dependencies():  # TODO: flesh out this test once version storage has been implemented
