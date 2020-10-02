@@ -15,6 +15,7 @@ import {Header, ScrollContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
 import {RepositoryInformation} from 'src/RepositoryInformation';
+import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {ScheduleStateRow} from 'src/schedules/ScheduleRow';
 import {SCHEDULE_STATE_FRAGMENT, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
 import {SCHEDULER_FRAGMENT, SchedulerInfo} from 'src/schedules/SchedulerInfo';
@@ -27,6 +28,7 @@ import {
 type ScheduleState = SchedulerRootQuery_scheduleStatesOrError_ScheduleStates_results;
 
 export const SchedulerRoot: React.FunctionComponent<{}> = () => {
+  useDocumentTitle('Scheduler');
   const queryResult = useQuery<SchedulerRootQuery>(SCHEDULER_ROOT_QUERY, {
     variables: {},
     fetchPolicy: 'cache-and-network',

@@ -7,6 +7,7 @@ import styled from 'styled-components/macro';
 import {createGlobalStyle} from 'styled-components/macro';
 
 import {Header} from 'src/ListComponents';
+import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {InstanceDetailsQuery} from 'src/types/InstanceDetailsQuery';
 
 const CodeMirrorShimStyle = createGlobalStyle`
@@ -26,6 +27,7 @@ const CodeMirrorShimStyle = createGlobalStyle`
 `;
 
 export const InstanceDetailsRoot: React.FunctionComponent = () => {
+  useDocumentTitle('Instance Details');
   const {data} = useQuery<InstanceDetailsQuery>(INSTANCE_DETAILS_QUERY, {
     fetchPolicy: 'cache-and-network',
   });

@@ -10,6 +10,7 @@ import {Header, Legend, LegendColumn, RowColumn, RowContainer} from 'src/ListCom
 import {Loading} from 'src/Loading';
 import {AssetRoot} from 'src/assets/AssetRoot';
 import {AssetsRootQuery_assetsOrError_AssetConnection_nodes} from 'src/assets/types/AssetsRootQuery';
+import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 
 type Asset = AssetsRootQuery_assetsOrError_AssetConnection_nodes;
 
@@ -233,6 +234,7 @@ const matches = (haystack: string, needle: string) =>
     .every((word) => haystack.toLowerCase().includes(word));
 
 const AssetsTable = ({assets, currentPath}: {assets: Asset[]; currentPath: string[]}) => {
+  useDocumentTitle(currentPath.length ? `Assets: ${currentPath.join('.')}` : 'Assets');
   const pathMap: {[key: string]: Asset} = {};
   assets.forEach((asset) => {
     const [pathKey] = asset.key.path.slice(currentPath.length, currentPath.length + 1);
