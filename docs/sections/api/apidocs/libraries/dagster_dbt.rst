@@ -57,7 +57,7 @@ RPC
 
 .. autofunction:: dbt_rpc_resource
 
-.. autoattribute:: local_dbt_rpc_resource
+.. autofunction:: local_dbt_rpc_resource
 
 .. autoclass:: DbtRpcClient
     :members:
