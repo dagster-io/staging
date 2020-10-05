@@ -71,7 +71,7 @@ def execute_cli(
         command_list.append(str(value))
 
     # Execute the dbt CLI command in a subprocess.
-    command = ' '.join(command_list)
+    command = " ".join(command_list)
     log.info(f"Executing command: $ {command}")
 
     return_code = 0
