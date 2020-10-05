@@ -1,6 +1,7 @@
 from abc import ABCMeta, abstractmethod, abstractproperty
 from datetime import datetime
 
+import pendulum
 import six
 
 from dagster import check
@@ -64,7 +65,6 @@ from dagster.grpc.types import (
     PartitionSetExecutionParamArgs,
     ScheduleExecutionDataMode,
 )
-from dagster.seven import get_timestamp_from_utc_datetime
 from dagster.utils.hosted_user_process import (
     external_repo_from_def,
     is_repository_location_in_same_python_env,
@@ -380,7 +380,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
             schedule_execution_data_mode, "schedule_execution_data_mode", ScheduleExecutionDataMode
         )
         check.opt_inst_param(
-            scheduled_execution_datetime_utc, "scheduled_execution_datetime_utc", datetime
+            scheduled_execution_datetime_utc, "scheduled_execution_datetime_utc", pendulum.DateTime
         )
 
         repo_origin = repository_handle.get_origin()
@@ -389,7 +389,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
             repository_origin=repo_origin,
             schedule_name=schedule_name,
             scheduled_execution_timestamp_utc=(
-                get_timestamp_from_utc_datetime(scheduled_execution_datetime_utc)
+                scheduled_execution_datetime_utc.float_timestamp
                 if scheduled_execution_datetime_utc
                 else None
             ),

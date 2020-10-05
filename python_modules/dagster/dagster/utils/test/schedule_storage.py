@@ -1,6 +1,7 @@
 import sys
 import time
 
+import pendulum
 import pytest
 
 from dagster import DagsterInvariantViolationError
@@ -8,7 +9,6 @@ from dagster.core.code_pointer import ModuleCodePointer
 from dagster.core.origin import RepositoryPythonOrigin, SchedulePythonOrigin
 from dagster.core.scheduler import ScheduleState, ScheduleStatus
 from dagster.core.scheduler.scheduler import ScheduleTickData, ScheduleTickStatus
-from dagster.seven import get_current_datetime_in_utc, get_timestamp_from_utc_datetime
 from dagster.utils.error import SerializableErrorInfo
 
 
@@ -104,7 +104,7 @@ class TestScheduleStorage:
         schedule = self.build_schedule("my_schedule", "* * * * *")
         storage.add_schedule_state(schedule)
 
-        now_time = get_current_datetime_in_utc()
+        now_time = pendulum.now("UTC")
 
         new_schedule = schedule.with_status(ScheduleStatus.RUNNING, start_time_utc=now_time)
         storage.update_schedule_state(new_schedule)
@@ -115,7 +115,7 @@ class TestScheduleStorage:
         schedule = schedules[0]
         assert schedule.name == "my_schedule"
         assert schedule.status == ScheduleStatus.RUNNING
-        assert schedule.start_timestamp == get_timestamp_from_utc_datetime(now_time)
+        assert schedule.start_timestamp == now_time.float_timestamp
 
         stopped_schedule = schedule.with_status(ScheduleStatus.STOPPED)
         storage.update_schedule_state(stopped_schedule)

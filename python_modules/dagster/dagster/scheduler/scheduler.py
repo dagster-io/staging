@@ -5,6 +5,7 @@ import sys
 import time
 
 import click
+import pendulum
 from croniter import croniter_range
 
 from dagster import check
@@ -19,6 +20,7 @@ from dagster.core.host_representation import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler import (
+    DagsterCommandLineScheduler,
     ScheduleState,
     ScheduleStatus,
     ScheduleTickData,
@@ -27,11 +29,6 @@ from dagster.core.scheduler import (
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import SCHEDULED_EXECUTION_TIME_TAG, check_tags
 from dagster.grpc.types import ScheduleExecutionDataMode
-from dagster.seven import (
-    get_current_datetime_in_utc,
-    get_timestamp_from_utc_datetime,
-    get_utc_timezone,
-)
 from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.log import default_format_string
@@ -89,6 +86,11 @@ def scheduler_run_command(interval, max_catchup_runs):
     execute_scheduler_command(interval, max_catchup_runs)
 
 
+def _mockable_localtime(_):
+    now_time = pendulum.now()
+    return now_time.timetuple()
+
+
 def get_default_scheduler_logger():
     handler = logging.StreamHandler(sys.stdout)
     logger = logging.getLogger("dagster-scheduler")
@@ -97,9 +99,10 @@ def get_default_scheduler_logger():
 
     formatter = logging.Formatter(default_format_string(), "%Y-%m-%d %H:%M:%S")
 
-    formatter.converter = time.localtime
+    formatter.converter = _mockable_localtime
 
     handler.setFormatter(formatter)
+
     return logger
 
 
@@ -107,11 +110,11 @@ def execute_scheduler_command(interval, max_catchup_runs):
     logger = get_default_scheduler_logger()
     while True:
         with DagsterInstance.get() as instance:
-            end_datetime_utc = get_current_datetime_in_utc()
+            end_datetime_utc = pendulum.now("UTC")
 
             launch_scheduled_runs(instance, logger, end_datetime_utc, max_catchup_runs)
 
-            time_left = interval - (get_current_datetime_in_utc() - end_datetime_utc).seconds
+            time_left = interval - (pendulum.now("UTC") - end_datetime_utc).seconds
 
             if time_left > 0:
                 time.sleep(time_left)
@@ -152,6 +155,9 @@ def launch_scheduled_runs_for_schedule(
     check.inst_param(schedule_state, "schedule_state", ScheduleState)
     check.inst_param(end_datetime_utc, "end_datetime_utc", datetime.datetime)
 
+    scheduler = instance.scheduler
+    check.invariant(isinstance(scheduler, DagsterCommandLineScheduler))
+
     latest_tick = instance.get_latest_tick(schedule_state.schedule_origin_id)
 
     if not latest_tick:
@@ -162,10 +168,17 @@ def launch_scheduled_runs_for_schedule(
     else:
         start_timestamp_utc = latest_tick.timestamp + 1
 
-    start_datetime_utc = datetime.datetime.fromtimestamp(start_timestamp_utc, tz=get_utc_timezone())
+    timezone_str = scheduler.default_timezone_str
 
-    tick_times = list(
-        croniter_range(start_datetime_utc, end_datetime_utc, schedule_state.cron_schedule)
+    end_datetime = end_datetime_utc.in_tz(timezone_str)
+    start_datetime = pendulum.from_timestamp(start_timestamp_utc, tz=timezone_str)
+
+    check.invariant(start_datetime.timezone.name == end_datetime.timezone.name)
+
+    tick_times = (
+        list(croniter_range(start_datetime, end_datetime, schedule_state.cron_schedule))
+        if end_datetime >= start_datetime
+        else []
     )
 
     if not tick_times:
@@ -196,8 +209,11 @@ def launch_scheduled_runs_for_schedule(
             )
         )
 
-    for schedule_time_utc in tick_times:
-        schedule_timestamp = get_timestamp_from_utc_datetime(schedule_time_utc)
+    for schedule_time in tick_times:
+        schedule_time_utc = pendulum.instance(schedule_time).in_tz("UTC")
+
+        schedule_timestamp = schedule_time_utc.float_timestamp
+
         if latest_tick and latest_tick.timestamp == schedule_timestamp:
             tick = latest_tick
             logger.info("Resuming previously interrupted schedule execution")
@@ -257,6 +273,8 @@ def _schedule_run_at_time(
     debug_crash_flags,
 ):
     schedule_name = schedule_state.name
+
+    check.invariant(schedule_time_utc.timezone_name == "UTC")
 
     repo_dict = repo_location.get_repositories()
     check.invariant(
