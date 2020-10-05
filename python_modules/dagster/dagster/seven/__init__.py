@@ -12,6 +12,8 @@ import threading
 import time
 from types import MethodType
 
+import pendulum
+
 from .json import JSONDecodeError, dump, dumps
 from .temp_dir import get_system_temp_directory
 
@@ -273,18 +275,6 @@ def get_utc_timezone():
 
 def get_current_datetime_in_utc():
     return datetime.datetime.now(tz=get_utc_timezone())
-
-
-def get_timestamp_from_utc_datetime(utc_datetime):
-    if utc_datetime.tzinfo != get_utc_timezone():
-        raise Exception("Must pass in a UTC timezone to compute UNIX timestamp")
-
-    if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
-        return utc_datetime.timestamp()
-    else:
-        import pytz
-
-        return (utc_datetime - datetime.datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds()
 
 
 def is_lambda(target):

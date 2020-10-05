@@ -1,18 +1,17 @@
 import abc
 import os
 from collections import namedtuple
-from datetime import datetime
 from enum import Enum
 
+import pendulum
 import six
 
-from dagster import check
+from dagster import Field, String, check
 from dagster.core.errors import DagsterError
 from dagster.core.host_representation import ExternalSchedule
 from dagster.core.instance import DagsterInstance
 from dagster.core.origin import ScheduleOrigin
 from dagster.serdes import ConfigurableClass, whitelist_for_serdes
-from dagster.seven import get_current_datetime_in_utc, get_timestamp_from_utc_datetime
 from dagster.utils import mkdir_p
 from dagster.utils.error import SerializableErrorInfo
 
@@ -155,7 +154,7 @@ class ScheduleState(
 
     def with_status(self, status, start_time_utc=None):
         check.inst_param(status, "status", ScheduleStatus)
-        check.opt_inst_param(start_time_utc, "start_time_utc", datetime)
+        check.opt_inst_param(start_time_utc, "start_time_utc", pendulum.datetime)
 
         check.invariant(
             (status == ScheduleStatus.RUNNING) == (start_time_utc != None),
@@ -166,9 +165,7 @@ class ScheduleState(
             self.origin,
             status=status,
             cron_schedule=self.cron_schedule,
-            start_timestamp=get_timestamp_from_utc_datetime(start_time_utc)
-            if start_time_utc
-            else None,
+            start_timestamp=start_time_utc.float_timestamp if start_time_utc else None,
         )
 
 
@@ -214,7 +211,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
 
                 new_timestamp = existing_schedule_state.start_timestamp
                 if not new_timestamp and existing_schedule_state.status == ScheduleStatus.RUNNING:
-                    new_timestamp = get_timestamp_from_utc_datetime(get_current_datetime_in_utc())
+                    new_timestamp = pendulum.now("UTC").float_timestamp
 
                 # Keep the status, update target and cron schedule
                 schedule_state = ScheduleState(
@@ -303,7 +300,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
 
         self.start_schedule(instance, external_schedule)
         started_schedule = schedule_state.with_status(
-            ScheduleStatus.RUNNING, start_time_utc=get_current_datetime_in_utc()
+            ScheduleStatus.RUNNING, start_time_utc=pendulum.now("UTC"),
         )
         instance.update_schedule_state(started_schedule)
         return started_schedule
@@ -435,10 +432,9 @@ class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
     long-lived process.
     """
 
-    def __init__(
-        self, inst_data=None,
-    ):
+    def __init__(self, inst_data=None, default_timezone_str="UTC"):
         self._inst_data = inst_data
+        self.default_timezone_str = default_timezone_str
 
     @property
     def inst_data(self):
@@ -446,11 +442,15 @@ class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
 
     @classmethod
     def config_type(cls):
-        return {}
+        return {"default_timezone": Field(String, is_required=False, default_value="UTC")}
 
     @staticmethod
     def from_config_value(inst_data, config_value):
-        return DagsterCommandLineScheduler(inst_data=inst_data)
+        default_timezone = config_value.get("default_timezone")
+        return DagsterCommandLineScheduler(
+            inst_data=inst_data,
+            default_timezone_str=default_timezone if default_timezone else "UTC",
+        )
 
     def debug_info(self):
         return ""
