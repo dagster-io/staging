@@ -259,8 +259,10 @@ class DagsterKubernetesClient:
 
             # Get all jobs in the namespace and find the matching job
             def _get_jobs_for_namespace():
-                jobs = self.batch_api.list_namespaced_job(namespace=namespace)
-                return next((j for j in jobs.items if j.metadata.name == job_name), None)
+                jobs = self.batch_api.list_namespaced_job(
+                    namespace=namespace, field_selector="metadata.name={}".format(job_name)
+                )
+                return next(jobs.items, None)
 
             job = k8s_api_retry(_get_jobs_for_namespace, max_retries=3)
 
