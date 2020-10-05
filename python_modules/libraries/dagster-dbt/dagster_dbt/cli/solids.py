@@ -22,7 +22,7 @@ DEFAULT_DBT_EXECUTABLE = "dbt"
 
 # The following config fields correspond to flags that apply to all dbt CLI commands. For details
 # on dbt CLI flags, see
-# https://github.com/fishtown-analytics/dbt/blob/dev/marian-anderson/core/dbt/main.py#L260-L329
+# https://github.com/fishtown-analytics/dbt/blob/1f8e29276e910c697588c43f08bc881379fff178/core/dbt/main.py#L260-L329
 CLI_COMMON_FLAGS_CONFIG_SCHEMA = {
     "project-dir": Field(
         config=StringSource,
