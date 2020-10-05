@@ -148,72 +148,64 @@ class DagsterKubernetesClient:
             time.time,
         )
 
-    def delete_job(
-        self, job_name, namespace,
+    ### Job operations ###
+
+    def wait_for_job(
+        self,
+        job_name,
+        namespace,
+        wait_timeout=DEFAULT_WAIT_TIMEOUT,
+        wait_time_between_attempts=DEFAULT_WAIT_BETWEEN_ATTEMPTS,
     ):
-        """Delete Kubernetes Job. We also need to delete corresponding pods due to:
-        https://github.com/kubernetes-client/python/issues/234
+        """ Wait for a job to launch and be running.
 
         Args:
             job_name (str): Name of the job to wait for.
             namespace (str): Namespace in which the job is located.
+            wait_timeout (numeric, optional): Timeout after which to give up and raise exception.
+                Defaults to DEFAULT_WAIT_TIMEOUT.
+            wait_time_between_attempts (numeric, optional): Wait time between polling attempts. Defaults
+                to DEFAULT_WAIT_BETWEEN_ATTEMPTS.
+
+        Raises:
+            DagsterK8sError: Raised when wait_timeout is exceeded or an error is encountered.
         """
         check.str_param(job_name, "job_name")
         check.str_param(namespace, "namespace")
+        check.numeric_param(wait_timeout, "wait_timeout")
+        check.numeric_param(wait_time_between_attempts, "wait_time_between_attempts")
 
-        try:
-            pod_names = self.get_pod_names_for_job(job_name, namespace)
+        job = None
+        start = self.timer()
 
-            # Collect all the errors so that we can post-process before raising
-            pod_names = self.get_pod_names_for_job(job_name, namespace)
+        while not job:
+            if self.timer() - start > wait_timeout:
+                raise DagsterK8sTimeoutError(
+                    "Timed out while waiting for job {job_name}"
+                    " to launch".format(job_name=job_name)
+                )
 
-            errors = []
-            try:
-                self.batch_api.delete_namespaced_job(name=job_name, namespace=namespace)
-            except Exception as e:  # pylint: disable=broad-except
-                errors.append(e)
+            # Get all jobs in the namespace and find the matching job
+            def _get_jobs_for_namespace():
+                jobs = self.batch_api.list_namespaced_job(
+                    namespace=namespace, field_selector="metadata.name={}".format(job_name)
+                )
+                if jobs.items:
+                    check.invariant(
+                        len(jobs.items) == 1,
+                        'There should only be one k8s job with name "{}", but got multiple jobs:" {}'.format(
+                            job_name, jobs.items
+                        ),
+                    )
+                    return jobs.items[0]
+                else:
+                    return None
 
-            for pod_name in pod_names:
-                try:
-                    self.core_api.delete_namespaced_pod(name=pod_name, namespace=namespace)
-                except Exception as e:  # pylint: disable=broad-except
-                    errors.append(e)
+            job = k8s_api_retry(_get_jobs_for_namespace, max_retries=3)
 
-            if len(errors) > 0:
-                # Raise first non-expected error. Else, raise first error.
-                for error in errors:
-                    if not (
-                        isinstance(error, kubernetes.client.rest.ApiException)
-                        and error.reason == "Not Found"
-                    ):
-                        raise error
-                raise errors[0]
-
-            return True
-        except kubernetes.client.rest.ApiException as e:
-            if e.reason == "Not Found":
-                return False
-            raise e
-
-    def get_pod_names_for_job(self, job_name, namespace):
-        """Get pod names that corresponds to job name
-
-        Args:
-            job_name (str): Name of the job to wait for.
-            namespace (str): Namespace in which the job is located.
-        """
-        check.str_param(job_name, "job_name")
-        check.str_param(namespace, "namespace")
-
-        pods = self.core_api.list_namespaced_pod(
-            label_selector="job-name=={}".format(job_name), namespace=namespace
-        )
-
-        pod_names = []
-        for item in pods.items:
-            pod_names.append(item.metadata.name)
-
-        return pod_names
+            if not job:
+                self.logger('Job "{job_name}" not yet launched, waiting'.format(job_name=job_name))
+                self.sleeper(wait_time_between_attempts)
 
     def wait_for_job_success(
         self,
@@ -246,38 +238,15 @@ class DagsterKubernetesClient:
         check.numeric_param(wait_time_between_attempts, "wait_time_between_attempts")
         check.int_param(num_pods_to_wait_for, "num_pods_to_wait_for")
 
-        job = None
         start = self.timer()
 
-        # Wait for job to launch
-        while not job:
-            if self.timer() - start > wait_timeout:
-                raise DagsterK8sTimeoutError(
-                    "Timed out while waiting for job {job_name}"
-                    " to launch".format(job_name=job_name)
-                )
-
-            # Get all jobs in the namespace and find the matching job
-            def _get_jobs_for_namespace():
-                jobs = self.batch_api.list_namespaced_job(
-                    namespace=namespace, field_selector="metadata.name={}".format(job_name)
-                )
-                if jobs.items:
-                    check.invariant(
-                        len(jobs.items) == 1,
-                        'There should only be one k8s job with name "{}", but got multiple jobs:" {}'.format(
-                            job_name, jobs.items
-                        ),
-                    )
-                    return jobs.items[0]
-                else:
-                    return None
-
-            job = k8s_api_retry(_get_jobs_for_namespace, max_retries=3)
-
-            if not job:
-                self.logger('Job "{job_name}" not yet launched, waiting'.format(job_name=job_name))
-                self.sleeper(wait_time_between_attempts)
+        # Wait for job to be running
+        self.wait_for_job(
+            job_name,
+            namespace,
+            wait_timeout=wait_timeout,
+            wait_time_between_attempts=wait_time_between_attempts,
+        )
 
         # Wait for the job status to be completed. We check the status every
         # wait_time_between_attempts seconds
@@ -321,6 +290,55 @@ class DagsterKubernetesClient:
 
             self.sleeper(wait_time_between_attempts)
 
+    def delete_job(
+        self, job_name, namespace,
+    ):
+        """Delete Kubernetes Job. We also need to delete corresponding pods due to:
+        https://github.com/kubernetes-client/python/issues/234
+
+        Args:
+            job_name (str): Name of the job to wait for.
+            namespace (str): Namespace in which the job is located.
+        """
+        check.str_param(job_name, "job_name")
+        check.str_param(namespace, "namespace")
+
+        try:
+            pod_names = self.get_pod_names_in_job(job_name, namespace)
+
+            # Collect all the errors so that we can post-process before raising
+            pod_names = self.get_pod_names_in_job(job_name, namespace)
+
+            errors = []
+            try:
+                self.batch_api.delete_namespaced_job(name=job_name, namespace=namespace)
+            except Exception as e:  # pylint: disable=broad-except
+                errors.append(e)
+
+            for pod_name in pod_names:
+                try:
+                    self.core_api.delete_namespaced_pod(name=pod_name, namespace=namespace)
+                except Exception as e:  # pylint: disable=broad-except
+                    errors.append(e)
+
+            if len(errors) > 0:
+                # Raise first non-expected error. Else, raise first error.
+                for error in errors:
+                    if not (
+                        isinstance(error, kubernetes.client.rest.ApiException)
+                        and error.reason == "Not Found"
+                    ):
+                        raise error
+                raise errors[0]
+
+            return True
+        except kubernetes.client.rest.ApiException as e:
+            if e.reason == "Not Found":
+                return False
+            raise e
+
+    ### Pod operations ###
+
     def retrieve_pod_logs(self, pod_name, namespace):
         """Retrieves the raw pod logs for the pod named `pod_name` from Kubernetes.
 
@@ -344,46 +362,6 @@ class DagsterKubernetesClient:
                 name=pod_name, namespace=namespace, _preload_content=False
             ).data
         )
-
-    def wait_for_job(
-        self,
-        job_name,
-        namespace,
-        wait_timeout=DEFAULT_WAIT_TIMEOUT,
-        wait_time_between_attempts=DEFAULT_WAIT_BETWEEN_ATTEMPTS,
-    ):
-        """ Wait for a job to launch and be running.
-
-        Args:
-            job_name (str): Name of the job to wait for.
-            namespace (str): Namespace in which the job is located.
-            wait_timeout (numeric, optional): Timeout after which to give up and raise exception.
-                Defaults to DEFAULT_WAIT_TIMEOUT.
-            wait_time_between_attempts (numeric, optional): Wait time between polling attempts. Defaults
-                to DEFAULT_WAIT_BETWEEN_ATTEMPTS.
-
-        Raises:
-            DagsterK8sError: Raised when wait_timeout is exceeded or an error is encountered.
-        """
-        check.str_param(job_name, "job_name")
-        check.str_param(namespace, "namespace")
-        check.numeric_param(wait_timeout, "wait_timeout")
-        check.numeric_param(wait_time_between_attempts, "wait_time_between_attempts")
-
-        job = None
-
-        start = self.timer()
-        # Ensure we found the job that we launched
-        while not job:
-            if self.timer() - start > wait_timeout:
-                raise DagsterK8sError("Timed out while waiting for job to launch")
-
-            jobs = self.batch_api.list_namespaced_job(namespace=namespace)
-            job = next((j for j in jobs.items if j.metadata.name == job_name), None)
-
-            if not job:
-                self.logger('Job "{job_name}" not yet launched, waiting'.format(job_name=job_name))
-                self.sleeper(wait_time_between_attempts)
 
     def wait_for_pod(
         self,
