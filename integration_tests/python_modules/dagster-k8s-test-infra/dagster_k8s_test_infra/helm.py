@@ -179,6 +179,18 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config):
         print("Waiting for celery workers")
         pods = kubernetes.client.CoreV1Api().list_namespaced_pod(namespace=namespace)
         pod_names = [p.metadata.name for p in pods.items if "celery-workers" in p.metadata.name]
+
+        celery_config = helm_config.get("celery", {})
+        num_celery_workers = celery_config.get("replicaCount", 0) + sum(
+            queue.get("replicaCount", 0) for queue in celery_config.get("extraWorkerQueues", [])
+        )
+
+        assert num_celery_workers == len(
+            pod_names
+        ), "num_celery_workers: {num_celery_workers} should equal num actual celery worker pods: {num_pod_names}".format(
+            num_celery_workers=num_celery_workers, num_pod_names=len(pod_names)
+        )
+
         for pod_name in pod_names:
             print("Waiting for Celery worker pod %s" % pod_name)
             wait_for_pod(pod_name, namespace=namespace)
@@ -248,8 +260,8 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
         },
         "celery": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
-            # https://github.com/dagster-io/dagster/issues/2671
-            # 'extraWorkerQueues': [{'name': 'extra-queue-1', 'replicaCount': 1},],
+            "replicaCount": 1,
+            "extraWorkerQueues": [{"name": "extra-queue-1", "replicaCount": 1},],
             "livenessProbe": {
                 "initialDelaySeconds": 15,
                 "periodSeconds": 10,
@@ -324,8 +336,8 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
         },
         "celery": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
-            # https://github.com/dagster-io/dagster/issues/2671
-            # 'extraWorkerQueues': [{'name': 'extra-queue-1', 'replicaCount': 1},],
+            "replicaCount": 1,
+            "extraWorkerQueues": [{"name": "extra-queue-1", "replicaCount": 1},],
             "livenessProbe": {
                 "initialDelaySeconds": 15,
                 "periodSeconds": 10,
