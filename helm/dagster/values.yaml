@@ -221,8 +221,8 @@ celery:
     # Each additional queue specified will be provisioned as an additional deployment alongside the
     # default Celery worker deployment.
     # Example:
-    # - name: "redshift"
-    #   replicaCount: "3"
+    - name: "redshift"
+      replicaCount: "1"
   # Additional environment variables to set on the celery/job containers
   # A Kubernetes ConfigMap will be created with these environment variables.
   env:
