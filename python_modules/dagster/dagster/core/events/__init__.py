@@ -356,6 +356,17 @@ class DagsterEvent(
         return self.event_type == DagsterEventType.ENGINE_EVENT
 
     @property
+    def is_external_operation_event(self):
+        return (
+            self.event_type_value == DagsterEventType.OBJECT_STORE_OPERATION.value
+            and self.event_specific_data.op
+            in (
+                ObjectStoreOperationType.SET_EXTERNAL_OBJECT.value,
+                ObjectStoreOperationType.GET_EXTERNAL_OBJECT.value,
+            )
+        )
+
+    @property
     def asset_key(self):
         if self.event_type != DagsterEventType.STEP_MATERIALIZATION:
             return None
@@ -780,7 +791,12 @@ class DagsterEvent(
                 op=object_store_operation_result.op,
                 value_name=value_name,
                 metadata_entries=[
-                    EventMetadataEntry.path(object_store_operation_result.key, label="key")
+                    EventMetadataEntry.path(object_store_operation_result.key, label="key"),
+                    EventMetadataEntry.address(
+                        address=object_store_operation_result.address,
+                        label="address",
+                        step_output_handle=object_store_operation_result.step_output_handle,
+                    ),
                 ],
             ),
             message=message,

@@ -14,6 +14,13 @@ export interface MetadataEntryFragment_EventPathMetadataEntry {
   path: string;
 }
 
+export interface MetadataEntryFragment_EventAddressMetadataEntry {
+  __typename: "EventAddressMetadataEntry";
+  label: string;
+  description: string | null;
+  address: string | null;
+}
+
 export interface MetadataEntryFragment_EventJsonMetadataEntry {
   __typename: "EventJsonMetadataEntry";
   label: string;
@@ -57,4 +64,4 @@ export interface MetadataEntryFragment_EventFloatMetadataEntry {
   value: number;
 }
 
-export type MetadataEntryFragment = MetadataEntryFragment_EventPathMetadataEntry | MetadataEntryFragment_EventJsonMetadataEntry | MetadataEntryFragment_EventUrlMetadataEntry | MetadataEntryFragment_EventTextMetadataEntry | MetadataEntryFragment_EventMarkdownMetadataEntry | MetadataEntryFragment_EventPythonArtifactMetadataEntry | MetadataEntryFragment_EventFloatMetadataEntry;
+export type MetadataEntryFragment = MetadataEntryFragment_EventPathMetadataEntry | MetadataEntryFragment_EventAddressMetadataEntry | MetadataEntryFragment_EventJsonMetadataEntry | MetadataEntryFragment_EventUrlMetadataEntry | MetadataEntryFragment_EventTextMetadataEntry | MetadataEntryFragment_EventMarkdownMetadataEntry | MetadataEntryFragment_EventPythonArtifactMetadataEntry | MetadataEntryFragment_EventFloatMetadataEntry;

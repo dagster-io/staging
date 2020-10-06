@@ -63,6 +63,9 @@ export class MetadataEntry extends React.Component<{
         ... on EventPathMetadataEntry {
           path
         }
+        ... on EventAddressMetadataEntry {
+          address
+        }
         ... on EventJsonMetadataEntry {
           jsonString
         }
@@ -107,6 +110,8 @@ export class MetadataEntry extends React.Component<{
             />
           </>
         );
+      case 'EventAddressMetadataEntry':
+        return entry.address;
 
       case 'EventJsonMetadataEntry':
         return (

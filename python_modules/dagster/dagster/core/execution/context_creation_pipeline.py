@@ -106,7 +106,7 @@ class ContextCreationData(
     namedtuple(
         "_ContextCreationData",
         "pipeline environment_config pipeline_run mode_def system_storage_def "
-        "intermediate_storage_def executor_def instance resource_keys_to_init",
+        "intermediate_storage_def executor_def instance resource_keys_to_init external_intermediates",
     )
 ):
     @property
@@ -137,6 +137,7 @@ def create_context_creation_data(
         resource_keys_to_init=get_required_resource_keys_to_init(
             execution_plan, system_storage_def, intermediate_storage_def
         ),
+        external_intermediates=instance.get_external_intermediates(pipeline_run.parent_run_id),
     )
 
 
@@ -395,11 +396,12 @@ def create_system_storage_data(
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 
-    environment_config, pipeline_def, system_storage_def, pipeline_run = (
+    environment_config, pipeline_def, system_storage_def, pipeline_run, external_intermediates = (
         context_creation_data.environment_config,
         context_creation_data.pipeline_def,
         context_creation_data.system_storage_def,
         context_creation_data.pipeline_run,
+        context_creation_data.external_intermediates,
     )
 
     system_storage_data = (
@@ -420,6 +422,7 @@ def create_system_storage_data(
                 resources=scoped_resources_builder.build(
                     context_creation_data.system_storage_def.required_resource_keys,
                 ),
+                external_intermediates=external_intermediates,
             )
         )
     )
@@ -432,11 +435,18 @@ def create_intermediate_storage(
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 
-    environment_config, pipeline_def, intermediate_storage_def, pipeline_run = (
+    (
+        environment_config,
+        pipeline_def,
+        intermediate_storage_def,
+        pipeline_run,
+        external_intermediates,
+    ) = (
         context_creation_data.environment_config,
         context_creation_data.pipeline_def,
         context_creation_data.intermediate_storage_def,
         context_creation_data.pipeline_run,
+        context_creation_data.external_intermediates,
     )
     intermediate_storage_data = (
         intermediate_storage_data
@@ -456,6 +466,7 @@ def create_intermediate_storage(
                 resources=scoped_resources_builder.build(
                     context_creation_data.intermediate_storage_def.required_resource_keys,
                 ),
+                external_intermediates=external_intermediates,
             )
         )
     )

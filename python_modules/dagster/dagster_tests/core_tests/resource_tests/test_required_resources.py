@@ -469,6 +469,13 @@ def define_materialization_pipeline(should_require_resources=True, resources_ini
         resources_initted["a"] = True
         yield "A"
 
+    @dagster_type_loader(
+        String, required_resource_keys={"a"} if should_require_resources else set()
+    )
+    def load(context, hello):
+        assert context.resources.a == "A"
+        return hello
+
     @dagster_type_materializer(
         String, required_resource_keys={"a"} if should_require_resources else set()
     )
@@ -476,7 +483,7 @@ def define_materialization_pipeline(should_require_resources=True, resources_ini
         assert context.resources.a == "A"
         return AssetMaterialization("hello")
 
-    CustomDagsterType = create_any_type(name="CustomType", materializer=materialize)
+    CustomDagsterType = create_any_type(name="CustomType", materializer=materialize, loader=load)
 
     @solid(output_defs=[OutputDefinition(CustomDagsterType)])
     def output_solid(_context):

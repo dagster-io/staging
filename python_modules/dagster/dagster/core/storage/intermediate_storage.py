@@ -4,7 +4,13 @@ import six
 
 from dagster import check
 from dagster.core.definitions.address import Address
-from dagster.core.errors import DagsterAddressIOError
+from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
+from dagster.core.errors import (
+    DagsterAddressIOError,
+    DagsterTypeLoadingError,
+    DagsterTypeMaterializationError,
+    user_code_error_boundary,
+)
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
@@ -66,12 +72,25 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
 
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
-    def __init__(self, object_store, root_for_run_id, run_id, type_storage_plugin_registry):
+    def __init__(
+        self,
+        object_store,
+        root_for_run_id,
+        run_id,
+        type_storage_plugin_registry,
+        external_intermediates=None,
+    ):
         self.root_for_run_id = check.callable_param(root_for_run_id, "root_for_run_id")
         self.run_id = check.str_param(run_id, "run_id")
         self.object_store = check.inst_param(object_store, "object_store", ObjectStore)
         self.type_storage_plugin_registry = check.inst_param(
             type_storage_plugin_registry, "type_storage_plugin_registry", TypeStoragePluginRegistry
+        )
+        self.external_intermediates = check.opt_dict_param(
+            external_intermediates,
+            "external_intermediates",
+            key_type=StepOutputHandle,
+            value_type=Address,
         )
 
     def _get_paths(self, step_output_handle):
@@ -109,6 +128,39 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             # if address is provided, the intermediate could be stored outside so we skip the check
             check.invariant(self.has_intermediate(context, step_output_handle))
 
+        # if the intermediate was stored externally
+        if address is None:
+            address = self.external_intermediates.get(step_output_handle)
+
+        if address and address.config_value and dagster_type.loader:
+            with user_code_error_boundary(
+                DagsterTypeLoadingError,
+                msg_fn=lambda: (
+                    "Error occurred during input loading:"
+                    "input name: '{output_name}'"
+                    "step key: '{key}'"
+                    "solid invocation: '{solid}'"
+                    "solid definition: '{solid_def}'"
+                ).format(
+                    output_name=step_output_handle.output_name,  # FIXME input name instead
+                    key=context.step.key,
+                    solid_def=context.solid_def.name,
+                    solid=context.solid.name,
+                ),
+            ):
+                value = dagster_type.loader.construct_from_config_value(
+                    context, address.config_value
+                )
+            # yield "get external object" operation event for cross-run intermediate storage
+            return ObjectStoreOperation(
+                op=ObjectStoreOperationType.GET_EXTERNAL_OBJECT,
+                key=address.key,
+                obj=value,
+                address=address,
+                step_output_handle=step_output_handle,
+            )
+
+        # START: to deprecate https://github.com/dagster-io/dagster/issues/3043
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).get_intermediate_object(
                 self, context, dagster_type, step_output_handle
@@ -117,6 +169,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
+        # END: to deprecate
 
         return self.get_intermediate_object(dagster_type, step_output_handle, address)
 
@@ -141,6 +194,37 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         except (IOError, OSError) as e:
             raise DagsterAddressIOError(str(e))
 
+    def _set_external_intermediate(self, context, dagster_type, step_output_handle, value, address):
+        with user_code_error_boundary(
+            DagsterTypeMaterializationError,
+            msg_fn=lambda: (
+                "Error occurred during output materialization:"
+                "output name: '{output_name}'"
+                "step key: '{key}'"
+                "solid invocation: '{solid}'"
+                "solid definition: '{solid_def}'"
+            ).format(
+                output_name=step_output_handle.output_name,
+                key=context.step.key,
+                solid_def=context.solid_def.name,
+                solid=context.solid.name,
+            ),
+        ):
+            materializations = dagster_type.materializer.materialize_runtime_values(
+                context, address.config_value, value
+            )
+        self.external_intermediates[step_output_handle] = address
+        for materialization in materializations:
+            yield materialization
+
+        # yield "set external object" operation event for cross-run intermediate storage
+        yield ObjectStoreOperation(
+            op=ObjectStoreOperationType.SET_EXTERNAL_OBJECT,
+            key=address.key,
+            address=address,
+            step_output_handle=step_output_handle,
+        )
+
     def set_intermediate(
         self, context, dagster_type=None, step_output_handle=None, value=None, address=None,
     ):
@@ -158,6 +242,23 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
                 % (step_output_handle.step_key, step_output_handle.output_name)
             )
 
+        # load to some external address
+        if address and address.config_value and dagster_type.materializer:
+            return self._set_external_intermediate(
+                context, dagster_type, step_output_handle, value, address
+            )
+
+        # skip if the intermediate has already been set by type materializer
+        if step_output_handle in self.external_intermediates:
+            context.log.info(
+                (
+                    "{step_output_handle} has already been materialized by DagsterTypeMaterializer. "
+                    "Skip object store."
+                ).format(step_output_handle=step_output_handle)
+            )
+            return
+
+        # START: to deprecate https://github.com/dagster-io/dagster/issues/3043
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).set_intermediate_object(
                 self, context, dagster_type, step_output_handle, value
@@ -166,6 +267,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
+        # END: to deprecate
 
         return self.set_intermediate_object(dagster_type, step_output_handle, value, address)
 
@@ -177,7 +279,9 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         check.param_invariant(len(paths) > 0, "paths")
 
         key = self.object_store.key_for_paths([self.root] + paths)
-        return self.object_store.has_object(key)
+        return (
+            self.object_store.has_object(key) or step_output_handle in self.external_intermediates
+        )
 
     def rm_intermediate(self, context, step_output_handle):
         check.opt_inst_param(context, "context", SystemExecutionContext)
@@ -229,7 +333,9 @@ def build_in_mem_intermediates_storage(run_id, type_storage_plugin_registry=None
     )
 
 
-def build_fs_intermediate_storage(root_for_run_id, run_id, type_storage_plugin_registry=None):
+def build_fs_intermediate_storage(
+    root_for_run_id, run_id, type_storage_plugin_registry=None, external_intermediates=None
+):
     return ObjectStoreIntermediateStorage(
         FilesystemObjectStore(),
         root_for_run_id,
@@ -237,4 +343,5 @@ def build_fs_intermediate_storage(root_for_run_id, run_id, type_storage_plugin_r
         type_storage_plugin_registry
         if type_storage_plugin_registry
         else TypeStoragePluginRegistry(types_to_register=[]),
+        external_intermediates,
     )

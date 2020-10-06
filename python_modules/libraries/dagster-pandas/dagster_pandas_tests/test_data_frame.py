@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from dagster_pandas.constraints import (
     ColumnDTypeInSetConstraint,
@@ -13,17 +15,16 @@ from dagster import (
     DagsterInvariantViolationError,
     DagsterType,
     EventMetadataEntry,
-    Field,
     InputDefinition,
     Output,
     OutputDefinition,
-    Selector,
     check_dagster_type,
     dagster_type_loader,
     dagster_type_materializer,
     execute_pipeline,
     execute_solid,
     pipeline,
+    seven,
     solid,
 )
 from dagster.utils import safe_tempfile_path
@@ -197,24 +198,14 @@ def test_custom_dagster_dataframe_loading_ok():
 
 
 def test_custom_dagster_dataframe_parametrizable_input():
-    @dagster_type_loader(
-        Selector({"door_a": Field(str), "door_b": Field(str), "door_c": Field(str),})
-    )
-    def silly_loader(_, config):
-        which_door = list(config.keys())[0]
-        if which_door == "door_a":
-            return DataFrame({"foo": ["goat"]})
-        elif which_door == "door_b":
-            return DataFrame({"foo": ["car"]})
-        elif which_door == "door_c":
-            return DataFrame({"foo": ["goat"]})
-        raise DagsterInvariantViolationError(
-            "You did not pick a door. You chose: {which_door}".format(which_door=which_door)
-        )
+    @dagster_type_loader(str)
+    def silly_loader(_, path):
+        return read_csv(path)
 
-    @dagster_type_materializer(Selector({"devnull": Field(str), "nothing": Field(str)}))
-    def silly_materializer(_, _config, _value):
-        return AssetMaterialization(asset_key="nothing", description="just one of those days")
+    @dagster_type_materializer(str)
+    def silly_materializer(_, path, df):
+        df.to_csv(path)
+        return AssetMaterialization.file(path)
 
     TestDataFrame = create_dagster_pandas_dataframe_type(
         name="TestDataFrame",
@@ -230,21 +221,33 @@ def test_custom_dagster_dataframe_parametrizable_input():
     def did_i_win(_, df):
         return df
 
-    solid_result = execute_solid(
-        did_i_win,
-        run_config={
-            "solids": {
-                "did_i_win": {
-                    "inputs": {"df": {"door_a": "bar"}},
-                    "outputs": [{"result": {"devnull": "baz"}}],
+    with seven.TemporaryDirectory() as tempdir:
+        file_path = os.path.join(tempdir, "foo.csv")
+        output_path = os.path.join(tempdir, "output.csv")
+        foo_df = DataFrame({"foo": [1, 2, 3]})
+        foo_df.to_csv(file_path)
+
+        solid_result = execute_solid(
+            did_i_win,
+            run_config={
+                "solids": {
+                    "did_i_win": {
+                        "inputs": {"df": file_path},
+                        "outputs": [{"result": output_path}],
+                    }
                 }
-            }
-        },
-    )
-    assert solid_result.success
-    output_df = solid_result.output_value()
-    assert isinstance(output_df, DataFrame)
-    assert output_df["foo"].tolist() == ["goat"]
-    materialization_events = solid_result.materialization_events_during_compute
-    assert len(materialization_events) == 1
-    assert materialization_events[0].event_specific_data.materialization.label == "nothing"
+            },
+        )
+
+        assert solid_result.success
+        output_df = solid_result.output_value()
+        assert isinstance(output_df, DataFrame)
+        assert output_df["foo"].tolist() == foo_df["foo"].tolist()
+        materialization_events = solid_result.materialization_events_during_compute
+        assert len(materialization_events) == 1
+        assert (
+            materialization_events[0]
+            .event_specific_data.materialization.metadata_entries[0]
+            .entry_data.path
+            == output_path
+        )

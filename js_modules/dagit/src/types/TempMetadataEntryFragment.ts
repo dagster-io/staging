@@ -7,8 +7,8 @@
 // GraphQL fragment: TempMetadataEntryFragment
 // ====================================================
 
-export interface TempMetadataEntryFragment_EventFloatMetadataEntry {
-  __typename: "EventFloatMetadataEntry";
+export interface TempMetadataEntryFragment_EventAddressMetadataEntry {
+  __typename: "EventAddressMetadataEntry" | "EventFloatMetadataEntry";
   label: string;
   description: string | null;
 }
@@ -56,4 +56,4 @@ export interface TempMetadataEntryFragment_EventPythonArtifactMetadataEntry {
   name: string;
 }
 
-export type TempMetadataEntryFragment = TempMetadataEntryFragment_EventFloatMetadataEntry | TempMetadataEntryFragment_EventPathMetadataEntry | TempMetadataEntryFragment_EventJsonMetadataEntry | TempMetadataEntryFragment_EventUrlMetadataEntry | TempMetadataEntryFragment_EventTextMetadataEntry | TempMetadataEntryFragment_EventMarkdownMetadataEntry | TempMetadataEntryFragment_EventPythonArtifactMetadataEntry;
+export type TempMetadataEntryFragment = TempMetadataEntryFragment_EventAddressMetadataEntry | TempMetadataEntryFragment_EventPathMetadataEntry | TempMetadataEntryFragment_EventJsonMetadataEntry | TempMetadataEntryFragment_EventUrlMetadataEntry | TempMetadataEntryFragment_EventTextMetadataEntry | TempMetadataEntryFragment_EventMarkdownMetadataEntry | TempMetadataEntryFragment_EventPythonArtifactMetadataEntry;
