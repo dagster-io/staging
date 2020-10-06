@@ -130,7 +130,6 @@ def execute_query_against_remote(host, query, variables):
 
 
 PREDEFINED_QUERIES = {
-    "executeRunInProcess": EXECUTE_RUN_IN_PROCESS_MUTATION,
     "executePlan": EXECUTE_PLAN_MUTATION,
     "launchPipelineExecution": LAUNCH_PIPELINE_EXECUTION_MUTATION,
 }
