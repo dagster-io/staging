@@ -13,7 +13,7 @@ from rx import Observable
 
 from dagster import check, seven
 from dagster.config import Field, Permissive
-from dagster.core.definitions.events import AssetKey
+from dagster.core.definitions.events import AddressMetadataEntryData, AssetKey
 from dagster.core.definitions.pipeline import PipelineDefinition, PipelineSubsetDefinition
 from dagster.core.errors import (
     DagsterInvalidConfigError,
@@ -490,6 +490,38 @@ class DagsterInstance:
 
     def get_run_group(self, run_id):
         return self._run_storage.get_run_group(run_id)
+
+    def get_external_intermediates(self, run_id):
+        from dagster.core.execution.plan.objects import StepOutputHandle
+
+        if run_id is None:
+            return
+        event_logs = self.all_logs(run_id)
+
+        external_intermediates = {}
+        for record in event_logs:
+            if not record.is_dagster_event:
+                continue
+
+            if not record.dagster_event.is_external_operation_event:
+                continue
+
+            if (
+                not record.dagster_event.event_specific_data
+                or not record.dagster_event.event_specific_data.metadata_entries
+            ):
+                continue
+
+            for entry in record.dagster_event.event_specific_data.metadata_entries:
+                if isinstance(entry.entry_data, AddressMetadataEntryData):
+                    step_output_handle = entry.entry_data.step_output_handle or StepOutputHandle(
+                        record.dagster_event.step_key,
+                        record.dagster_event.event_specific_data.value_name,
+                    )
+                    external_intermediates[step_output_handle] = entry.entry_data.address
+                    break
+
+        return external_intermediates
 
     def resolve_unmemoized_steps(self, execution_plan, run_config, mode):
         """
