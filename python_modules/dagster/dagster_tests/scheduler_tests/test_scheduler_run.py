@@ -242,7 +242,10 @@ def grpc_repo():
 @contextmanager
 def default_repo():
     loadable_target_origin = LoadableTargetOrigin(
-        executable_path=sys.executable, python_file=__file__, attribute="the_repo",
+        executable_path=sys.executable,
+        python_file=__file__,
+        attribute="the_repo",
+        working_directory=os.getcwd(),
     )
 
     with RepositoryLocationHandle.create_python_env_location(
