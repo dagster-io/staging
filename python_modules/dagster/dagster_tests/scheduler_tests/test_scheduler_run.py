@@ -167,16 +167,15 @@ def grpc_repo():
 
 
 @contextmanager
-def cli_api_repo():
+def default_repo():
     loadable_target_origin = LoadableTargetOrigin(
         executable_path=sys.executable, python_file=__file__, attribute="the_repo",
     )
 
-    yield PythonEnvRepositoryLocation(
-        RepositoryLocationHandle.create_python_env_location(
-            loadable_target_origin=loadable_target_origin, location_name="test_location",
-        )
-    ).get_repository("the_repo")
+    with RepositoryLocationHandle.create_python_env_location(
+        loadable_target_origin=loadable_target_origin, location_name="test_location",
+    ) as handle:
+        yield PythonEnvRepositoryLocation(handle).get_repository("the_repo")
 
 
 def validate_tick(
@@ -224,7 +223,11 @@ def wait_for_all_runs_to_start(instance, timeout=10):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context",
+    [
+        default_repo,
+        # grpc_repo
+    ],
 )
 def test_simple_schedule(external_repo_context, capfd):
     freeze_datetime = pendulum.datetime(
@@ -354,7 +357,7 @@ def test_simple_schedule(external_repo_context, capfd):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_bad_env_fn(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -391,7 +394,7 @@ def test_bad_env_fn(external_repo_context, capfd):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_bad_should_execute(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -433,7 +436,7 @@ def test_bad_should_execute(external_repo_context, capfd):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_skip(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -465,7 +468,7 @@ def test_skip(external_repo_context, capfd):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_wrong_config(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -519,7 +522,7 @@ def test_wrong_config(external_repo_context, capfd):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -605,7 +608,7 @@ def test_bad_schedule_mixed_with_good_schedule(external_repo_context):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_run_scheduled_on_time_boundary(external_repo_context):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -679,7 +682,7 @@ def test_bad_load(capfd):
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_multiple_schedules_on_different_time_ranges(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
@@ -753,7 +756,7 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context, capf
 
 
 @pytest.mark.parametrize(
-    "external_repo_context", [cli_api_repo, grpc_repo],
+    "external_repo_context", [default_repo, grpc_repo],
 )
 def test_launch_failure(external_repo_context, capfd):
     with instance_with_schedules(

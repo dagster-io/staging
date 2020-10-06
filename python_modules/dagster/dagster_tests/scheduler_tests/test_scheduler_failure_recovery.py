@@ -11,7 +11,7 @@ from dagster.scheduler.scheduler import get_default_scheduler_logger, launch_sch
 from dagster.seven import multiprocessing
 
 from .test_scheduler_run import (
-    cli_api_repo,
+    default_repo,
     grpc_repo,
     instance_with_schedules,
     validate_run_started,
@@ -31,7 +31,7 @@ def _test_launch_scheduled_runs_in_subprocess(instance_ref, execution_datetime, 
             )
 
 
-@pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
+@pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
 @pytest.mark.parametrize("crash_location", ["TICK_CREATED", "TICK_HELD"])
 @pytest.mark.parametrize("crash_signal", [signal.SIGKILL, signal.SIGINT])
 def test_failure_recovery_before_run_created(
@@ -111,7 +111,7 @@ def test_failure_recovery_before_run_created(
             )
 
 
-@pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
+@pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
 @pytest.mark.parametrize("crash_location", ["RUN_CREATED", "RUN_LAUNCHED"])
 @pytest.mark.parametrize(
     "crash_signal", [signal.SIGKILL, signal.SIGINT],
@@ -214,7 +214,7 @@ def test_failure_recovery_after_run_created(
                 )
 
 
-@pytest.mark.parametrize("external_repo_context", [cli_api_repo, grpc_repo])
+@pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
 @pytest.mark.parametrize("crash_location", ["TICK_SUCCESS"])
 @pytest.mark.parametrize("crash_signal", [signal.SIGKILL, signal.SIGINT])
 def test_failure_recovery_after_tick_success(external_repo_context, crash_location, crash_signal):
