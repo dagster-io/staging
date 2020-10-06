@@ -194,17 +194,11 @@ def _type_checked_step_output_event_sequence(step_context, output):
     check.inst_param(output, "output", Output)
 
     step_output = step_context.step.step_output_named(output.output_name)
-    speculative_execution_plan = create_execution_plan(
-        step_context.pipeline_def,
-        run_config=step_context.run_config,
-        mode=step_context.mode_def.name,
-    )
 
     version = resolve_step_output_versions(
-        speculative_execution_plan,
-        run_config=step_context.run_config,
-        mode=step_context.mode_def.name,
+        step_context.execution_plan, step_context.environment_config, step_context.mode_def,
     )[StepOutputHandle(step_context.step.key, output.output_name)]
+
     with user_code_error_boundary(
         DagsterTypeCheckError,
         lambda: (
