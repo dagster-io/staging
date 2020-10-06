@@ -54,11 +54,19 @@ versioned_storage_test = pytest.mark.parametrize(
 )
 
 
+def default_mode_output_versions(pipeline_def):
+    return resolve_step_output_versions(
+        create_execution_plan(pipeline_def),
+        EnvironmentConfig.build(pipeline_def, {}, "default"),
+        pipeline_def.get_mode_definition("default"),
+    )
+
+
 @versioned_storage_test
 def test_addresses_for_version(version_storing_context):
     @solid(version="abc")
     def solid1(_):
-        yield Output(5, address="some_address")
+        yield Output(5)
 
     @solid(version="123")
     def solid2(_, _input1):
@@ -73,14 +81,10 @@ def test_addresses_for_version(version_storing_context):
         execute_pipeline(instance=instance, pipeline=my_pipeline)
 
         step_output_handle = StepOutputHandle("solid1.compute", "result")
-        output_version = resolve_step_output_versions(
-            create_execution_plan(my_pipeline),
-            EnvironmentConfig.build(my_pipeline, {}, "default"),
-            my_pipeline.get_mode_definition("default"),
-        )[step_output_handle]
+        output_version = default_mode_output_versions(my_pipeline)[step_output_handle]
         assert instance.get_addresses_for_step_output_versions(
             {("my_pipeline", step_output_handle): output_version}
-        ) == {("my_pipeline", step_output_handle): "some_address"}
+        ) == {("my_pipeline", step_output_handle): "/intermediates/solid1.compute/result"}
 
 
 def test_address_operation_using_intermediates_file_system():
