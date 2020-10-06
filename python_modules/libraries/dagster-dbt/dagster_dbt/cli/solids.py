@@ -200,6 +200,7 @@ def dbt_cli_run(context) -> CliRunResult:
             description="The dbt models to exclude.",
         ),
     },
+    tags={"kind": "dbt"},
 )
 @experimental
 def dbt_cli_test(context) -> CliRunResult:
@@ -251,6 +252,7 @@ def dbt_cli_test(context) -> CliRunResult:
             description="The dbt models to exclude.",
         ),
     },
+    tags={"kind": "dbt"},
 )
 @experimental
 def dbt_cli_snapshot(context) -> Dict:
@@ -289,6 +291,7 @@ def dbt_cli_snapshot(context) -> Dict:
             description="Supply arguments to the macro. This dictionary will be mapped to the keyword arguments defined in the selected macro. This argument should be a dictionary, eg. {'my_variable': 'my_value'}",
         ),
     },
+    tags={"kind": "dbt"},
 )
 @experimental
 def dbt_cli_run_operation(context) -> Dict:
@@ -339,6 +342,7 @@ def dbt_cli_run_operation(context) -> Dict:
             description="Specify number of threads to use while executing models. Overrides settings in profiles.yml.",
         ),
     },
+    tags={"kind": "dbt"},
 )
 @experimental
 def dbt_cli_snapshot_freshness(context) -> Dict:
@@ -411,6 +415,7 @@ def dbt_cli_snapshot_freshness(context) -> Dict:
             default_value=False,
         ),
     },
+    tags={"kind": "dbt"},
 )
 @experimental
 def dbt_cli_compile(context) -> Dict:
