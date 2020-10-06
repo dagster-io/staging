@@ -64,9 +64,9 @@ def python_user_process_api_from_instance(instance):
 
     opt_in_settings = instance.get_settings("opt_in")
     return (
-        UserProcessApi.GRPC
-        if (opt_in_settings and opt_in_settings["local_servers"])
-        else UserProcessApi.CLI
+        UserProcessApi.CLI
+        if (opt_in_settings and not opt_in_settings["local_servers"])
+        else UserProcessApi.GRPC
     )
 
 
