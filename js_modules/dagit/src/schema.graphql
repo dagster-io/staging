@@ -208,6 +208,12 @@ type EvaluationStackPathEntry {
   fieldName: String!
 }
 
+type EventAddressMetadataEntry implements EventMetadataEntry {
+  label: String!
+  description: String
+  address: String
+}
+
 type EventFloatMetadataEntry implements EventMetadataEntry {
   label: String!
   description: String
@@ -682,7 +688,9 @@ type ObjectStoreOperationResult implements DisplayableEvent {
 
 enum ObjectStoreOperationType {
   SET_OBJECT
+  SET_EXTERNAL_OBJECT
   GET_OBJECT
+  GET_EXTERNAL_OBJECT
   RM_OBJECT
   CP_OBJECT
 }

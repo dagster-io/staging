@@ -4,6 +4,7 @@ import six
 
 from dagster import check
 from dagster.core.definitions.address import Address
+from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
 from dagster.core.errors import DagsterAddressIOError
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
@@ -105,13 +106,20 @@ class InMemoryIntermediateStorage(IntermediateStorage):
 
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
-    def __init__(self, object_store, root_for_run_id, run_id, type_storage_plugin_registry):
+    def __init__(
+        self, object_store, root_for_run_id, run_id, type_storage_plugin_registry,
+    ):
         self.root_for_run_id = check.callable_param(root_for_run_id, "root_for_run_id")
         self.run_id = check.str_param(run_id, "run_id")
         self.object_store = check.inst_param(object_store, "object_store", ObjectStore)
         self.type_storage_plugin_registry = check.inst_param(
             type_storage_plugin_registry, "type_storage_plugin_registry", TypeStoragePluginRegistry
         )
+        self.external_intermediates = {}  # step_output_handle -> address
+
+    def set_external_intermediates(self, external_intermediates):
+        # TODO yuhan: shouldn't mutate
+        self.external_intermediates = external_intermediates
 
     def _get_paths(self, step_output_handle):
         return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
@@ -148,6 +156,23 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             # if address is provided, the intermediate could be stored outside so we skip the check
             check.invariant(self.has_intermediate(context, step_output_handle))
 
+        # if the intermediate was stored externally
+        if address is None:
+            address = self.external_intermediates.get(step_output_handle)
+
+        if address and address.config_value and dagster_type.loader:
+            # TODO yuhan: wrap user code error
+            value = dagster_type.loader.construct_from_config_value(context, address.config_value)
+            # yield "get external object" operation event for cross-run intermediate storage
+            return ObjectStoreOperation(
+                op=ObjectStoreOperationType.GET_EXTERNAL_OBJECT,
+                key=address.key,
+                obj=value,
+                address=address,
+                step_output_handle=step_output_handle,
+            )
+
+        # START: to deprecate https://github.com/dagster-io/dagster/issues/3043
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).get_intermediate_object(
                 self, context, dagster_type, step_output_handle
@@ -156,6 +181,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
+        # END: to deprecate
 
         return self.get_intermediate_object(dagster_type, step_output_handle, address)
 
@@ -197,6 +223,26 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
                 % (step_output_handle.step_key, step_output_handle.output_name)
             )
 
+        # load to some external address
+        if address and address.config_value and dagster_type.materializer:
+            # TODO yuhan: wrap user code error
+            materializations = dagster_type.materializer.materialize_runtime_values(
+                context, address.config_value, value
+            )
+            self.external_intermediates[step_output_handle] = address
+            return materializations
+
+        # skip if the intermediate has already been set by type materializer
+        if step_output_handle in self.external_intermediates:
+            context.log.info(
+                (
+                    "{step_output_handle} has already been materialized by DagsterTypeMaterializer. "
+                    "Skip object store."
+                ).format(step_output_handle=step_output_handle)
+            )
+            return
+
+        # START: to deprecate https://github.com/dagster-io/dagster/issues/3043
         if self.type_storage_plugin_registry.is_registered(dagster_type):
             return self.type_storage_plugin_registry.get(dagster_type.name).set_intermediate_object(
                 self, context, dagster_type, step_output_handle, value
@@ -205,6 +251,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
             self.type_storage_plugin_registry.check_for_unsupported_composite_overrides(
                 dagster_type
             )
+        # END: to deprecate
 
         return self.set_intermediate_object(dagster_type, step_output_handle, value, address)
 
@@ -216,7 +263,9 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         check.param_invariant(len(paths) > 0, "paths")
 
         key = self.object_store.key_for_paths([self.root] + paths)
-        return self.object_store.has_object(key)
+        return (
+            self.object_store.has_object(key) or step_output_handle in self.external_intermediates
+        )
 
     def rm_intermediate(self, context, step_output_handle):
         check.opt_inst_param(context, "context", SystemExecutionContext)
