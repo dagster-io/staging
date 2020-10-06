@@ -529,17 +529,17 @@ exports[`renders execution 1`] = `
     }
   >
     <div
-      className="TopNav__PipelineTabBarContainer-uwq7ub-1 hHpEuD"
+      className="TopNav__PipelineTabBarContainer-uwq7ub-3 igQCby"
     >
       <div
-        className="TopNav__BreadcrumbContainer-uwq7ub-0 chDXIj"
+        className="TopNav__BreadcrumbContainer-uwq7ub-2 bQinae"
       >
         <ul
           className="bp3-overflow-list bp3-breadcrumbs"
         >
           <li>
             <span
-              className="bp3-breadcrumb"
+              className="bp3-breadcrumb TopNav__SmallerBreadcrumb-uwq7ub-0 fnzTgI"
             >
               <span
                 className="bp3-icon bp3-icon-diagram-tree"
@@ -565,7 +565,7 @@ exports[`renders execution 1`] = `
           </li>
           <li>
             <span
-              className="bp3-breadcrumb bp3-breadcrumb-current"
+              className="bp3-breadcrumb TopNav__CurrentBreadcrumb-uwq7ub-1 ekDsuW"
             >
               airline_demo_ingest_pipeline
             </span>
@@ -579,7 +579,7 @@ exports[`renders execution 1`] = `
         className="bp3-tabs"
       >
         <div
-          className="bp3-tab-list bp3-large"
+          className="bp3-tab-list"
           onKeyDown={[Function]}
           onKeyPress={[Function]}
           role="tablist"
@@ -1327,17 +1327,17 @@ exports[`renders pipeline page 1`] = `
     }
   >
     <div
-      className="TopNav__PipelineTabBarContainer-uwq7ub-1 hHpEuD"
+      className="TopNav__PipelineTabBarContainer-uwq7ub-3 igQCby"
     >
       <div
-        className="TopNav__BreadcrumbContainer-uwq7ub-0 chDXIj"
+        className="TopNav__BreadcrumbContainer-uwq7ub-2 bQinae"
       >
         <ul
           className="bp3-overflow-list bp3-breadcrumbs"
         >
           <li>
             <span
-              className="bp3-breadcrumb"
+              className="bp3-breadcrumb TopNav__SmallerBreadcrumb-uwq7ub-0 fnzTgI"
             >
               <span
                 className="bp3-icon bp3-icon-diagram-tree"
@@ -1363,7 +1363,7 @@ exports[`renders pipeline page 1`] = `
           </li>
           <li>
             <span
-              className="bp3-breadcrumb bp3-breadcrumb-current"
+              className="bp3-breadcrumb TopNav__CurrentBreadcrumb-uwq7ub-1 ekDsuW"
             >
               airline_demo_ingest_pipeline
             </span>
@@ -1377,7 +1377,7 @@ exports[`renders pipeline page 1`] = `
         className="bp3-tabs"
       >
         <div
-          className="bp3-tab-list bp3-large"
+          className="bp3-tab-list"
           onKeyDown={[Function]}
           onKeyPress={[Function]}
           role="tablist"
@@ -6075,17 +6075,17 @@ exports[`renders pipeline solid page 1`] = `
     }
   >
     <div
-      className="TopNav__PipelineTabBarContainer-uwq7ub-1 hHpEuD"
+      className="TopNav__PipelineTabBarContainer-uwq7ub-3 igQCby"
     >
       <div
-        className="TopNav__BreadcrumbContainer-uwq7ub-0 chDXIj"
+        className="TopNav__BreadcrumbContainer-uwq7ub-2 bQinae"
       >
         <ul
           className="bp3-overflow-list bp3-breadcrumbs"
         >
           <li>
             <span
-              className="bp3-breadcrumb"
+              className="bp3-breadcrumb TopNav__SmallerBreadcrumb-uwq7ub-0 fnzTgI"
             >
               <span
                 className="bp3-icon bp3-icon-diagram-tree"
@@ -6111,7 +6111,7 @@ exports[`renders pipeline solid page 1`] = `
           </li>
           <li>
             <span
-              className="bp3-breadcrumb bp3-breadcrumb-current"
+              className="bp3-breadcrumb TopNav__CurrentBreadcrumb-uwq7ub-1 ekDsuW"
             >
               airline_demo_ingest_pipeline
             </span>
@@ -6125,7 +6125,7 @@ exports[`renders pipeline solid page 1`] = `
         className="bp3-tabs"
       >
         <div
-          className="bp3-tab-list bp3-large"
+          className="bp3-tab-list"
           onKeyDown={[Function]}
           onKeyPress={[Function]}
           role="tablist"
@@ -12686,17 +12686,17 @@ exports[`renders type page 1`] = `
     }
   >
     <div
-      className="TopNav__PipelineTabBarContainer-uwq7ub-1 hHpEuD"
+      className="TopNav__PipelineTabBarContainer-uwq7ub-3 igQCby"
     >
       <div
-        className="TopNav__BreadcrumbContainer-uwq7ub-0 chDXIj"
+        className="TopNav__BreadcrumbContainer-uwq7ub-2 bQinae"
       >
         <ul
           className="bp3-overflow-list bp3-breadcrumbs"
         >
           <li>
             <span
-              className="bp3-breadcrumb"
+              className="bp3-breadcrumb TopNav__SmallerBreadcrumb-uwq7ub-0 fnzTgI"
             >
               <span
                 className="bp3-icon bp3-icon-diagram-tree"
@@ -12722,7 +12722,7 @@ exports[`renders type page 1`] = `
           </li>
           <li>
             <span
-              className="bp3-breadcrumb bp3-breadcrumb-current"
+              className="bp3-breadcrumb TopNav__CurrentBreadcrumb-uwq7ub-1 ekDsuW"
             >
               airline_demo_ingest_pipeline
             </span>
@@ -12736,7 +12736,7 @@ exports[`renders type page 1`] = `
         className="bp3-tabs"
       >
         <div
-          className="bp3-tab-list bp3-large"
+          className="bp3-tab-list"
           onKeyDown={[Function]}
           onKeyPress={[Function]}
           role="tablist"
@@ -17434,17 +17434,17 @@ exports[`renders type page 2`] = `
     }
   >
     <div
-      className="TopNav__PipelineTabBarContainer-uwq7ub-1 hHpEuD"
+      className="TopNav__PipelineTabBarContainer-uwq7ub-3 igQCby"
     >
       <div
-        className="TopNav__BreadcrumbContainer-uwq7ub-0 chDXIj"
+        className="TopNav__BreadcrumbContainer-uwq7ub-2 bQinae"
       >
         <ul
           className="bp3-overflow-list bp3-breadcrumbs"
         >
           <li>
             <span
-              className="bp3-breadcrumb"
+              className="bp3-breadcrumb TopNav__SmallerBreadcrumb-uwq7ub-0 fnzTgI"
             >
               <span
                 className="bp3-icon bp3-icon-diagram-tree"
@@ -17470,7 +17470,7 @@ exports[`renders type page 2`] = `
           </li>
           <li>
             <span
-              className="bp3-breadcrumb bp3-breadcrumb-current"
+              className="bp3-breadcrumb TopNav__CurrentBreadcrumb-uwq7ub-1 ekDsuW"
             >
               airline_demo_ingest_pipeline
             </span>
@@ -17484,7 +17484,7 @@ exports[`renders type page 2`] = `
         className="bp3-tabs"
       >
         <div
-          className="bp3-tab-list bp3-large"
+          className="bp3-tab-list"
           onKeyDown={[Function]}
           onKeyPress={[Function]}
           role="tablist"
@@ -22182,17 +22182,17 @@ exports[`renders without error 1`] = `
     }
   >
     <div
-      className="TopNav__PipelineTabBarContainer-uwq7ub-1 hHpEuD"
+      className="TopNav__PipelineTabBarContainer-uwq7ub-3 igQCby"
     >
       <div
-        className="TopNav__BreadcrumbContainer-uwq7ub-0 chDXIj"
+        className="TopNav__BreadcrumbContainer-uwq7ub-2 bQinae"
       >
         <ul
           className="bp3-overflow-list bp3-breadcrumbs"
         >
           <li>
             <span
-              className="bp3-breadcrumb"
+              className="bp3-breadcrumb TopNav__SmallerBreadcrumb-uwq7ub-0 fnzTgI"
             >
               <span
                 className="bp3-icon bp3-icon-diagram-tree"
@@ -22218,7 +22218,7 @@ exports[`renders without error 1`] = `
           </li>
           <li>
             <span
-              className="bp3-breadcrumb bp3-breadcrumb-current"
+              className="bp3-breadcrumb TopNav__CurrentBreadcrumb-uwq7ub-1 ekDsuW"
             >
               airline_demo_ingest_pipeline
             </span>
@@ -22232,7 +22232,7 @@ exports[`renders without error 1`] = `
         className="bp3-tabs"
       >
         <div
-          className="bp3-tab-list bp3-large"
+          className="bp3-tab-list"
           onKeyDown={[Function]}
           onKeyPress={[Function]}
           role="tablist"
