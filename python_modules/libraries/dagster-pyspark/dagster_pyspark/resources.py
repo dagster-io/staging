@@ -25,7 +25,7 @@ class PySparkResource(object):
                 completed_process = subprocess.run(
                     args="hostname -i", capture_output=True, encoding="utf8", check=False,
                 )
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass  # TODO: Swallowing of arbitrary exceptions.
             else:
                 spark_conf["spark"]["driver"]["host"] = completed_process.stdout.strip()
