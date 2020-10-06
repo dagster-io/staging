@@ -664,7 +664,7 @@ class ObjectStoreOperation(
         return super(ObjectStoreOperation, cls).__new__(
             cls,
             op=op,
-            key=check.str_param(key, "key"),
+            key=check.opt_str_param(key, "key"),
             dest_key=check.opt_str_param(dest_key, "dest_key"),
             obj=obj,
             serialization_strategy_name=check.opt_str_param(
