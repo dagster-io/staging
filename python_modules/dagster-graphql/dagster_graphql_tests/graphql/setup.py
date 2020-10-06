@@ -7,11 +7,7 @@ from collections import OrderedDict
 from copy import deepcopy
 
 from dagster_graphql.implementation.context import DagsterGraphQLContext
-from dagster_graphql.test.utils import (
-    define_context_for_file,
-    define_out_of_process_context,
-    infer_pipeline_selector,
-)
+from dagster_graphql.test.utils import define_context_for_file, infer_pipeline_selector
 
 from dagster import (
     Any,
@@ -84,11 +80,6 @@ PoorMansDataFrame = PythonObjectDagsterType(
     loader=df_input_schema,
     materializer=df_output_schema,
 )
-
-
-def define_test_out_of_process_context(instance):
-    check.inst_param(instance, "instance", DagsterInstance)
-    return define_out_of_process_context(__file__, "test_repo", instance)
 
 
 def define_test_context(instance):

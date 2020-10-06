@@ -1,5 +1,3 @@
-import sys
-
 from dagster_graphql.implementation.context import DagsterGraphQLContext
 from dagster_graphql.schema import create_schema
 from graphql import graphql
@@ -10,7 +8,6 @@ from dagster.core.code_pointer import CodePointer
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import RepositoryLocationHandle
 from dagster.core.instance import DagsterInstance
-from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 
 
 def execute_dagster_graphql(context, query, variables=None):
@@ -47,24 +44,6 @@ def define_context_for_file(python_file, fn_name, instance):
             [
                 RepositoryLocationHandle.create_in_process_location(
                     CodePointer.from_python_file(python_file, fn_name, None)
-                )
-            ]
-        ),
-        instance=instance,
-    )
-
-
-def define_out_of_process_context(python_file, fn_name, instance):
-    check.inst_param(instance, "instance", DagsterInstance)
-
-    return DagsterGraphQLContext(
-        workspace=Workspace(
-            [
-                RepositoryLocationHandle.create_python_env_location(
-                    loadable_target_origin=LoadableTargetOrigin(
-                        executable_path=sys.executable, python_file=python_file, attribute=fn_name,
-                    ),
-                    location_name="test_location",
                 )
             ]
         ),
