@@ -10,6 +10,7 @@ from dagster_graphql.implementation.fetch_runs import get_stats, get_step_stats
 
 from dagster import PipelineRun, check, seven
 from dagster.core.definitions.events import (
+    AddressMetadataEntryData,
     EventMetadataEntry,
     FloatMetadataEntryData,
     JsonMetadataEntryData,
@@ -429,6 +430,14 @@ class DauphinEventPathMetadataEntry(dauphin.ObjectType):
     path = dauphin.NonNull(dauphin.String)
 
 
+class DauphinEventAddressMetadataEntry(dauphin.ObjectType):
+    class Meta(object):
+        name = "EventAddressMetadataEntry"
+        interfaces = (DauphinEventMetadataEntry,)
+
+    address = dauphin.Field(dauphin.String)
+
+
 class DauphinEventJsonMetadataEntry(dauphin.ObjectType):
     class Meta(object):
         name = "EventJsonMetadataEntry"
@@ -487,6 +496,12 @@ def iterate_metadata_entries(metadata_entries):
                 description=metadata_entry.description,
                 path=metadata_entry.entry_data.path,
             )
+        elif isinstance(metadata_entry.entry_data, AddressMetadataEntryData):
+            yield DauphinEventAddressMetadataEntry(
+                label=metadata_entry.label,
+                description=metadata_entry.description,
+                address=metadata_entry.entry_data.address,
+            )
         elif isinstance(metadata_entry.entry_data, JsonMetadataEntryData):
             yield DauphinEventJsonMetadataEntry(
                 label=metadata_entry.label,
@@ -540,7 +555,9 @@ class DauphinObjectStoreOperationType(dauphin.Enum):
         name = "ObjectStoreOperationType"
 
     SET_OBJECT = "SET_OBJECT"
+    SET_EXTERNAL_OBJECT = "SET_EXTERNAL_OBJECT"
     GET_OBJECT = "GET_OBJECT"
+    GET_EXTERNAL_OBJECT = "GET_EXTERNAL_OBJECT"
     RM_OBJECT = "RM_OBJECT"
     CP_OBJECT = "CP_OBJECT"
 
