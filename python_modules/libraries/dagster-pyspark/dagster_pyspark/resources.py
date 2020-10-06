@@ -1,3 +1,5 @@
+import subprocess
+
 from dagster_spark.configs_spark import spark_config
 from dagster_spark.utils import flatten_dict
 from pyspark.sql import SparkSession
@@ -17,6 +19,17 @@ def spark_session_from_config(spark_conf=None):
 
 class PySparkResource(object):
     def __init__(self, spark_conf):
+        if spark_conf["spark"]["driver"].get("host") is None:
+            # Set hostname of Spark driver, so it can be passed to Spark executors.
+            try:
+                completed_process = subprocess.run(
+                    args="hostname -i", capture_output=True, encoding="utf8",
+                )
+            except:
+                pass  # TODO: Swallowing of arbitrary exceptions.
+            else:
+                spark_conf["spark"]["driver"]["host"] = completed_process.stdout.strip()
+
         self._spark_session = spark_session_from_config(spark_conf)
 
     @property
