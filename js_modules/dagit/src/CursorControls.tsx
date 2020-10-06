@@ -2,7 +2,13 @@ import {Button} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 
-import {CursorPaginationProps} from 'src/runs/useCursorPaginatedQuery';
+export interface CursorPaginationProps {
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+  onReset: () => void;
+}
 
 export const CursorPaginationControls: React.FunctionComponent<CursorPaginationProps> = ({
   hasPrevPage,
@@ -31,6 +37,34 @@ export const CursorPaginationControls: React.FunctionComponent<CursorPaginationP
         onClick={onNextPage}
       >
         Next Page
+      </Button>
+    </div>
+  );
+};
+
+export const CursorHistoryControls: React.FunctionComponent<CursorPaginationProps> = ({
+  hasPrevPage,
+  hasNextPage,
+  onPrevPage,
+  onNextPage,
+}) => {
+  return (
+    <div style={{textAlign: 'center', marginBottom: 10}}>
+      <Button
+        style={{marginRight: 4}}
+        disabled={!hasNextPage}
+        icon={IconNames.ARROW_LEFT}
+        onClick={onNextPage}
+      >
+        Older
+      </Button>
+      <Button
+        style={{marginLeft: 4}}
+        disabled={!hasPrevPage}
+        rightIcon={IconNames.ARROW_RIGHT}
+        onClick={onPrevPage}
+      >
+        Newer
       </Button>
     </div>
   );

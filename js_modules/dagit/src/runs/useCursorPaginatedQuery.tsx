@@ -4,13 +4,7 @@ import * as React from 'react';
 import {useQuery} from 'react-apollo';
 import {__RouterContext as RouterContext} from 'react-router';
 
-export interface CursorPaginationProps {
-  hasPrevPage: boolean;
-  hasNextPage: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-  onReset: () => void;
-}
+import {CursorPaginationProps} from 'src/CursorControls';
 
 interface CursorPaginationQueryVariables {
   cursor?: string | null;

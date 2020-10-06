@@ -1,9 +1,7 @@
 import {Button, Menu, MenuItem, NonIdealState, Popover} from '@blueprintjs/core';
 import gql from 'graphql-tag';
-import * as querystring from 'query-string';
 import * as React from 'react';
 import {useQuery} from 'react-apollo';
-import {__RouterContext as RouterContext} from 'react-router';
 import {RouteComponentProps} from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -21,7 +19,7 @@ type PartitionSet = PipelinePartitionsRootQuery_partitionSetsOrError_PartitionSe
 
 export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps<{
   pipelinePath: string;
-}>> = ({location, match}) => {
+}>> = ({match}) => {
   const pipelineName = match.params.pipelinePath.split(':')[0];
   useDocumentTitle(`Pipeline: ${pipelineName}`);
 
@@ -30,13 +28,6 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
     variables: {repositorySelector, pipelineName},
     fetchPolicy: 'network-only',
   });
-  const {history} = React.useContext(RouterContext);
-  const qs = querystring.parse(location.search);
-  const cursor = (qs.cursor as string) || undefined;
-  const setCursor = (cursor: string | undefined) => {
-    history.push({search: `?${querystring.stringify({...qs, cursor})}`});
-  };
-
   const [selected, setSelected] = React.useState<PartitionSet | undefined>();
   const [showLoader, setShowLoader] = React.useState<boolean>(false);
   const [runTags, setRunTags] = React.useState<{[key: string]: string}>({});
@@ -93,8 +84,6 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
             <PartitionView
               pipelineName={pipelineName}
               partitionSetName={partitionSet.name}
-              cursor={cursor}
-              setCursor={setCursor}
               onLoaded={() => setShowLoader(true)}
               runTags={runTags}
             />
