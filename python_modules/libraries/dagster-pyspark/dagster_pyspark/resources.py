@@ -23,9 +23,9 @@ class PySparkResource(object):
             # Set hostname of Spark driver, so it can be passed to Spark executors.
             try:
                 completed_process = subprocess.run(
-                    args="hostname -i", capture_output=True, encoding="utf8",
+                    args="hostname -i", capture_output=True, encoding="utf8", check=False,
                 )
-            except:
+            except Exception:
                 pass  # TODO: Swallowing of arbitrary exceptions.
             else:
                 spark_conf["spark"]["driver"]["host"] = completed_process.stdout.strip()
