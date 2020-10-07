@@ -39,4 +39,4 @@ def my_pipeline():
 
 
 def email_run_results(recipient, run_results):  # pylint: disable=unused-argument
-    print(f"Sending run results to {recipient}")  # pylint: disable=print-statement
+    pass
