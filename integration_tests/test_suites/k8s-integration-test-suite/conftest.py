@@ -7,7 +7,7 @@ import pytest
 from dagster_k8s.launcher import K8sRunLauncher
 from dagster_k8s.scheduler import K8sScheduler
 from dagster_k8s_test_infra.cluster import (
-    dagster_instance,
+    dagster_instance_for_k8s_run_launcher,
     dagster_instance_with_k8s_scheduler,
     define_cluster_provider_fixture,
 )
