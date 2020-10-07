@@ -60,6 +60,10 @@ spec:
         env:
         - name: DAGSTER_HOME
           value: /opt/dagster/dagster_home
+        - name: DAGSTER_K8S_INSTANCE_CONFIG_MAP
+          value: dagster-instance
+        - name: DAGSTER_K8S_PG_PASSWORD_SECRET
+          value: dagster-postgresql-secret
         - name: DAGSTER_PG_PASSWORD
           value_from:
             secret_key_ref:
@@ -126,6 +130,10 @@ spec:
         env:
         - name: DAGSTER_HOME
           value: /opt/dagster/dagster_home
+        - name: DAGSTER_K8S_INSTANCE_CONFIG_MAP
+          value: dagster-instance
+        - name: DAGSTER_K8S_PG_PASSWORD_SECRET
+          value: dagster-postgresql-secret
         - name: DAGSTER_PG_PASSWORD
           value_from:
             secret_key_ref:
