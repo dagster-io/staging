@@ -24,7 +24,7 @@ import six
 import yaml
 
 from dagster import check, seven
-from dagster.utils import compose
+from dagster.utils import compose, frozenlist
 
 _WHITELIST_MAP = {
     "types": {"tuple": {}, "enum": {}},
@@ -241,7 +241,7 @@ def _unpack_value(val, whitelist_map):
         klass_name = val.pop("__class__")
         if klass_name not in whitelist_map["types"]["tuple"]:
             check.failed(
-                'Attempted to deserialize class "{}" which is not in the serdes whitelist.'.format(
+                'Attempted to deserialize class "{}", which is not in the serdes whitelist.'.format(
                     klass_name
                 )
             )
@@ -447,3 +447,11 @@ class ConfigurableClass(six.with_metaclass(ABCMeta)):
                 return MyConfigurableClass(inst_data=inst_data, **config_value)
 
         """
+
+
+@whitelist_for_serdes
+class DictItemsContainer(namedtuple("_DictItemsContainer", "dict_items")):
+    def __new__(cls, dict_items):
+        return super(DictItemsContainer, cls).__new__(
+            cls, frozenlist([frozenlist(k, v) for k, v in dict_items])
+        )

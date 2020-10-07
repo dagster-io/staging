@@ -271,6 +271,10 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None):
     return _t_fn
 
 
+class DagstermillSolidDefinition(SolidDefinition):
+    pass
+
+
 def define_dagstermill_solid(
     name,
     notebook_path,
@@ -307,7 +311,7 @@ def define_dagstermill_solid(
         required_resource_keys, "required_resource_keys", of_type=str
     )
 
-    return SolidDefinition(
+    return DagstermillSolidDefinition(
         name=name,
         input_defs=input_defs,
         compute_fn=_dm_solid_compute(name, notebook_path, output_notebook),
