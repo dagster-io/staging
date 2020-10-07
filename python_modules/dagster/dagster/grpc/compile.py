@@ -13,13 +13,15 @@ from dagster.utils import file_relative_path, safe_tempfile_path
 
 PROTOS_DIR = file_relative_path(__file__, "protos")
 
-PROTOS_PATH = os.path.join(PROTOS_DIR, "api.proto")
+PROTOS_PATHS = [os.path.join(PROTOS_DIR, f) for f in ["api.proto", "health.proto"]]
 
 GENERATED_DIR = file_relative_path(__file__, "__generated__")
 
-GENERATED_PB2_PATH = os.path.join(GENERATED_DIR, "api_pb2.py")
+GENERATED_PB2_PATHS = [os.path.join(GENERATED_DIR, f) for f in ["api_pb2.py", "health_pb2.py"]]
 
-GENERATED_GRPC_PATH = os.path.join(GENERATED_DIR, "api_pb2_grpc.py")
+GENERATED_GRPC_PATHS = [
+    os.path.join(GENERATED_DIR, f) for f in ["api_pb2_grpc.py", "health_pb2_grpc.py"]
+]
 
 ISORT_SETTINGS_PATH = file_relative_path(__file__, "../../../../")
 
@@ -44,93 +46,97 @@ GENERATED_PB2_PYLINT_DIRECTIVE = [
 
 
 def protoc():
-    # python -m grpc_tools.protoc \
-    #   -I protos --python_out __generated__ --grpc_python_out __generated__ protos/api.proto
-    _res = subprocess.check_output(
-        [
-            sys.executable,
-            "-m",
-            "grpc_tools.protoc",
-            "-I",
-            PROTOS_DIR,
-            "--python_out",
-            GENERATED_DIR,
-            "--grpc_python_out",
-            GENERATED_DIR,
-            PROTOS_PATH,
-        ]
-    )
 
-    # The generated api_pb2_grpc.py file must be altered in two ways:
-    # 1. Add a pylint directive, `disable=no-member, unused-argument`
-    # 2. Change the import from `import api_pb2 as api__pb2` to `from . import api_pb2 as api__pb2`.
-    #    See: https://github.com/grpc/grpc/issues/22914
-    with safe_tempfile_path() as tempfile_path:
-        shutil.copyfile(
-            GENERATED_GRPC_PATH, tempfile_path,
+    for protos_path, generated_pb2_path, generated_grpc_path in zip(
+        PROTOS_PATHS, GENERATED_PB2_PATHS, GENERATED_GRPC_PATHS
+    ):
+        # python -m grpc_tools.protoc \
+        #   -I protos --python_out __generated__ --grpc_python_out __generated__ protos/api.proto
+        _res = subprocess.check_output(
+            [
+                sys.executable,
+                "-m",
+                "grpc_tools.protoc",
+                "-I",
+                PROTOS_DIR,
+                "--python_out",
+                GENERATED_DIR,
+                "--grpc_python_out",
+                GENERATED_DIR,
+                protos_path,
+            ]
         )
-        with open(tempfile_path, "r") as generated:
-            with open(GENERATED_GRPC_PATH, "w") as rewritten:
-                for line in GENERATED_HEADER:
-                    rewritten.write(line)
 
-                for line in GENERATED_GRPC_PYLINT_DIRECTIVE:
-                    rewritten.write(line)
-
-                for line in generated.readlines():
-                    if line == "import api_pb2 as api__pb2\n":
-                        rewritten.write("from . import api_pb2 as api__pb2\n")
-                    else:
+        # The generated api_pb2_grpc.py file must be altered in two ways:
+        # 1. Add a pylint directive, `disable=no-member, unused-argument`
+        # 2. Change the import from `import api_pb2 as api__pb2` to `from . import api_pb2 as api__pb2`.
+        #    See: https://github.com/grpc/grpc/issues/22914
+        with safe_tempfile_path() as tempfile_path:
+            shutil.copyfile(
+                generated_grpc_path, tempfile_path,
+            )
+            with open(tempfile_path, "r") as generated:
+                with open(generated_grpc_path, "w") as rewritten:
+                    for line in GENERATED_HEADER:
                         rewritten.write(line)
 
-    with safe_tempfile_path() as tempfile_path:
-        shutil.copyfile(
-            GENERATED_PB2_PATH, tempfile_path,
+                    for line in GENERATED_GRPC_PYLINT_DIRECTIVE:
+                        rewritten.write(line)
+
+                    for line in generated.readlines():
+                        if line == "import api_pb2 as api__pb2\n":
+                            rewritten.write("from . import api_pb2 as api__pb2\n")
+                        else:
+                            rewritten.write(line)
+
+        with safe_tempfile_path() as tempfile_path:
+            shutil.copyfile(
+                generated_pb2_path, tempfile_path,
+            )
+            with open(tempfile_path, "r") as generated:
+                with open(generated_pb2_path, "w") as rewritten:
+                    for line in GENERATED_HEADER:
+                        rewritten.write(line)
+
+                    for line in GENERATED_PB2_PYLINT_DIRECTIVE:
+                        rewritten.write(line)
+
+                    for line in generated.readlines():
+                        rewritten.write(line)
+
+        # We need to run black
+        _res = subprocess.check_output(
+            [
+                sys.executable,
+                "-m",
+                "black",
+                "-l",
+                "100",
+                "-t",
+                "py27",
+                "-t",
+                "py35",
+                "-t",
+                "py36",
+                "-t",
+                "py37",
+                "-t",
+                "py38",
+                GENERATED_DIR,
+            ]
         )
-        with open(tempfile_path, "r") as generated:
-            with open(GENERATED_PB2_PATH, "w") as rewritten:
-                for line in GENERATED_HEADER:
-                    rewritten.write(line)
 
-                for line in GENERATED_PB2_PYLINT_DIRECTIVE:
-                    rewritten.write(line)
-
-                for line in generated.readlines():
-                    rewritten.write(line)
-
-    # We need to run black
-    _res = subprocess.check_output(
-        [
-            sys.executable,
-            "-m",
-            "black",
-            "-l",
-            "100",
-            "-t",
-            "py27",
-            "-t",
-            "py35",
-            "-t",
-            "py36",
-            "-t",
-            "py37",
-            "-t",
-            "py38",
-            GENERATED_DIR,
-        ]
-    )
-
-    # And, finally, we need to run isort
-    _res = subprocess.check_output(
-        [
-            "isort",
-            "--settings-path",
-            ISORT_SETTINGS_PATH,
-            "-y",
-            GENERATED_PB2_PATH,
-            GENERATED_GRPC_PATH,
-        ]
-    )
+        # And, finally, we need to run isort
+        _res = subprocess.check_output(
+            [
+                "isort",
+                "--settings-path",
+                ISORT_SETTINGS_PATH,
+                "-y",
+                generated_pb2_path,
+                generated_grpc_path,
+            ]
+        )
 
 
 if __name__ == "__main__":
