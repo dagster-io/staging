@@ -439,6 +439,12 @@ def construct_dagster_k8s_job(
         env=[
             kubernetes.client.V1EnvVar(name="DAGSTER_HOME", value=job_config.dagster_home),
             kubernetes.client.V1EnvVar(
+                name="DAGSTER_K8S_INSTANCE_CONFIG_MAP", value=job_config.instance_config_map
+            ),
+            kubernetes.client.V1EnvVar(
+                name="DAGSTER_K8S_PG_PASSWORD_SECRET", value=job_config.postgres_password_secret
+            ),
+            kubernetes.client.V1EnvVar(
                 name=DAGSTER_PG_PASSWORD_ENV_VAR,
                 value_from=kubernetes.client.V1EnvVarSource(
                     secret_key_ref=kubernetes.client.V1SecretKeySelector(
