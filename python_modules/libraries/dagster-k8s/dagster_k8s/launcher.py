@@ -93,10 +93,10 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             present in this namespace. Default: ``"default"``
         env_config_maps (Optional[List[str]]): A list of custom ConfigMapEnvSource names from which to
             draw environment variables (using ``envFrom``) for the Job. Default: ``[]``. See:
-        https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/#define-an-environment-variable-for-a-container
+            https://kubernetes.io/docs/tasks/inject-data-application/define-environment-variable-container/#define-an-environment-variable-for-a-container
         env_secrets (Optional[List[str]]): A list of custom Secret names from which to
             draw environment variables (using ``envFrom``) for the Job. Default: ``[]``. See:
-        https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#configure-all-key-value-pairs-in-a-secret-as-container-environment-variables
+            https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#configure-all-key-value-pairs-in-a-secret-as-container-environment-variables
     """
 
     def __init__(
@@ -157,7 +157,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         job_cfg = DagsterK8sJobConfig.config_type()
 
         run_launcher_extra_cfg = {
-            "job_namespace": StringSource,
+            "job_namespace": Field(StringSource, is_required=False, default_value="default"),
             "load_incluster_config": Field(bool, is_required=False, default_value=True),
             "kubeconfig_file": Field(Noneable(str), is_required=False, default_value=None),
         }
