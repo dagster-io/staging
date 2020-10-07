@@ -38,5 +38,5 @@ def my_pipeline():
     notify_bob(run_results)
 
 
-def email_run_results(recipient, run_results):
-    print(f"Sending run results to {recipient}")
+def email_run_results(recipient, run_results):  # pylint: disable=unused-argument
+    print(f"Sending run results to {recipient}")  # pylint: disable=print-statement
