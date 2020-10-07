@@ -95,7 +95,10 @@ def get_smaller_external_repo():
 
 @mark_scheduler
 def test_init(
-    dagster_instance_with_k8s_scheduler, schedule_tempdir, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler,
+    schedule_tempdir,
+    helm_namespace_for_k8s_run_launcher,
+    restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
 
@@ -116,7 +119,10 @@ def test_init(
 
 @mark_scheduler
 def test_re_init(
-    dagster_instance_with_k8s_scheduler, schedule_tempdir, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler,
+    schedule_tempdir,
+    helm_namespace_for_k8s_run_launcher,
+    restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -144,7 +150,10 @@ def test_re_init(
 
 @mark_scheduler
 def test_start_and_stop_schedule(
-    dagster_instance_with_k8s_scheduler, schedule_tempdir, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler,
+    schedule_tempdir,
+    helm_namespace_for_k8s_run_launcher,
+    restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -169,7 +178,7 @@ def test_start_and_stop_schedule(
 
 @mark_scheduler
 def test_start_non_existent_schedule(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     with pytest.raises(DagsterScheduleDoesNotExist):
@@ -179,7 +188,7 @@ def test_start_non_existent_schedule(
 
 @mark_scheduler
 def test_start_schedule_cron_job(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -226,7 +235,7 @@ def test_start_schedule_cron_job(
 
 @mark_scheduler
 def test_remove_schedule_def(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -243,7 +252,7 @@ def test_remove_schedule_def(
 
 @mark_scheduler
 def test_add_schedule_def(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_smaller_external_repo()
@@ -283,7 +292,7 @@ def test_add_schedule_def(
 
 @mark_scheduler
 def test_start_and_stop_schedule_cron_tab(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -373,7 +382,10 @@ def test_start_and_stop_schedule_cron_tab(
 
 @mark_scheduler
 def test_script_execution(
-    dagster_instance_with_k8s_scheduler, unset_dagster_home, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler,
+    unset_dagster_home,
+    helm_namespace_for_k8s_run_launcher,
+    restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument,redefined-outer-name
     with seven.TemporaryDirectory() as tempdir:
         with environ({"DAGSTER_HOME": tempdir}):
@@ -394,7 +406,9 @@ def test_script_execution(
             ).get_origin_id()
 
             batch_v1beta1_api = kubernetes.client.BatchV1beta1Api()
-            cron_job = batch_v1beta1_api.read_namespaced_cron_job(cron_job_name, helm_namespace)
+            cron_job = batch_v1beta1_api.read_namespaced_cron_job(
+                cron_job_name, helm_namespace_for_k8s_run_launcher
+            )
             container = cron_job.spec.job_template.spec.template.spec.containers[0]
             command = container.command
             args = container.args
@@ -428,7 +442,7 @@ def test_script_execution(
 
 @mark_scheduler
 def test_start_schedule_fails(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -454,7 +468,7 @@ def test_start_schedule_fails(
 
 @mark_scheduler
 def test_start_schedule_unsuccessful(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -482,7 +496,7 @@ def test_start_schedule_unsuccessful(
 
 @mark_scheduler
 def test_start_schedule_manual_delete_debug(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -515,7 +529,7 @@ def test_start_schedule_manual_delete_debug(
 
 @mark_scheduler
 def test_start_schedule_manual_add_debug(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -540,7 +554,10 @@ def test_start_schedule_manual_add_debug(
 
 @mark_scheduler
 def test_stop_schedule_fails(
-    dagster_instance_with_k8s_scheduler, schedule_tempdir, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler,
+    schedule_tempdir,
+    helm_namespace_for_k8s_run_launcher,
+    restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -571,7 +588,7 @@ def test_stop_schedule_fails(
 
 @mark_scheduler
 def test_stop_schedule_unsuccessful(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -603,7 +620,7 @@ def test_stop_schedule_unsuccessful(
 
 @mark_scheduler
 def test_wipe(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -625,7 +642,7 @@ def test_wipe(
 
 @mark_scheduler
 def test_reconcile_failure(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
@@ -657,7 +674,7 @@ def test_reconcile_failure(
 
 @mark_scheduler
 def test_reconcile_failure_when_deleting_schedule_def(
-    dagster_instance_with_k8s_scheduler, helm_namespace, restore_k8s_cron_tab,
+    dagster_instance_with_k8s_scheduler, helm_namespace_for_k8s_run_launcher, restore_k8s_cron_tab,
 ):  # pylint:disable=unused-argument
     instance = dagster_instance_with_k8s_scheduler
     external_repo = get_test_external_repo()
