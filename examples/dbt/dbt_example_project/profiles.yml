@@ -1,0 +1,12 @@
+dbt_example_project:
+    target: dev
+    outputs:
+        dev:
+            type: postgres
+            host: "{{ env_var('DAGSTER_DBT_POSTGRESQL_HOST') }}"
+            user: dbt-example
+            pass: dbt-example
+            port: 5432
+            dbname: dbt-example
+            schema: dbt-example-schema
+            threads: 2
