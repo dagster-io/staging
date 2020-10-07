@@ -64,6 +64,13 @@ def helm_namespace(
     yield _helm_namespace_helper(helm_chart, request)
 
 
+@pytest.fixture(scope="session")
+def helm_namespace_for_k8s_run_launcher(
+    cluster_provider, request
+):  # pylint: disable=unused-argument, redefined-outer-name
+    yield _helm_namespace_helper(helm_chart_for_k8s_run_launcher, request)
+
+
 @contextmanager
 def test_namespace(should_cleanup=True):
     # Will be something like dagster-test-3fcd70 to avoid ns collisions in shared test environment
@@ -258,6 +265,43 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                 "failureThreshold": 3,
             },
         },
+        "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
+        "serviceAccount": {"name": "dagit-admin"},
+        "postgresqlPassword": "test",
+        "postgresqlDatabase": "test",
+        "postgresqlUser": "test",
+    }
+
+    with _helm_chart_helper(namespace, should_cleanup, helm_config):
+        yield
+
+
+@contextmanager
+def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True):
+    check.str_param(namespace, "namespace")
+    check.str_param(docker_image, "docker_image")
+    check.bool_param(should_cleanup, "should_cleanup")
+
+    repository, tag = docker_image.split(":")
+    pull_policy = image_pull_policy()
+    helm_config = {
+        "dagit": {
+            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
+            "env_config_maps": [TEST_CONFIGMAP_NAME],
+            "env_secrets": [TEST_SECRET_NAME],
+            "livenessProbe": {
+                "tcpSocket": {"port": "http"},
+                "periodSeconds": 20,
+                "failureThreshold": 3,
+            },
+            "startupProbe": {
+                "tcpSocket": {"port": "http"},
+                "failureThreshold": 6,
+                "periodSeconds": 10,
+            },
+        },
+        "celery": {"enabled": "false"},
         "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
