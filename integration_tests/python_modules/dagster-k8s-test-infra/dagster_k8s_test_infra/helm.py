@@ -64,6 +64,13 @@ def helm_namespace(
     yield _helm_namespace_helper(helm_chart, request)
 
 
+@pytest.fixture(scope="session")
+def helm_namespace_for_k8s_run_launcher(
+    cluster_provider, request
+):  # pylint: disable=unused-argument, redefined-outer-name
+    yield _helm_namespace_helper(helm_chart_for_k8s_run_launcher, request)
+
+
 @contextmanager
 def test_namespace(should_cleanup=True):
     # Will be something like dagster-test-3fcd70 to avoid ns collisions in shared test environment
@@ -176,12 +183,19 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config):
             time.sleep(1)
 
         # Wait for Celery worker queues to become ready
-        print("Waiting for celery workers")
         pods = kubernetes.client.CoreV1Api().list_namespaced_pod(namespace=namespace)
         pod_names = [p.metadata.name for p in pods.items if "celery-workers" in p.metadata.name]
-        for pod_name in pod_names:
-            print("Waiting for Celery worker pod %s" % pod_name)
-            wait_for_pod(pod_name, namespace=namespace)
+        if helm_config.get("celery", {}).get("enabled"):
+            print("Waiting for celery workers")
+            for pod_name in pod_names:
+                print("Waiting for Celery worker pod %s" % pod_name)
+                wait_for_pod(pod_name, namespace=namespace)
+        else:
+            assert (
+                len(pod_names) == 0
+            ), "celery-worker pods {pod_names} exists when celery is not enabled.".format(
+                pod_names=pod_names
+            )
 
         if helm_config.get("userDeployments") and helm_config.get("userDeployments", {}).get(
             "enabled"
@@ -247,6 +261,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
             },
         },
         "celery": {
+            "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             # https://github.com/dagster-io/dagster/issues/2671
             # 'extraWorkerQueues': [{'name': 'extra-queue-1', 'replicaCount': 1},],
@@ -258,6 +273,43 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                 "failureThreshold": 3,
             },
         },
+        "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
+        "serviceAccount": {"name": "dagit-admin"},
+        "postgresqlPassword": "test",
+        "postgresqlDatabase": "test",
+        "postgresqlUser": "test",
+    }
+
+    with _helm_chart_helper(namespace, should_cleanup, helm_config):
+        yield
+
+
+@contextmanager
+def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True):
+    check.str_param(namespace, "namespace")
+    check.str_param(docker_image, "docker_image")
+    check.bool_param(should_cleanup, "should_cleanup")
+
+    repository, tag = docker_image.split(":")
+    pull_policy = image_pull_policy()
+    helm_config = {
+        "dagit": {
+            "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
+            "env_config_maps": [TEST_CONFIGMAP_NAME],
+            "env_secrets": [TEST_SECRET_NAME],
+            "livenessProbe": {
+                "tcpSocket": {"port": "http"},
+                "periodSeconds": 20,
+                "failureThreshold": 3,
+            },
+            "startupProbe": {
+                "tcpSocket": {"port": "http"},
+                "failureThreshold": 6,
+                "periodSeconds": 10,
+            },
+        },
+        "celery": {"enabled": False},
         "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -323,6 +375,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
             },
         },
         "celery": {
+            "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             # https://github.com/dagster-io/dagster/issues/2671
             # 'extraWorkerQueues': [{'name': 'extra-queue-1', 'replicaCount': 1},],
