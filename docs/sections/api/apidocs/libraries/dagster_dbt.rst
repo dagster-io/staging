@@ -55,12 +55,8 @@ RPC
 .. autodata:: dbt_rpc_resource
     :annotation: ResourceDefinition
 
-<<<<<<< HEAD
-.. autofunction:: local_dbt_rpc_resource
-=======
 .. autodata:: local_dbt_rpc_resource
     :annotation: ResourceDefinition
->>>>>>> Refactors classes into named tuples.
 
 .. autoclass:: DbtRpcClient
     :members:
@@ -95,10 +91,6 @@ Errors
 
 .. autoexception:: DagsterDbtCliOutputsNotFoundError
 
-<<<<<<< HEAD
-.. autoexception:: DagsterDbtUnexpectedCliOutputError
-=======
 .. autoexception:: DagsterDbtCliUnexpectedOutputError
->>>>>>> Refactors classes into named tuples.
 
 .. autoexception:: DagsterRpcDbtUnexpectedPollOutputError

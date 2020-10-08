@@ -1,8 +1,5 @@
 from collections import namedtuple
-from datetime import datetime
 from typing import Any, Dict
-
-from dateutil import parser
 
 from dagster import check, usable_as_dagster_type
 
