@@ -1,3 +1,5 @@
+import pytest
+
 from dagster import execute_pipeline, seven
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.instance import DagsterInstance, InstanceType
@@ -7,7 +9,7 @@ from dagster.core.storage.local_compute_log_manager import LocalComputeLogManage
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
 
-from .memoized_dev_loop_pipeline import basic_pipeline
+from .memoized_dev_loop_pipeline import aliased_pipeline, basic_pipeline
 
 
 def get_step_keys_to_execute(instance, pipeline, run_config, mode):
@@ -19,7 +21,8 @@ def get_step_keys_to_execute(instance, pipeline, run_config, mode):
     return memoized_execution_plan.step_keys_to_execute
 
 
-def test_dev_loop_changing_versions():
+@pytest.mark.parametrize("pipeline_def", [basic_pipeline, aliased_pipeline])
+def test_dev_loop_with_pipeline(pipeline_def):
     with seven.TemporaryDirectory() as temp_dir:
         run_store = SqliteRunStorage.from_local(temp_dir)
         event_store = ConsolidatedSqliteEventLogStorage(temp_dir)
@@ -45,7 +48,7 @@ def test_dev_loop_changing_versions():
         }
 
         result = execute_pipeline(
-            basic_pipeline,
+            pipeline_def,
             run_config=run_config,
             mode="only_mode",
             tags={"dagster/is_memoized_run": "true"},
@@ -53,16 +56,16 @@ def test_dev_loop_changing_versions():
         )
         assert result.success
 
-        assert not get_step_keys_to_execute(instance, basic_pipeline, run_config, "only_mode")
+        assert not get_step_keys_to_execute(instance, pipeline_def, run_config, "only_mode")
 
         run_config["solids"]["take_string_1"]["config"]["input_str"] = "banana"
 
         assert set(
-            get_step_keys_to_execute(instance, basic_pipeline, run_config, "only_mode")
+            get_step_keys_to_execute(instance, pipeline_def, run_config, "only_mode")
         ) == set(["take_string_1.compute", "take_string_two_inputs.compute"])
 
         result2 = execute_pipeline(
-            basic_pipeline,
+            pipeline_def,
             run_config=run_config,
             mode="only_mode",
             tags={"dagster/is_memoized_run": "true"},
@@ -70,16 +73,16 @@ def test_dev_loop_changing_versions():
         )
         assert result2.success
 
-        assert not get_step_keys_to_execute(instance, basic_pipeline, run_config, "only_mode")
+        assert not get_step_keys_to_execute(instance, pipeline_def, run_config, "only_mode")
 
         run_config["solids"]["take_string_two_inputs"]["config"]["input_str"] = "banana"
 
-        assert get_step_keys_to_execute(instance, basic_pipeline, run_config, "only_mode") == [
+        assert get_step_keys_to_execute(instance, pipeline_def, run_config, "only_mode") == [
             "take_string_two_inputs.compute"
         ]
 
         result3 = execute_pipeline(
-            basic_pipeline,
+            pipeline_def,
             run_config=run_config,
             mode="only_mode",
             tags={"dagster/is_memoized_run": "true"},
@@ -87,4 +90,4 @@ def test_dev_loop_changing_versions():
         )
         assert result3.success
 
-        assert not get_step_keys_to_execute(instance, basic_pipeline, run_config, "only_mode")
+        assert not get_step_keys_to_execute(instance, pipeline_def, run_config, "only_mode")

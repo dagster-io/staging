@@ -83,3 +83,15 @@ def basic_pipeline():
         _string_input_1=take_string_1(create_string_1()),
         _string_input_2=take_string_2(create_string_2()),
     )
+
+
+@pipeline(
+    mode_defs=[ModeDefinition("only_mode", intermediate_storage_defs=[fs_intermediate_storage])]
+)
+def aliased_pipeline():
+    take_string_two_inputs(
+        _string_input_1=take_string_1(create_string_1()),
+        _string_input_2=take_string_1.alias("take_string_2")(
+            create_string_2.alias("create_string_2")()
+        ),
+    )

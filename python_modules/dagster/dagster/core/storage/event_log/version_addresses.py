@@ -14,7 +14,7 @@ def get_addresses_for_step_output_versions_helper(step_output_versions, step_out
             For each step output, an address if there is one and None otherwise.
     """
     # if multiple output events wrote to the same address, only the latest one is relevant
-    latest_version_by_address = {}
+    latest_version_by_address = defaultdict(lambda: [])
     latest_timestamp_by_address = defaultdict(int)
     for timestamp, dagster_event in step_output_records:
         step_output_data = dagster_event.event_specific_data
@@ -25,21 +25,17 @@ def get_addresses_for_step_output_versions_helper(step_output_versions, step_out
 
         if address and latest_timestamp_by_address[address] < timestamp:
             latest_timestamp_by_address[address] = timestamp
-            latest_version_by_address[address] = (
-                pipeline_name,
-                step_output,
-                version,
-            )
+            latest_version_by_address[address].append((pipeline_name, step_output, version))
 
     # finally, we select the addresses that correspond to the steps we're concerned with.
     # ideally, we'd be pushing down this filter to the initial query so that we don't need to pull
     # every single step output event across all runs for all pipelines. to do that, we'll need to
     # add columns to the event schema.
     step_output_versions_set = set(step_output_versions.items())
-    address_by_output = {
-        (pipeline_name, step_output): address
-        for address, (pipeline_name, step_output, version) in latest_version_by_address.items()
-        if ((pipeline_name, step_output), version) in step_output_versions_set
-    }
+    address_by_output = {}
+    for address, output_tuples in latest_version_by_address.items():
+        for (pipeline_name, step_output, version) in output_tuples:
+            if ((pipeline_name, step_output), version) in step_output_versions_set:
+                address_by_output[(pipeline_name, step_output)] = address
 
     return address_by_output
