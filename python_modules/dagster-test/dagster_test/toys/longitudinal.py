@@ -14,7 +14,6 @@ from dagster import (
     pipeline,
     solid,
 )
-from dagster.utils.partitions import DEFAULT_DATE_FORMAT
 
 
 def _base_config():
@@ -151,6 +150,7 @@ SLEEP_BUILD = 0.001 * 0.001
 SLEEP_TRAIN = 0.001 * 0.001
 
 
+DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 INITIAL_DATE = datetime.strptime("2020-01-01", DEFAULT_DATE_FORMAT)
 
 
