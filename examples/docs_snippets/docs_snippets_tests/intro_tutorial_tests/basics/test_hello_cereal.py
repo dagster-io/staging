@@ -1,4 +1,4 @@
-from docs_snippets.intro_tutorial.basics.e01_first_pipeline.hello_cereal import (
+from docs_snippets.docs_snippets.intro_tutorial.basics.e01_first_pipeline.hello_cereal import (
     hello_cereal_pipeline,
 )
 

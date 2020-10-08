@@ -1,4 +1,6 @@
-from docs_snippets.intro_tutorial.basics.e02_solids.multiple_outputs import split_cereals
+from docs_snippets.docs_snippets.intro_tutorial.basics.e02_solids.multiple_outputs import (
+    split_cereals,
+)
 
 from dagster import execute_solid
 

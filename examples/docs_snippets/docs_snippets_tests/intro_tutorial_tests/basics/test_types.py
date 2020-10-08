@@ -1,20 +1,22 @@
 import csv
 from collections import OrderedDict
 
-from docs_snippets.intro_tutorial.basics.e04_quality.custom_types_2 import (
+from docs_snippets.docs_snippets.intro_tutorial.basics.e04_quality.custom_types_2 import (
     less_simple_data_frame_type_check as lsdftc2,
 )
-from docs_snippets.intro_tutorial.basics.e04_quality.custom_types_2 import sort_by_calories
-from docs_snippets.intro_tutorial.basics.e04_quality.custom_types_3 import (
+from docs_snippets.docs_snippets.intro_tutorial.basics.e04_quality.custom_types_2 import (
+    sort_by_calories,
+)
+from docs_snippets.docs_snippets.intro_tutorial.basics.e04_quality.custom_types_3 import (
     less_simple_data_frame_type_check as lsdftc3,
 )
-from docs_snippets.intro_tutorial.basics.e04_quality.custom_types_4 import (
+from docs_snippets.docs_snippets.intro_tutorial.basics.e04_quality.custom_types_4 import (
     less_simple_data_frame_type_check as lsdftc4,
 )
-from docs_snippets.intro_tutorial.basics.e04_quality.custom_types_5 import (
+from docs_snippets.docs_snippets.intro_tutorial.basics.e04_quality.custom_types_5 import (
     expect_column_to_be_integers,
 )
-from docs_snippets.intro_tutorial.basics.e04_quality.custom_types_5 import (
+from docs_snippets.docs_snippets.intro_tutorial.basics.e04_quality.custom_types_5 import (
     less_simple_data_frame_type_check as lsdftc5,
 )
 
