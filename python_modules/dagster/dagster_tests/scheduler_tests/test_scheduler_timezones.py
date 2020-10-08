@@ -15,10 +15,9 @@ from .test_scheduler_run import (
 
 
 @pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
-def test_different_timezone_run(external_repo_context, capfd):
-    # Verify that schedule runs at the expected time in a non-UTC timezone (in this
-    # case, the instance is configured to run in US/Central on a server that is in US/Pacific)
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+def test_non_utc_timezone_run(external_repo_context, capfd):
+    # Verify that schedule runs at the expected time in a non-UTC timezone
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -26,7 +25,7 @@ def test_different_timezone_run(external_repo_context, capfd):
             "US/Pacific"
         )
         with pendulum.test(freeze_datetime):
-            external_schedule = external_repo.get_external_schedule("simple_schedule")
+            external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
 
             schedule_origin = external_schedule.get_origin()
 
@@ -47,8 +46,8 @@ def test_different_timezone_run(external_repo_context, capfd):
 
             assert (
                 captured.out
-                == """2019-02-27 21:59:59 - dagster-scheduler - INFO - Checking for new runs for the following schedules: simple_schedule
-2019-02-27 21:59:59 - dagster-scheduler - INFO - No new runs for simple_schedule
+                == """2019-02-27 21:59:59 - dagster-scheduler - INFO - Checking for new runs for the following schedules: daily_central_time_schedule
+2019-02-27 21:59:59 - dagster-scheduler - INFO - No new runs for daily_central_time_schedule
 """
             )
         freeze_datetime = freeze_datetime.add(seconds=2)
@@ -80,9 +79,9 @@ def test_different_timezone_run(external_repo_context, capfd):
 
             assert (
                 captured.out
-                == """2019-02-27 22:00:01 - dagster-scheduler - INFO - Checking for new runs for the following schedules: simple_schedule
-2019-02-27 22:00:01 - dagster-scheduler - INFO - Launching run for simple_schedule at 2019-02-28 00:00:00-0600
-2019-02-27 22:00:01 - dagster-scheduler - INFO - Completed scheduled launch of run {run_id} for simple_schedule
+                == """2019-02-27 22:00:01 - dagster-scheduler - INFO - Checking for new runs for the following schedules: daily_central_time_schedule
+2019-02-27 22:00:01 - dagster-scheduler - INFO - Launching run for daily_central_time_schedule at 2019-02-28 00:00:00-0600
+2019-02-27 22:00:01 - dagster-scheduler - INFO - Completed scheduled launch of run {run_id} for daily_central_time_schedule
 """.format(
                     run_id=instance.get_runs()[0].run_id
                 )
@@ -98,11 +97,123 @@ def test_different_timezone_run(external_repo_context, capfd):
             assert ticks[0].status == ScheduleTickStatus.SUCCESS
 
 
+@pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
+def test_differing_timezones(external_repo_context):
+    # Two schedules, one using US/Central, the other on US/Eastern
+    with instance_with_schedules(external_repo_context) as (
+        instance,
+        external_repo,
+    ):
+        freeze_datetime = pendulum.create(2019, 2, 27, 23, 59, 59, tz="US/Eastern").in_tz(
+            "US/Pacific"
+        )
+        with pendulum.test(freeze_datetime):
+            external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
+            external_eastern_schedule = external_repo.get_external_schedule(
+                "daily_eastern_time_schedule"
+            )
+
+            schedule_origin = external_schedule.get_origin()
+            eastern_origin = external_eastern_schedule.get_origin()
+
+            instance.start_schedule_and_update_storage_state(external_schedule)
+            instance.start_schedule_and_update_storage_state(external_eastern_schedule)
+
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 0
+
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 0
+
+        # 1 hour later, the eastern timezone schedule will run, but not the central timezone
+        freeze_datetime = freeze_datetime.add(hours=1)
+        with pendulum.test(freeze_datetime):
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+
+            assert instance.get_runs_count() == 1
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 1
+
+            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Eastern").in_tz(
+                "UTC"
+            )
+
+            validate_tick(
+                ticks[0],
+                external_eastern_schedule,
+                expected_datetime,
+                ScheduleTickStatus.SUCCESS,
+                instance.get_runs()[0].run_id,
+            )
+
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
+
+        # 1 hour later, the central timezone schedule will now run
+        freeze_datetime = freeze_datetime.add(hours=1)
+        with pendulum.test(freeze_datetime):
+
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+
+            assert instance.get_runs_count() == 2
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 1
+
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+
+            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Central").in_tz(
+                "UTC"
+            )
+
+            validate_tick(
+                ticks[0],
+                external_schedule,
+                expected_datetime,
+                ScheduleTickStatus.SUCCESS,
+                instance.get_runs()[0].run_id,
+            )
+
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
+
+            # Verify idempotence
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+            assert instance.get_runs_count() == 2
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 1
+            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+
+
 # Verify that a schedule that runs in US/Central late enough in the day that it executes on
 # a different day in UTC still runs and creates its partition names based on the US/Central time
 @pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
 def test_different_days_in_different_timezones(external_repo_context):
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -166,7 +277,7 @@ def test_different_days_in_different_timezones(external_repo_context):
 )
 def test_hourly_dst_spring_forward(external_repo_context):
     # Verify that an hourly schedule still runs hourly during the spring DST transition
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -174,7 +285,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
         freeze_datetime = pendulum.create(2019, 3, 10, 1, 0, 0, tz="US/Central").in_tz("US/Pacific")
 
         with pendulum.test(freeze_datetime):
-            external_schedule = external_repo.get_external_schedule("simple_hourly_schedule")
+            external_schedule = external_repo.get_external_schedule("hourly_central_time_schedule")
             schedule_origin = external_schedule.get_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
@@ -232,7 +343,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
 )
 def test_hourly_dst_fall_back(external_repo_context):
     # Verify that an hourly schedule still runs hourly during the fall DST transition
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -242,7 +353,7 @@ def test_hourly_dst_fall_back(external_repo_context):
         )
 
         with pendulum.test(freeze_datetime):
-            external_schedule = external_repo.get_external_schedule("simple_hourly_schedule")
+            external_schedule = external_repo.get_external_schedule("hourly_central_time_schedule")
             schedule_origin = external_schedule.get_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
@@ -313,7 +424,7 @@ def test_hourly_dst_fall_back(external_repo_context):
 )
 def test_daily_dst_spring_forward(external_repo_context):
     # Verify that a daily schedule still runs once per day during the spring DST transition
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -321,7 +432,7 @@ def test_daily_dst_spring_forward(external_repo_context):
         freeze_datetime = pendulum.create(2019, 3, 10, 0, 0, 0, tz="US/Central").in_tz("US/Pacific")
 
         with pendulum.test(freeze_datetime):
-            external_schedule = external_repo.get_external_schedule("simple_schedule")
+            external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
             schedule_origin = external_schedule.get_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
@@ -377,7 +488,7 @@ def test_daily_dst_spring_forward(external_repo_context):
 @pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
 def test_daily_dst_fall_back(external_repo_context):
     # Verify that a daily schedule still runs once per day during the fall DST transition
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -385,7 +496,7 @@ def test_daily_dst_fall_back(external_repo_context):
         freeze_datetime = pendulum.create(2019, 11, 3, 0, 0, 0, tz="US/Central").in_tz("US/Pacific")
 
         with pendulum.test(freeze_datetime):
-            external_schedule = external_repo.get_external_schedule("simple_schedule")
+            external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
             schedule_origin = external_schedule.get_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
@@ -444,7 +555,7 @@ def test_daily_dst_fall_back(external_repo_context):
 def test_execute_during_dst_transition_spring_forward(external_repo_context):
     # Verify that a daily schedule that is supposed to execute at a time that is skipped
     # by the DST transition does not execute for that day
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):
@@ -507,7 +618,7 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
     "external_repo_context", [default_repo, grpc_repo],
 )
 def test_execute_during_dst_transition_fall_back(external_repo_context):
-    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+    with instance_with_schedules(external_repo_context) as (
         instance,
         external_repo,
     ):

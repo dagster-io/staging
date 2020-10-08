@@ -52,8 +52,24 @@ def the_pipeline():
     the_solid()
 
 
-@daily_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO)
+@daily_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="UTC")
 def simple_schedule(_context):
+    return {
+        "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
+    }
+
+
+@daily_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO)
+def daily_schedule_without_timezone(_context):
+    return {
+        "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
+    }
+
+
+@daily_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Central"
+)
+def daily_central_time_schedule(_context):
     return {
         "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
     }
@@ -64,6 +80,7 @@ def simple_schedule(_context):
     pipeline_name="the_pipeline",
     start_date=_COUPLE_DAYS_AGO,
     execution_time=datetime.time(hour=23, minute=0),
+    execution_timezone="US/Central",
 )
 def daily_late_schedule(_context):
     return {
@@ -75,8 +92,18 @@ def daily_late_schedule(_context):
     pipeline_name="the_pipeline",
     start_date=_COUPLE_DAYS_AGO,
     execution_time=datetime.time(hour=2, minute=30),
+    execution_timezone="US/Central",
 )
 def daily_dst_transition_schedule(_context):
+    return {
+        "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
+    }
+
+
+@daily_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Eastern",
+)
+def daily_eastern_time_schedule(_context):
     return {
         "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
     }
@@ -86,44 +113,65 @@ def daily_dst_transition_schedule(_context):
     pipeline_name="the_pipeline",
     start_date=_COUPLE_DAYS_AGO,
     end_date=datetime.datetime(year=2019, month=3, day=1),
+    execution_timezone="UTC",
 )
 def simple_temporary_schedule(_context):
     return {}
 
 
-@daily_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO)
+@daily_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="UTC",
+)
 def bad_env_fn_schedule():  # forgot context arg
     return {}
 
 
-@hourly_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO)
+@hourly_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="UTC",
+)
 def simple_hourly_schedule(_context):
     return {"solids": {"the_solid": {"config": {"work_amt": "even more"}}}}
 
 
+@hourly_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Central"
+)
+def hourly_central_time_schedule(_context):
+    return {"solids": {"the_solid": {"config": {"work_amt": "even more"}}}}
+
+
 @daily_schedule(
-    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, should_execute=_throw,
+    pipeline_name="the_pipeline",
+    start_date=_COUPLE_DAYS_AGO,
+    should_execute=_throw,
+    execution_timezone="UTC",
 )
 def bad_should_execute_schedule(_context):
     return {"solids": {"the_solid": {"config": {"work_amt": "a lot"}}}}
 
 
 @daily_schedule(
-    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, should_execute=_throw_on_odd_day,
+    pipeline_name="the_pipeline",
+    start_date=_COUPLE_DAYS_AGO,
+    should_execute=_throw_on_odd_day,
+    execution_timezone="UTC",
 )
 def bad_should_execute_schedule_on_odd_days(_context):
     return {"solids": {"the_solid": {"config": {"work_amt": "a lot"}}}}
 
 
 @daily_schedule(
-    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, should_execute=_never,
+    pipeline_name="the_pipeline",
+    start_date=_COUPLE_DAYS_AGO,
+    should_execute=_never,
+    execution_timezone="UTC",
 )
 def skip_schedule(_context):
     return {"solids": {"the_solid": {"config": {"work_amt": "a lot"}}}}
 
 
 @daily_schedule(
-    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO,
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="UTC",
 )
 def wrong_config_schedule(_context):
     return {}
@@ -136,8 +184,12 @@ def the_repo():
         simple_schedule,
         simple_temporary_schedule,
         simple_hourly_schedule,
+        daily_schedule_without_timezone,
         daily_late_schedule,
         daily_dst_transition_schedule,
+        daily_central_time_schedule,
+        daily_eastern_time_schedule,
+        hourly_central_time_schedule,
         bad_env_fn_schedule,
         bad_should_execute_schedule,
         bad_should_execute_schedule_on_odd_days,
@@ -146,14 +198,14 @@ def the_repo():
     ]
 
 
-def schedule_instance(timezone=None, overrides=None):
+def schedule_instance(overrides=None):
     return instance_for_test(
         overrides=merge_dicts(
             {
-                "scheduler": merge_dicts(
-                    {"module": "dagster.core.scheduler", "class": "DagsterCommandLineScheduler",},
-                    ({"config": {"default_timezone": timezone}} if timezone else {}),
-                ),
+                "scheduler": {
+                    "module": "dagster.core.scheduler",
+                    "class": "DagsterCommandLineScheduler",
+                },
             },
             (overrides if overrides else {}),
         )
@@ -161,8 +213,8 @@ def schedule_instance(timezone=None, overrides=None):
 
 
 @contextmanager
-def instance_with_schedules(external_repo_context, timezone=None, overrides=None):
-    with schedule_instance(timezone, overrides) as instance:
+def instance_with_schedules(external_repo_context, overrides=None):
+    with schedule_instance(overrides) as instance:
         with external_repo_context() as external_repo:
             instance.reconcile_scheduler_state(external_repo)
             yield (instance, external_repo)
@@ -375,6 +427,61 @@ def test_simple_schedule(external_repo_context, capfd):
             assert instance.get_runs_count() == 3
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
+
+
+@pytest.mark.parametrize(
+    "external_repo_context", [default_repo, grpc_repo],
+)
+def test_no_started_schedules(external_repo_context, capfd):
+    with instance_with_schedules(external_repo_context) as (instance, external_repo):
+        external_schedule = external_repo.get_external_schedule("simple_schedule")
+        schedule_origin = external_schedule.get_origin()
+
+        launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
+        assert instance.get_runs_count() == 0
+
+        ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+        assert len(ticks) == 0
+
+        captured = capfd.readouterr()
+
+        assert "Not checking for any runs since no schedules have been started." in captured.out
+
+
+@pytest.mark.parametrize(
+    "external_repo_context", [default_repo, grpc_repo],
+)
+def test_schedule_without_timezone(external_repo_context, capfd):
+    with instance_with_schedules(external_repo_context) as (instance, external_repo):
+        external_schedule = external_repo.get_external_schedule("daily_schedule_without_timezone")
+        schedule_origin = external_schedule.get_origin()
+        initial_datetime = pendulum.datetime(year=2019, month=2, day=27, hour=0, minute=0, second=0)
+
+        with pendulum.test(initial_datetime):
+
+            instance.start_schedule_and_update_storage_state(external_schedule)
+
+            launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
+
+            assert instance.get_runs_count() == 0
+
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+
+            assert len(ticks) == 0
+
+            captured = capfd.readouterr()
+
+            assert (
+                "Scheduler could not run for daily_schedule_without_timezone as it did not specify "
+                "an execution_timezone in its definition." in captured.out
+            )
+
+        initial_datetime = initial_datetime.add(days=1)
+        with pendulum.test(initial_datetime):
+            launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
 
 
 @pytest.mark.parametrize(
