@@ -67,7 +67,7 @@ class DagsterDbtRpcUnexpectedPollOutputError(DagsterDbtError):
     """Represents an unexpected response when polling the dbt RPC server."""
 
 
-class DagsterDbtCliRunResultsNotFoundError(DagsterDbtError):
+class DagsterDbtCliOutputsNotFoundError(DagsterDbtError):
     """Represents a problem in finding the ``target/run_results.json`` artifact when executing a dbt
     CLI command.
 
