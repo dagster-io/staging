@@ -59,11 +59,21 @@ def simple_schedule(_context):
     }
 
 
+@daily_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Central"
+)
+def daily_central_time_schedule(_context):
+    return {
+        "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
+    }
+
+
 # Schedule that runs on a different day in Central Time vs UTC
 @daily_schedule(
     pipeline_name="the_pipeline",
     start_date=_COUPLE_DAYS_AGO,
     execution_time=datetime.time(hour=23, minute=0),
+    execution_timezone="US/Central",
 )
 def daily_late_schedule(_context):
     return {
@@ -75,8 +85,18 @@ def daily_late_schedule(_context):
     pipeline_name="the_pipeline",
     start_date=_COUPLE_DAYS_AGO,
     execution_time=datetime.time(hour=2, minute=30),
+    execution_timezone="US/Central",
 )
 def daily_dst_transition_schedule(_context):
+    return {
+        "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
+    }
+
+
+@daily_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Eastern",
+)
+def daily_eastern_time_schedule(_context):
     return {
         "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
     }
@@ -98,6 +118,13 @@ def bad_env_fn_schedule():  # forgot context arg
 
 @hourly_schedule(pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO)
 def simple_hourly_schedule(_context):
+    return {"solids": {"the_solid": {"config": {"work_amt": "even more"}}}}
+
+
+@hourly_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Central"
+)
+def hourly_central_time_schedule(_context):
     return {"solids": {"the_solid": {"config": {"work_amt": "even more"}}}}
 
 
@@ -138,6 +165,9 @@ def the_repo():
         simple_hourly_schedule,
         daily_late_schedule,
         daily_dst_transition_schedule,
+        daily_central_time_schedule,
+        daily_eastern_time_schedule,
+        hourly_central_time_schedule,
         bad_env_fn_schedule,
         bad_should_execute_schedule,
         bad_should_execute_schedule_on_odd_days,
@@ -146,14 +176,14 @@ def the_repo():
     ]
 
 
-def schedule_instance(timezone=None, overrides=None):
+def schedule_instance(overrides=None):
     return instance_for_test(
         overrides=merge_dicts(
             {
-                "scheduler": merge_dicts(
-                    {"module": "dagster.core.scheduler", "class": "DagsterCommandLineScheduler",},
-                    ({"config": {"default_timezone": timezone}} if timezone else {}),
-                ),
+                "scheduler": {
+                    "module": "dagster.core.scheduler",
+                    "class": "DagsterCommandLineScheduler",
+                },
             },
             (overrides if overrides else {}),
         )
@@ -161,8 +191,8 @@ def schedule_instance(timezone=None, overrides=None):
 
 
 @contextmanager
-def instance_with_schedules(external_repo_context, timezone=None, overrides=None):
-    with schedule_instance(timezone, overrides) as instance:
+def instance_with_schedules(external_repo_context, overrides=None):
+    with schedule_instance(overrides) as instance:
         with external_repo_context() as external_repo:
             instance.reconcile_scheduler_state(external_repo)
             yield (instance, external_repo)

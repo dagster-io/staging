@@ -177,8 +177,6 @@ def launch_scheduled_runs_for_schedule(
     check.inst_param(end_datetime_utc, "end_datetime_utc", datetime.datetime)
     check.inst_param(repo_location, "repo_location", RepositoryLocation)
 
-    scheduler = instance.scheduler
-
     latest_tick = instance.get_latest_tick(schedule_state.schedule_origin_id)
 
     if not latest_tick:
@@ -189,11 +187,6 @@ def launch_scheduled_runs_for_schedule(
     else:
         start_timestamp_utc = latest_tick.timestamp + 1
 
-    timezone_str = scheduler.default_timezone_str
-
-    end_datetime = end_datetime_utc.in_tz(timezone_str)
-    start_datetime = pendulum.from_timestamp(start_timestamp_utc, tz=timezone_str)
-
     schedule_name = schedule_state.name
 
     repo_dict = repo_location.get_repositories()
@@ -203,6 +196,11 @@ def launch_scheduled_runs_for_schedule(
     external_repo = next(iter(repo_dict.values()))
 
     external_schedule = external_repo.get_external_schedule(schedule_name)
+
+    timezone_str = external_schedule.execution_timezone
+
+    end_datetime = end_datetime_utc.in_tz(timezone_str)
+    start_datetime = pendulum.from_timestamp(start_timestamp_utc, tz=timezone_str)
 
     date_iter = croniter(external_schedule.cron_schedule, start_datetime)
     tick_times = []
