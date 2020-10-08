@@ -1,9 +1,9 @@
-from dagster_dbt import RpcRunResult
+from dagster_dbt import DbtRpcResult
 
-from ..test_types import RUN_RESULT_DICT
+from ..test_types import DBT_RESULT_DICT
 
-POLLED_RUN_RESULT_DICT = {
-    **RUN_RESULT_DICT,
+DBT_RPC_RESULT_DICT = {
+    **DBT_RESULT_DICT,
     "state": "success",
     "start": "2020-09-28T17:10:56.070900Z",
     "end": "2020-09-28T17:10:58.116186Z",
@@ -13,5 +13,5 @@ POLLED_RUN_RESULT_DICT = {
 
 class TestRpcRunResult:
     def test_from_dict(self):
-        prr = RpcRunResult.from_dict(POLLED_RUN_RESULT_DICT)
-        assert len(prr) == len(POLLED_RUN_RESULT_DICT["results"])
+        prr = DbtRpcResult.from_dict(DBT_RPC_RESULT_DICT)
+        assert len(prr) == len(DBT_RPC_RESULT_DICT["results"])

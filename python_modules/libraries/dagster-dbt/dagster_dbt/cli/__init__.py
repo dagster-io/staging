@@ -6,4 +6,4 @@ from .solids import (
     dbt_cli_snapshot_freshness,
     dbt_cli_test,
 )
-from .types import CliRunResult
+from .types import DbtCliResult

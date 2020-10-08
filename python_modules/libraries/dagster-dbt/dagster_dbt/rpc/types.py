@@ -5,17 +5,17 @@ from dateutil import parser
 
 from dagster import check, usable_as_dagster_type
 
-from ..types import RunResult
+from ..types import DbtResult
 
 
 @usable_as_dagster_type
-class RpcRunResult(RunResult):
+class DbtRpcResult(DbtResult):
     """The results of executing a dbt command, along with additional metadata about the dbt process
     that was run on the dbt RPC server.
 
-    We recommend that you construct an instance of :class:`RpcRunResult
-    <dagster_dbt.RpcRunResult>` by using the class method:func:`from_dict
-    <dagster_dbt.RpcRunResult.from_dict>`.
+    We recommend that you construct an instance of :class:`DbtRpcResult
+    <dagster_dbt.DbtRpcResult>` by using the class method:func:`from_dict
+    <dagster_dbt.DbtRpcResult.from_dict>`.
 
     When using the dbt RPC server, polled run results are typically parsed from the JSON body of
     the RPC response.
@@ -43,23 +43,23 @@ class RpcRunResult(RunResult):
         self._elapsed = elapsed
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "RpcRunResult":
-        """Constructs an instance of :class:`RpcRunResult <dagster_dbt.RpcRunResult>` from a
+    def from_dict(cls, d: Dict[str, Any]) -> "DbtRpcResult":
+        """Constructs an instance of :class:`DbtRpcResult <dagster_dbt.DbtRpcResult>` from a
         dictionary.
 
         Args:
-            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`RpcRunResult
-                <dagster_dbt.RpcRunResult>`.
+            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`DbtRpcResult
+                <dagster_dbt.DbtRpcResult>`.
 
         Returns:
-            RpcRunResult: an instance of :class:`RpcRunResult <dagster_dbt.RpcRunResult>`.
+            DbtRpcResult: an instance of :class:`DbtRpcResult <dagster_dbt.DbtRpcResult>`.
         """
         check.str_elem(d, "state")
         check.str_elem(d, "start")
         check.str_elem(d, "end")
         # check.float_elem(d, "elapsed") TODO[Bob]: Impelement `check.float_elem`.
 
-        RunResult.from_dict(d)  # Run the type checks for parent class, but throw away the instance.
+        DbtResult.from_dict(d)  # Run the type checks for parent class, but throw away the instance.
 
         return cls(**d)
 

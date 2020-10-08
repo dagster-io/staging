@@ -1,6 +1,6 @@
-from dagster_dbt import RunResult
+from dagster_dbt import DbtResult
 
-RUN_RESULT_DICT = {
+DBT_RESULT_DICT = {
     "logs": [],
     "results": [
         {
@@ -38,5 +38,5 @@ RUN_RESULT_DICT = {
 
 class TestRunResult:
     def test_from_dict(self):
-        rr = RunResult.from_dict(RUN_RESULT_DICT)
-        assert len(rr) == len(RUN_RESULT_DICT["results"])
+        rr = DbtResult.from_dict(DBT_RESULT_DICT)
+        assert len(rr) == len(DBT_RESULT_DICT["results"])
