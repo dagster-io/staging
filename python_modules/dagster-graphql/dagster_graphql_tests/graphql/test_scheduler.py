@@ -205,13 +205,19 @@ def test_get_schedule_states_for_repository(graphql_context):
         graphql_context, GET_SCHEDULE_STATES_QUERY, variables={"repositorySelector": selector},
     )
 
+    external_repository = graphql_context.get_repository_location(
+        main_repo_location_name()
+    ).get_repository(main_repo_name())
+
     assert result.data
     assert result.data["scheduleStatesOrError"]
     assert result.data["scheduleStatesOrError"]["__typename"] == "ScheduleStates"
 
-    # Since we haven't run reconcile yet, there should be no states in storage
     results = result.data["scheduleStatesOrError"]["results"]
-    assert len(results) == 0
+    assert len(results) == len(external_repository.get_external_schedules())
+
+    for schedule_state in results:
+        assert schedule_state["status"] == ScheduleStatus.STOPPED.value
 
 
 def test_get_schedule_state_with_for_repository_not_reconciled(graphql_context):
@@ -220,13 +226,19 @@ def test_get_schedule_state_with_for_repository_not_reconciled(graphql_context):
         graphql_context, GET_SCHEDULE_STATES_QUERY, variables={"repositorySelector": selector},
     )
 
+    external_repository = graphql_context.get_repository_location(
+        main_repo_location_name()
+    ).get_repository(main_repo_name())
+
     assert result.data
     assert result.data["scheduleStatesOrError"]
     assert result.data["scheduleStatesOrError"]["__typename"] == "ScheduleStates"
 
-    # Since we haven't run reconcile yet, there should be no states in storage
     results = result.data["scheduleStatesOrError"]["results"]
-    assert len(results) == 0
+    assert len(results) == len(external_repository.get_external_schedules())
+
+    for schedule_state in results:
+        assert schedule_state["status"] == ScheduleStatus.STOPPED.value
 
 
 def test_get_schedule_states_for_repository_after_reconcile(graphql_context):

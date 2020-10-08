@@ -188,6 +188,17 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
 
         return schedule_state
 
+    def _create_new_schedule_state(self, instance, external_schedule):
+        schedule_state = ScheduleState(
+            external_schedule.get_origin(),
+            ScheduleStatus.STOPPED,
+            external_schedule.cron_schedule,
+            start_timestamp=None,
+        )
+
+        instance.add_schedule_state(schedule_state)
+        return schedule_state
+
     def reconcile_scheduler_state(self, instance, external_repository):
         """Reconcile the ExternalSchedule list from the repository and ScheduleStorage
         on the instance to ensure there is a 1-1 correlation between ExternalSchedule and
@@ -227,14 +238,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
                 instance.update_schedule_state(schedule_state)
                 schedules_to_restart.append((existing_schedule_state, external_schedule))
             else:
-                schedule_state = ScheduleState(
-                    external_schedule.get_origin(),
-                    ScheduleStatus.STOPPED,
-                    external_schedule.cron_schedule,
-                    start_timestamp=None,
-                )
-
-                instance.add_schedule_state(schedule_state)
+                self._create_new_schedule_state(instance, external_schedule)
 
         # Delete all existing schedules that are not in external schedules
         external_schedule_origin_ids = {
@@ -292,7 +296,10 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
         check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(external_schedule, "external_schedule", ExternalSchedule)
 
-        schedule_state = self._get_schedule_state(instance, external_schedule.get_origin_id())
+        schedule_state = instance.get_schedule_state(external_schedule.get_origin_id())
+
+        if not schedule_state:
+            schedule_state = self._create_new_schedule_state(instance, external_schedule)
 
         if schedule_state.status == ScheduleStatus.RUNNING:
             raise DagsterSchedulerError(
