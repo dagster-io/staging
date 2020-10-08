@@ -28,12 +28,12 @@ from dagster import (
 from dagster.core.execution.context.compute import SolidExecutionContext
 
 from ..errors import DagsterDbtRpcUnexpectedPollOutputError
-from .types import RpcRunResult
+from .types import DbtRpcResult
 from .utils import log_rpc, raise_for_rpc_error
 
 
-def _generate_materializations(prr: RpcRunResult) -> Iterator[AssetMaterialization]:
-    """Yields ``AssetMaterializations`` for metadata in the dbt RPC ``RpcRunResult``."""
+def _generate_materializations(prr: DbtRpcResult) -> Iterator[AssetMaterialization]:
+    """Yields ``AssetMaterializations`` for metadata in the dbt RPC ``DbtRpcResult``."""
     for node_result in prr.results:
         if node_result.node["resource_type"] in ["model", "snapshot"]:
             success = not node_result.fail and not node_result.skip and not node_result.error
@@ -96,7 +96,7 @@ def _generate_materializations(prr: RpcRunResult) -> Iterator[AssetMaterializati
 
 def _poll_rpc(
     context: SolidExecutionContext, request_token: str, should_yield_materializations: bool = True
-) -> RpcRunResult:
+) -> DbtRpcResult:
     """Polls the dbt RPC server for the status of a request until the state is ``success``."""
     logs_start = 0
     while True:
@@ -134,7 +134,7 @@ def _poll_rpc(
     )
     context.log.debug(json.dumps(resp.json().get("result"), indent=2))
 
-    polled_run_results = RpcRunResult.from_dict(resp.json().get("result"))
+    polled_run_results = DbtRpcResult.from_dict(resp.json().get("result"))
 
     if should_yield_materializations:
         for materialization in _generate_materializations(polled_run_results):
@@ -143,8 +143,8 @@ def _poll_rpc(
     yield Output(polled_run_results)
 
 
-def unwrap_result(poll_rpc_generator) -> RpcRunResult:
-    """A helper function that extracts the `RpcRunResult` value from a generator.
+def unwrap_result(poll_rpc_generator) -> DbtRpcResult:
+    """A helper function that extracts the `DbtRpcResult` value from a generator.
 
     The parameter `poll_rpc_generator` is expected to be an invocation of `_poll_rpc`.
     """
@@ -154,17 +154,17 @@ def unwrap_result(poll_rpc_generator) -> RpcRunResult:
 
     if output is None:
         raise DagsterDbtRpcUnexpectedPollOutputError(
-            description="poll_rpc yielded None as its last value. Expected value of type Output containing RpcRunResult.",
+            description="poll_rpc yielded None as its last value. Expected value of type Output containing DbtRpcResult.",
         )
 
     if not isinstance(output, Output):
         raise DagsterDbtRpcUnexpectedPollOutputError(
-            description=f"poll_rpc yielded value of type {type(output)} as its last value. Expected value of type Output containing RpcRunResult.",
+            description=f"poll_rpc yielded value of type {type(output)} as its last value. Expected value of type Output containing DbtRpcResult.",
         )
 
-    if not isinstance(output.value, RpcRunResult):
+    if not isinstance(output.value, DbtRpcResult):
         raise DagsterDbtRpcUnexpectedPollOutputError(
-            description=f"poll_rpc yielded Output containing {type(output.value)}. Expected RpcRunResult.",
+            description=f"poll_rpc yielded Output containing {type(output.value)}. Expected DbtRpcResult.",
         )
 
     return output.value
@@ -214,7 +214,7 @@ def dbt_rpc_run(context: SolidExecutionContext) -> String:
 @solid(
     description="A solid to invoke dbt run over RPC and poll the resulting RPC process until it's complete.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=RpcRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtRpcResult)],
     config_schema={
         "models": Field(
             config=Noneable(Array(String)),
@@ -265,7 +265,7 @@ def dbt_rpc_run(context: SolidExecutionContext) -> String:
     required_resource_keys={"dbt_rpc"},
     tags={"kind": "dbt"},
 )
-def dbt_rpc_run_and_wait(context: SolidExecutionContext) -> RpcRunResult:
+def dbt_rpc_run_and_wait(context: SolidExecutionContext) -> DbtRpcResult:
     """This solid sends the ``dbt run`` command to a dbt RPC server and returns the result of the
     executed dbt process.
 
@@ -372,7 +372,7 @@ def dbt_rpc_test(context: SolidExecutionContext) -> String:
 @solid(
     description="A solid to invoke dbt test over RPC and poll the resulting RPC process until it's complete.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=RpcRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtRpcResult)],
     config_schema={
         "models": Field(
             config=Noneable(Array(String)),
@@ -414,7 +414,7 @@ def dbt_rpc_test(context: SolidExecutionContext) -> String:
     required_resource_keys={"dbt_rpc"},
     tags={"kind": "dbt"},
 )
-def dbt_rpc_test_and_wait(context: SolidExecutionContext) -> RpcRunResult:
+def dbt_rpc_test_and_wait(context: SolidExecutionContext) -> DbtRpcResult:
     """This solid sends the ``dbt test`` command to a dbt RPC server and returns the result of the
     executed dbt process.
 
@@ -477,7 +477,7 @@ def dbt_rpc_run_operation(context: SolidExecutionContext) -> String:
 @solid(
     description="A solid to invoke a dbt run operation over RPC and poll the resulting RPC process until it's complete.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=RpcRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtRpcResult)],
     config_schema={
         "macro": Field(
             config=String,
@@ -506,7 +506,7 @@ def dbt_rpc_run_operation(context: SolidExecutionContext) -> String:
     required_resource_keys={"dbt_rpc"},
     tags={"kind": "dbt"},
 )
-def dbt_rpc_run_operation_and_wait(context: SolidExecutionContext) -> RpcRunResult:
+def dbt_rpc_run_operation_and_wait(context: SolidExecutionContext) -> DbtRpcResult:
     """This solid sends the ``dbt run-operation`` command to a dbt RPC server and returns the result of the
     executed dbt process.
 
@@ -567,7 +567,7 @@ def dbt_rpc_snapshot(context: SolidExecutionContext) -> String:
 @solid(
     description="A solid to invoke a dbt snapshot over RPC and poll the resulting RPC process until it's complete.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=RpcRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtRpcResult)],
     config_schema={
         "select": Field(
             config=Noneable(Array(String)),
@@ -600,7 +600,7 @@ def dbt_rpc_snapshot(context: SolidExecutionContext) -> String:
     required_resource_keys={"dbt_rpc"},
     tags={"kind": "dbt"},
 )
-def dbt_rpc_snapshot_and_wait(context: SolidExecutionContext) -> RpcRunResult:
+def dbt_rpc_snapshot_and_wait(context: SolidExecutionContext) -> DbtRpcResult:
     """This solid sends the ``dbt snapshot`` command to a dbt RPC server and returns the result of
     the executed dbt process.
 
@@ -683,7 +683,7 @@ def dbt_rpc_snapshot_freshness(context: SolidExecutionContext) -> String:
 @solid(
     description="A solid to invoke dbt source snapshot-freshness over RPC and poll the resulting RPC process until it's complete.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=RpcRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtRpcResult)],
     config_schema={
         "select": Field(
             config=Noneable(Array(String)),
@@ -713,7 +713,7 @@ def dbt_rpc_snapshot_freshness(context: SolidExecutionContext) -> String:
     required_resource_keys={"dbt_rpc"},
     tags={"kind": "dbt"},
 )
-def dbt_rpc_snapshot_freshness_and_wait(context: SolidExecutionContext) -> RpcRunResult:
+def dbt_rpc_snapshot_freshness_and_wait(context: SolidExecutionContext) -> DbtRpcResult:
     """This solid sends the ``dbt source snapshot`` command to a dbt RPC server and returns the
     result of the executed dbt process.
 
