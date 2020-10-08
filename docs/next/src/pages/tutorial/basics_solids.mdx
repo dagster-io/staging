@@ -209,20 +209,33 @@ startAfter:start_config_marker_0
 endBefore:end_config_marker_0
 ```
 
-First, we pass the `config` argument to the <PyObject module="dagster" object="solid"
-displayText="@solid" /> decorator. This tells Dagster to give our solid a config field structured as
-a dictionary, whose keys are the keys of this argument, and the types of whose values are defined by
-the values of this argument (instances of <PyObject module="dagster" object="Field" />).
+First, we pass the `config` argument to the <PyObject module="dagster" object="solid" displayText="@solid" /> decorator.
+This tells Dagster to give our solid a config field structured as a dictionary. The values of the dictionary are
+instances of <PyObject module="dagster" object="Field" />.
 
 Then, we define one of these fields, `escapechar`, to be a string, setting a default value, making
 it optional, and setting a human-readable description.
 
 Finally, inside the body of the solid function, we access the config value set by the user using the
 `solid_config` field on the familiar <PyObject module="dagster"
-object="SystemComputeExecutionContext" displayText="context" /> object. When Dagster executes our
-pipeline, the framework will make validated config for each solid available on this object.
+object="SystemComputeExecutionContext" displayText="context" /> object.
 
-Let's see how all of this looks in Dagit. As usual, run:
+We can also pass a `config` argument to next <PyObject module="dagster" object="solid"
+displayText="@solid" /> `sort_by_calories`.
+
+```python literalinclude showLines startLine=43 emphasize-lines=5  caption=config.py
+file:/docs_snippets/docs_snippets/intro_tutorial/basics/e02_solids/config.py
+lines:43-67
+```
+
+Let's run config with `"calories": 130` like following and see how all of these look in Dagit:
+
+```python literalinclude showLines startLine=76  caption=config.py
+file:/docs_snippets/docs_snippets/intro_tutorial/basics/e02_solids/config.py
+lines:76-81
+```
+
+As usual, run:
 
 ```bash
 dagit -f config.py
@@ -230,28 +243,13 @@ dagit -f config.py
 
 ![config_figure_one.png](/assets/images/tutorial/config_figure_one.png)
 
-As you may by now expect, Dagit provides a fully type-aware and schema-aware config editing
-environment with a typeahead. The human-readable descriptions we provided on our config fields
-appear in the config context minimap, as well as in typeahead tooltips and in the Explore pane when
-clicking into the individual solid definition.
+Dagit provides a fully type-aware and schema-aware config editing environment with a typeahead.
+The human-readable descriptions of `delimiter` and `escapechar` we provided on our config fields
+appear in the config section on the right when we click into the `read_csv` solid definition.
 
 ![config_figure_two.png](/assets/images/tutorial/config_figure_two.png)
 
-You can see that we've added a new section to the solid config. In addition to the `inputs` section,
-which we'll still use to set the `csv_path` input, we now have a `config` section, where we can set
-values defined in the `config` argument to <PyObject module="dagster" object="solid"
-displayText="@solid" />.
-
-```YAML literalinclude caption=config_env_bad.yaml
-file:/docs_snippets/docs_snippets/intro_tutorial/basics/e02_solids/config_env_bad.yaml
-```
-
-Of course, this config won't give us the results we're expecting. The values in `cereal.csv` are
-comma-separated, not semicolon-separated, as they might be if this were a CSV from Europe, where
-commas are frequently used in place of the decimal point.
-
-We'll see later how we can use Dagster's facilities for automatic data quality checks to guard
-against semantic issues like this, which won't be caught by the type system.
+Our `inputs_pipeline` run successfully with the config schemas we defined for our solids.
 
 <br />
 
