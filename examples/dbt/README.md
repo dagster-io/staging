@@ -22,6 +22,7 @@ These examples are here to illustrate how custom solids can be combined with dbt
 Creating a Python virtual env is recommended.
     - `dbt`
     - `dagster`
+    - `dagit`
     - `dagster-dbt`
 
 > __Note__
