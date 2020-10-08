@@ -83,6 +83,15 @@ def daily_dst_transition_schedule(_context):
 
 
 @daily_schedule(
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Eastern",
+)
+def daily_eastern_timezone_schedule(_context):
+    return {
+        "solids": {"the_solid": {"config": {"work_amt": "a lot"}}},
+    }
+
+
+@daily_schedule(
     pipeline_name="the_pipeline",
     start_date=_COUPLE_DAYS_AGO,
     end_date=datetime.datetime(year=2019, month=3, day=1),
@@ -138,6 +147,7 @@ def the_repo():
         simple_hourly_schedule,
         daily_late_schedule,
         daily_dst_transition_schedule,
+        daily_eastern_timezone_schedule,
         bad_env_fn_schedule,
         bad_should_execute_schedule,
         bad_should_execute_schedule_on_odd_days,
