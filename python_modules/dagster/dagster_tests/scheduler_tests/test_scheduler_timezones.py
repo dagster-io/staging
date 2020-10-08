@@ -98,6 +98,120 @@ def test_different_timezone_run(external_repo_context, capfd):
             assert ticks[0].status == ScheduleTickStatus.SUCCESS
 
 
+@pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
+def test_override_timezone_in_schedule(external_repo_context):
+    # Two schedules, one using the instance-level timezone (US/Central), the other
+    # has overridden the execution timestamp at the schedule level to run at midnight
+    # US/Eastern
+    with instance_with_schedules(external_repo_context, timezone="US/Central") as (
+        instance,
+        external_repo,
+    ):
+        freeze_datetime = pendulum.create(2019, 2, 27, 23, 59, 59, tz="US/Eastern").in_tz(
+            "US/Pacific"
+        )
+        with pendulum.test(freeze_datetime):
+            external_schedule = external_repo.get_external_schedule("simple_schedule")
+            external_eastern_schedule = external_repo.get_external_schedule(
+                "daily_eastern_timezone_schedule"
+            )
+
+            schedule_origin = external_schedule.get_origin()
+            eastern_origin = external_eastern_schedule.get_origin()
+
+            instance.start_schedule_and_update_storage_state(external_schedule)
+            instance.start_schedule_and_update_storage_state(external_eastern_schedule)
+
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 0
+
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 0
+
+        # 1 hour later, the eastern timezone schedule will run, but not the central timezone
+        freeze_datetime = freeze_datetime.add(hours=1)
+        with pendulum.test(freeze_datetime):
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+
+            assert instance.get_runs_count() == 1
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 1
+
+            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Eastern").in_tz(
+                "UTC"
+            )
+
+            validate_tick(
+                ticks[0],
+                external_eastern_schedule,
+                expected_datetime,
+                ScheduleTickStatus.SUCCESS,
+                instance.get_runs()[0].run_id,
+            )
+
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
+
+        # 1 hour later, the central timezone schedule will now run
+        freeze_datetime = freeze_datetime.add(hours=1)
+        with pendulum.test(freeze_datetime):
+
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+
+            assert instance.get_runs_count() == 2
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 1
+
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+
+            expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Central").in_tz(
+                "UTC"
+            )
+
+            validate_tick(
+                ticks[0],
+                external_schedule,
+                expected_datetime,
+                ScheduleTickStatus.SUCCESS,
+                instance.get_runs()[0].run_id,
+            )
+
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
+
+            # Verify idempotence
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+            assert instance.get_runs_count() == 2
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+
+            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            assert len(ticks) == 1
+            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+
+
 # Verify that a schedule that runs in US/Central late enough in the day that it executes on
 # a different day in UTC still runs and creates its partition names based on the US/Central time
 @pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])

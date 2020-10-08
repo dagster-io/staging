@@ -28,6 +28,7 @@ def schedule(
     mode="default",
     should_execute=None,
     environment_vars=None,
+    execution_timezone=None,
 ):
     """Create a schedule.
 
@@ -57,6 +58,8 @@ def schedule(
             schedule should execute). Defaults to a function that always returns ``True``.
         environment_vars (Optional[Dict[str, str]]): Any environment variables to set when executing
             the schedule.
+        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
+            with DagsterCommandLineScheduler.
     """
 
     def inner(fn):
@@ -75,6 +78,7 @@ def schedule(
             mode=mode,
             should_execute=should_execute,
             environment_vars=environment_vars,
+            execution_timezone=execution_timezone,
         )
 
     return inner
@@ -92,6 +96,7 @@ def monthly_schedule(
     should_execute=None,
     environment_vars=None,
     end_date=None,
+    execution_timezone=None,
 ):
     """Create a schedule that runs monthly.
 
@@ -122,6 +127,8 @@ def monthly_schedule(
             the schedule.
         end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to
             current time.
+        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
+            with DagsterCommandLineScheduler.
     """
     check.opt_str_param(name, "name")
     check.inst_param(start_date, "start_date", datetime.datetime)
@@ -134,6 +141,7 @@ def monthly_schedule(
     check.str_param(pipeline_name, "pipeline_name")
     check.int_param(execution_day_of_month, "execution_day")
     check.inst_param(execution_time, "execution_time", datetime.time)
+    check.opt_str_param(execution_timezone, "execution_timezone")
 
     if execution_day_of_month <= 0 or execution_day_of_month > 31:
         raise DagsterInvalidDefinitionError(
@@ -175,6 +183,7 @@ def monthly_schedule(
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(delta, fmt),
+            execution_timezone=execution_timezone,
         )
 
     return inner
@@ -192,6 +201,7 @@ def weekly_schedule(
     should_execute=None,
     environment_vars=None,
     end_date=None,
+    execution_timezone=None,
 ):
     """Create a schedule that runs weekly.
 
@@ -222,6 +232,8 @@ def weekly_schedule(
             the schedule.
         end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to
             current time.
+        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
+            with DagsterCommandLineScheduler.
     """
     check.opt_str_param(name, "name")
     check.inst_param(start_date, "start_date", datetime.datetime)
@@ -234,6 +246,7 @@ def weekly_schedule(
     check.str_param(pipeline_name, "pipeline_name")
     check.int_param(execution_day_of_week, "execution_day_of_week")
     check.inst_param(execution_time, "execution_time", datetime.time)
+    check.opt_str_param(execution_timezone, "execution_timezone")
 
     if execution_day_of_week < 0 or execution_day_of_week >= 7:
         raise DagsterInvalidDefinitionError(
@@ -279,6 +292,7 @@ def weekly_schedule(
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(delta + execution_offset, fmt),
+            execution_timezone=execution_timezone,
         )
 
     return inner
@@ -295,6 +309,7 @@ def daily_schedule(
     should_execute=None,
     environment_vars=None,
     end_date=None,
+    execution_timezone=None,
 ):
     """Create a schedule that runs daily.
 
@@ -323,17 +338,20 @@ def daily_schedule(
             the schedule.
         end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to
             current time.
+        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
+            with DagsterCommandLineScheduler
     """
-    check.opt_str_param(name, "name")
+    check.str_param(pipeline_name, "pipeline_name")
     check.inst_param(start_date, "start_date", datetime.datetime)
+    check.opt_str_param(name, "name")
+    check.inst_param(execution_time, "execution_time", datetime.time)
     check.opt_inst_param(end_date, "end_date", datetime.datetime)
     check.opt_callable_param(tags_fn_for_date, "tags_fn_for_date")
     check.opt_nullable_list_param(solid_selection, "solid_selection", of_type=str)
     mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
     check.opt_callable_param(should_execute, "should_execute")
     check.opt_dict_param(environment_vars, "environment_vars", key_type=str, value_type=str)
-    check.str_param(pipeline_name, "pipeline_name")
-    check.inst_param(execution_time, "execution_time", datetime.time)
+    check.opt_str_param(execution_timezone, "execution_timezone")
 
     cron_schedule = "{minute} {hour} * * *".format(
         minute=execution_time.minute, hour=execution_time.hour
@@ -369,6 +387,7 @@ def daily_schedule(
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(fmt=fmt, delta=delta),
+            execution_timezone=execution_timezone,
         )
 
     return inner
@@ -385,6 +404,7 @@ def hourly_schedule(
     should_execute=None,
     environment_vars=None,
     end_date=None,
+    execution_timezone=None,
 ):
     """Create a schedule that runs hourly.
 
@@ -415,6 +435,8 @@ def hourly_schedule(
             the schedule.
         end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to
             current time.
+        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works
+            with DagsterCommandLineScheduler
     """
     check.opt_str_param(name, "name")
     check.inst_param(start_date, "start_date", datetime.datetime)
@@ -426,6 +448,7 @@ def hourly_schedule(
     check.opt_dict_param(environment_vars, "environment_vars", key_type=str, value_type=str)
     check.str_param(pipeline_name, "pipeline_name")
     check.inst_param(execution_time, "execution_time", datetime.time)
+    check.opt_str_param(execution_timezone, "execution_timezone")
 
     if execution_time.hour != 0:
         warnings.warn(
@@ -477,6 +500,7 @@ def hourly_schedule(
                 # depending on what timezone the schedule runs in
                 partition_in_utc=True,
             ),
+            execution_timezone=execution_timezone,
         )
 
     return inner
