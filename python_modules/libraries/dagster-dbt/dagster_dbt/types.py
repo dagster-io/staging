@@ -1,5 +1,5 @@
 from collections import namedtuple
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Dict, List, Optional, Union
 
 from dateutil import parser

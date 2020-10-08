@@ -1,5 +1,4 @@
 from collections import namedtuple
-from datetime import datetime
 from typing import Any, Dict
 
 from dateutil import parser
