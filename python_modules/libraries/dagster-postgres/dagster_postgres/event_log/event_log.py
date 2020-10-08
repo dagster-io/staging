@@ -48,9 +48,7 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         self.postgres_url = check.str_param(postgres_url, "postgres_url")
         self._event_watcher = PostgresEventWatcher(self.postgres_url)
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
-        self._engine = create_engine(
-            self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
-        )
+        self._engine = create_engine(self.postgres_url, isolation_level="AUTOCOMMIT",)
         self._disposed = False
 
         with self.connect() as conn:

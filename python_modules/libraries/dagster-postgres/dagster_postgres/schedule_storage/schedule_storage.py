@@ -29,9 +29,7 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
 
     def __init__(self, postgres_url, inst_data=None):
         self.postgres_url = postgres_url
-        self._engine = create_engine(
-            self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
-        )
+        self._engine = create_engine(self.postgres_url, isolation_level="AUTOCOMMIT",)
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
         with self.connect() as conn:
