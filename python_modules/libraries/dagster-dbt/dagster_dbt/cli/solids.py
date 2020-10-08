@@ -15,7 +15,7 @@ from dagster import (
 from dagster.config.field import Field
 from dagster.utils.backcompat import experimental
 
-from .types import CliRunResult
+from .types import DbtCliResult
 from .utils import execute_cli, parse_run_results
 
 DEFAULT_DBT_EXECUTABLE = "dbt"
@@ -96,7 +96,7 @@ def passthrough_flags_only(solid_config, additional_flags):
 @solid(
     description="A solid to invoke dbt run via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=CliRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "threads": Field(
@@ -133,7 +133,7 @@ def passthrough_flags_only(solid_config, additional_flags):
     tags={"kind": "dbt"},
 )
 @experimental
-def dbt_cli_run(context) -> CliRunResult:
+def dbt_cli_run(context) -> DbtCliResult:
     """This solid executes ``dbt run`` via the dbt CLI."""
     cli_results = execute_cli(
         context.solid_config["dbt_executable"],
@@ -154,13 +154,13 @@ def dbt_cli_run(context) -> CliRunResult:
         metadata_entries=[EventMetadataEntry.json(cli_run_results, label="CLI Results")],
     )
 
-    yield Output(CliRunResult.from_dict(cli_run_results))
+    yield Output(DbtCliResult.from_dict(cli_run_results))
 
 
 @solid(
     description="A solid to invoke dbt test via CLI.",
     input_defs=[InputDefinition(name="start_after", dagster_type=Nothing)],
-    output_defs=[OutputDefinition(name="result", dagster_type=CliRunResult)],
+    output_defs=[OutputDefinition(name="result", dagster_type=DbtCliResult)],
     config_schema={
         **CLI_CONFIG_SCHEMA,
         "data": Field(
@@ -203,7 +203,7 @@ def dbt_cli_run(context) -> CliRunResult:
     tags={"kind": "dbt"},
 )
 @experimental
-def dbt_cli_test(context) -> CliRunResult:
+def dbt_cli_test(context) -> DbtCliResult:
     """This solid executes ``dbt test`` via the dbt CLI."""
     cli_results = execute_cli(
         context.solid_config["dbt_executable"],
@@ -224,7 +224,7 @@ def dbt_cli_test(context) -> CliRunResult:
         metadata_entries=[EventMetadataEntry.json(cli_run_results, label="CLI Results")],
     )
 
-    yield Output(CliRunResult.from_dict(cli_run_results))
+    yield Output(DbtCliResult.from_dict(cli_run_results))
 
 
 @solid(
