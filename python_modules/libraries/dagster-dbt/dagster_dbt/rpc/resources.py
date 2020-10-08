@@ -148,7 +148,11 @@ class DbtRpcClient:
 
     def status(self):
         """Sends a request with the method ``status`` to the dbt RPC server, and returns the
+<<<<<<< HEAD
         response. For more details, see the dbt docs for the RPC method `status
+=======
+        response. For more details, see the `dbt docs for the status RPC method
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#status>`_.
 
         Returns:
@@ -161,7 +165,11 @@ class DbtRpcClient:
         self, *, request_token: str, logs: bool = False, logs_start: int = 0
     ) -> requests.Response:
         """Sends a request with the method ``poll`` to the dbt RPC server, and returns the response.
+<<<<<<< HEAD
         For more details, see the dbt docs for the RPC method `poll
+=======
+        For more details, see the `dbt docs for the poll RPC method
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#poll>`_.
 
         Args:
@@ -178,7 +186,11 @@ class DbtRpcClient:
 
     def ps(self, *, completed: bool = False) -> requests.Response:
         """Sends a request with the method ``ps`` to the dbt RPC server, and returns the response.
+<<<<<<< HEAD
         For more details, see the dbt docs for the RPC method `ps
+=======
+        For more details, see the `dbt docs for the ps RPC method
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#ps>`_.
 
         Args:
@@ -193,7 +205,11 @@ class DbtRpcClient:
 
     def kill(self, *, task_id: str) -> requests.Response:
         """Sends a request with the method ``kill`` to the dbt RPC server, and returns the response.
+<<<<<<< HEAD
         For more details, see the dbt docs for the RPC method `kill
+=======
+        For more details, see the `dbt docs for the kill RPC method
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#kill>`_.
 
         Args:
@@ -229,7 +245,11 @@ class DbtRpcClient:
         self, *, models: List[str] = None, exclude: List[str] = None, **kwargs
     ) -> requests.Response:
         """Sends a request with the method ``compile`` to the dbt RPC server, and returns the
+<<<<<<< HEAD
         response. For more details, see the dbt docs for `compiling projects via RPC
+=======
+        response. For more details, see the `dbt docs for compiling a project via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#compile-a-project>`_.
 
         Args:
@@ -251,7 +271,11 @@ class DbtRpcClient:
         self, *, models: List[str] = None, exclude: List[str] = None, **kwargs
     ) -> requests.Response:
         """Sends a request with the method ``run`` to the dbt RPC server, and returns the response.
+<<<<<<< HEAD
         For more details, see the dbt docs for the RPC method `run
+=======
+        For more details, see the `dbt docs for running a project via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#run-models>`_.
 
         Args:
@@ -272,8 +296,13 @@ class DbtRpcClient:
     def snapshot(
         self, *, select: List[str] = None, exclude: List[str] = None, **kwargs
     ) -> requests.Response:
+<<<<<<< HEAD
         """Sends a request with the method ``snapshot`` to the dbt RPC server, and returns the
         response. For more details, see the dbt docs for the command `snapshot
+=======
+        """Sends a request with the method ``cli`` to the dbt RPC server, and returns the response.
+        For more details, see the `dbt docs for the snapshot dbt command
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/snapshot>`_.
 
         Args:
@@ -301,7 +330,11 @@ class DbtRpcClient:
         **kwargs,
     ) -> requests.Response:
         """Sends a request with the method ``test`` to the dbt RPC server, and returns the response.
+<<<<<<< HEAD
         For more details, see the dbt docs for the RPC method `test
+=======
+        For more details, see the `dbt docs for testing your project via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#run-test>`_.
 
         Args:
@@ -325,7 +358,11 @@ class DbtRpcClient:
 
     def seed(self, *, show: bool = False, **kwargs) -> requests.Response:
         """Sends a request with the method ``seed`` to the dbt RPC server, and returns the response.
+<<<<<<< HEAD
         For more details, see the dbt docs for the RPC method `seed
+=======
+        For more details, see the `dbt docs for seeding your project via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#run-seed>`_.
 
         Args:
@@ -352,7 +389,11 @@ class DbtRpcClient:
         **kwargs,
     ) -> requests.Response:
         """Sends a request with the method ``docs.generate`` to the dbt RPC server, and returns the
+<<<<<<< HEAD
         response. For more details, see the dbt docs for the RPC method `docs.generate
+=======
+        response. For more details, see the `dbt docs for generating docs via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc/#generate-docs>`_.
 
         Args:
@@ -378,7 +419,11 @@ class DbtRpcClient:
         self, *, macro: str, args: Optional[Dict[str, Any]] = None, **kwargs
     ) -> requests.Response:
         """Sends a request with the method ``run-operation`` to the dbt RPC server, and returns the
+<<<<<<< HEAD
         response. For more details, see the dbt docs for the command `run-operation
+=======
+        response. For more details, see the `dbt docs for the run-operation command
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/run-operation>`_.
 
         Args:
@@ -403,7 +448,11 @@ class DbtRpcClient:
         self, *, select: Optional[List[str]] = None, **kwargs
     ) -> requests.Response:
         """Sends a request with the method ``snapshot-freshness`` to the dbt RPC server, and returns
+<<<<<<< HEAD
         the response. For more details, see the dbt docs for the command `source snapshot-freshness
+=======
+        the response. For more details, see the `dbt docs for the source snapshot-freshness method
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/source#dbt-source-snapshot-freshness>`_.
 
         Args:
@@ -422,7 +471,11 @@ class DbtRpcClient:
 
     def compile_sql(self, *, sql: str, name: str) -> requests.Response:
         """Sends a request with the method ``compile_sql`` to the dbt RPC server, and returns the
+<<<<<<< HEAD
         response. For more details, see the dbt docs for `compiling SQL via RPC
+=======
+        response. For more details, see the `dbt docs for compiling an SQL query via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc#compiling-a-query>`_.
 
         Args:
@@ -438,7 +491,11 @@ class DbtRpcClient:
 
     def run_sql(self, *, sql: str, name: str) -> requests.Response:
         """Sends a request with the method ``run_sql`` to the dbt RPC server, and returns the
+<<<<<<< HEAD
         response. For more details, see the dbt docs for `running SQL via RPC
+=======
+        response. For more details, see the `dbt docs for executing an SQL query via RPC
+>>>>>>> Refactors classes into named tuples.
         <https://docs.getdbt.com/reference/commands/rpc#executing-a-query>`_.
 
         Args:
@@ -480,6 +537,7 @@ def dbt_rpc_resource(context) -> DbtRpcClient:
     return DbtRpcClient(host=context.resource_config["host"], port=context.resource_config["port"])
 
 
+<<<<<<< HEAD
 @resource(
     description="A resource representing a dbt RPC client that is configured for 0.0.0.0:8580",
 )
@@ -491,3 +549,8 @@ def local_dbt_rpc_resource(_context) -> DbtRpcClient:
             for dbt RPC server at ``0.0.0.0:8580``.
     """
     return DbtRpcClient(host="0.0.0.0", port=8580)
+=======
+local_dbt_rpc_resource = dbt_rpc_resource.configured({"host": "0.0.0.0", "port": 8580})
+local_dbt_rpc_resource.__doc__ = """This resource defines a dbt RPC client for an RPC server running
+on 0.0.0.0:8580."""
+>>>>>>> Refactors classes into named tuples.
