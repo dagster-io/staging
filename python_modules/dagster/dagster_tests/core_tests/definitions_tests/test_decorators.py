@@ -347,6 +347,10 @@ def test_schedule_decorators_sanity():
     def foo_pipeline():
         do_nothing()
 
+    @schedule(cron_schedule="* * * * *", pipeline_name="foo_pipeline")
+    def foo_schedule(context):
+        return {}
+
     @monthly_schedule(
         pipeline_name="foo_pipeline",
         execution_day_of_month=3,
@@ -374,6 +378,83 @@ def test_schedule_decorators_sanity():
     )
     def hourly_foo_schedule():
         return {}
+
+    assert not foo_schedule.execution_timezone
+    assert not monthly_foo_schedule.execution_timezone
+    assert not weekly_foo_schedule.execution_timezone
+    assert not hourly_foo_schedule.execution_timezone
+    assert not daily_foo_schedule.execution_timezone
+
+
+def test_schedule_decorators_execution_timezone():
+    @solid
+    def do_nothing(_):
+        pass
+
+    @pipeline
+    def foo_pipeline():
+        do_nothing()
+
+    @schedule(
+        cron_schedule="* * * * *", pipeline_name="foo_pipeline", execution_timezone="US/Central",
+    )
+    def foo_schedule(context):
+        return {}
+
+    @monthly_schedule(
+        pipeline_name="foo_pipeline",
+        execution_day_of_month=3,
+        start_date=datetime(year=2019, month=1, day=1),
+        execution_timezone="US/Central",
+    )
+    def monthly_foo_schedule():
+        return {}
+
+    @weekly_schedule(
+        pipeline_name="foo_pipeline",
+        execution_day_of_week=1,
+        start_date=datetime(year=2019, month=1, day=1),
+        execution_timezone="US/Central",
+    )
+    def weekly_foo_schedule():
+        return {}
+
+    @daily_schedule(
+        pipeline_name="foo_pipeline",
+        start_date=datetime(year=2019, month=1, day=1),
+        execution_timezone="US/Central",
+    )
+    def daily_foo_schedule():
+        return {}
+
+    @hourly_schedule(
+        pipeline_name="foo_pipeline",
+        start_date=datetime(year=2019, month=1, day=1),
+        execution_timezone="US/Central",
+    )
+    def hourly_foo_schedule():
+        return {}
+
+    assert foo_schedule.execution_timezone == "US/Central"
+    assert monthly_foo_schedule.execution_timezone == "US/Central"
+    assert weekly_foo_schedule.execution_timezone == "US/Central"
+    assert hourly_foo_schedule.execution_timezone == "US/Central"
+    assert daily_foo_schedule.execution_timezone == "US/Central"
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=re.escape(
+            "Invalid execution timezone MadeUpTimeZone for invalid_timezone_foo_schedule"
+        ),
+    ):
+
+        @daily_schedule(
+            pipeline_name="foo_pipeline",
+            start_date=datetime(year=2019, month=1, day=1),
+            execution_timezone="MadeUpTimeZone",
+        )
+        def invalid_timezone_foo_schedule():
+            return {}
 
 
 def _check_partitions(partition_schedule_def, expected_num_partitions, expected_relative_delta):

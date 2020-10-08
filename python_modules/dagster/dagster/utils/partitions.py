@@ -1,15 +1,17 @@
 import datetime
 
+import pendulum
 from dateutil.relativedelta import relativedelta
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.seven import get_current_datetime_in_utc
 
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 
 
 def date_partition_range(
-    start, end=None, delta=datetime.timedelta(days=1), fmt=None, inclusive=False
+    start, end=None, delta=datetime.timedelta(days=1), fmt=None, inclusive=False, timezone=None
 ):
     """ Utility function that returns a partition generating function to be used in creating a
     `PartitionSet` definition.
@@ -27,7 +29,7 @@ def date_partition_range(
             past. If inclusive is set to True, then the partition set will include all date
             interval partitions for which the start time of the interval is less than the
             current time.
-
+        timezone (Optional(str)): Timezone in which the partition values should be expressed.
     Returns:
         Callable[[], List[Partition]]
     """
@@ -37,6 +39,7 @@ def date_partition_range(
     check.opt_inst_param(end, "end", datetime.datetime)
     check.inst_param(delta, "timedelta", (datetime.timedelta, relativedelta))
     fmt = check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT)
+    check.opt_str_param(timezone, "timezone")
 
     if end and start > end:
         raise DagsterInvariantViolationError(
@@ -46,14 +49,29 @@ def date_partition_range(
         )
 
     def get_date_range_partitions():
-        current = start
-
-        _end = end or datetime.datetime.now()
-
         date_names = []
-        while current <= _end:
-            date_names.append(Partition(value=current, name=current.strftime(fmt)))
-            current = current + delta
+        if timezone:
+            current_utc = pendulum.instance(start, tz=timezone).in_tz("UTC")
+            end_utc = (
+                pendulum.instance(end, tz=timezone).in_tz("UTC")
+                if end
+                else get_current_datetime_in_utc()
+            )
+            while current_utc <= end_utc:
+                current_in_timezone = current_utc.in_tz(timezone)
+
+                date_names.append(
+                    Partition(value=current_in_timezone, name=current_in_timezone.strftime(fmt))
+                )
+                current_utc = current_utc + delta
+        else:
+            current = start
+
+            _end = end or datetime.datetime.now()
+
+            while current <= _end:
+                date_names.append(Partition(value=current, name=current.strftime(fmt)))
+                current = current + delta
 
         # We don't include the last element here by default since we only want
         # fully completed intervals, and the _end time is in the middle of the interval
