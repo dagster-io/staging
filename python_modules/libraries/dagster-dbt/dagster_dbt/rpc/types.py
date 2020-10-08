@@ -1,3 +1,4 @@
+from collections import namedtuple
 from datetime import datetime
 from typing import Any, Dict
 
@@ -9,76 +10,49 @@ from ..types import DbtResult
 
 
 @usable_as_dagster_type
-class DbtRpcResult(DbtResult):
-    """The results of executing a dbt command, along with additional metadata about the dbt process
-    that was run on the dbt RPC server.
+class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")):
+    """The output from executing a dbt command via the dbt RPC server.
 
-    We recommend that you construct an instance of :class:`DbtRpcResult
-    <dagster_dbt.DbtRpcResult>` by using the class method:func:`from_dict
-    <dagster_dbt.DbtRpcResult.from_dict>`.
+    Note that users should not construct instances of this class directly. This class is intended to be
+    constructed from the JSON output of dbt commands.
 
-    When using the dbt RPC server, polled run results are typically parsed from the JSON body of
-    the RPC response.
+    Attributes:
+        result (DbtResult): The dbt results from the executed command.
+        state (str): The state of the polled dbt process.
+        start (str): An ISO string timestamp of when the dbt process started.
+        end (str): An ISO string timestamp of when the dbt process ended.
+        elapsed (float): The duration (in seconds) for which the dbt process was running.
     """
 
-    def __init__(self, *args, state: str, start: str, end: str, elapsed: float, **kwargs):
-        """Constructor
-
-        Args:
-            state (str): The state of the polled dbt process.
-            start (str): An ISO string timestamp of when the dbt process started.
-            end (str): An ISO string timestamp of when the dbt process ended.
-            elapsed (float): The duration (in seconds) for which the dbt process was running.
-        """
-        super().__init__(*args, **kwargs)
-
-        check.str_param(state, "state")
-        check.str_param(start, "start")
-        check.str_param(end, "end")
-        check.float_param(elapsed, "elapsed")
-
-        self._state = state
-        self._start = parser.isoparse(start)
-        self._end = parser.isoparse(end)
-        self._elapsed = elapsed
+    def __new__(
+        cls, *, result: DbtResult, state: str, start: str, end: str, elapsed: float, **_,
+    ):
+        return super().__new__(
+            cls,
+            result,
+            check.str_param(state, "state"),
+            check.str_param(start, "start"),
+            check.str_param(end, "end"),
+            check.float_param(elapsed, "elapsed"),
+        )
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "DbtRpcResult":
-        """Constructs an instance of :class:`DbtRpcResult <dagster_dbt.DbtRpcResult>` from a
+    def from_dict(cls, d: Dict[str, Any]) -> "DbtRpcOutput":
+        """Constructs an instance of :class:`DbtRpcOutput <dagster_dbt.DbtRpcOutput>` from a
         dictionary.
 
         Args:
-            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`DbtRpcResult
-                <dagster_dbt.DbtRpcResult>`.
+            d (Dict[str, Any]): A dictionary with key-values to construct a :class:`DbtRpcOutput
+                <dagster_dbt.DbtRpcOutput>`.
 
         Returns:
-            DbtRpcResult: an instance of :class:`DbtRpcResult <dagster_dbt.DbtRpcResult>`.
+            DbtRpcOutput: An instance of :class:`DbtRpcOutput <dagster_dbt.DbtRpcOutput>`.
         """
         check.str_elem(d, "state")
         check.str_elem(d, "start")
         check.str_elem(d, "end")
         # check.float_elem(d, "elapsed") TODO[Bob]: Impelement `check.float_elem`.
 
-        DbtResult.from_dict(d)  # Run the type checks for parent class, but throw away the instance.
+        d["result"] = DbtResult.from_dict(d)
 
         return cls(**d)
-
-    @property
-    def state(self) -> str:
-        """str: The state of the polled dbt process."""
-        return self._state
-
-    @property
-    def start(self) -> datetime:
-        """datetime.datetime: A timestamp of when the dbt process started."""
-        return self._start
-
-    @property
-    def end(self) -> datetime:
-        """datetime.datetime: A timestamp of when the dbt process ended."""
-        return self._end
-
-    @property
-    def elapsed(self) -> float:
-        """float: The duration (in seconds) for which the dbt process was running."""
-        return self._elapsed
