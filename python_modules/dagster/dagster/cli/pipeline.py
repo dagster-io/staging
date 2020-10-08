@@ -48,9 +48,9 @@ from dagster.seven import IS_WINDOWS, JSONDecodeError, json
 from dagster.utils import (
     DEFAULT_WORKSPACE_YAML_FILENAME,
     delay_interrupts,
+    is_str,
     load_yaml_from_glob_list,
     merge_dicts,
-    is_str,
 )
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_pipeline_from_origin
@@ -701,13 +701,8 @@ def get_tags_from_args(kwargs):
 
 
 def get_solid_selection_from_args(kwargs):
-<<<<<<< HEAD
     solid_selection_str = kwargs.get('solid_selection')
     if not is_str(solid_selection_str):
-=======
-    solid_selection_str = kwargs.get("solid_selection")
-    if not check.is_str(solid_selection_str):
->>>>>>> master
         return None
 
     return [ele.strip() for ele in solid_selection_str.split(",")] if solid_selection_str else None
