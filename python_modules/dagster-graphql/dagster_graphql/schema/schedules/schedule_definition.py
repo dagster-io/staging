@@ -8,6 +8,7 @@ from dagster_graphql.schema.errors import (
 
 from dagster import check
 from dagster.core.host_representation import ExternalSchedule
+from dagster.core.scheduler import ScheduleState, ScheduleStatus
 
 
 class DapuphinScheduleDefinitionOrError(dauphin.Union):
@@ -69,6 +70,14 @@ class DauphinScheduleDefinition(dauphin.ObjectType):
         self._schedule_state = graphene_info.context.instance.get_schedule_state(
             self._external_schedule.get_origin_id()
         )
+
+        if not self._schedule_state:
+            self._schedule_state = ScheduleState(
+                self._external_schedule.get_origin(),
+                ScheduleStatus.STOPPED,
+                self._external_schedule.cron_schedule,
+                start_timestamp=None,
+            )
 
         super(DauphinScheduleDefinition, self).__init__(
             name=external_schedule.name,
