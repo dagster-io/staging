@@ -31,6 +31,8 @@ from .types import (
 
 CLIENT_HEARTBEAT_INTERVAL = 1
 
+MAX_EXTERNAL_REPO_MESSAGE_LENGTH = 50000000
+
 
 def client_heartbeat_thread(client, shutdown_event):
     while True:
@@ -66,8 +68,9 @@ class DagsterGrpcClient(object):
         else:
             self._server_address = "unix:" + os.path.abspath(socket)
 
-    def _query(self, method, request_type, timeout=None, **kwargs):
-        with grpc.insecure_channel(self._server_address) as channel:
+    def _query(self, method, request_type, timeout=None, channel_options=None, **kwargs):
+        channel_options = check.opt_list_param(channel_options, "channel_options")
+        with grpc.insecure_channel(self._server_address, options=channel_options) as channel:
             stub = DagsterApiStub(channel)
             response = getattr(stub, method)(request_type(**kwargs), timeout=timeout)
         # TODO need error handling here
@@ -203,7 +206,9 @@ class DagsterGrpcClient(object):
             res.serialized_external_pipeline_subset_result
         )
 
-    def external_repository(self, repository_grpc_server_origin):
+    def external_repository(
+        self, repository_grpc_server_origin, message_limit=MAX_EXTERNAL_REPO_MESSAGE_LENGTH
+    ):
         check.inst_param(
             repository_grpc_server_origin,
             "repository_grpc_server_origin",
@@ -216,6 +221,14 @@ class DagsterGrpcClient(object):
             serialized_repository_python_origin=serialize_dagster_namedtuple(
                 repository_grpc_server_origin
             ),
+            channel_options=[
+                (
+                    "grpc.max_receive_message_length",
+                    message_limit if message_limit else MAX_EXTERNAL_REPO_MESSAGE_LENGTH,
+                )
+            ]
+            if message_limit
+            else [],
         )
 
         return deserialize_json_to_dagster_namedtuple(res.serialized_external_repository_data)

@@ -6,6 +6,7 @@ from dagster.core.host_representation import (
     RepositoryLocationHandle,
 )
 from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryPythonOrigin
+from dagster.grpc.client import MAX_EXTERNAL_REPO_MESSAGE_LENGTH
 
 from .utils import execute_unary_api_cli_command
 
@@ -39,7 +40,9 @@ def sync_get_external_repositories(repository_location_handle):
     return repos
 
 
-def sync_get_external_repositories_grpc(api_client, repository_location_handle):
+def sync_get_external_repositories_grpc(
+    api_client, repository_location_handle, message_limit=MAX_EXTERNAL_REPO_MESSAGE_LENGTH
+):
     check.inst_param(
         repository_location_handle, "repository_location_handle", RepositoryLocationHandle
     )
@@ -53,7 +56,8 @@ def sync_get_external_repositories_grpc(api_client, repository_location_handle):
                     repository_location_handle.port,
                     repository_location_handle.socket,
                     repository_name,
-                )
+                ),
+                message_limit=message_limit,
             ),
             ExternalRepositoryData,
         )
