@@ -10,7 +10,7 @@ from dagster import check
 from ..errors import (
     DagsterDbtCliFatalRuntimeError,
     DagsterDbtCliHandledRuntimeError,
-    DagsterDbtCliRunResultsNotFoundError,
+    DagsterDbtCliOutputsNotFoundError,
 )
 
 
@@ -145,4 +145,4 @@ def parse_run_results(path: str) -> Dict[str, Any]:
         with open(run_results_path) as file:
             return json.load(file)
     except FileNotFoundError:
-        raise DagsterDbtCliRunResultsNotFoundError(path=run_results_path)
+        raise DagsterDbtCliOutputsNotFoundError(path=run_results_path)

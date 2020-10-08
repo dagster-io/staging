@@ -1,4 +1,4 @@
-from dagster_dbt import DbtRpcResult
+from dagster_dbt import DbtRpcOutput
 
 from ..test_types import DBT_RESULT_DICT
 
@@ -11,7 +11,7 @@ DBT_RPC_RESULT_DICT = {
 }
 
 
-class TestRpcRunResult:
+class TestDbtRpcOutput:
     def test_from_dict(self):
-        prr = DbtRpcResult.from_dict(DBT_RPC_RESULT_DICT)
-        assert len(prr) == len(DBT_RPC_RESULT_DICT["results"])
+        dro = DbtRpcOutput.from_dict(DBT_RPC_RESULT_DICT)
+        assert len(dro.result) == len(DBT_RPC_RESULT_DICT["results"])
