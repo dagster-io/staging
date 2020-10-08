@@ -195,11 +195,11 @@ class NodeResult:
         return self._skip
 
 
-class RunResult:
+class DbtResult:
     """The results of executing a dbt command.
 
-    We recommend that you construct an instance of :class:`RunResult <dagster_dbt.RunResult>` by
-    using the class method :func:`from_dict <dagster_dbt.RunResult.from_dict>`.
+    We recommend that you construct an instance of :class:`DbtResult <dagster_dbt.DbtResult>` by
+    using the class method :func:`from_dict <dagster_dbt.DbtResult.from_dict>`.
 
     When using the dbt CLI, run results are typically parsed from ``target/run_results.json``.
     """
@@ -231,15 +231,15 @@ class RunResult:
         self._elapsed_time = elapsed_time
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "RunResult":
-        """Constructs an instance of :class:`RunResult <dagster_dbt.RunResult>` from a dictionary.
+    def from_dict(cls, d: Dict[str, Any]) -> "DbtResult":
+        """Constructs an instance of :class:`DbtResult <dagster_dbt.DbtResult>` from a dictionary.
 
         Args:
-            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`RunResult
-                <dagster_dbt.RunResult>`.
+            d (Dict[str, Any]): a dictionary with key-values to construct a :class:`DbtResult
+                <dagster_dbt.DbtResult>`.
 
         Returns:
-            RunResult: an instance of :class:`RunResult <dagster_dbt.RunResult>`.
+            DbtResult: an instance of :class:`DbtResult <dagster_dbt.DbtResult>`.
         """
         check.list_elem(d, "logs")
         check.is_list(d["logs"], of_type=Dict)
