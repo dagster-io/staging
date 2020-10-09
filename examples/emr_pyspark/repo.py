@@ -1,7 +1,7 @@
 # start-snippet
 from pathlib import Path
 
-from dagster_aws.emr import emr_pyspark_step_launcher
+from dagster_aws.emr.pyspark import emr_pyspark_step_launcher
 from dagster_aws.s3 import s3_intermediate_storage, s3_resource
 from dagster_pyspark import DataFrame as DagsterPySparkDataFrame
 from dagster_pyspark import pyspark_resource
