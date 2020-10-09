@@ -17,12 +17,13 @@ from dagster import (
     executor,
     seven,
 )
+from dagster.cli.api import ExecuteStepArgs
 from dagster.core.definitions.executor import check_cross_process_constraints
 from dagster.core.events import EngineEventData
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation.handle import IN_PROCESS_NAME
 from dagster.core.instance import InstanceRef
-from dagster.serdes import serialize_dagster_namedtuple
+from dagster.serdes import pack_value, serialize_dagster_namedtuple, unpack_value
 from dagster.seven import JSONDecodeError
 from dagster.utils import merge_dicts
 
@@ -203,6 +204,8 @@ def _submit_task_docker(app, pipeline_context, step, queue, priority):
         repo_location_name=pipeline_context.executor.repo_location_name,
         run_id=pipeline_context.pipeline_run.run_id,
         docker_config=pipeline_context.executor.docker_config,
+        pipeline_origin_packed=pack_value(pipeline_context.pipeline.get_origin()),
+        retries_dict=pipeline_context.executor.retries.for_inner_plan().to_config(),
     )
     return task_signature.apply_async(
         priority=priority,
@@ -223,9 +226,26 @@ def create_docker_task(celery_app, **task_kwargs):
         repo_location_name,
         run_id,
         docker_config,
+        pipeline_origin_packed,
+        retries_dict,
     ):
         """Run step execution in a Docker container.
         """
+        check.dict_param(instance_ref_dict, "instance_ref_dict")
+        check.list_param(step_keys, "step_keys", of_type=str)
+        check.dict_param(run_config, "run_config")
+        check.str_param(mode, "mode")
+        check.str_param(repo_name, "repo_name")
+        check.str_param(repo_location_name, "repo_location_name")
+        check.str_param(run_id, "run_id")
+        check.dict_param(docker_config, "docker_config")
+        pipeline_origin = unpack_value(
+            check.dict_param(
+                pipeline_origin_packed, "pipeline_origin_packed"
+            )  # TODO: make part of args
+        )
+        check.dict_param(retries_dict, "retries_dict")
+
         instance_ref = InstanceRef.from_dict(instance_ref_dict)
         instance = DagsterInstance.from_ref(instance_ref)
         pipeline_run = instance.get_run_by_id(run_id)
@@ -233,26 +253,19 @@ def create_docker_task(celery_app, **task_kwargs):
 
         step_keys_str = ", ".join(step_keys)
 
-        variables = {
-            "executionParams": {
-                "runConfigData": run_config,
-                "mode": mode,
-                "selector": {
-                    "repositoryLocationName": repo_location_name,
-                    "repositoryName": repo_name,
-                    "pipelineName": pipeline_run.pipeline_name,
-                    "solidSelection": list(pipeline_run.solids_to_execute)
-                    if pipeline_run.solids_to_execute
-                    else None,
-                },
-                "executionMetadata": {"runId": run_id},
-                "stepKeys": step_keys,
-            }
-        }
-
-        command = "dagster-graphql -v '{variables}' -p executePlan".format(
-            variables=seven.json.dumps(variables)
+        input_json = serialize_dagster_namedtuple(
+            ExecuteStepArgs(
+                pipeline_origin=pipeline_origin,
+                pipeline_run_id=run_id,
+                instance_ref=instance_ref,
+                mode=mode,
+                step_keys_to_execute=step_keys,
+                run_config=run_config,
+                retries_dict=retries_dict,
+            )
         )
+        command = 'dagster api execute_step_with_structured_logs "{}"'.format(input_json)
+
         docker_image = docker_config["image"]
         client = docker.client.from_env()
 
@@ -296,7 +309,7 @@ def create_docker_task(celery_app, **task_kwargs):
             )
             res = seven.json.loads(docker_response)
 
-        except docker.errors.ContainerError as err:
+        except (docker.errors.ContainerError, docker.errors.DockerException) as err:
             instance.report_engine_event(
                 "Failed to run steps {} in Docker container {}".format(step_keys_str, docker_image),
                 pipeline_run,
