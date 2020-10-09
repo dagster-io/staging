@@ -35,6 +35,7 @@ from dagster.core.definitions.reconstructable import (
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
+from dagster.seven import get_current_datetime_in_utc
 
 TELEMETRY_STR = ".telemetry"
 INSTANCE_ID_STR = "instance_id"
@@ -84,10 +85,10 @@ def telemetry_wrapper(f):
     @wraps(f)
     def wrap(*args, **kwargs):
         instance = _check_telemetry_instance_param(args, kwargs, instance_index)
-        start_time = datetime.datetime.now()
+        start_time = get_current_datetime_in_utc()
         log_action(instance=instance, action=f.__name__ + "_started", client_time=start_time)
         result = f(*args, **kwargs)
-        end_time = datetime.datetime.now()
+        end_time = get_current_datetime_in_utc()
         log_action(
             instance=instance,
             action=f.__name__ + "_ended",
@@ -346,7 +347,7 @@ def log_external_repo_stats(instance, source, external_repo, external_pipeline=N
         write_telemetry_log_line(
             TelemetryEntry(
                 action=UPDATE_REPO_STATS,
-                client_time=str(datetime.datetime.now()),
+                client_time=str(get_current_datetime_in_utc()),
                 event_id=str(uuid.uuid4()),
                 instance_id=instance_id,
                 pipeline_name_hash=pipeline_name_hash,
@@ -384,7 +385,7 @@ def log_repo_stats(instance, source, pipeline=None, repo=None):
         write_telemetry_log_line(
             TelemetryEntry(
                 action=UPDATE_REPO_STATS,
-                client_time=str(datetime.datetime.now()),
+                client_time=str(get_current_datetime_in_utc()),
                 event_id=str(uuid.uuid4()),
                 instance_id=instance_id,
                 pipeline_name_hash=pipeline_name_hash,
@@ -398,7 +399,7 @@ def log_repo_stats(instance, source, pipeline=None, repo=None):
 def log_action(instance, action, client_time=None, elapsed_time=None, metadata=None):
     check.inst_param(instance, "instance", DagsterInstance)
     if client_time is None:
-        client_time = datetime.datetime.now()
+        client_time = get_current_datetime_in_utc()
 
     (dagster_telemetry_enabled, instance_id) = _get_instance_telemetry_info(instance)
 
@@ -446,7 +447,7 @@ SLACK_PROMPT = """
 def upload_logs(stop_event):
     """Upload logs to telemetry server every hour, or when log directory size is > 10MB"""
     try:
-        last_run = datetime.datetime.now() - datetime.timedelta(minutes=120)
+        last_run = get_current_datetime_in_utc() - datetime.timedelta(minutes=120)
         dagster_log_dir = get_dir_from_dagster_home("logs")
         dagster_log_queue_dir = get_dir_from_dagster_home(".logs_queue")
         in_progress = False
@@ -471,12 +472,12 @@ def upload_logs(stop_event):
                 return
 
             if not in_progress and (
-                datetime.datetime.now() - last_run > datetime.timedelta(minutes=60)
+                get_current_datetime_in_utc() - last_run > datetime.timedelta(minutes=60)
                 or log_size >= MAX_BYTES
                 or log_queue_size >= MAX_BYTES
             ):
                 in_progress = True  # Prevent concurrent _upload_logs invocations
-                last_run = datetime.datetime.now()
+                last_run = get_current_datetime_in_utc()
                 dagster_log_dir = get_dir_from_dagster_home("logs")
                 dagster_log_queue_dir = get_dir_from_dagster_home(".logs_queue")
                 _upload_logs(dagster_log_dir, log_size, dagster_log_queue_dir)
