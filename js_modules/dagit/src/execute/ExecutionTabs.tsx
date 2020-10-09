@@ -1,4 +1,4 @@
-import {Colors, Icon} from '@blueprintjs/core';
+import {Button, Classes, Colors, Dialog, Icon} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import styled from 'styled-components/macro';
@@ -89,6 +89,7 @@ interface ExecutionTabsProps {
 
 export const ExecutionTabs = (props: ExecutionTabsProps) => {
   const {data, onSave} = props;
+  const [keyToRemove, setKeyToRemove] = React.useState<string | null>(null);
 
   const onApply = React.useCallback(
     (mutator: any, ...args: any[]) => {
@@ -96,6 +97,14 @@ export const ExecutionTabs = (props: ExecutionTabsProps) => {
     },
     [data, onSave],
   );
+
+  const onCancelDiscard = React.useCallback(() => setKeyToRemove(null), []);
+  const onConfirmDiscard = React.useCallback(() => {
+    if (Object.keys(data.sessions).length > 1) {
+      onApply(applyRemoveSession, keyToRemove);
+    }
+    setKeyToRemove(null);
+  }, [data.sessions, keyToRemove, onApply]);
 
   return (
     <ExecutionTabsContainer>
@@ -106,10 +115,31 @@ export const ExecutionTabs = (props: ExecutionTabsProps) => {
           title={data.sessions[key].name}
           onClick={() => onApply(applySelectSession, key)}
           onChange={(name) => onApply(applyChangesToSession, key, {name})}
-          onRemove={() => onApply(applyRemoveSession, key)}
+          onRemove={() => setKeyToRemove(key)}
         />
       ))}
       <ExecutionTab title="Add..." onClick={() => onApply(applyCreateSession)} />
+      <Dialog
+        canEscapeKeyClose={false}
+        canOutsideClickClose={false}
+        isCloseButtonShown={false}
+        isOpen={typeof keyToRemove === 'string'}
+        onClose={() => setKeyToRemove(null)}
+        title="Discard tab?"
+        usePortal
+      >
+        <div className={Classes.DIALOG_BODY}>{`The configuration for ${
+          keyToRemove ? `"${data.sessions[keyToRemove].name}"` : 'this tab'
+        } will be discarded.`}</div>
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button onClick={onCancelDiscard}>Cancel</Button>
+            <Button onClick={onConfirmDiscard} intent="primary">
+              Confirm
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </ExecutionTabsContainer>
   );
 };
