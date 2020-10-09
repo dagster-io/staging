@@ -1,11 +1,11 @@
 import os
 import sys
-import warnings
 
 import six
 
 from dagster import check
-from dagster.core.code_pointer import CodePointer, rebase_file
+from dagster.core.code_pointer import rebase_file
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import RepositoryLocationHandle, UserProcessApi
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.utils import load_yaml_from_path
@@ -41,17 +41,9 @@ def load_workspace_from_config(workspace_config, yaml_path, python_user_process_
     check.inst_param(python_user_process_api, "python_user_process_api", UserProcessApi)
 
     if "repository" in workspace_config:
-        warnings.warn(
-            # link to docs once they exist
+        raise DagsterInvariantViolationError(
             "You are using the legacy repository yaml format. Please update your file "
             "to abide by the new workspace file format."
-        )
-        return Workspace(
-            [
-                RepositoryLocationHandle.create_in_process_location(
-                    pointer=CodePointer.from_legacy_repository_yaml(yaml_path)
-                )
-            ]
         )
 
     location_handles = []
