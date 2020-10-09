@@ -72,13 +72,13 @@ class DbtCliOutput(
         Returns:
             DbtCliOutput: An instance of :class:`DbtCliOutput <dagster_dbt.DbtCliOutput>`.
         """
-        # check.int_elem(d, "return_code") TODO[Bob]: Implement `check.int_elem`.
+        check.int_elem(d, "return_code")
         check.str_elem(d, "raw_output")
-        # check.opt_int_elem(d, "num_pass") TODO[Bob]: Implement `check.opt_int_elem`.
-        # check.opt_int_elem(d, "num_warn")
-        # check.opt_int_elem(d, "num_error")
-        # check.opt_int_elem(d, "num_skip")
-        # check.opt_int_elem(d, "num_total")
+        check.opt_int_elem(d, "num_pass")
+        check.opt_int_elem(d, "num_warn")
+        check.opt_int_elem(d, "num_error")
+        check.opt_int_elem(d, "num_skip")
+        check.opt_int_elem(d, "num_total")
 
         d["result"] = DbtResult.from_dict(d)
 

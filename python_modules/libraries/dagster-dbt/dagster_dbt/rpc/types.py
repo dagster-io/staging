@@ -48,7 +48,7 @@ class DbtRpcOutput(namedtuple("_DbtRpcOutput", "result state start end elapsed")
         check.str_elem(d, "state")
         check.str_elem(d, "start")
         check.str_elem(d, "end")
-        # check.float_elem(d, "elapsed") TODO[Bob]: Impelement `check.float_elem`.
+        check.float_elem(d, "elapsed")
 
         d["result"] = DbtResult.from_dict(d)
 
