@@ -62,6 +62,7 @@ from dagster.core.host_representation.handle import python_user_process_api_from
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.core.storage.tags import RESUME_RETRY_TAG
 from dagster.core.test_utils import today_at_midnight
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils import file_relative_path, segfault
 
 
@@ -861,7 +862,7 @@ def define_schedules():
     @daily_schedule(
         pipeline_name="no_config_pipeline",
         start_date=today_at_midnight() - datetime.timedelta(days=1),
-        execution_time=(datetime.datetime.now() + datetime.timedelta(hours=2)).time(),
+        execution_time=(get_current_datetime_in_utc() + datetime.timedelta(hours=2)).time(),
     )
     def partition_based_decorator(_date):
         return {"storage": {"filesystem": {}}}
@@ -869,7 +870,7 @@ def define_schedules():
     @daily_schedule(
         pipeline_name="multi_mode_with_loggers",
         start_date=today_at_midnight() - datetime.timedelta(days=1),
-        execution_time=(datetime.datetime.now() + datetime.timedelta(hours=2)).time(),
+        execution_time=(get_current_datetime_in_utc() + datetime.timedelta(hours=2)).time(),
         mode="foo_mode",
     )
     def partition_based_multi_mode_decorator(_date):
@@ -878,7 +879,7 @@ def define_schedules():
     @hourly_schedule(
         pipeline_name="no_config_chain_pipeline",
         start_date=today_at_midnight() - datetime.timedelta(days=1),
-        execution_time=(datetime.datetime.now() + datetime.timedelta(hours=2)).time(),
+        execution_time=(get_current_datetime_in_utc() + datetime.timedelta(hours=2)).time(),
         solid_selection=["return_foo"],
     )
     def solid_selection_hourly_decorator(_date):
@@ -887,7 +888,7 @@ def define_schedules():
     @daily_schedule(
         pipeline_name="no_config_chain_pipeline",
         start_date=today_at_midnight() - datetime.timedelta(days=2),
-        execution_time=(datetime.datetime.now() + datetime.timedelta(hours=3)).time(),
+        execution_time=(get_current_datetime_in_utc() + datetime.timedelta(hours=3)).time(),
         solid_selection=["return_foo"],
     )
     def solid_selection_daily_decorator(_date):
@@ -896,7 +897,7 @@ def define_schedules():
     @monthly_schedule(
         pipeline_name="no_config_chain_pipeline",
         start_date=(today_at_midnight() - datetime.timedelta(days=100)).replace(day=1),
-        execution_time=(datetime.datetime.now() + datetime.timedelta(hours=4)).time(),
+        execution_time=(get_current_datetime_in_utc() + datetime.timedelta(hours=4)).time(),
         solid_selection=["return_foo"],
     )
     def solid_selection_monthly_decorator(_date):
@@ -905,7 +906,7 @@ def define_schedules():
     @weekly_schedule(
         pipeline_name="no_config_chain_pipeline",
         start_date=today_at_midnight() - datetime.timedelta(days=50),
-        execution_time=(datetime.datetime.now() + datetime.timedelta(hours=5)).time(),
+        execution_time=(get_current_datetime_in_utc() + datetime.timedelta(hours=5)).time(),
         solid_selection=["return_foo"],
     )
     def solid_selection_weekly_decorator(_date):

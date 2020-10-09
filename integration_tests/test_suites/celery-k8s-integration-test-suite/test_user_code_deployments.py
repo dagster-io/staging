@@ -8,6 +8,8 @@ from dagster_k8s.test import wait_for_job_and_get_raw_logs
 from kubernetes.stream import stream
 from marks import mark_user_code_deployment
 
+from dagster.seven import get_current_datetime_in_utc
+
 
 # This test spins up a user code deployment, and then executes a launch pipeline command in the
 # dagit pod to trigger a pipeline run
@@ -81,8 +83,8 @@ def test_execute_on_celery_k8s(  # pylint: disable=redefined-outer-name,unused-a
 
     runmaster_job_name = None
     timeout = datetime.timedelta(0, 90)
-    start_time = datetime.datetime.now()
-    while datetime.datetime.now() < start_time + timeout and not runmaster_job_name:
+    start_time = get_current_datetime_in_utc()
+    while get_current_datetime_in_utc() < start_time + timeout and not runmaster_job_name:
         jobs = batch_api.list_namespaced_job(namespace=namespace)
         runmaster_job_list = list(
             filter(lambda item: "dagster-run-" in item.metadata.name, jobs.items)
