@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from dagster import seven
 from dagster.cli.pipeline import execute_list_command, pipeline_list_command
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -154,8 +155,8 @@ def test_list_command_cli():
     )
     assert_correct_bar_repository_output(result)
 
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        DagsterInvariantViolationError,
         match=re.escape(
             "You are using the legacy repository yaml format. Please update your file "
         ),
