@@ -1,5 +1,5 @@
 from dagster_graphql.client.query import EXECUTE_RUN_IN_PROCESS_MUTATION
-from dagster_graphql.test.utils import execute_dagster_graphql
+from dagster_graphql.test.utils import execute_dagster_graphql, main_repo_name
 
 from dagster import DagsterInstance
 from dagster.core.host_representation.handle import IN_PROCESS_NAME
@@ -10,8 +10,6 @@ from .setup import (
     csv_hello_world,
     csv_hello_world_solids_config,
     define_test_out_of_process_context,
-    main_repo_location_name,
-    main_repo_name,
 )
 
 
@@ -30,7 +28,7 @@ class TestStartPipelineForCreatedRunInHostedUserProcess(
             EXECUTE_RUN_IN_PROCESS_MUTATION,
             variables={
                 "runId": pipeline_run.run_id,
-                "repositoryLocationName": main_repo_location_name(),
+                "repositoryLocationName": IN_PROCESS_NAME,
                 "repositoryName": main_repo_name(),
             },
         )
@@ -44,7 +42,7 @@ class TestStartPipelineForCreatedRunInHostedUserProcess(
             EXECUTE_RUN_IN_PROCESS_MUTATION,
             variables={
                 "runId": run_id,
-                "repositoryLocationName": main_repo_location_name(),
+                "repositoryLocationName": IN_PROCESS_NAME,
                 "repositoryName": main_repo_name(),
             },
         )
