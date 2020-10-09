@@ -14,22 +14,6 @@ from ..errors import (
 )
 
 
-# This function is copied from `dagster-shell`, which itself is copied from the Airflow bash
-# operator. According to
-# https://github.com/apache/airflow/commit/ca961042c146d49504e00e4abefc7779f0747782
-# Python 2.7 would override the default signal handling for subprocesses. `pre_exec` is used to
-# restore default signal handling behavior.
-#
-# Given that `dagster-dbt` is expected to only run on Python 3+, `pre_exec` may be deprecated and
-# removed.
-def pre_exec():
-    # Restore default signal disposition and invoke setsid
-    for sig in ("SIGPIPE", "SIGXFZ", "SIGXFSZ"):
-        if hasattr(signal, sig):
-            signal.signal(getattr(signal, sig), signal.SIG_DFL)
-    os.setsid()
-
-
 def execute_cli(
     executable: str,
     command: Tuple[str, ...],
@@ -76,9 +60,7 @@ def execute_cli(
 
     return_code = 0
     try:
-        proc_out = subprocess.check_output(
-            args=command_list, preexec_fn=pre_exec, stderr=subprocess.STDOUT
-        )
+        proc_out = subprocess.check_output(args=command_list, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as exc:
         return_code = exc.returncode
         proc_out = exc.output
