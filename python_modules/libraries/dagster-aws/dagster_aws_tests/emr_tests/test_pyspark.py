@@ -4,7 +4,7 @@ import sys
 
 import pytest
 from dagster_aws.emr import EmrError, EmrJobRunner
-from dagster_aws.emr.pyspark_step_launcher import EmrPySparkStepLauncher, emr_pyspark_step_launcher
+from dagster_aws.emr.pyspark import EmrPySparkStepLauncher, emr_pyspark_step_launcher
 from dagster_aws.s3 import s3_plus_default_storage_defs, s3_resource
 from dagster_pyspark import DataFrame, pyspark_resource
 from moto import mock_emr
@@ -109,7 +109,7 @@ def test_local():
 
 
 @mock_emr
-@mock.patch("dagster_aws.emr.pyspark_step_launcher.EmrPySparkStepLauncher.read_events")
+@mock.patch("dagster_aws.emr.pyspark.EmrPySparkStepLauncher.read_events")
 @mock.patch("dagster_aws.emr.emr.EmrJobRunner.is_emr_step_complete")
 def test_pyspark_emr(mock_is_emr_step_complete, mock_read_events):
     mock_read_events.return_value = execute_pipeline(
@@ -225,8 +225,8 @@ def test_do_it_live_emr():
 
 
 @mock.patch("boto3.resource")
-@mock.patch("dagster_aws.emr.pyspark_step_launcher.EmrPySparkStepLauncher.wait_for_completion")
-@mock.patch("dagster_aws.emr.pyspark_step_launcher.EmrPySparkStepLauncher._log_logs_from_s3")
+@mock.patch("dagster_aws.emr.pyspark.EmrPySparkStepLauncher.wait_for_completion")
+@mock.patch("dagster_aws.emr.pyspark.EmrPySparkStepLauncher._log_logs_from_s3")
 @mock.patch("dagster.core.events.log_step_event")
 def test_fetch_logs_on_fail(
     _mock_log_step_event, mock_log_logs, mock_wait_for_completion, _mock_boto3_resource
