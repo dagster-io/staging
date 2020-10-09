@@ -15,6 +15,7 @@ from collections import namedtuple
 from enum import Enum
 from warnings import warn
 
+import pytz
 import six
 import yaml
 from six.moves import configparser
@@ -32,7 +33,7 @@ if sys.version_info > (3,):
 else:
     from pathlib2 import Path  # pylint: disable=import-error
 
-EPOCH = datetime.datetime.utcfromtimestamp(0)
+EPOCH = datetime.datetime.utcfromtimestamp(0).replace(tzinfo=pytz.utc)
 
 # 2/3 compatibility
 PICKLE_PROTOCOL = 2
