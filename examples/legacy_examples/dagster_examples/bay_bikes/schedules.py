@@ -5,6 +5,7 @@ from dagster_examples.bay_bikes.pipelines import generate_training_set_and_train
 
 from dagster import daily_schedule
 from dagster.core.definitions.decorators import monthly_schedule
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils.merger import deep_merge_dicts
 
 weather_etl_environment = generate_training_set_and_train_model.get_preset(
@@ -12,7 +13,7 @@ weather_etl_environment = generate_training_set_and_train_model.get_preset(
 ).run_config
 trip_etl_environment = generate_training_set_and_train_model.get_preset("prod_trip_etl").run_config
 
-now = datetime.now()
+now = get_current_datetime_in_utc()
 
 
 @daily_schedule(

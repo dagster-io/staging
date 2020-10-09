@@ -79,3 +79,19 @@ class TestDagsterChecker(pylint.testutils.CheckerTestCase):
             pylint.testutils.Message(msg_id="daemon-thread", node=daemon_thread_node)
         ):
             self.checker.visit_call(daemon_thread_node)
+
+    def test_datetime_now(self):
+        datetime_now_node = astroid.extract_node("datetime.datetime.now()")
+
+        with self.assertAddsMessages(
+            pylint.testutils.Message(msg_id="datetime-now", node=datetime_now_node)
+        ):
+            self.checker.visit_call(datetime_now_node)
+
+    def test_datetime_utcnow(self):
+        datetime_utcnow_node = astroid.extract_node("datetime.datetime.utcnow()")
+
+        with self.assertAddsMessages(
+            pylint.testutils.Message(msg_id="datetime-utcnow", node=datetime_utcnow_node)
+        ):
+            self.checker.visit_call(datetime_utcnow_node)
