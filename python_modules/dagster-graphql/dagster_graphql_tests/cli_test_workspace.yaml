@@ -1,3 +1,4 @@
-repository:
-  file: test_cli.py
-  fn: test
+load_from:
+  - python_file:
+      relative_path: test_cli.py
+      attribute: test

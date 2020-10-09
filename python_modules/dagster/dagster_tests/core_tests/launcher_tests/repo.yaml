@@ -1,3 +1,4 @@
-repository:
-  file: test_default_run_launcher.py
-  fn: nope
+load_from:
+  - python_file:
+      relative_path: test_default_run_launcher.py
+      attribute: nope
