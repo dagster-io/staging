@@ -1,4 +1,3 @@
-import datetime
 import json
 import time
 
@@ -85,7 +84,7 @@ def test_cloudwatch_logging(cloudwatch_client):
         },
     )
 
-    now = millisecond_timestamp(datetime.datetime.utcnow())
+    now = millisecond_timestamp(get_current_datetime_in_utc())
 
     attempt_num = 0
 

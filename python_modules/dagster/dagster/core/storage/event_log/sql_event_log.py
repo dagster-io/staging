@@ -13,6 +13,7 @@ from dagster.core.events.log import EventRecord
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.stats import RunStepKeyStatsSnapshot, StepEventStatus
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
+from dagster.seven import get_utc_timezone
 from dagster.utils import datetime_as_float, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRunStatsSnapshot
@@ -26,6 +27,8 @@ SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
 REINDEX_DATA_MIGRATIONS = {
     SECONDARY_INDEX_ASSET_KEY: migrate_asset_key_data,
 }
+
+utc = get_utc_timezone()
 
 
 class SqlEventLogStorage(EventLogStorage):
@@ -206,8 +209,10 @@ class SqlEventLogStorage(EventLogStorage):
                 steps_failed=counts.get(DagsterEventType.STEP_FAILURE.value, 0),
                 materializations=counts.get(DagsterEventType.STEP_MATERIALIZATION.value, 0),
                 expectations=counts.get(DagsterEventType.STEP_EXPECTATION_RESULT.value, 0),
-                start_time=datetime_as_float(start_time) if start_time else None,
-                end_time=datetime_as_float(end_time) if end_time else None,
+                start_time=datetime_as_float(start_time.replace(tzinfo=utc))
+                if start_time
+                else None,
+                end_time=datetime_as_float(end_time.replace(tzinfo=utc)) if end_time else None,
             )
         except (seven.JSONDecodeError, check.CheckError) as err:
             six.raise_from(DagsterEventLogInvalidForRun(run_id=run_id), err)

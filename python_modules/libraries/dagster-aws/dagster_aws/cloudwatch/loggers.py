@@ -4,13 +4,13 @@ import logging
 import boto3
 from dagster import Field, StringSource, check, logger, seven
 from dagster.core.log_manager import coerce_valid_log_level
+from dagster.seven import get_utc_timezone
+from dagster.utils import EPOCH
 
 # The maximum batch size is 1,048,576 bytes, and this size is calculated as the sum of all event
 # messages in UTF-8, plus 26 bytes for each log event.
 MAXIMUM_BATCH_SIZE = 1048576
 OVERHEAD = 26
-
-EPOCH = datetime.datetime(1970, 1, 1)
 
 # For real
 def millisecond_timestamp(dt):
@@ -120,7 +120,9 @@ class CloudwatchLogsHandler(logging.Handler):
     def _emit(self, record, retry=False):
         message = seven.json.dumps(record.__dict__)
         timestamp = millisecond_timestamp(
-            datetime.datetime.strptime(record.dagster_meta["log_timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
+            datetime.datetime.strptime(
+                record.dagster_meta["log_timestamp"], "%Y-%m-%dT%H:%M:%S.%f+00:00"
+            ).replace(tzinfo=get_utc_timezone())
         )
         params = {
             "logGroupName": self.log_group_name,

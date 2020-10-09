@@ -207,9 +207,9 @@ def _test_termination(dagster_instance, run_config):
 
     # Wait for pipeline run to start
     timeout = datetime.timedelta(0, 120)
-    start_time = datetime.datetime.now()
+    start_time = get_current_datetime_in_utc()
     can_terminate = False
-    while datetime.datetime.now() < start_time + timeout:
+    while get_current_datetime_in_utc() < start_time + timeout:
         if dagster_instance.run_launcher.can_terminate(run_id=run.run_id):
             can_terminate = True
             break
@@ -218,8 +218,8 @@ def _test_termination(dagster_instance, run_config):
 
     # Wait for step to start
     step_start_found = False
-    start_time = datetime.datetime.now()
-    while datetime.datetime.now() < start_time + timeout:
+    start_time = get_current_datetime_in_utc()
+    while get_current_datetime_in_utc() < start_time + timeout:
         event_records = dagster_instance.all_logs(run.run_id)
         for event_record in event_records:
             if (
@@ -237,8 +237,8 @@ def _test_termination(dagster_instance, run_config):
 
     # Check that pipeline run is marked as failed
     pipeline_run_status_failure = False
-    start_time = datetime.datetime.now()
-    while datetime.datetime.now() < start_time + timeout:
+    start_time = get_current_datetime_in_utc()
+    while get_current_datetime_in_utc() < start_time + timeout:
         pipeline_run = dagster_instance.get_run_by_id(run.run_id)
         if pipeline_run.status == PipelineRunStatus.FAILURE:
             pipeline_run_status_failure = True
@@ -252,8 +252,8 @@ def _test_termination(dagster_instance, run_config):
 
     # Check for step failure and resource tear down
     expected_events_found = False
-    start_time = datetime.datetime.now()
-    while datetime.datetime.now() < start_time + timeout:
+    start_time = get_current_datetime_in_utc()
+    while get_current_datetime_in_utc() < start_time + timeout:
         step_failures_count = 0
         resource_tear_down_count = 0
         resource_init_count = 0
@@ -366,10 +366,10 @@ def test_execute_on_celery_k8s_with_hard_failure(  # pylint: disable=redefined-o
 
     # Check that pipeline run is marked as failed
     pipeline_run_status_failure = False
-    start_time = datetime.datetime.now()
+    start_time = get_current_datetime_in_utc()
     timeout = datetime.timedelta(0, 120)
 
-    while datetime.datetime.now() < start_time + timeout:
+    while get_current_datetime_in_utc() < start_time + timeout:
         pipeline_run = dagster_instance.get_run_by_id(run.run_id)
         if pipeline_run.status == PipelineRunStatus.FAILURE:
             pipeline_run_status_failure = True
@@ -378,9 +378,9 @@ def test_execute_on_celery_k8s_with_hard_failure(  # pylint: disable=redefined-o
     assert pipeline_run_status_failure
 
     # Check for step failure for hard_fail_or_0.compute
-    start_time = datetime.datetime.now()
+    start_time = get_current_datetime_in_utc()
     step_failure_found = False
-    while datetime.datetime.now() < start_time + timeout:
+    while get_current_datetime_in_utc() < start_time + timeout:
         event_records = dagster_instance.all_logs(run.run_id)
         for event_record in event_records:
             if event_record.dagster_event:
