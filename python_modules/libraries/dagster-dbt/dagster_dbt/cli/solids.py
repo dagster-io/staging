@@ -135,7 +135,7 @@ def passthrough_flags_only(solid_config, additional_flags):
 @experimental
 def dbt_cli_run(context) -> DbtCliOutput:
     """This solid executes ``dbt run`` via the dbt CLI."""
-    cli_results = execute_cli(
+    cli_output = execute_cli(
         context.solid_config["dbt_executable"],
         command=("run",),
         flags_dict=passthrough_flags_only(
@@ -146,15 +146,15 @@ def dbt_cli_run(context) -> DbtCliOutput:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
     run_results = parse_run_results(context.solid_config["project-dir"])
-    cli_run_results = {**run_results, **cli_results}
+    cli_output = {**run_results, **cli_output}
 
     yield AssetMaterialization(
-        asset_key="dbt_run_cli_run_results",
-        description="Metadata about the CLI execution of `dbt run`.",
-        metadata_entries=[EventMetadataEntry.json(cli_run_results, label="CLI Results")],
+        asset_key="dbt_run_cli_output",
+        description="Output from the CLI execution of `dbt run`.",
+        metadata_entries=[EventMetadataEntry.json(cli_output, label="CLI Output")],
     )
 
-    yield Output(DbtCliOutput.from_dict(cli_run_results))
+    yield Output(DbtCliOutput.from_dict(cli_output))
 
 
 @solid(
@@ -205,7 +205,7 @@ def dbt_cli_run(context) -> DbtCliOutput:
 @experimental
 def dbt_cli_test(context) -> DbtCliOutput:
     """This solid executes ``dbt test`` via the dbt CLI."""
-    cli_results = execute_cli(
+    cli_output = execute_cli(
         context.solid_config["dbt_executable"],
         command=("test",),
         flags_dict=passthrough_flags_only(
@@ -216,15 +216,15 @@ def dbt_cli_test(context) -> DbtCliOutput:
         ignore_handled_error=context.solid_config["ignore_handled_error"],
     )
     run_results = parse_run_results(context.solid_config["project-dir"])
-    cli_run_results = {**run_results, **cli_results}
+    cli_output = {**run_results, **cli_output}
 
     yield AssetMaterialization(
-        asset_key="dbt_test_cli_run_results",
-        description="Metadata about the CLI execution of `dbt test`.",
-        metadata_entries=[EventMetadataEntry.json(cli_run_results, label="CLI Results")],
+        asset_key="dbt_test_cli_output",
+        description="Output from the CLI execution of `dbt test`.",
+        metadata_entries=[EventMetadataEntry.json(cli_output, label="CLI Output")],
     )
 
-    yield Output(DbtCliOutput.from_dict(cli_run_results))
+    yield Output(DbtCliOutput.from_dict(cli_output))
 
 
 @solid(
@@ -257,7 +257,7 @@ def dbt_cli_test(context) -> DbtCliOutput:
 @experimental
 def dbt_cli_snapshot(context) -> Dict:
     """This solid executes ``dbt snapshot`` via the dbt CLI."""
-    cli_results = execute_cli(
+    cli_output = execute_cli(
         context.solid_config["dbt_executable"],
         command=("snapshot",),
         flags_dict=passthrough_flags_only(context.solid_config, ("threads", "models", "exclude")),
@@ -267,12 +267,12 @@ def dbt_cli_snapshot(context) -> Dict:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_snapshot_cli_results",
-        description="Metadata about the CLI execution of `dbt snapshot`.",
-        metadata_entries=[EventMetadataEntry.json(cli_results, label="CLI Results")],
+        asset_key="dbt_snapshot_cli_output",
+        description="Output from the CLI execution of `dbt snapshot`.",
+        metadata_entries=[EventMetadataEntry.json(cli_output, label="CLI Output")],
     )
 
-    yield Output(cli_results)
+    yield Output(cli_output)
 
 
 @solid(
@@ -296,7 +296,7 @@ def dbt_cli_snapshot(context) -> Dict:
 @experimental
 def dbt_cli_run_operation(context) -> Dict:
     """This solid executes ``dbt run-operation`` via the dbt CLI."""
-    cli_results = execute_cli(
+    cli_output = execute_cli(
         context.solid_config["dbt_executable"],
         command=("run-operation", context.solid_config["macro"]),
         flags_dict=passthrough_flags_only(context.solid_config, ("args",)),
@@ -306,16 +306,12 @@ def dbt_cli_run_operation(context) -> Dict:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_run_operation_cli_results",
-        description="Metadata about the CLI execution of `dbt run-operation`.",
-        metadata_entries=[
-            EventMetadataEntry.json(
-                cli_results, label="CLI Results", description="Metadata in JSON",
-            )
-        ],
+        asset_key="dbt_run_operation_cli_output",
+        description="Output from the CLI execution of `dbt run-operation`.",
+        metadata_entries=[EventMetadataEntry.json(cli_output, label="CLI Output")],
     )
 
-    yield Output(cli_results)
+    yield Output(cli_output)
 
 
 @solid(
@@ -347,7 +343,7 @@ def dbt_cli_run_operation(context) -> Dict:
 @experimental
 def dbt_cli_snapshot_freshness(context) -> Dict:
     """This solid executes ``dbt source snapshot-freshness`` via the dbt CLI."""
-    cli_results = execute_cli(
+    cli_output = execute_cli(
         context.solid_config["dbt_executable"],
         command=("source", "snapshot-freshness"),
         flags_dict=passthrough_flags_only(context.solid_config, ("select", "output", "threads")),
@@ -357,12 +353,12 @@ def dbt_cli_snapshot_freshness(context) -> Dict:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_source_snapshot-freshness_cli_results",
-        description="Metadata about the CLI execution of `dbt source snapshot-freshness`.",
-        metadata_entries=[EventMetadataEntry.json(cli_results, label="CLI Results")],
+        asset_key="dbt_source_snapshot-freshness_cli_output",
+        description="Output from the CLI execution of `dbt source snapshot-freshness`.",
+        metadata_entries=[EventMetadataEntry.json(cli_output, label="CLI Output")],
     )
 
-    yield Output(cli_results)
+    yield Output(cli_output)
 
 
 @solid(
@@ -420,7 +416,7 @@ def dbt_cli_snapshot_freshness(context) -> Dict:
 @experimental
 def dbt_cli_compile(context) -> Dict:
     """This solid executes ``dbt compile`` via the dbt CLI."""
-    cli_results = execute_cli(
+    cli_output = execute_cli(
         context.solid_config["dbt_executable"],
         command=("compile",),
         flags_dict=passthrough_flags_only(
@@ -442,9 +438,9 @@ def dbt_cli_compile(context) -> Dict:
     )
 
     yield AssetMaterialization(
-        asset_key="dbt_compile_cli_results",
-        description="Metadata about the CLI execution of `dbt compile`.",
-        metadata_entries=[EventMetadataEntry.json(cli_results, label="CLI Results")],
+        asset_key="dbt_compile_cli_output",
+        description="Output from the CLI execution of `dbt compile`.",
+        metadata_entries=[EventMetadataEntry.json(cli_output, label="CLI Output")],
     )
 
-    yield Output(cli_results)
+    yield Output(cli_output)
