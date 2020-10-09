@@ -1,4 +1,3 @@
-import datetime
 import json
 import time
 
@@ -7,6 +6,7 @@ from dagster_aws.cloudwatch import cloudwatch_logger
 from dagster_aws.cloudwatch.loggers import millisecond_timestamp
 
 from dagster import ModeDefinition, execute_pipeline, pipeline, solid
+from dagster.seven import get_current_datetime_in_utc
 
 from .conftest import AWS_REGION, TEST_CLOUDWATCH_LOG_GROUP_NAME, TEST_CLOUDWATCH_LOG_STREAM_NAME
 
@@ -86,7 +86,7 @@ def test_cloudwatch_logging(cloudwatch_client):
         },
     )
 
-    now = millisecond_timestamp(datetime.datetime.utcnow())
+    now = millisecond_timestamp(get_current_datetime_in_utc())
 
     attempt_num = 0
 
