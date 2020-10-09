@@ -22,7 +22,7 @@ ScheduleTickTable = db.Table(
     db.Column("status", db.String(63)),
     # utc timezone - make an index as a breaking change for 0.10.0
     # (https://github.com/dagster-io/dagster/issues/2956)
-    db.Column("timestamp", db.types.TIMESTAMP),
+    db.Column("timestamp", db.types.TIMESTAMP(timezone=True)),
     db.Column("tick_body", db.String),
     # The create and update timestamps are not used in framework code, are are simply
     # present for debugging purposes.

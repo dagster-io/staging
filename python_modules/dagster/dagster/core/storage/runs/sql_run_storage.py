@@ -2,7 +2,6 @@ import logging
 import zlib
 from abc import abstractmethod
 from collections import defaultdict
-from datetime import datetime
 from enum import Enum
 
 import six
@@ -18,7 +17,7 @@ from dagster.core.snap import (
 )
 from dagster.core.storage.tags import ROOT_RUN_ID_TAG
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
-from dagster.seven import JSONDecodeError
+from dagster.seven import JSONDecodeError, get_current_datetime_in_utc
 from dagster.utils import merge_dicts
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
@@ -124,7 +123,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                 .values(
                     status=new_pipeline_status.value,
                     run_body=serialize_dagster_namedtuple(run.with_status(new_pipeline_status)),
-                    update_timestamp=datetime.now(),
+                    update_timestamp=get_current_datetime_in_utc(),
                 )
             )
 
@@ -262,7 +261,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                     run_body=serialize_dagster_namedtuple(
                         run.with_tags(merge_dicts(current_tags, new_tags))
                     ),
-                    update_timestamp=datetime.now(),
+                    update_timestamp=get_current_datetime_in_utc(),
                 )
             )
 

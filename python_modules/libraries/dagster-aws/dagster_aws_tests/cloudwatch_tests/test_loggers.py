@@ -1,9 +1,9 @@
-import datetime
 import json
 import time
 
 import pytest
 from dagster import ModeDefinition, execute_pipeline, pipeline, solid
+from dagster.seven import get_current_datetime_in_utc
 from dagster_aws.cloudwatch import cloudwatch_logger
 from dagster_aws.cloudwatch.loggers import millisecond_timestamp
 
@@ -85,7 +85,7 @@ def test_cloudwatch_logging(cloudwatch_client):
         },
     )
 
-    now = millisecond_timestamp(datetime.datetime.utcnow())
+    now = millisecond_timestamp(get_current_datetime_in_utc())
 
     attempt_num = 0
 

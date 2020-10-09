@@ -19,7 +19,7 @@ import six
 import yaml
 from dagster import check, seven
 from dagster.core.errors import DagsterInvariantViolationError
-from dagster.seven import IS_WINDOWS, TemporaryDirectory, multiprocessing, thread
+from dagster.seven import IS_WINDOWS, TemporaryDirectory, get_utc_timezone, multiprocessing, thread
 from dagster.seven.abc import Mapping
 from six.moves import configparser
 
@@ -31,7 +31,7 @@ if sys.version_info > (3,):
 else:
     from pathlib2 import Path  # pylint: disable=import-error
 
-EPOCH = datetime.datetime.utcfromtimestamp(0)
+EPOCH = datetime.datetime.utcfromtimestamp(0).replace(tzinfo=get_utc_timezone())
 
 # 2/3 compatibility
 PICKLE_PROTOCOL = 2
@@ -449,6 +449,8 @@ def iterate_with_context(context_manager_class, iterator):
 
 def datetime_as_float(dt):
     check.inst_param(dt, "dt", datetime.datetime)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=get_utc_timezone())
     return float((dt - EPOCH).total_seconds())
 
 
@@ -523,17 +525,7 @@ class EventGenerationManager(object):
 
 
 def utc_datetime_from_timestamp(timestamp):
-    tz = None
-    if sys.version_info.major >= 3 and sys.version_info.minor >= 2:
-        from datetime import timezone
-
-        tz = timezone.utc
-    else:
-        import pytz
-
-        tz = pytz.utc
-
-    return datetime.datetime.fromtimestamp(timestamp, tz=tz)
+    return datetime.datetime.fromtimestamp(timestamp, tz=get_utc_timezone())
 
 
 def is_str(obj):
