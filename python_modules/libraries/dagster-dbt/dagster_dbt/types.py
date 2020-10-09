@@ -106,7 +106,7 @@ class NodeResult(
         """
         check.dict_elem(d, "node")
         check.opt_str_elem(d, "error")
-        # check.float_elem(d, "execution_time") TODO[Bob]: Implement `check.float_elem`.
+        check.float_elem(d, "execution_time")
         check.opt_str_elem(d, "thread_id")
         check.list_elem(d, "timing")
         check.is_list(d["timing"], of_type=Dict)
@@ -164,7 +164,7 @@ class DbtResult(namedtuple("_DbtResult", "logs results generated_at elapsed_time
         check.list_elem(d, "results")
         check.is_list(d["results"], of_type=Dict)
         check.str_elem(d, "generated_at")
-        # check.float_elem(d, "elapsed_time") TODO[Bob]: Implement `check.float_elem`.
+        check.float_elem(d, "elapsed_time")
 
         return cls(**d)
 
