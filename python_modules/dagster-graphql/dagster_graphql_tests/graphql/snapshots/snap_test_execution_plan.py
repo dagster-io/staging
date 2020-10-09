@@ -506,3 +506,15 @@ snapshots['test_pipeline_not_found_error_execute_plan 1'] = {
         'pipelineName': 'nope'
     }
 }
+
+snapshots['TestExecutionPlan.test_invalid_config_fetch_execute_plan 1'] = {
+    'executionPlanOrError': {
+        '__typename': 'PipelineConfigValidationInvalid',
+        'errors': [
+            {
+                'message': 'Invalid scalar at path root:solids:sum_solid:inputs:num'
+            }
+        ],
+        'pipelineName': 'csv_hello_world'
+    }
+}
