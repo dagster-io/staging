@@ -1,4 +1,4 @@
-from dagster_aws.emr.pyspark_step_launcher import EmrPySparkStepLauncher
+from dagster_aws.emr.pyspark import EmrPySparkStepLauncher
 
 from dagster.seven import mock
 
