@@ -53,10 +53,12 @@ from dagster import (
     weekly_schedule,
 )
 from dagster.cli.workspace import Workspace
+from dagster.cli.workspace.load import location_handle_from_python_file
 from dagster.core.definitions.decorators import executable
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
-from dagster.core.host_representation import InProcessRepositoryLocation, RepositoryLocationHandle
+from dagster.core.host_representation import RepositoryLocation, RepositoryLocationHandle
+from dagster.core.host_representation.handle import python_user_process_api_from_instance
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.core.storage.tags import RESUME_RETRY_TAG
 from dagster.utils import file_relative_path, segfault
@@ -100,11 +102,14 @@ def create_main_recon_repo():
     return ReconstructableRepository.for_file(__file__, "test_repo")
 
 
-def get_main_external_repo():
-    return InProcessRepositoryLocation(
-        ReconstructableRepository.from_legacy_repository_yaml(
-            file_relative_path(__file__, "repo.yaml")
-        ),
+def get_main_external_repo(instance):
+    return RepositoryLocation.from_handle(
+        location_handle_from_python_file(
+            python_file=file_relative_path(__file__, "setup.py"),
+            attribute="test_repo",
+            working_directory=None,
+            user_process_api=python_user_process_api_from_instance(instance),
+        )
     ).get_repository("test_repo")
 
 
