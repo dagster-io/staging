@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import click
 import six
@@ -7,6 +7,7 @@ import yaml
 
 from dagster import check, seven
 from dagster.cli.load_handle import recon_repo_for_cli_args
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils import load_yaml_from_glob_list
 from dagster.utils.indenting_printer import IndentingStringIoPrinter
 
@@ -41,7 +42,7 @@ def construct_environment_yaml(preset_name, config, pipeline_name, module_name):
 
 
 def construct_scaffolded_file_contents(module_name, pipeline_name, run_config):
-    yesterday = datetime.now() - timedelta(1)
+    yesterday = get_current_datetime_in_utc() - timedelta(1)
 
     printer = IndentingStringIoPrinter(indent_level=4)
     printer.line("'''")

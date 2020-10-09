@@ -21,9 +21,10 @@ from dagster.core.telemetry import get_dir_from_dagster_home
 from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils import find_free_port
 
-_COUPLE_DAYS_AGO = datetime.datetime.now() - datetime.timedelta(days=2)
+_COUPLE_DAYS_AGO = get_current_datetime_in_utc() - datetime.timedelta(days=2)
 
 
 def _throw(_context):
