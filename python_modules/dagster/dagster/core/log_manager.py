@@ -1,10 +1,10 @@
-import datetime
 import itertools
 import logging
 from collections import OrderedDict, namedtuple
 
 from dagster import check, seven
 from dagster.core.utils import make_new_run_id
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils import frozendict, merge_dicts
 from dagster.utils.error import SerializableErrorInfo
 
@@ -159,7 +159,7 @@ class DagsterLogManager(namedtuple("_DagsterLogManager", "run_id logging_tags lo
 
         log_message_id = make_new_run_id()
 
-        log_timestamp = datetime.datetime.utcnow().isoformat()
+        log_timestamp = get_current_datetime_in_utc().isoformat()
 
         synth_props = {
             "orig_message": orig_message,

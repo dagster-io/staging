@@ -2,19 +2,17 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import attr
-import pytz
 from dateutil import parser
 
 from dagster import usable_as_dagster_type
+from dagster.seven import get_utc_timezone
 
 
 def datetime_converter(value):
     if isinstance(value, datetime):
         return value
     elif value is not None:
-        return parser.isoparse(value).replace(
-            tzinfo=pytz.UTC
-        )  # TODO does this need to be dealt with differently in py27? see https://dagster.phacility.com/D2295
+        return parser.isoparse(value).replace(tzinfo=get_utc_timezone())
     else:
         return None
 
