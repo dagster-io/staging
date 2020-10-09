@@ -6,6 +6,7 @@ import string
 import pytest
 
 from dagster.cli.pipeline import execute_backfill_command
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.utils import merge_dicts
 
 from .test_cli_commands import backfill_command_contexts
@@ -19,8 +20,8 @@ def run_test_backfill(
     error_message=None,
 ):
     if uses_legacy_repository_yaml_format:
-        with pytest.warns(
-            UserWarning,
+        with pytest.raises(
+            DagsterInvariantViolationError,
             match=re.escape(
                 "You are using the legacy repository yaml format. Please update your file "
             ),

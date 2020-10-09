@@ -2,13 +2,16 @@ import os
 import time
 
 from dagster_graphql.client.query import LAUNCH_PIPELINE_EXECUTION_MUTATION
-from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
+from dagster_graphql.test.utils import (
+    execute_dagster_graphql,
+    infer_pipeline_selector,
+    main_repo_location_name,
+)
 
 from dagster import execute_pipeline
 from dagster.utils import safe_tempfile_path
 
 from .graphql_context_test_suite import GraphQLContextVariant, make_graphql_context_test_suite
-from .setup import main_repo_location_name
 
 RUN_CANCELLATION_QUERY = """
 mutation($runId: String!) {

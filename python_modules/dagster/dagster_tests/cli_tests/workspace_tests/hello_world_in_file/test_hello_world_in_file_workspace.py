@@ -4,6 +4,7 @@ import pytest
 
 from dagster.cli.workspace import Workspace
 from dagster.cli.workspace.load import load_workspace_from_yaml_paths
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation.handle import UserProcessApi
 from dagster.utils import file_relative_path
 
@@ -54,8 +55,8 @@ def test_load_in_process_location_handle_hello_world_terse(python_user_process_a
     "python_user_process_api", [UserProcessApi.CLI, UserProcessApi.GRPC],
 )
 def test_load_legacy_repository_yaml(python_user_process_api):
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        DagsterInvariantViolationError,
         match=re.escape(
             "You are using the legacy repository yaml format. Please update your file "
             "to abide by the new workspace file format."
@@ -63,6 +64,5 @@ def test_load_legacy_repository_yaml(python_user_process_api):
     ):
         with load_workspace_from_yaml_paths(
             [file_relative_path(__file__, "legacy_repository.yaml")], python_user_process_api,
-        ) as workspace:
-            assert isinstance(workspace, Workspace)
-            assert len(workspace.repository_location_handles) == 1
+        ):
+            pass

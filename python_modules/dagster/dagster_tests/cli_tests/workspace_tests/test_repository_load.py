@@ -1,6 +1,4 @@
-import os
 import re
-from contextlib import contextmanager
 
 import click
 import pytest
@@ -10,6 +8,7 @@ from dagster.cli.workspace.cli_target import (
     get_external_repository_from_kwargs,
     repository_target_argument,
 )
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import ExternalRepository
 from dagster.core.instance import DagsterInstance
 from dagster.core.test_utils import new_cwd
@@ -73,17 +72,17 @@ LEGACY_REPOSITORY = file_relative_path(__file__, "hello_world_in_file/legacy_rep
 )
 def test_valid_repository_target_combos_with_single_repo_single_location(cli_args):
     if cli_args[1] == LEGACY_REPOSITORY:
-        with pytest.warns(
-            UserWarning,
+        with pytest.raises(
+            DagsterInvariantViolationError,
             match=re.escape(
                 "You are using the legacy repository yaml format. Please update your file "
             ),
         ):
-            external_repository = successfully_load_repository_via_cli(cli_args)
+            successfully_load_repository_via_cli(cli_args)
     else:
         external_repository = successfully_load_repository_via_cli(cli_args)
-    assert isinstance(external_repository, ExternalRepository)
-    assert external_repository.name == "hello_world_repository"
+        assert isinstance(external_repository, ExternalRepository)
+        assert external_repository.name == "hello_world_repository"
 
 
 def test_repository_target_argument_one_repo_and_specified_wrong():
@@ -174,8 +173,8 @@ def test_missing_repo_name_in_multi_repo_location():
 
 
 def test_legacy_repository_yaml_autoload():
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        DagsterInvariantViolationError,
         match=re.escape(
             "You are using the legacy repository yaml format. Please update your file "
         ),
@@ -200,8 +199,8 @@ def test_legacy_repository_yaml_dash_y():
 
 
 def test_legacy_repository_yaml_module_autoload():
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        DagsterInvariantViolationError,
         match=re.escape(
             "You are using the legacy repository yaml format. Please update your file "
         ),
@@ -211,8 +210,8 @@ def test_legacy_repository_yaml_module_autoload():
 
 
 def test_legacy_repository_module_yaml_dash_y():
-    with pytest.warns(
-        UserWarning,
+    with pytest.raises(
+        DagsterInvariantViolationError,
         match=re.escape(
             "You have used -y or --repository-yaml to load a workspace. This is deprecated and "
             "will be eliminated in 0.9.0."

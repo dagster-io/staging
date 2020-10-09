@@ -6,6 +6,7 @@ import pytest
 from click.testing import CliRunner
 
 from dagster.cli.pipeline import execute_launch_command, pipeline_launch_command
+from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.test_utils import new_cwd
 from dagster.utils import file_relative_path
 
@@ -38,8 +39,8 @@ def run_launch_cli(execution_args, instance, expected_count=None):
 def test_launch_pipeline(gen_pipeline_args):
     with gen_pipeline_args as (cli_args, uses_legacy_repository_yaml_format, instance):
         if uses_legacy_repository_yaml_format:
-            with pytest.warns(
-                UserWarning,
+            with pytest.raises(
+                DagsterInvariantViolationError,
                 match=re.escape(
                     "You are using the legacy repository yaml format. Please update your file "
                 ),
@@ -54,8 +55,8 @@ def test_launch_pipeline_cli(pipeline_cli_args):
     with default_cli_test_instance() as instance:
         cli_args, uses_legacy_repository_yaml_format = pipeline_cli_args
         if uses_legacy_repository_yaml_format:
-            with pytest.warns(
-                UserWarning,
+            with pytest.raises(
+                DagsterInvariantViolationError,
                 match=re.escape(
                     "You are using the legacy repository yaml format. Please update your file "
                 ),
