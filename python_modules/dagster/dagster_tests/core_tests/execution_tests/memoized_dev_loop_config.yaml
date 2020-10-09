@@ -1,0 +1,25 @@
+solids:
+  create_string_1:
+    config:
+      input_str: apple
+      base_dir: /Users/christopherdecarolis/scratch_dir
+  create_string_2:
+    config:
+      input_str: apple
+      base_dir: /Users/christopherdecarolis/scratch_dir
+  take_string_1:
+    config:
+      input_str: apple
+      base_dir: /Users/christopherdecarolis/scratch_dir
+  take_string_2:
+    config:
+      input_str: apple
+      base_dir: /Users/christopherdecarolis/scratch_dir
+  take_string_two_inputs:
+    config:
+      input_str: apple
+      base_dir: /Users/christopherdecarolis/scratch_dir
+intermediate_storage:
+  filesystem:
+    config:
+      base_dir: /Users/christopherdecarolis/scratch_dir

@@ -1,0 +1,5 @@
+event_log_storage:
+  module: dagster.core.storage.event_log
+  class: ConsolidatedSqliteEventLogStorage
+  config:
+    base_dir: /Users/christopherdecarolis/scratch_dir
