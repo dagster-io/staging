@@ -166,11 +166,11 @@ namespaces changes the returned data immediately.
 */
 export function useStorage(repositoryName: string, pipelineName: string): StorageHook {
   const namespace = `${repositoryName}.${pipelineName}`;
-  const [version, setVersion] = React.useState<number>(0);
+  const [, setVersion] = React.useState(0);
 
   const onSave = (newData: IStorageData) => {
     writeStorageDataForNamespace(namespace, newData);
-    setVersion(version + 1); // trigger a React render
+    setVersion((curr) => curr + 1); // trigger a React render
   };
 
   return [getStorageDataForNamespace(namespace), onSave];
