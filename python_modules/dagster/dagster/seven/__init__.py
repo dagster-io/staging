@@ -272,7 +272,7 @@ def get_utc_timezone():
 
 
 def get_current_datetime_in_utc():
-    return datetime.datetime.now(tz=get_utc_timezone())
+    return datetime.datetime.now(tz=get_utc_timezone())  # pylint: disable=datetime-now
 
 
 def get_timestamp_from_utc_datetime(utc_datetime):

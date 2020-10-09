@@ -4,6 +4,7 @@ from dateutil.relativedelta import relativedelta
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.seven import get_current_datetime_in_utc, get_utc_timezone
 
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 
@@ -15,10 +16,11 @@ def date_partition_range(
     `PartitionSet` definition.
 
     Args:
-        start (datetime): Datetime capturing the start of the time range.
+        start (datetime): Datetime capturing the start of the time range. If no timezone is
+            specified, this will be interpreted as UTC.
         end  (Optional(datetime)): Datetime capturing the end of the partition.  By default, the
-                                   current time is used.  The range is not inclusive of the end
-                                   value.
+            current time is used.  The range is not inclusive of the end value. If no timezone is
+            specified, this will be interpreted as UTC.
         delta (Optional(timedelta)): Timedelta representing the time duration of each partition.
         fmt (Optional(str)): Format string to represent each partition by its start time
         inclusive (Optional(bool)): By default, the partition set only contains date interval
@@ -38,6 +40,12 @@ def date_partition_range(
     check.inst_param(delta, "timedelta", (datetime.timedelta, relativedelta))
     fmt = check.opt_str_param(fmt, "fmt", default=DEFAULT_DATE_FORMAT)
 
+    if start.tzinfo is None:
+        start.replace(tzinfo=get_utc_timezone())
+
+    if end and end.tzinfo is None:
+        end.replace(tzinfo=get_utc_timezone())
+
     if end and start > end:
         raise DagsterInvariantViolationError(
             'Selected date range start "{start}" is after date range end "{end}'.format(
@@ -48,7 +56,7 @@ def date_partition_range(
     def get_date_range_partitions():
         current = start
 
-        _end = end or datetime.datetime.now()
+        _end = end or get_current_datetime_in_utc()
 
         date_names = []
         while current <= _end:
