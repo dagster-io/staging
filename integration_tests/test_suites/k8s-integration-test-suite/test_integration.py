@@ -106,8 +106,8 @@ def test_k8s_run_launcher_terminate(
     )
 
     timeout = datetime.timedelta(0, 30)
-    start_time = datetime.datetime.now()
-    while datetime.datetime.now() < start_time + timeout:
+    start_time = get_current_datetime_in_utc()
+    while get_current_datetime_in_utc() < start_time + timeout:
         if dagster_instance_for_k8s_run_launcher.run_launcher.can_terminate(run_id=run.run_id):
             break
         time.sleep(5)
@@ -115,9 +115,9 @@ def test_k8s_run_launcher_terminate(
     assert dagster_instance_for_k8s_run_launcher.run_launcher.can_terminate(run_id=run.run_id)
     assert dagster_instance_for_k8s_run_launcher.run_launcher.terminate(run_id=run.run_id)
 
-    start_time = datetime.datetime.now()
+    start_time = get_current_datetime_in_utc()
     pipeline_run = None
-    while datetime.datetime.now() < start_time + timeout:
+    while get_current_datetime_in_utc() < start_time + timeout:
         pipeline_run = dagster_instance_for_k8s_run_launcher.get_run_by_id(run.run_id)
         if pipeline_run.status == PipelineRunStatus.FAILURE:
             break

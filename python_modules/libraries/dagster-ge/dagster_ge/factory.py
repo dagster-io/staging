@@ -1,5 +1,3 @@
-import datetime
-
 import great_expectations as ge
 from dagster import (
     EventMetadataEntry,
@@ -103,7 +101,7 @@ def ge_validation_solid_factory(
         batch = data_context.get_batch(final_batch_kwargs, suite)
         run_id = {
             "run_name": datasource_name + " run",
-            "run_time": datetime.datetime.utcnow(),
+            "run_time": get_current_datetime_in_utc(),
         }
         results = data_context.run_validation_operator(
             validation_operator, assets_to_validate=[batch], run_id=run_id

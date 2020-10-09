@@ -12,6 +12,7 @@ from dagster.core.launcher.default_run_launcher import DefaultRunLauncher
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.serdes import ConfigurableClass
+from dagster.seven import get_current_datetime_in_utc
 from dagster.utils import merge_dicts
 
 
@@ -224,7 +225,7 @@ def new_cwd(path):
 
 
 def today_at_midnight():
-    return datetime.datetime.combine(datetime.date.today(), datetime.time())
+    return datetime.datetime.combine(get_current_datetime_in_utc().date(), datetime.time())
 
 
 class ExplodingRunLauncher(RunLauncher, ConfigurableClass):

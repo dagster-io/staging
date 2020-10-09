@@ -23,9 +23,19 @@ def define_dagster_checker():
             ),
             "W0002": ("print() call", "print-call", "Cannot call print()"),
             "W0003": (
-                "setting daemon=True in threading.Thread constructor",
+                "Setting daemon=True in threading.Thread constructor",
                 "daemon-thread",
                 "Cannot set daemon=True in threading.Thread constructor (py2 compat)",
+            ),
+            "W0004": (
+                "Use of now() instead of seven.get_current_datetime_in_utc()",
+                "datetime-now",
+                "Must use timezone-aware dagster.seven.get_current_datetime_in_utc() for timestamps",
+            ),
+            "W0005": (
+                "Use of utcnow() instead of seven.get_current_datetime_in_utc()",
+                "datetime-utcnow",
+                "Must use timezone-aware dagster.seven.get_current_datetime_in_utc() for timestamps",
             ),
         }
         options = ()
@@ -61,21 +71,30 @@ def define_dagster_checker():
                 current = current.parent
 
         def visit_call(self, node):
-            if (
-                node.callable
-                and isinstance(node.func, astroid.node_classes.Name)
-                and node.func.name == "print"
-            ):
+            if isinstance(node.func, astroid.node_classes.Name) and node.func.name == "print":
                 self.add_message("print-call", node=node)
             if (
-                node.callable
-                and isinstance(node.func, astroid.node_classes.Attribute)
+                isinstance(node.func, astroid.node_classes.Attribute)
                 and node.func.attrname == "Thread"
                 and isinstance(node.func.expr, astroid.node_classes.Name)
                 and node.func.expr.name == "threading"
                 and "daemon" in [keyword.arg for keyword in node.keywords]
             ):
                 self.add_message("daemon-thread", node=node)
+            if (
+                isinstance(node.func, astroid.node_classes.Attribute)
+                and node.func.attrname == "now"
+                and isinstance(node.func.expr, astroid.node_classes.Attribute)
+                and node.func.expr.attrname == "datetime"
+            ):
+                self.add_message("datetime-now", node=node)
+            if (
+                isinstance(node.func, astroid.node_classes.Attribute)
+                and node.func.attrname == "utcnow"
+                and isinstance(node.func.expr, astroid.node_classes.Attribute)
+                and node.func.expr.attrname == "datetime"
+            ):
+                self.add_message("datetime-utcnow", node=node)
 
     return DagsterChecker
 

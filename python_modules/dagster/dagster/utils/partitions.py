@@ -51,10 +51,11 @@ def date_partition_range(
     `PartitionSet` definition.
 
     Args:
-        start (datetime): Datetime capturing the start of the time range.
+        start (datetime): Datetime capturing the start of the time range. If no timezone is
+            specified, this will be interpreted as UTC.
         end  (Optional(datetime)): Datetime capturing the end of the partition.  By default, the
-                                   current time is used.  The range is not inclusive of the end
-                                   value.
+            current time is used.  The range is not inclusive of the end value. If no timezone is
+            specified, this will be interpreted as UTC.
         delta (Optional(timedelta)): Timedelta representing the time duration of each partition.
             DEPRECATED: use 'delta_range' instead, which handles timezone transitions correctly.
         delta_range (Optional(str)): string representing the time duration of each partition.
@@ -93,6 +94,12 @@ def date_partition_range(
         check.invariant(delta_range, "Must include either a 'delta' or 'delta_range' parameter")
         delta_amount = 1
 
+    if start.tzinfo is None:
+        start.replace(tzinfo=get_utc_timezone())
+
+    if end and end.tzinfo is None:
+        end.replace(tzinfo=get_utc_timezone())
+
     if end and start > end:
         raise DagsterInvariantViolationError(
             'Selected date range start "{start}" is after date range end "{end}'.format(
@@ -102,6 +109,7 @@ def date_partition_range(
 
     def get_date_range_partitions():
         tz = timezone if timezone else pendulum.now().timezone.name
+
         _start = (
             start.in_tz(tz)
             if isinstance(start, pendulum.Pendulum)
