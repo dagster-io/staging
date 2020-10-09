@@ -9,7 +9,7 @@ SqlEventLogStorageTable = db.Table(
     db.Column("run_id", db.String(255)),
     db.Column("event", db.Text, nullable=False),
     db.Column("dagster_event_type", db.Text),
-    db.Column("timestamp", db.types.TIMESTAMP),
+    db.Column("timestamp", db.types.TIMESTAMP(timezone=True)),
     db.Column("step_key", db.String),
     db.Column("asset_key", db.String),
 )

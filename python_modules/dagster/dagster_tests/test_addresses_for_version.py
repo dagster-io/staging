@@ -73,7 +73,7 @@ def test_addresses_for_version(version_storing_context):
 
         step_output_handle = StepOutputHandle("solid1.compute", "result")
         output_version = resolve_step_output_versions(
-            create_execution_plan(my_pipeline), run_config={}, mode="default"
+            create_execution_plan(my_pipeline), environment_config={}, mode="default"
         )[step_output_handle]
         assert instance.get_addresses_for_step_output_versions(
             {("my_pipeline", step_output_handle): output_version}

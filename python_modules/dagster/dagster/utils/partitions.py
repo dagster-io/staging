@@ -4,6 +4,7 @@ from dateutil.relativedelta import relativedelta
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.seven import get_current_datetime_in_utc
 
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 
@@ -48,7 +49,7 @@ def date_partition_range(
     def get_date_range_partitions():
         current = start
 
-        _end = end or datetime.datetime.now()
+        _end = end or get_current_datetime_in_utc()
 
         date_names = []
         while current <= _end:

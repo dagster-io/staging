@@ -1,5 +1,3 @@
-import datetime
-
 from dagster import (
     InputDefinition,
     Int,
@@ -9,6 +7,7 @@ from dagster import (
     pipeline,
     repository,
 )
+from dagster.seven import get_current_datetime_in_utc
 
 
 @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
@@ -26,7 +25,7 @@ def math():
     return mult_two(num=add_one())
 
 
-@daily_schedule(pipeline_name="math", start_date=datetime.datetime.now())
+@daily_schedule(pipeline_name="math", start_date=get_current_datetime_in_utc())
 def my_schedule(_):
     return {"solids": {"mult_two": {"inputs": {"num": {"value": 2}}}}}
 
