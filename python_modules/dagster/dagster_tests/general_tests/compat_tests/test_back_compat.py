@@ -331,3 +331,19 @@ def test_object_store_operation_result_data_new_fields():
     """We added address and version fields to ObjectStoreOperationResultData.
     Make sure we can still deserialize old ObjectStoreOperationResultData without those fields."""
     instance_from_debug_payloads([file_relative_path(__file__, "0_9_12_nothing_fs_storage.gz")])
+
+
+def test_event_log_asset_key_summary_table():
+    test_dir = file_relative_path(__file__, "snapshot_0_9_15_pre_asset_key_summary/sqlite")
+    with restore_directory(test_dir):
+        db_path = os.path.join(
+            test_dir, "history", "runs", "d12b0ba3-f100-4caa-a4b3-3394978b1b1b.db"
+        )
+        assert get_current_alembic_version(db_path) == "c34498c29964"
+        assert "asset_keys" not in get_sqlite3_tables(db_path)
+
+        # Make sure the schema is migrated
+        instance = DagsterInstance.from_ref(InstanceRef.from_dir(test_dir))
+        instance.upgrade()
+
+        assert "asset_keys" in get_sqlite3_tables(db_path)
