@@ -60,13 +60,13 @@ def test_execute_run_with_structured_logs(pipeline_handle):
     assert "PIPELINE_SUCCESS" in result.stdout, "no match, result: {}".format(result)
 
 
-def runner_execute_step_with_structured_logs(runner, cli_args):
-    result = runner.invoke(api.execute_step_with_structured_logs_command, cli_args)
+def runner_execute_step(runner, cli_args):
+    result = runner.invoke(api.execute_step_command, cli_args)
     if result.exit_code != 0:
         # CliRunner captures stdout so printing it out here
         raise Exception(
             (
-                "dagster runner_execute_step_with_structured_logs commands with cli_args {cli_args} "
+                "dagster runner_execute_step commands with cli_args {cli_args} "
                 'returned exit_code {exit_code} with stdout:\n"{stdout}"'
                 '\n exception: "\n{exception}"'
                 '\n and result as string: "{result}"'
@@ -82,7 +82,7 @@ def runner_execute_step_with_structured_logs(runner, cli_args):
 
 
 @pytest.mark.parametrize("pipeline_handle", [get_foo_pipeline_handle()])
-def test_execute_step_with_structured_logs(pipeline_handle):
+def test_execute_step(pipeline_handle):
     runner = CliRunner()
 
     with instance_for_test(
@@ -99,10 +99,11 @@ def test_execute_step_with_structured_logs(pipeline_handle):
             ExecuteStepArgs(
                 pipeline_origin=pipeline_handle.get_origin(),
                 pipeline_run_id=run.run_id,
+                step_keys_to_execute=["do_something.compute"],
                 instance_ref=instance.get_ref(),
             )
         )
 
-        result = runner_execute_step_with_structured_logs(runner, [input_json],)
+        result = runner_execute_step(runner, [input_json],)
 
     assert "STEP_SUCCESS" in result.stdout
