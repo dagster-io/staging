@@ -108,3 +108,28 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
     finally:
         if conn:
             conn.close()
+
+
+def pg_statement_timeout(millis):
+    check.int_param(millis, "millis")
+    return "-c statement_timeout={}".format(millis)
+
+
+# reference https://github.com/gevent/gevent/blob/master/examples/psycopg2_pool.py
+def config_psycopg_for_gevent():
+    psycopg2.extensions.set_wait_callback(_wait_select)
+
+
+def _wait_select(conn, timeout=None):
+    import gevent
+
+    while True:
+        state = conn.poll()
+        if state == psycopg2.extensions.POLL_OK:
+            break
+        elif state == psycopg2.extensions.POLL_READ:
+            gevent.socket.wait_read(conn.fileno(), timeout=timeout)  # pylint: disable=no-member
+        elif state == psycopg2.extensions.POLL_WRITE:
+            gevent.socket.wait_write(conn.fileno(), timeout=timeout)  # pylint: disable=no-member
+        else:
+            raise psycopg2.OperationalError("bad state from poll: {}".format(state))
