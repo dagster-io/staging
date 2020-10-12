@@ -175,7 +175,6 @@ class CeleryDockerExecutor(Executor):
         return self._retries
 
     def execute(self, pipeline_context, execution_plan):
-
         return core_celery_execution_loop(
             pipeline_context, execution_plan, step_execution_fn=_submit_task_docker
         )
@@ -264,7 +263,10 @@ def create_docker_task(celery_app, **task_kwargs):
                 retries_dict=retries_dict,
             )
         )
-        command = 'dagster api execute_step_with_structured_logs "{}"'.format(input_json)
+
+        import json
+
+        command = "dagster api execute_step_with_structured_logs {}".format(json.dumps(input_json))
 
         docker_image = docker_config["image"]
         client = docker.client.from_env()
@@ -302,11 +304,16 @@ def create_docker_task(celery_app, **task_kwargs):
             docker_response = client.containers.run(
                 docker_image,
                 command=command,
-                detach=False,
+                detach=True,
                 auto_remove=True,
                 # pass through this worker's environment for things like AWS creds etc.
                 environment=docker_env,
+                stdout=True,
+                stderr=True,
             )
+
+            print("RESPONSE: " + repr(docker_response.logs(follow=True)))
+
             res = seven.json.loads(docker_response)
 
         except (docker.errors.ContainerError, docker.errors.DockerException) as err:
