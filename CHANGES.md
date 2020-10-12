@@ -5,6 +5,8 @@
 **Breaking Changes**
 
 - Eliminated public field `config_field` on definition classes.
+- `execute_step_with_structured_logs` CLI command is replaced by `execute_step`. `ExecuteStepArgs`
+  parameters have been changed.
 
 ## 0.9.20
 
