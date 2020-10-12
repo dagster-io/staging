@@ -129,31 +129,22 @@ def normalize_calories(context, cereals):
     context.resources.warehouse.update_normalized_cereals(normalized_cereals)
 
 
+# start_presets_marker_0
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            name="unittest",
-            resource_defs={"warehouse": local_sqlite_warehouse_resource},
+            name="unittest", resource_defs={"warehouse": local_sqlite_warehouse_resource},
         ),
         ModeDefinition(
-            name="dev",
-            resource_defs={
-                "warehouse": sqlalchemy_postgres_warehouse_resource
-            },
+            name="dev", resource_defs={"warehouse": sqlalchemy_postgres_warehouse_resource},
         ),
     ],
     preset_defs=[
         PresetDefinition(
             "unittest",
             run_config={
-                "solids": {
-                    "read_csv": {
-                        "inputs": {"csv_path": {"value": "cereal.csv"}}
-                    }
-                },
-                "resources": {
-                    "warehouse": {"config": {"conn_str": ":memory:"}}
-                },
+                "solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}},
+                "resources": {"warehouse": {"config": {"conn_str": ":memory:"}}},
             },
             mode="unittest",
         ),
@@ -171,6 +162,11 @@ def presets_pipeline():
     normalize_calories(read_csv())
 
 
+# end_presets_marker_0
+
+
 if __name__ == "__main__":
+    # start_presets_main
     result = execute_pipeline(presets_pipeline, preset="unittest")
+    # end_presets_main
     assert result.success

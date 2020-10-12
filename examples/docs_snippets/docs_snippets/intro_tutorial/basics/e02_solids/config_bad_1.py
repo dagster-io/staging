@@ -3,7 +3,7 @@ import os
 
 from dagster import execute_pipeline, pipeline, solid
 
-
+# start_config_bad_1_marker_0
 @solid
 def read_csv(context, csv_path):
     csv_path = os.path.join(os.path.dirname(__file__), csv_path)
@@ -27,16 +27,15 @@ def read_csv(context, csv_path):
     return lines
 
 
+# end_config_bad_1_marker_0
+
+
 @pipeline
 def config_pipeline():
     read_csv()
 
 
 if __name__ == "__main__":
-    run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        }
-    }
+    run_config = {"solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}}}
     result = execute_pipeline(config_pipeline, run_config=run_config)
     assert result.success

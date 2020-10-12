@@ -3,7 +3,7 @@ import os
 
 from dagster import execute_pipeline, pipeline, solid
 
-
+# start_config_bad_2_marker_0
 @solid
 def read_csv(
     context,
@@ -35,6 +35,9 @@ def read_csv(
     context.log.info("Read {n_lines} lines".format(n_lines=len(lines)))
 
     return lines
+
+
+# end_config_bad_2_marker_0
 
 
 @pipeline

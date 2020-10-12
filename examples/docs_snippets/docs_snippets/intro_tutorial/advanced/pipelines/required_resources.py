@@ -54,6 +54,7 @@ def read_csv(context, csv_path):
     return lines
 
 
+# start_required_resources_marker_0
 @solid(required_resource_keys={"warehouse"})
 def normalize_calories(context, cereals):
     columns_to_normalize = [
@@ -80,22 +81,17 @@ def normalize_calories(context, cereals):
     context.resources.warehouse.update_normalized_cereals(normalized_cereals)
 
 
-@pipeline(
-    mode_defs=[
-        ModeDefinition(
-            resource_defs={"warehouse": local_sqlite_warehouse_resource}
-        )
-    ]
-)
+# end_required_resources_marker_0
+
+
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"warehouse": local_sqlite_warehouse_resource})])
 def resources_pipeline():
     normalize_calories(read_csv())
 
 
 if __name__ == "__main__":
     run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        },
+        "solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}},
         "resources": {"warehouse": {"config": {"conn_str": ":memory:"}}},
     }
     result = execute_pipeline(resources_pipeline, run_config=run_config)

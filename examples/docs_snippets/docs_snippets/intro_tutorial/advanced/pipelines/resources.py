@@ -89,23 +89,18 @@ def normalize_calories(context, cereals):
 
 # end_resources_marker_1
 
-
-@pipeline(
-    mode_defs=[
-        ModeDefinition(
-            resource_defs={"warehouse": local_sqlite_warehouse_resource}
-        )
-    ]
-)
+# start_resources_marker_2
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"warehouse": local_sqlite_warehouse_resource})])
 def resources_pipeline():
     normalize_calories(read_csv())
 
 
+# end_resources_marker_2
+
+
 if __name__ == "__main__":
     run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        },
+        "solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}},
         "resources": {"warehouse": {"config": {"conn_str": ":memory:"}}},
     }
     result = execute_pipeline(resources_pipeline, run_config=run_config)

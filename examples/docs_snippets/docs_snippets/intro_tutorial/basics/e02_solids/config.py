@@ -1,3 +1,4 @@
+# start_config_marker_0
 import csv
 import os
 
@@ -104,11 +105,9 @@ def config_pipeline():
     read_csv()
 
 
+# end_config_marker_0
+
 if __name__ == "__main__":
-    run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        }
-    }
+    run_config = {"solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}}}
     result = execute_pipeline(config_pipeline, run_config=run_config)
     assert result.success

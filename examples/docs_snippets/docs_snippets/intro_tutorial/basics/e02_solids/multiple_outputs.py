@@ -25,6 +25,7 @@ def read_csv(context, csv_path):
     return lines
 
 
+# start_split_cereals
 @solid(
     config_schema={
         "process_hot": Field(Bool, is_required=False, default_value=True),
@@ -44,14 +45,14 @@ def split_cereals(context, cereals):
         yield Output(cold_cereals, "cold_cereals")
 
 
+# end_split_cereals
+
 # start-sort-and-pipeline
 @solid
 def sort_hot_cereals_by_calories(context, cereals):
     sorted_cereals = sorted(cereals, key=lambda cereal: cereal["calories"])
     context.log.info(
-        "Least caloric hot cereal: {least_caloric}".format(
-            least_caloric=sorted_cereals[0]["name"]
-        )
+        "Least caloric hot cereal: {least_caloric}".format(least_caloric=sorted_cereals[0]["name"])
     )
 
 
@@ -59,9 +60,7 @@ def sort_hot_cereals_by_calories(context, cereals):
 def sort_cold_cereals_by_calories(context, cereals):
     sorted_cereals = sorted(cereals, key=lambda cereal: cereal["calories"])
     context.log.info(
-        "Least caloric cold cereal: {least_caloric}".format(
-            least_caloric=sorted_cereals[0]["name"]
-        )
+        "Least caloric cold cereal: {least_caloric}".format(least_caloric=sorted_cereals[0]["name"])
     )
 
 
@@ -76,12 +75,6 @@ def multiple_outputs_pipeline():
 
 
 if __name__ == "__main__":
-    run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        }
-    }
-    result = execute_pipeline(
-        multiple_outputs_pipeline, run_config=run_config
-    )
+    run_config = {"solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}}}
+    result = execute_pipeline(multiple_outputs_pipeline, run_config=run_config)
     assert result.success

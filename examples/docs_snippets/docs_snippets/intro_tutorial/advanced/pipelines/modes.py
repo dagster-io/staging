@@ -74,6 +74,7 @@ class NormalizedCereal(Base):
     rating = sqlalchemy.Column(sqlalchemy.Float)
 
 
+# start_modes_marker_0
 class SqlAlchemyPostgresWarehouse(object):
     def __init__(self, conn_str):
         self._conn_str = conn_str
@@ -84,6 +85,9 @@ class SqlAlchemyPostgresWarehouse(object):
         Base.metadata.drop_all(self._engine)
         Base.metadata.create_all(self._engine)
         NormalizedCereal.__table__.insert().execute(records)
+
+
+# end_modes_marker_0
 
 
 @resource(config_schema={"conn_str": Field(String)})
@@ -127,17 +131,14 @@ def normalize_calories(context, cereals):
     context.resources.warehouse.update_normalized_cereals(normalized_cereals)
 
 
+# start_modes_marker_1
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            name="unittest",
-            resource_defs={"warehouse": local_sqlite_warehouse_resource},
+            name="unittest", resource_defs={"warehouse": local_sqlite_warehouse_resource},
         ),
         ModeDefinition(
-            name="dev",
-            resource_defs={
-                "warehouse": sqlalchemy_postgres_warehouse_resource
-            },
+            name="dev", resource_defs={"warehouse": sqlalchemy_postgres_warehouse_resource},
         ),
     ]
 )
@@ -145,16 +146,15 @@ def modes_pipeline():
     normalize_calories(read_csv())
 
 
+# end_modes_marker_1
+
+
 if __name__ == "__main__":
     # start_modes_main
     run_config = {
-        "solids": {
-            "read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}
-        },
+        "solids": {"read_csv": {"inputs": {"csv_path": {"value": "cereal.csv"}}}},
         "resources": {"warehouse": {"config": {"conn_str": ":memory:"}}},
     }
-    result = execute_pipeline(
-        pipeline=modes_pipeline, mode="unittest", run_config=run_config,
-    )
+    result = execute_pipeline(pipeline=modes_pipeline, mode="unittest", run_config=run_config,)
+    # end_modes_main
     assert result.success
-# end_modes_main
