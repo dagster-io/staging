@@ -7,6 +7,10 @@
 // GraphQL query operation: AssetsRootQuery
 // ====================================================
 
+export interface AssetsRootQuery_assetsOrError_PythonError {
+  __typename: "PythonError";
+}
+
 export interface AssetsRootQuery_assetsOrError_AssetsNotSupportedError {
   __typename: "AssetsNotSupportedError";
   message: string;
@@ -27,7 +31,7 @@ export interface AssetsRootQuery_assetsOrError_AssetConnection {
   nodes: AssetsRootQuery_assetsOrError_AssetConnection_nodes[];
 }
 
-export type AssetsRootQuery_assetsOrError = AssetsRootQuery_assetsOrError_AssetsNotSupportedError | AssetsRootQuery_assetsOrError_AssetConnection;
+export type AssetsRootQuery_assetsOrError = AssetsRootQuery_assetsOrError_PythonError | AssetsRootQuery_assetsOrError_AssetsNotSupportedError | AssetsRootQuery_assetsOrError_AssetConnection;
 
 export interface AssetsRootQuery {
   assetsOrError: AssetsRootQuery_assetsOrError;
