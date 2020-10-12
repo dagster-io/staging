@@ -14,6 +14,14 @@ SqlEventLogStorageTable = db.Table(
     db.Column("asset_key", db.String),
 )
 
+AssetKeyTable = db.Table(
+    "asset_keys",
+    SqlEventLogStorageMetadata,
+    db.Column("id", db.Integer, primary_key=True, autoincrement=True),
+    db.Column("asset_key", db.String, unique=True),
+    db.Column("counter", db.Integer, default=0),
+)
+
 db.Index("idx_run_id", SqlEventLogStorageTable.c.run_id)
 db.Index("idx_step_key", SqlEventLogStorageTable.c.step_key)
 db.Index("idx_asset_key", SqlEventLogStorageTable.c.asset_key)
