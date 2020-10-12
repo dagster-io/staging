@@ -5,8 +5,8 @@
 **Breaking Changes**
 
 - `CliApiRunLauncher` and `GrpcRunLauncher` have been combined into `DefaultRunLauncher`.
-If you had one of these run launchers in your `dagster.yaml`, replace it with `DefaultRunLauncher`
-or remove the `run_launcher:` section entirely.
+  If you had one of these run launchers in your `dagster.yaml`, replace it with `DefaultRunLauncher`
+  or remove the `run_launcher:` section entirely.
 
 **New**
 
@@ -20,13 +20,13 @@ or remove the `run_launcher:` section entirely.
   - Fixed pipeline explorer state for empty pipelines
   - Fixed Scheduler table
 - User-defined k8s config in the pipeline run tags (with key `dagster-k8s/config`) will now be
-passed to the k8s jobs when using the `dagster-k8s` and `dagster-celery-k8s` run launchers.
-Previously, only user-defined k8s config in the pipeline definition’s tag was passed down.
+  passed to the k8s jobs when using the `dagster-k8s` and `dagster-celery-k8s` run launchers.
+  Previously, only user-defined k8s config in the pipeline definition’s tag was passed down.
 
 **Experimental**
 
 - Run queuing: the new `QueuedRunCoordinator` enables limiting the number of concurrent runs.
-The `DefaultRunCoordinator` launches jobs directly from Dagit, preserving existing behavior.
+  The `DefaultRunCoordinator` launches jobs directly from Dagit, preserving existing behavior.
 
 ## 0.9.17
 
@@ -54,6 +54,8 @@ The `DefaultRunCoordinator` launches jobs directly from Dagit, preserving existi
 
 **Breaking Changes**
 
+<<<<<<< HEAD
+
 - Removed `DagsterKubernetesPodOperator` in `dagster-airflow`.
 - Removed the `execute_plan` mutation from `dagster-graphql`.
 - `ModeDefinition`, `PartitionSetDefinition`, `PresetDefinition`, `@repository`, `@pipeline`, and `ScheduleDefinition` names must pass the regular expression `r"^[A-Za-z0-9_]+$"` and not be python keywords or disallowed names. See `DISALLOWED_NAMES` in `dagster.core.definitions.utils` for exhaustive list of illegal names.
@@ -73,7 +75,9 @@ The `DefaultRunCoordinator` launches jobs directly from Dagit, preserving existi
 **Bugfixes**
 
 - Addressed performance issues loading the /assets table in dagit. Requires a data migration to create a secondary index by running dagster instance reindex.
-- Dagit bugfixes and improvements
+- # Dagit bugfixes and improvements
+- [Celery] Refactored the Celery task on dagster-celery-k8s and dagster-celery-docker executors. Celery workers will need to be updated along with the rest of the system.
+  > > > > > > > c9238e29f... modify execute_step args
 
 ## 0.9.15
 

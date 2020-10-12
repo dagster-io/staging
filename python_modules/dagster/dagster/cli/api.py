@@ -37,6 +37,7 @@ from dagster.core.scheduler import (
     ScheduledExecutionSkipped,
     ScheduledExecutionSuccess,
 )
+from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.tags import check_tags
 from dagster.core.telemetry import telemetry_wrapper
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -146,14 +147,14 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
 
 
 @click.command(
-    name="execute_step_with_structured_logs",
+    name="execute_step",
     help=(
         "[INTERNAL] This is an internal utility. Users should generally not invoke this command "
         "interactively."
     ),
 )
 @click.argument("input_json", type=click.STRING)
-def execute_step_with_structured_logs_command(input_json):
+def execute_step_command(input_json):
     try:
         signal.signal(signal.SIGTERM, signal.getsignal(signal.SIGINT))
     except ValueError:
@@ -171,22 +172,32 @@ def execute_step_with_structured_logs_command(input_json):
         DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
     ) as instance:
         pipeline_run = instance.get_run_by_id(args.pipeline_run_id)
+        check.inst(
+            pipeline_run,
+            PipelineRun,
+            "Pipeline run with id '{}' not found for step execution".format(args.pipeline_run_id),
+        )
+
         recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
 
         execution_plan = create_execution_plan(
             recon_pipeline.subset_for_execution_from_existing_pipeline(
                 pipeline_run.solids_to_execute
             ),
-            run_config=args.run_config,
+            run_config=pipeline_run.run_config,
             step_keys_to_execute=args.step_keys_to_execute,
-            mode=args.mode,
+            mode=pipeline_run.mode,
         )
 
         retries = Retries.from_config(args.retries_dict)
 
         buff = []
         for event in execute_plan_iterator(
-            execution_plan, pipeline_run, instance, run_config=args.run_config, retries=retries,
+            execution_plan,
+            pipeline_run,
+            instance,
+            run_config=pipeline_run.run_config,
+            retries=retries,
         ):
             buff.append(serialize_dagster_namedtuple(event))
 
@@ -542,7 +553,8 @@ def create_api_cli_group():
     )
 
     group.add_command(execute_run_with_structured_logs_command)
-    group.add_command(execute_step_with_structured_logs_command)
+
+    group.add_command(execute_step_command)
     group.add_command(launch_scheduled_execution)
     group.add_command(grpc_command)
     group.add_command(grpc_health_check_command)
