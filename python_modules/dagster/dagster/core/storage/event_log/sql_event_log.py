@@ -18,7 +18,7 @@ from dagster.utils import datetime_as_float, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRunStatsSnapshot
 from .base import AssetAwareEventLogStorage, EventLogStorage
-from .schema import SqlEventLogStorageTable
+from .schema import AssetKeyTable, SqlEventLogStorageTable
 from .version_addresses import get_addresses_for_step_output_versions_helper
 
 
@@ -41,7 +41,7 @@ class SqlEventLogStorage(EventLogStorage):
         out-of-date instance of the storage up to date.
         """
 
-    def prepare_insert_statement(self, event):
+    def prepare_insert_event(self, event):
         """ Helper method for preparing the event log SQL insertion statement.  Abstracted away to
         have a single place for the logical table representation of the event, while having a way
         for SQL backends to implement different execution implementations for `store_event`. See
@@ -70,6 +70,20 @@ class SqlEventLogStorage(EventLogStorage):
             asset_key=asset_key_str,
         )
 
+    def prepare_insert_asset_key(self, event):
+        check.inst(event.dagster_event.asset_key, AssetKey)
+        return AssetKeyTable.insert().values(  # pylint: disable=no-value-for-parameter
+            asset_key=event.dagster_event.asset_key.to_string(), counter=1
+        )
+
+    def prepare_update_asset_key(self, event):
+        check.inst(event.dagster_event.asset_key, AssetKey)
+        return (
+            AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
+            .where(AssetKeyTable.c.asset_key == event.dagster_event.asset_key.to_string())
+            .values(counter=AssetKeyTable.c.counter + 1)
+        )
+
     def store_event(self, event):
         """Store an event corresponding to a pipeline run.
 
@@ -77,11 +91,16 @@ class SqlEventLogStorage(EventLogStorage):
             event (EventRecord): The event to store.
         """
         check.inst_param(event, "event", EventRecord)
-        sql_statement = self.prepare_insert_statement(event)
+        insert_event_statement = self.prepare_insert_event(event)
         run_id = event.run_id
 
         with self.connect(run_id) as conn:
-            conn.execute(sql_statement)
+            conn.execute(insert_event_statement)
+            if event.is_dagster_event and event.dagster_event.asset_key:
+                try:
+                    conn.execute(self.prepare_insert_asset_key(event))
+                except db.exc.IntegrityError:
+                    conn.execute(self.prepare_update_asset_key(event))
 
     def get_logs_for_run_by_log_id(self, run_id, cursor=-1):
         check.str_param(run_id, "run_id")
@@ -286,16 +305,30 @@ class SqlEventLogStorage(EventLogStorage):
         # https://stackoverflow.com/a/54386260/324449
         with self.connect() as conn:
             conn.execute(SqlEventLogStorageTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(AssetKeyTable.delete())  # pylint: disable=no-value-for-parameter
 
     def delete_events(self, run_id):
         check.str_param(run_id, "run_id")
 
-        statement = SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
+        delete_statement = SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
             SqlEventLogStorageTable.c.run_id == run_id
+        )
+        asset_key_query = (
+            db.select([SqlEventLogStorageTable.c.asset_key, db.func.count().label("count"),])
+            .where(SqlEventLogStorageTable.c.run_id == run_id)
+            .where(SqlEventLogStorageTable.c.asset_key != None)
+            .group_by(SqlEventLogStorageTable.c.asset_key)
         )
 
         with self.connect(run_id) as conn:
-            conn.execute(statement)
+            removed_asset_keys = conn.execute(asset_key_query).fetchall()
+            conn.execute(delete_statement)
+            for (asset_key, count) in removed_asset_keys:
+                conn.execute(
+                    AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
+                    .where(AssetKeyTable.c.asset_key == asset_key)
+                    .values(counter=AssetKeyTable.c.counter - count)
+                )
 
     @property
     def is_persistent(self):
@@ -401,7 +434,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
         return query
 
     def get_all_asset_keys(self):
-        query = db.select([SqlEventLogStorageTable.c.asset_key]).distinct()
+        query = db.select([AssetKeyTable.c.asset_key]).where(AssetKeyTable.c.counter > 0)
         with self.connect() as conn:
             results = conn.execute(query).fetchall()
 
@@ -452,11 +485,16 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
 
     def wipe_asset(self, asset_key):
         check.inst_param(asset_key, "asset_key", AssetKey)
-        query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event]).where(
-            SqlEventLogStorageTable.c.asset_key == asset_key.to_string()
+        event_query = db.select(
+            [SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event]
+        ).where(SqlEventLogStorageTable.c.asset_key == asset_key.to_string())
+        asset_key_delete = AssetKeyTable.delete().where(  # pylint: disable=no-value-for-parameter
+            AssetKeyTable.c.asset_key == asset_key.to_string()
         )
+
         with self.connect() as conn:
-            results = conn.execute(query).fetchall()
+            conn.execute(asset_key_delete)
+            results = conn.execute(event_query).fetchall()
 
         for row_id, json_str in results:
             try:

@@ -86,10 +86,10 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
             event (EventRecord): The event to store.
         """
         check.inst_param(event, "event", EventRecord)
-        sql_statement = self.prepare_insert_statement(event)  # from SqlEventLogStorage.py
+        insert_event_statement = self.prepare_insert_event(event)  # from SqlEventLogStorage.py
         with self.connect() as conn:
             result_proxy = conn.execute(
-                sql_statement.returning(
+                insert_event_statement.returning(
                     SqlEventLogStorageTable.c.run_id, SqlEventLogStorageTable.c.id
                 )
             )
@@ -99,6 +99,12 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
                 """NOTIFY {channel}, %s; """.format(channel=CHANNEL_NAME),
                 (res[0] + "_" + str(res[1]),),
             )
+            if event.is_dagster_event and event.dagster_event.asset_key:
+                try:
+                    conn.execute(self.prepare_insert_asset_key(event))
+                except db.exc.IntegrityError:
+                    # asset key already present
+                    conn.execute(self.prepare_update_asset_key(event))
 
     def connect(self, run_id=None):
         return create_pg_connection(self._engine, __file__, "event log")
