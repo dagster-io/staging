@@ -378,14 +378,11 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 pipeline_origin=pipeline_origin,
                 pipeline_run_id=run_id,
                 instance_ref=None,
-                mode=mode,
-                step_keys_to_execute=step_keys,
-                run_config=run_config,
                 retries_dict=retries_dict,
             )
         )
         command = ["dagster"]
-        args = ["api", "execute_step_with_structured_logs", input_json]
+        args = ["api", "execute_step", input_json]
 
         job = construct_dagster_k8s_job(
             job_config, command, args, job_name, user_defined_k8s_config, pod_name
