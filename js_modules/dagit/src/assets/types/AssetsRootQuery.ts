@@ -27,7 +27,20 @@ export interface AssetsRootQuery_assetsOrError_AssetConnection {
   nodes: AssetsRootQuery_assetsOrError_AssetConnection_nodes[];
 }
 
-export type AssetsRootQuery_assetsOrError = AssetsRootQuery_assetsOrError_AssetsNotSupportedError | AssetsRootQuery_assetsOrError_AssetConnection;
+export interface AssetsRootQuery_assetsOrError_PythonError_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface AssetsRootQuery_assetsOrError_PythonError {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: AssetsRootQuery_assetsOrError_PythonError_cause | null;
+}
+
+export type AssetsRootQuery_assetsOrError = AssetsRootQuery_assetsOrError_AssetsNotSupportedError | AssetsRootQuery_assetsOrError_AssetConnection | AssetsRootQuery_assetsOrError_PythonError;
 
 export interface AssetsRootQuery {
   assetsOrError: AssetsRootQuery_assetsOrError;

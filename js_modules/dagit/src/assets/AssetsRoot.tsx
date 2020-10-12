@@ -15,11 +15,11 @@ import styled from 'styled-components';
 
 import {Legend, LegendColumn, RowColumn, RowContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
+import {PythonErrorInfo} from 'src/PythonErrorInfo';
 import {AssetRoot} from 'src/assets/AssetRoot';
 import {AssetsRootQuery_assetsOrError_AssetConnection_nodes} from 'src/assets/types/AssetsRootQuery';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {TopNav} from 'src/nav/TopNav';
-
 type Asset = AssetsRootQuery_assetsOrError_AssetConnection_nodes;
 
 export const AssetsRoot: React.FunctionComponent<RouteComponentProps> = ({match}) => {
@@ -43,6 +43,14 @@ export const AssetsRoot: React.FunctionComponent<RouteComponentProps> = ({match}
       <div style={{flexGrow: 1}}>
         <Loading queryResult={queryResult}>
           {({assetsOrError}) => {
+            if (assetsOrError.__typename === 'PythonError') {
+              return (
+                <Wrapper>
+                  <PythonErrorInfo error={assetsOrError} />
+                </Wrapper>
+              );
+            }
+
             if (assetsOrError.__typename === 'AssetsNotSupportedError') {
               return (
                 <Wrapper>
@@ -281,6 +289,9 @@ export const ASSETS_ROOT_QUERY = gql`
           }
         }
       }
+      ...PythonErrorFragment
     }
   }
+
+  ${PythonErrorInfo.fragments.PythonErrorFragment}
 `;

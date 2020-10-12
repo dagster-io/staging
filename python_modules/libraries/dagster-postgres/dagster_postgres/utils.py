@@ -108,3 +108,17 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
     finally:
         if conn:
             conn.close()
+
+
+def pg_statement_timeout(millis):
+    check.int_param(millis, "millis")
+    return "-c statement_timeout={}".format(millis)
+
+
+_PYSCOPG_PATCHED_FOR_GEVENT = False
+
+
+def config_psycopg_for_gevent():
+    from gevent.socket import read_wait, write_wait
+
+    psycopg2.extensions.set_wait_callback()
