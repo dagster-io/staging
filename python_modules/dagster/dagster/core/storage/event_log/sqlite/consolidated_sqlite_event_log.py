@@ -107,11 +107,13 @@ class ConsolidatedSqliteEventLogStorage(AssetAwareSqlEventLogStorage, Configurab
 
     def has_summary_data(self, name, run_id=None):
         if name not in self._summary_data_cache:
-            self._summary_data_cache[name] = super().has_summary_data(name, run_id)
+            self._summary_data_cache[name] = super(
+                ConsolidatedSqliteEventLogStorage, self
+            ).has_summary_data(name, run_id)
         return self._summary_data_cache[name]
 
     def mark_summary_data_complete(self, name, run_id=None):
-        super().mark_summary_data_complete(name)
+        super(ConsolidatedSqliteEventLogStorage, self).mark_summary_data_complete(name)
         if name in self._summary_data_cache:
             del self._summary_data_cache[name]
 

@@ -445,6 +445,11 @@ class DagsterInstance:
             print_fn("Updating schedule storage...")
             self._schedule_storage.upgrade()
 
+    def reindex(self, print_fn=lambda _: None):
+        print_fn("Checking for reindexing...")
+        self._event_storage.reindex(print_fn)
+        print_fn("Done.")
+
     def dispose(self):
         self._run_storage.dispose()
         self._run_launcher.dispose()
