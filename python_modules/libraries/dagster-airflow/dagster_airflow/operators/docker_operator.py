@@ -210,10 +210,7 @@ class DagsterDockerOperator(DockerOperator):
                 pipeline_origin=recon_pipeline.get_python_origin(),
                 pipeline_run_id=self.run_id,
                 instance_ref=self.instance_ref,
-                mode=self.mode,
                 step_keys_to_execute=self.step_keys,
-                run_config=self.run_config,
-                retries_dict={},
             )
         )
 
