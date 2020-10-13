@@ -27,7 +27,7 @@ def _base_config():
         "materialization_url": Field(str, is_required=False),
         "materialization_path": Field(str, is_required=False),
         "materialization_json": Field(Permissive(), is_required=False),
-        "materialization_value": Field(float, is_required=False),
+        "materialization_value": Field(int, is_required=False),
     }
 
 
@@ -75,7 +75,7 @@ def _base_compute(context):
 
         if context.solid_config.get("materialization_value") is not None:
             metadata_entries = [
-                EventMetadataEntry.float(
+                EventMetadataEntry.int(
                     context.solid_config.get("materialization_value"), context.solid.name,
                 )
             ]
@@ -179,7 +179,7 @@ def longitudinal_config(partition):
                     "error_rate": random() * 0.01,  # ingestion is slightly error prone
                     "sleep": SLEEP_PERSIST * cost_data_size,  # sleep dependent on data size
                     "materialization_key": "cost_db_table",
-                    "materialization_value": cost_data_size,
+                    "materialization_value": int(cost_data_size),
                     "partition": partition.name,
                 }
             },
@@ -195,7 +195,7 @@ def longitudinal_config(partition):
                     "error_rate": random() * 0.01,  # ingestion is slightly error prone
                     "sleep": SLEEP_PERSIST * traffic_data_size,
                     "materialization_key": "traffic_db_table",
-                    "materialization_value": traffic_data_size,
+                    "materialization_value": int(traffic_data_size),
                     "partition": partition.name,
                 }
             },

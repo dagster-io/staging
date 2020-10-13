@@ -80,7 +80,10 @@ export class MetadataEntry extends React.Component<{
           name
         }
         ... on EventFloatMetadataEntry {
-          value
+          floatValue: value
+        }
+        ... on EventIntMetadataEntry {
+          intValue: value
         }
       }
     `,
@@ -151,7 +154,9 @@ export class MetadataEntry extends React.Component<{
           />
         );
       case 'EventFloatMetadataEntry':
-        return entry.value;
+        return entry.floatValue;
+      case 'EventIntMetadataEntry':
+        return entry.intValue;
       default:
         return assertUnreachable(entry);
     }
