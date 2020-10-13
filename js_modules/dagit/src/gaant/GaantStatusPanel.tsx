@@ -54,7 +54,7 @@ export const GaantStatusPanel: React.FunctionComponent<GaantStatusPanelProps> = 
   return (
     <div style={{display: 'flex', flexDirection: 'column', minHeight: 0}}>
       <RunGroupPanel runId={runId} />
-      <SectionHeader>Preparing</SectionHeader>
+      <SectionHeader>Not Executed</SectionHeader>
       <Section>{preparing.map(renderStepItem)}</Section>
       {preparing.length === 0 && <EmptyNotice>No steps are preparing to execute</EmptyNotice>}
       <SectionHeader>Executing</SectionHeader>
