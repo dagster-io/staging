@@ -341,20 +341,21 @@ class DagsterApiServer(DagsterApiServicer):
             partition_names_args.partition_set_name
         )
         try:
-            with user_code_error_boundary(
-                PartitionExecutionError,
-                lambda: "Error occurred during the execution of the partition generation function for "
-                "partition set {partition_set_name}".format(
-                    partition_set_name=partition_set_def.name
-                ),
-            ):
-                return api_pb2.ExternalPartitionNamesReply(
-                    serialized_external_partition_names_or_external_partition_execution_error=serialize_dagster_namedtuple(
-                        ExternalPartitionNamesData(
-                            partition_names=partition_set_def.get_partition_names()
+            with DagsterInstance.from_ref(partition_names_args.instance_ref) as instance:
+                with user_code_error_boundary(
+                    PartitionExecutionError,
+                    lambda: "Error occurred during the execution of the partition generation function for "
+                    "partition set {partition_set_name}".format(
+                        partition_set_name=partition_set_def.name
+                    ),
+                ):
+                    return api_pb2.ExternalPartitionNamesReply(
+                        serialized_external_partition_names_or_external_partition_execution_error=serialize_dagster_namedtuple(
+                            ExternalPartitionNamesData(
+                                partition_names=partition_set_def.get_partition_names(instance)
+                            )
                         )
                     )
-                )
         except PartitionExecutionError:
             return api_pb2.ExternalPartitionNamesReply(
                 serialized_external_partition_names_or_external_partition_execution_error=serialize_dagster_namedtuple(
@@ -389,7 +390,10 @@ class DagsterApiServer(DagsterApiServicer):
                 lambda: "Error occurred during the partition generation for partition set "
                 "{partition_set_name}".format(partition_set_name=partition_set_def.name),
             ):
-                all_partitions = partition_set_def.get_partitions()
+                with DagsterInstance.from_ref(
+                    partition_set_execution_param_args.instance_ref
+                ) as instance:
+                    all_partitions = partition_set_def.get_partitions(instance)
             partitions = [
                 partition
                 for partition in all_partitions
@@ -441,7 +445,8 @@ class DagsterApiServer(DagsterApiServicer):
         recon_repo = self._recon_repository_from_origin(partition_args.repository_origin)
         definition = recon_repo.get_definition()
         partition_set_def = definition.get_partition_set_def(partition_args.partition_set_name)
-        partition = partition_set_def.get_partition(partition_args.partition_name)
+        with DagsterInstance.from_ref(partition_args.instance_ref) as instance:
+            partition = partition_set_def.get_partition(partition_args.partition_name, instance)
         try:
             with user_code_error_boundary(
                 PartitionExecutionError,
@@ -473,7 +478,8 @@ class DagsterApiServer(DagsterApiServicer):
         recon_repo = self._recon_repository_from_origin(partition_args.repository_origin)
         definition = recon_repo.get_definition()
         partition_set_def = definition.get_partition_set_def(partition_args.partition_set_name)
-        partition = partition_set_def.get_partition(partition_args.partition_name)
+        with DagsterInstance.from_ref(partition_args.instance_ref) as instance:
+            partition = partition_set_def.get_partition(partition_args.partition_name, instance)
         try:
             with user_code_error_boundary(
                 PartitionExecutionError,

@@ -1,15 +1,22 @@
 import datetime
 
+import pendulum
 from dateutil.relativedelta import relativedelta
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.seven import get_current_datetime_in_utc
 
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 
 
 def date_partition_range(
-    start, end=None, delta=datetime.timedelta(days=1), fmt=None, inclusive=False
+    start,
+    end=None,
+    delta=datetime.timedelta(days=1),
+    fmt=None,
+    inclusive=False,
+    schedule_timezone=None,
 ):
     """ Utility function that returns a partition generating function to be used in creating a
     `PartitionSet` definition.
@@ -45,15 +52,36 @@ def date_partition_range(
             )
         )
 
-    def get_date_range_partitions():
-        current = start
-
-        _end = end or datetime.datetime.now()
-
+    def get_date_range_partitions(instance):
         date_names = []
-        while current <= _end:
-            date_names.append(Partition(value=current, name=current.strftime(fmt)))
-            current = current + delta
+        if instance.default_schedule_timezone():
+            timezone = (
+                schedule_timezone if schedule_timezone else instance.default_schedule_timezone()
+            )
+
+            current_utc = pendulum.instance(start, tz=timezone).in_tz("UTC")
+            _end_utc = (
+                pendulum.instance(end, tz=timezone).in_tz("UTC")
+                if end
+                else get_current_datetime_in_utc()
+            )
+
+            while current_utc <= _end_utc:
+                current_in_timezone = current_utc.in_tz(timezone)
+
+                date_names.append(
+                    Partition(value=current_in_timezone, name=current_in_timezone.strftime(fmt))
+                )
+                current_utc = current_utc + delta
+
+        else:
+            current = start
+
+            _end = end or datetime.datetime.now()
+
+            while current <= _end:
+                date_names.append(Partition(value=current, name=current.strftime(fmt)))
+                current = current + delta
 
         # We don't include the last element here by default since we only want
         # fully completed intervals, and the _end time is in the middle of the interval

@@ -215,7 +215,7 @@ def test_override_timezone_in_schedule(external_repo_context):
 # Verify that a schedule that runs in US/Central late enough in the day that it executes on
 # a different day in UTC still runs and creates its partition names based on the US/Central time
 @pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
-def test_different_days_in_different_timezones(external_repo_context):
+def test_different_days_in_different_timezones_late(external_repo_context):
     with instance_with_schedules(external_repo_context, timezone="US/Central") as (
         instance,
         external_repo,
@@ -264,6 +264,69 @@ def test_different_days_in_different_timezones(external_repo_context):
 
             wait_for_all_runs_to_start(instance)
             validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-26")
+
+            # Verify idempotence
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+            assert instance.get_runs_count() == 1
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+
+
+# Verify that a schedule that runs in US/Central early enough that it isn't the next
+# day in UTC yet still has a valid partition
+@pytest.mark.parametrize("external_repo_context", [default_repo, grpc_repo])
+def test_different_days_in_different_timezones_early(external_repo_context):
+    with instance_with_schedules(external_repo_context, timezone="Europe/Paris") as (
+        instance,
+        external_repo,
+    ):
+        freeze_datetime = pendulum.create(2019, 2, 27, 23, 59, 59, tz="Europe/Paris").in_tz(
+            "US/Pacific"
+        )
+        with pendulum.test(freeze_datetime):
+            # Runs every day at 11PM (CST)
+            external_schedule = external_repo.get_external_schedule("simple_schedule")
+            schedule_origin = external_schedule.get_origin()
+            instance.start_schedule_and_update_storage_state(external_schedule)
+
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+            assert instance.get_runs_count() == 0
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 0
+
+        freeze_datetime = freeze_datetime.add(seconds=2)
+        with pendulum.test(freeze_datetime):
+            launch_scheduled_runs(
+                instance, get_default_scheduler_logger(), pendulum.now("UTC"),
+            )
+
+            assert instance.get_runs_count() == 1
+            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            assert len(ticks) == 1
+
+            expected_datetime = pendulum.create(
+                year=2019, month=2, day=28, tz="Europe/Paris"
+            ).in_tz("UTC")
+
+            validate_tick(
+                ticks[0],
+                external_schedule,
+                expected_datetime,
+                ScheduleTickStatus.SUCCESS,
+                instance.get_runs()[0].run_id,
+            )
+
+            wait_for_all_runs_to_start(instance)
+            validate_run_started(instance.get_runs()[0], expected_datetime, "2019-02-27")
 
             # Verify idempotence
             launch_scheduled_runs(
@@ -329,7 +392,10 @@ def test_hourly_dst_spring_forward(external_repo_context):
                 validate_run_started(
                     instance.get_runs()[i],
                     expected_datetimes_utc[i],
-                    expected_datetimes_utc[i].subtract(hours=1).strftime("%Y-%m-%d-%H:%M"),
+                    expected_datetimes_utc[i]
+                    .subtract(hours=1)
+                    .in_tz("US/Central")
+                    .strftime("%Y-%m-%d-%H:%M%Z"),
                 )
 
             # Verify idempotence
