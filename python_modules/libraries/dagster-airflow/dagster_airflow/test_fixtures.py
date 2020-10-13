@@ -1,5 +1,6 @@
 import logging
 import sys
+from contextlib import contextmanager
 
 import pytest
 from airflow import DAG
@@ -8,8 +9,46 @@ from airflow.models import TaskInstance
 from airflow.settings import LOG_FORMAT
 from airflow.utils import timezone
 
+from dagster import file_relative_path, seven
+from dagster.core.test_utils import instance_for_test_tempdir
 from dagster.core.utils import make_new_run_id
-from dagster.utils import load_yaml_from_glob_list
+from dagster.utils import load_yaml_from_glob_list, merge_dicts
+from dagster.utils.test.postgres_instance import TestPostgresInstance
+
+
+@contextmanager
+def postgres_instance(overrides=None):
+    with seven.TemporaryDirectory() as temp_dir:
+        with TestPostgresInstance.docker_service_up_or_skip(
+            file_relative_path(__file__, "docker-compose.yml"), "test-postgres-db-airflow",
+        ) as pg_conn_string:
+            TestPostgresInstance.clean_run_storage(pg_conn_string)
+            TestPostgresInstance.clean_event_log_storage(pg_conn_string)
+            TestPostgresInstance.clean_schedule_storage(pg_conn_string)
+            with instance_for_test_tempdir(
+                temp_dir,
+                overrides=merge_dicts(
+                    {
+                        "run_storage": {
+                            "module": "dagster_postgres.run_storage.run_storage",
+                            "class": "PostgresRunStorage",
+                            "config": {"postgres_url": pg_conn_string},
+                        },
+                        "event_log_storage": {
+                            "module": "dagster_postgres.event_log.event_log",
+                            "class": "PostgresEventLogStorage",
+                            "config": {"postgres_url": pg_conn_string},
+                        },
+                        "schedule_storage": {
+                            "module": "dagster_postgres.schedule_storage.schedule_storage",
+                            "class": "PostgresScheduleStorage",
+                            "config": {"postgres_url": pg_conn_string},
+                        },
+                    },
+                    overrides if overrides else {},
+                ),
+            ) as instance:
+                yield instance
 
 
 def execute_tasks_in_dag(dag, tasks, run_id, execution_date):
@@ -162,22 +201,25 @@ def dagster_airflow_docker_operator_pipeline():
         if run_config is None and environment_yaml is not None:
             run_config = load_yaml_from_glob_list(environment_yaml)
 
-        dag, tasks = make_airflow_dag_containerized_for_recon_repo(
-            recon_repo=recon_repo,
-            pipeline_name=pipeline_name,
-            image=image,
-            mode=mode,
-            run_config=run_config,
-            op_kwargs=op_kwargs,
-        )
-        assert isinstance(dag, DAG)
+        with postgres_instance() as instance:
 
-        for task in tasks:
-            assert isinstance(task, DagsterDockerOperator)
+            dag, tasks = make_airflow_dag_containerized_for_recon_repo(
+                recon_repo=recon_repo,
+                pipeline_name=pipeline_name,
+                image=image,
+                mode=mode,
+                run_config=run_config,
+                op_kwargs=op_kwargs,
+                instance=instance,
+            )
+            assert isinstance(dag, DAG)
 
-        return execute_tasks_in_dag(
-            dag, tasks, run_id=make_new_run_id(), execution_date=execution_date
-        )
+            for task in tasks:
+                assert isinstance(task, DagsterDockerOperator)
+
+            return execute_tasks_in_dag(
+                dag, tasks, run_id=make_new_run_id(), execution_date=execution_date
+            )
 
     return _pipeline_fn
 

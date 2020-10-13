@@ -38,6 +38,7 @@ def test_fs_storage_no_explicit_base_dir(
             os.path.join(environments_path, "env_filesystem_no_explicit_base_dir.yaml"),
         ],
         image=dagster_docker_image,
+        op_kwargs={"network_mode": "container:test-postgres-db-airflow"},
     )
     validate_pipeline_execution(results)
 
