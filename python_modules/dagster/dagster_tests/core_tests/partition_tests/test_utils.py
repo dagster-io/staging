@@ -4,6 +4,7 @@ import pytest
 from dateutil.relativedelta import relativedelta
 
 from dagster import DagsterInvariantViolationError, Partition
+from dagster.core.test_utils import instance_for_test
 from dagster.utils.partitions import date_partition_range
 
 
@@ -76,15 +77,17 @@ def test_date_partition_range_out_of_order():
     ],
 )
 def test_date_partition_range_daily(start, end, delta, inclusive, expected_partitions):
-    partition_generator = date_partition_range(start, end, delta, inclusive=inclusive)
-    generated_partitions = partition_generator()
-    assert all(
-        isinstance(generated_partition, Partition) for generated_partition in generated_partitions
-    )
-    assert len(generated_partitions) == len(expected_partitions)
-    assert all(
-        expected_partition_name == generated_partition_name
-        for expected_partition_name, generated_partition_name in zip(
-            expected_partitions, [partition.name for partition in generated_partitions]
+    with instance_for_test() as instance:
+        partition_generator = date_partition_range(start, end, delta, inclusive=inclusive)
+        generated_partitions = partition_generator(instance)
+        assert all(
+            isinstance(generated_partition, Partition)
+            for generated_partition in generated_partitions
         )
-    )
+        assert len(generated_partitions) == len(expected_partitions)
+        assert all(
+            expected_partition_name == generated_partition_name
+            for expected_partition_name, generated_partition_name in zip(
+                expected_partitions, [partition.name for partition in generated_partitions]
+            )
+        )

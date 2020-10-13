@@ -1076,6 +1076,10 @@ class DagsterInstance:
             return self._scheduler.running_schedule_count(self, schedule_origin_id)
         return 0
 
+    @property
+    def default_schedule_timezone(self):
+        return self._scheduler.get_default_timezone() if self._scheduler else None
+
     def scheduler_debug_info(self):
         from dagster.core.scheduler import SchedulerDebugInfo, ScheduleStatus
 

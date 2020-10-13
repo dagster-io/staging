@@ -742,6 +742,16 @@ class GraphQLContextVariant:
         """
         return _variants_with_mark(GraphQLContextVariant.all_variants(), pytest.mark.readonly)
 
+    @staticmethod
+    def all_persistent_readonly_variants():
+        """
+        Return all readonly variants with instances that can be persisted and reloaded.
+        """
+        return _variants_without_marks(
+            _variants_with_mark(GraphQLContextVariant.all_variants(), pytest.mark.readonly),
+            [Marks.in_memory_instance],
+        )
+
 
 def _variants_with_mark(variants, mark):
     def _yield_all():
@@ -858,6 +868,10 @@ class TestAThing(
 
 ReadonlyGraphQLContextTestMatrix = make_graphql_context_test_suite(
     context_variants=GraphQLContextVariant.all_readonly_variants()
+)
+
+PersistentReadonlyGraphQLContextTestMatrix = make_graphql_context_test_suite(
+    context_variants=GraphQLContextVariant.all_persistent_readonly_variants()
 )
 
 ExecutingGraphQLContextTestMatrix = make_graphql_context_test_suite(

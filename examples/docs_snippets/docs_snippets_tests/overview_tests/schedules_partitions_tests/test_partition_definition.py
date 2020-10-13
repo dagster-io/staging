@@ -2,6 +2,7 @@ from docs_snippets.overview.schedules_partitions.partition_definition import day
 from docs_snippets.overview.schedules_partitions.pipeline import my_pipeline
 
 from dagster import execute_pipeline
+from dagster.core.test_utils import instance_for_test
 
 
 def test_pipeline():
@@ -12,7 +13,8 @@ def test_pipeline():
 
 
 def test_partition_set():
-    partitions = day_partition_set.get_partitions()
-    assert len(partitions) == 7
-    for partition in partitions:
-        assert day_partition_set.run_config_for_partition(partition)
+    with instance_for_test() as instance:
+        partitions = day_partition_set.get_partitions(instance)
+        assert len(partitions) == 7
+        for partition in partitions:
+            assert day_partition_set.run_config_for_partition(partition)
