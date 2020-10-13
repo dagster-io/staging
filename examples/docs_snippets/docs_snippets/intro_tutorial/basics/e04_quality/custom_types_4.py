@@ -5,7 +5,6 @@ from dagster import (
     DagsterType,
     EventMetadataEntry,
     Field,
-    Selector,
     String,
     TypeCheck,
     dagster_type_loader,
@@ -20,10 +19,9 @@ def less_simple_data_frame_type_check(_, value):
     if not isinstance(value, list):
         return TypeCheck(
             success=False,
-            description=(
-                "LessSimpleDataFrame should be a list of dicts, got "
-                "{type_}"
-            ).format(type_=type(value)),
+            description=("LessSimpleDataFrame should be a list of dicts, got " "{type_}").format(
+                type_=type(value)
+            ),
         )
 
     fields = [field for field in value[0].keys()]
@@ -34,8 +32,7 @@ def less_simple_data_frame_type_check(_, value):
             return TypeCheck(
                 success=False,
                 description=(
-                    "LessSimpleDataFrame should be a list of dicts, "
-                    "got {type_} for row {idx}"
+                    "LessSimpleDataFrame should be a list of dicts, " "got {type_} for row {idx}"
                 ).format(type_=type(row), idx=(i + 1)),
             )
         row_fields = [field for field in row.keys()]
@@ -53,9 +50,7 @@ def less_simple_data_frame_type_check(_, value):
         description="LessSimpleDataFrame summary statistics",
         metadata_entries=[
             EventMetadataEntry.text(
-                str(len(value)),
-                "n_rows",
-                "Number of rows seen in the data frame",
+                str(len(value)), "n_rows", "Number of rows seen in the data frame",
             ),
             EventMetadataEntry.text(
                 str(len(value[0].keys()) if len(value) > 0 else 0),
@@ -74,9 +69,9 @@ def less_simple_data_frame_type_check(_, value):
 # end_custom_types_4_marker_0
 
 
-@dagster_type_loader(Selector({"csv": Field(String)}))
-def less_simple_data_frame_loader(context, selector):
-    csv_path = os.path.join(os.path.dirname(__file__), selector["csv"])
+@dagster_type_loader({"csv_path": Field(String)})
+def less_simple_data_frame_loader(context, config):
+    csv_path = os.path.join(os.path.dirname(__file__), config["csv_path"])
     with open(csv_path, "r") as fd:
         lines = [row for row in csv.DictReader(fd)]
 
@@ -96,14 +91,10 @@ LessSimpleDataFrame = DagsterType(
 def sort_by_calories(context, cereals: LessSimpleDataFrame):
     sorted_cereals = sorted(cereals, key=lambda cereal: cereal["calories"])
     context.log.info(
-        "Least caloric cereal: {least_caloric}".format(
-            least_caloric=sorted_cereals[0]["name"]
-        )
+        "Least caloric cereal: {least_caloric}".format(least_caloric=sorted_cereals[0]["name"])
     )
     context.log.info(
-        "Most caloric cereal: {most_caloric}".format(
-            most_caloric=sorted_cereals[-1]["name"]
-        )
+        "Most caloric cereal: {most_caloric}".format(most_caloric=sorted_cereals[-1]["name"])
     )
 
 
@@ -115,11 +106,5 @@ def custom_type_pipeline():
 if __name__ == "__main__":
     execute_pipeline(
         custom_type_pipeline,
-        {
-            "solids": {
-                "sort_by_calories": {
-                    "inputs": {"cereals": {"csv": "cereal.csv"}}
-                }
-            }
-        },
+        {"solids": {"sort_by_calories": {"inputs": {"cereals": {"csv_path": "cereal.csv"}}}}},
     )

@@ -5,7 +5,6 @@ from dagster import (
     AssetMaterialization,
     EventMetadataEntry,
     Field,
-    Selector,
     String,
     dagster_type_loader,
     dagster_type_materializer,
@@ -17,9 +16,9 @@ from dagster import (
 )
 
 
-@dagster_type_loader(Selector({"csv": Field(String)}))
-def less_simple_data_frame_loader(context, selector):
-    csv_path = os.path.join(os.path.dirname(__file__), selector["csv"])
+@dagster_type_loader({"csv_path": Field(String)})
+def less_simple_data_frame_loader(context, config):
+    csv_path = os.path.join(os.path.dirname(__file__), config["csv_path"])
 
     with open(csv_path, "r") as fd:
         lines = [row for row in csv.DictReader(fd)]
@@ -32,10 +31,7 @@ def less_simple_data_frame_loader(context, selector):
 @dagster_type_materializer(
     {
         "csv": Field(
-            {
-                "path": String,
-                "sep": Field(String, is_required=False, default_value=","),
-            },
+            {"path": String, "sep": Field(String, is_required=False, default_value=","),},
             is_required=False,
         ),
         "json": Field({"path": String,}, is_required=False,),
@@ -43,21 +39,15 @@ def less_simple_data_frame_loader(context, selector):
 )
 def less_simple_data_frame_materializer(context, config, value):
     # Materialize LessSimpleDataFrame into a csv file
-    csv_path = os.path.join(
-        os.path.dirname(__file__), os.path.abspath(config["csv"]["path"])
-    )
+    csv_path = os.path.join(os.path.dirname(__file__), os.path.abspath(config["csv"]["path"]))
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     with open(csv_path, "w") as fd:
         fieldnames = list(value[0].keys())
-        writer = csv.DictWriter(
-            fd, fieldnames, delimiter=config["csv"]["sep"]
-        )
+        writer = csv.DictWriter(fd, fieldnames, delimiter=config["csv"]["sep"])
         writer.writeheader()
         writer.writerows(value)
 
-    context.log.debug(
-        "Wrote dataframe as .csv to {path}".format(path=csv_path)
-    )
+    context.log.debug("Wrote dataframe as .csv to {path}".format(path=csv_path))
     yield AssetMaterialization(
         "1data_frame_csv",
         "LessSimpleDataFrame materialized as csv",
@@ -75,9 +65,7 @@ def less_simple_data_frame_materializer(context, config, value):
         json_value = seven.json.dumps([dict(row) for row in value])
         fd.write(json_value)
 
-    context.log.debug(
-        "Wrote dataframe as .json to {path}".format(path=json_path)
-    )
+    context.log.debug("Wrote dataframe as .json to {path}".format(path=json_path))
     yield AssetMaterialization(
         "data_frame_json",
         "LessSimpleDataFrame materialized as json",
@@ -108,21 +96,13 @@ class LessSimpleDataFrame(list):
 
 
 @solid
-def sort_by_calories(
-    context, cereals: LessSimpleDataFrame
-) -> LessSimpleDataFrame:
-    sorted_cereals = sorted(
-        cereals, key=lambda cereal: int(cereal["calories"])
+def sort_by_calories(context, cereals: LessSimpleDataFrame) -> LessSimpleDataFrame:
+    sorted_cereals = sorted(cereals, key=lambda cereal: int(cereal["calories"]))
+    context.log.info(
+        "Least caloric cereal: {least_caloric}".format(least_caloric=sorted_cereals[0]["name"])
     )
     context.log.info(
-        "Least caloric cereal: {least_caloric}".format(
-            least_caloric=sorted_cereals[0]["name"]
-        )
-    )
-    context.log.info(
-        "Most caloric cereal: {most_caloric}".format(
-            most_caloric=sorted_cereals[-1]["name"]
-        )
+        "Most caloric cereal: {most_caloric}".format(most_caloric=sorted_cereals[-1]["name"])
     )
     return LessSimpleDataFrame(sorted_cereals)
 
@@ -138,7 +118,7 @@ if __name__ == "__main__":
         {
             "solids": {
                 "sort_by_calories": {
-                    "inputs": {"cereals": {"csv": "cereal.csv"}},
+                    "inputs": {"cereals": {"csv_path": "cereal.csv"}},
                     "outputs": [
                         {
                             "result": {
