@@ -80,10 +80,10 @@ export class MetadataEntry extends React.Component<{
           name
         }
         ... on EventFloatMetadataEntry {
-          floatValue: value
+          floatValue
         }
         ... on EventIntMetadataEntry {
-          intValue: value
+          intValue
         }
       }
     `,
