@@ -1,22 +1,114 @@
 # pylint: disable=redefined-outer-name, unused-argument
 
 import os
+from contextlib import contextmanager
 
 import pytest
+from airflow import DAG
 from airflow.exceptions import AirflowException
 from airflow.utils import timezone
 from dagster_airflow.factory import make_airflow_dag_kubernetized_for_recon_repo
+from dagster_airflow.operators.kubernetes_operator import DagsterKubernetesPodOperator
 from dagster_airflow_tests.marks import nettest
 from dagster_airflow_tests.test_factory.utils import validate_pipeline_execution
 from dagster_airflow_tests.test_fixtures import (  # pylint: disable=unused-import
-    dagster_airflow_k8s_operator_pipeline,
     execute_tasks_in_dag,
 )
 from dagster_test.test_project import test_project_environments_path
 
+from dagster import file_relative_path, seven
 from dagster.core.definitions.reconstructable import ReconstructableRepository
+from dagster.core.test_utils import instance_for_test_tempdir
 from dagster.core.utils import make_new_run_id
-from dagster.utils import load_yaml_from_glob_list
+from dagster.utils import load_yaml_from_glob_list, merge_dicts
+from dagster.utils.test.postgres_instance import TestPostgresInstance
+
+
+@pytest.fixture(scope="function")
+def dagster_airflow_k8s_operator_pipeline():
+    """This is a test fixture for running Dagster pipelines on Airflow + K8s.
+    """
+
+    def _pipeline_fn(
+        recon_repo,
+        pipeline_name,
+        image,
+        run_config=None,
+        environment_yaml=None,
+        op_kwargs=None,
+        mode=None,
+        namespace="default",
+        execution_date=timezone.utcnow(),
+    ):
+        if run_config is None and environment_yaml is not None:
+            run_config = load_yaml_from_glob_list(environment_yaml)
+
+        op_kwargs = op_kwargs or {}
+
+        # In this test, sometimes we are pulling the integration image for the first
+        # time on a BK node, which can take a long time.
+        op_kwargs["startup_timeout_seconds"] = 300
+        op_kwargs["network_mode"] = "container:test-postgres-db-airflow-integration"
+
+        with postgres_instance() as instance:
+            dag, tasks = make_airflow_dag_kubernetized_for_recon_repo(
+                recon_repo=recon_repo,
+                pipeline_name=pipeline_name,
+                image=image,
+                mode=mode,
+                namespace=namespace,
+                run_config=run_config,
+                op_kwargs=op_kwargs,
+                instance=instance,
+            )
+            assert isinstance(dag, DAG)
+
+            for task in tasks:
+                assert isinstance(task, DagsterKubernetesPodOperator)
+                # testing to make sure that kwargs shuffling works
+                assert task.startup_timeout_seconds == 300
+
+            return execute_tasks_in_dag(
+                dag, tasks, run_id=make_new_run_id(), execution_date=execution_date
+            )
+
+    return _pipeline_fn
+
+
+@contextmanager
+def postgres_instance(overrides=None):
+    with seven.TemporaryDirectory() as temp_dir:
+        with TestPostgresInstance.docker_service_up_or_skip(
+            file_relative_path(__file__, "docker-compose.yml"),
+            "test-postgres-db-airflow-integration",
+        ) as pg_conn_string:
+            TestPostgresInstance.clean_run_storage(pg_conn_string)
+            TestPostgresInstance.clean_event_log_storage(pg_conn_string)
+            TestPostgresInstance.clean_schedule_storage(pg_conn_string)
+            with instance_for_test_tempdir(
+                temp_dir,
+                overrides=merge_dicts(
+                    {
+                        "run_storage": {
+                            "module": "dagster_postgres.run_storage.run_storage",
+                            "class": "PostgresRunStorage",
+                            "config": {"postgres_url": pg_conn_string},
+                        },
+                        "event_log_storage": {
+                            "module": "dagster_postgres.event_log.event_log",
+                            "class": "PostgresEventLogStorage",
+                            "config": {"postgres_url": pg_conn_string},
+                        },
+                        "schedule_storage": {
+                            "module": "dagster_postgres.schedule_storage.schedule_storage",
+                            "class": "PostgresScheduleStorage",
+                            "config": {"postgres_url": pg_conn_string},
+                        },
+                    },
+                    overrides if overrides else {},
+                ),
+            ) as instance:
+                yield instance
 
 
 @nettest
