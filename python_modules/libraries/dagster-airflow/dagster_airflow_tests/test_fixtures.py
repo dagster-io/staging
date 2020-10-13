@@ -265,25 +265,28 @@ def dagster_airflow_k8s_operator_pipeline():
         # In this test, sometimes we are pulling the integration image for the first
         # time on a BK node, which can take a long time.
         op_kwargs["startup_timeout_seconds"] = 300
+        op_kwargs["network_mode"] = "container:test-postgres-db-airflow"
 
-        dag, tasks = make_airflow_dag_kubernetized_for_recon_repo(
-            recon_repo=recon_repo,
-            pipeline_name=pipeline_name,
-            image=image,
-            mode=mode,
-            namespace=namespace,
-            run_config=run_config,
-            op_kwargs=op_kwargs,
-        )
-        assert isinstance(dag, DAG)
+        with postgres_instance() as instance:
+            dag, tasks = make_airflow_dag_kubernetized_for_recon_repo(
+                recon_repo=recon_repo,
+                pipeline_name=pipeline_name,
+                image=image,
+                mode=mode,
+                namespace=namespace,
+                run_config=run_config,
+                op_kwargs=op_kwargs,
+                instance=instance,
+            )
+            assert isinstance(dag, DAG)
 
-        for task in tasks:
-            assert isinstance(task, DagsterKubernetesPodOperator)
-            # testing to make sure that kwargs shuffling works
-            assert task.startup_timeout_seconds == 300
+            for task in tasks:
+                assert isinstance(task, DagsterKubernetesPodOperator)
+                # testing to make sure that kwargs shuffling works
+                assert task.startup_timeout_seconds == 300
 
-        return execute_tasks_in_dag(
-            dag, tasks, run_id=make_new_run_id(), execution_date=execution_date
-        )
+            return execute_tasks_in_dag(
+                dag, tasks, run_id=make_new_run_id(), execution_date=execution_date
+            )
 
     return _pipeline_fn
