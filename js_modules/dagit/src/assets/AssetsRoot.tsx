@@ -15,7 +15,7 @@ import styled from 'styled-components';
 
 import {Legend, LegendColumn, RowColumn, RowContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
-import {AssetRoot} from 'src/assets/AssetRoot';
+import {AssetView} from 'src/assets/AssetView';
 import {AssetsRootQuery_assetsOrError_AssetConnection_nodes} from 'src/assets/types/AssetsRootQuery';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {TopNav} from 'src/nav/TopNav';
@@ -23,10 +23,10 @@ import {TopNav} from 'src/nav/TopNav';
 type Asset = AssetsRootQuery_assetsOrError_AssetConnection_nodes;
 
 export const AssetsRoot: React.FunctionComponent<RouteComponentProps> = ({match}) => {
-  const urlPathString = match.params['0'];
-  const queryResult = useQuery(ASSETS_ROOT_QUERY);
-
-  const currentPath = (urlPathString || '').split('/').filter((x: string) => x);
+  const currentPath = (match.params['0'] || '').split('/').filter((x: string) => x);
+  const queryResult = useQuery(ASSETS_ROOT_QUERY, {
+    variables: {prefixPath: currentPath},
+  });
 
   const breadcrumbs: IBreadcrumbProps[] = [{icon: 'panel-table', text: 'Assets', href: '/assets'}];
   if (currentPath.length) {
@@ -66,7 +66,7 @@ export const AssetsRoot: React.FunctionComponent<RouteComponentProps> = ({match}
             }
 
             const [exactMatchingAsset] = assetsOrError.nodes.filter(
-              (asset: Asset) => asset.key.path.join('/') === urlPathString,
+              (asset: Asset) => asset.key.path.join('/') === currentPath.join('/'),
             );
             const prefixMatchingAssets = assetsOrError.nodes.filter(
               (asset: Asset) =>
@@ -82,8 +82,8 @@ export const AssetsRoot: React.FunctionComponent<RouteComponentProps> = ({match}
                     title="Assets"
                     description={
                       <p>
-                        There are no {urlPathString ? 'matching ' : 'known '}
-                        materialized assets with {urlPathString ? 'the ' : 'a '}
+                        There are no {currentPath.length ? 'matching ' : 'known '}
+                        materialized assets with {currentPath.length ? 'the ' : 'a '}
                         specified asset key. Any asset keys that have been specified with a{' '}
                         <code>Materialization</code> during a pipeline run will appear here. See the{' '}
                         <a href="https://docs.dagster.io/_apidocs/solids#dagster.AssetMaterialization">
@@ -102,7 +102,7 @@ export const AssetsRoot: React.FunctionComponent<RouteComponentProps> = ({match}
                 {prefixMatchingAssets.length ? (
                   <AssetsTable assets={prefixMatchingAssets} currentPath={currentPath} />
                 ) : null}
-                {exactMatchingAsset ? <AssetRoot assetKey={exactMatchingAsset.key} /> : null}
+                {exactMatchingAsset ? <AssetView assetKey={exactMatchingAsset.key} /> : null}
               </Wrapper>
             );
           }}
@@ -124,7 +124,6 @@ const AssetSearch = ({assets}: {assets: Asset[]}) => {
   const [active, setActive] = React.useState<ActiveSuggestionInfo | null>(null);
 
   const selectOption = (asset: Asset) => {
-    console.log('wtf', asset);
     history.push(`/assets/${asset.key.path.join('/')}`);
   };
 
@@ -268,8 +267,8 @@ const Wrapper = styled.div`
 `;
 
 export const ASSETS_ROOT_QUERY = gql`
-  query AssetsRootQuery {
-    assetsOrError {
+  query AssetsRootQuery($prefixPath: [String!]) {
+    assetsOrError(prefixPath: $prefixPath) {
       __typename
       ... on AssetsNotSupportedError {
         message
