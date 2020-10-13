@@ -32,3 +32,7 @@ export type AssetsRootQuery_assetsOrError = AssetsRootQuery_assetsOrError_Assets
 export interface AssetsRootQuery {
   assetsOrError: AssetsRootQuery_assetsOrError;
 }
+
+export interface AssetsRootQueryVariables {
+  prefixPath?: string[] | null;
+}

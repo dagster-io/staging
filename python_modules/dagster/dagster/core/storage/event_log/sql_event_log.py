@@ -400,8 +400,20 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
         query = query.order_by(SqlEventLogStorageTable.c.timestamp.desc())
         return query
 
-    def get_all_asset_keys(self):
-        query = db.select([SqlEventLogStorageTable.c.asset_key]).distinct()
+    def get_all_asset_keys(self, prefix_path=None):
+        if not prefix_path:
+            query = db.select([SqlEventLogStorageTable.c.asset_key]).distinct()
+        else:
+            query = (
+                db.select([SqlEventLogStorageTable.c.asset_key])
+                .where(
+                    SqlEventLogStorageTable.c.asset_key.startswith(
+                        AssetKey.get_db_prefix(prefix_path)
+                    )
+                )
+                .distinct()
+            )
+
         with self.connect() as conn:
             results = conn.execute(query).fetchall()
 
