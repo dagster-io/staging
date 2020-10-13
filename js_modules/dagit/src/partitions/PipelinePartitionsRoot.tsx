@@ -29,7 +29,6 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
     fetchPolicy: 'network-only',
   });
   const [selected, setSelected] = React.useState<PartitionSet | undefined>();
-  const [showLoader, setShowLoader] = React.useState<boolean>(false);
   const [runTags, setRunTags] = React.useState<{[key: string]: string}>({});
 
   return (
@@ -78,13 +77,11 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
             <PartitionsBackfill
               pipelineName={pipelineName}
               partitionSetName={partitionSet.name}
-              showLoader={showLoader}
               onLaunch={(backfillId: string) => setRunTags({'dagster/backfill': backfillId})}
             />
             <PartitionView
               pipelineName={pipelineName}
               partitionSetName={partitionSet.name}
-              onLoaded={() => setShowLoader(true)}
               runTags={runTags}
             />
           </PartitionRootContainer>

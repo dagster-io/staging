@@ -12,6 +12,7 @@ interface PartitionPageControlsProps {
 
 export const PartitionPageControls: React.FunctionComponent<PartitionPageControlsProps> = ({
   pageSize,
+  children,
   setPageSize,
   paginationProps,
 }) => (
@@ -30,13 +31,14 @@ export const PartitionPageControls: React.FunctionComponent<PartitionPageControl
         All
       </Button>
     </ButtonGroup>
+    {children}
+    <div style={{flex: 1}} />
     <CursorHistoryControls {...paginationProps} />
   </PartitionPagerContainer>
 );
 
 const PartitionPagerContainer = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
   margin: 10px 0;
 `;

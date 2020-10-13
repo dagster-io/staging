@@ -23,6 +23,7 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
 
   const version = React.useRef(0);
   const [results, setResults] = React.useState<Partition[]>([]);
+  const [loading, setLoading] = React.useState(false);
 
   const [cursorStack, setCursorStack] = React.useState<string[]>([]);
   const [cursor, setCursor] = React.useState<string | undefined>();
@@ -32,6 +33,7 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
     version.current = v;
 
     setResults([]);
+    setLoading(true);
 
     let c = cursor;
     let accumulated: Partition[] = [];
@@ -47,16 +49,19 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
           repositorySelector: {repositoryName, repositoryLocationName},
           reverse: true,
           cursor: c,
-          limit: 2,
+          limit: Math.min(2, pageSize - accumulated.length),
         },
       });
       if (version.current !== v) {
         return;
       }
-      accumulated = [...partitionsFromResult(result.data)!, ...accumulated];
-      if (accumulated.length < pageSize) {
+      const fetched = partitionsFromResult(result.data);
+      accumulated = [...fetched, ...accumulated];
+      if (accumulated.length < pageSize && fetched.length > 0) {
         c = accumulated[0].name;
         fetchOne();
+      } else {
+        setLoading(false);
       }
       setResults(accumulated);
     };
@@ -65,6 +70,7 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
   }, [pageSize, cursor, client, partitionSetName, repositoryName, repositoryLocationName]);
 
   return {
+    loading,
     partitions: [...buildEmptyPartitions(pageSize - results.length), ...results],
     paginationProps: {
       hasPrevPage: cursor !== undefined,
@@ -107,10 +113,10 @@ function buildEmptyPartitions(count: number) {
 
 function partitionsFromResult(result?: PartitionLongitudinalQuery) {
   if (result?.partitionSetOrError.__typename !== 'PartitionSet') {
-    return undefined;
+    return [];
   }
   if (result.partitionSetOrError.partitionsOrError.__typename !== 'Partitions') {
-    return undefined;
+    return [];
   }
   return result.partitionSetOrError.partitionsOrError.results;
 }

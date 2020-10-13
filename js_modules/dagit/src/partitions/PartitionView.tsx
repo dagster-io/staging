@@ -23,27 +23,18 @@ interface PartitionViewProps {
   pipelineName: string;
   partitionSetName: string;
   runTags?: {[key: string]: string};
-  onLoaded?: () => void;
 }
 
 export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
   pipelineName,
   partitionSetName,
-  onLoaded,
   runTags,
 }) => {
   const [pageSize, setPageSize] = React.useState(30);
-  const {partitions, paginationProps} = useChunkedPartitionsQuery(partitionSetName, pageSize);
-  const ready = partitions.length > 0;
-  React.useEffect(() => {
-    if (ready) {
-      onLoaded?.();
-    }
-  }, [onLoaded, ready]);
-
-  if (!partitions) {
-    return <span />;
-  }
+  const {loading, partitions, paginationProps} = useChunkedPartitionsQuery(
+    partitionSetName,
+    pageSize,
+  );
 
   const allStepKeys = {};
   partitions.forEach((partition) => {
@@ -68,15 +59,18 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
           setPageSize(next);
           paginationProps.onReset();
         }}
-      />
+      >
+        {loading && (
+          <div style={{marginLeft: 15, display: 'flex', alignItems: 'center'}}>
+            <Spinner size={19} />
+            <div style={{width: 5}} />
+            Loading Partitions...
+          </div>
+        )}
+      </PartitionPageControls>
       <div style={{position: 'relative'}}>
         <PartitionRunMatrix pipelineName={pipelineName} partitions={partitions} runTags={runTags} />
         <PartitionContent partitions={partitions} allStepKeys={Object.keys(allStepKeys)} />
-        {!ready && (
-          <Overlay>
-            <Spinner size={48} />
-          </Overlay>
-        )}
       </div>
     </div>
   );
@@ -272,20 +266,6 @@ const PartitionContentContainer = styled.div`
   position: relative;
   max-width: 1600px;
   margin: 0 auto;
-`;
-
-const Overlay = styled.div`
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  background-color: #ffffff;
-  opacity: 0.8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
 `;
 
 const getPipelineDurationForRun = (run: Run) => {
