@@ -1,5 +1,5 @@
-from docs_snippets.intro_tutorial.advanced.repositories.repos import hello_cereal_repository
-from docs_snippets.intro_tutorial.advanced.scheduling.scheduler import (
+from docs_snippets.docs_snippets.intro_tutorial.advanced.repositories.repos import hello_cereal_repository
+from docs_snippets.docs_snippets.intro_tutorial.advanced.scheduling.scheduler import (
     hello_cereal_repository as scheduler_repository,
 )
 

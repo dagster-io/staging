@@ -1,14 +1,14 @@
 import csv
 import os
 
-from docs_snippets.intro_tutorial.advanced.pipelines.modes import (
+from docs_snippets.docs_snippets.intro_tutorial.advanced.pipelines.modes import (
     SqlAlchemyPostgresWarehouse as sapw1,
 )
-from docs_snippets.intro_tutorial.advanced.pipelines.modes import modes_pipeline
-from docs_snippets.intro_tutorial.advanced.pipelines.presets import (
+from docs_snippets.docs_snippets.intro_tutorial.advanced.pipelines.modes import modes_pipeline
+from docs_snippets.docs_snippets.intro_tutorial.advanced.pipelines.presets import (
     SqlAlchemyPostgresWarehouse as sapw2,
 )
-from docs_snippets.intro_tutorial.advanced.pipelines.presets import presets_pipeline
+from docs_snippets.docs_snippets.intro_tutorial.advanced.pipelines.presets import presets_pipeline
 
 from dagster import execute_pipeline
 from dagster.utils import pushd, script_relative_path
