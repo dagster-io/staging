@@ -142,20 +142,24 @@ class RepositoryLocation(six.with_metaclass(ABCMeta)):
         pass
 
     @abstractmethod
-    def get_external_partition_config(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_config(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
         pass
 
     @abstractmethod
-    def get_external_partition_tags(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_tags(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
         pass
 
     @abstractmethod
-    def get_external_partition_names(self, repository_handle, partition_set_name):
+    def get_external_partition_names(self, instance, repository_handle, partition_set_name):
         pass
 
     @abstractmethod
     def get_external_partition_set_execution_param_data(
-        self, repository_handle, partition_set_name, partition_names
+        self, instance, repository_handle, partition_set_name, partition_names
     ):
         pass
 
@@ -328,7 +332,10 @@ class InProcessRepositoryLocation(RepositoryLocation):
 
         return ExternalPipelineExecutionResult(event_list=execution_result.event_list)
 
-    def get_external_partition_config(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_config(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.str_param(partition_name, "partition_name")
@@ -337,10 +344,14 @@ class InProcessRepositoryLocation(RepositoryLocation):
             repository_origin=repository_handle.get_origin(),
             partition_set_name=partition_set_name,
             partition_name=partition_name,
+            instance_ref=instance.get_ref(),
         )
         return get_partition_config(args)
 
-    def get_external_partition_tags(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_tags(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.str_param(partition_name, "partition_name")
@@ -349,15 +360,19 @@ class InProcessRepositoryLocation(RepositoryLocation):
             repository_origin=repository_handle.get_origin(),
             partition_set_name=partition_set_name,
             partition_name=partition_name,
+            instance_ref=instance.get_ref(),
         )
         return get_partition_tags(args)
 
-    def get_external_partition_names(self, repository_handle, partition_set_name):
+    def get_external_partition_names(self, instance, repository_handle, partition_set_name):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
 
         args = PartitionNamesArgs(
-            repository_origin=repository_handle.get_origin(), partition_set_name=partition_set_name
+            repository_origin=repository_handle.get_origin(),
+            partition_set_name=partition_set_name,
+            instance_ref=instance.get_ref(),
         )
         return get_partition_names(args)
 
@@ -408,8 +423,9 @@ class InProcessRepositoryLocation(RepositoryLocation):
         return get_external_executable_params(recon_repo, args)
 
     def get_external_partition_set_execution_param_data(
-        self, repository_handle, partition_set_name, partition_names
+        self, instance, repository_handle, partition_set_name, partition_names
     ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.list_param(partition_names, "partition_names", of_type=str)
@@ -418,6 +434,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
             repository_origin=repository_handle.get_origin(),
             partition_set_name=partition_set_name,
             partition_names=partition_names,
+            instance_ref=instance.get_ref(),
         )
         return get_partition_set_execution_param_data(args)
 
@@ -525,30 +542,37 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             self._handle.client, pipeline_handle.get_origin(), selector.solid_selection
         )
 
-    def get_external_partition_config(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_config(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.str_param(partition_name, "partition_name")
 
         return sync_get_external_partition_config_grpc(
-            self._handle.client, repository_handle, partition_set_name, partition_name
+            self._handle.client, instance, repository_handle, partition_set_name, partition_name
         )
 
-    def get_external_partition_tags(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_tags(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.str_param(partition_name, "partition_name")
 
         return sync_get_external_partition_tags_grpc(
-            self._handle.client, repository_handle, partition_set_name, partition_name
+            self._handle.client, instance, repository_handle, partition_set_name, partition_name
         )
 
-    def get_external_partition_names(self, repository_handle, partition_set_name):
+    def get_external_partition_names(self, instance, repository_handle, partition_set_name):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
 
         return sync_get_external_partition_names_grpc(
-            self._handle.client, repository_handle, partition_set_name
+            self._handle.client, instance, repository_handle, partition_set_name
         )
 
     def get_external_schedule_execution_data(
@@ -587,14 +611,15 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         )
 
     def get_external_partition_set_execution_param_data(
-        self, repository_handle, partition_set_name, partition_names
+        self, instance, repository_handle, partition_set_name, partition_names
     ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.list_param(partition_names, "partition_names", of_type=str)
 
         return sync_get_external_partition_set_execution_param_data_grpc(
-            self._handle.client, repository_handle, partition_set_name, partition_names
+            self._handle.client, instance, repository_handle, partition_set_name, partition_names,
         )
 
 
@@ -705,29 +730,36 @@ class PythonEnvRepositoryLocation(RepositoryLocation):
             pipeline_handle.get_origin(), selector.solid_selection
         )
 
-    def get_external_partition_config(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_config(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.str_param(partition_name, "partition_name")
 
         return sync_get_external_partition_config(
-            repository_handle, partition_set_name, partition_name
+            instance, repository_handle, partition_set_name, partition_name
         )
 
-    def get_external_partition_tags(self, repository_handle, partition_set_name, partition_name):
+    def get_external_partition_tags(
+        self, instance, repository_handle, partition_set_name, partition_name
+    ):
+        check.inst_param(instance, "instacne", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.str_param(partition_name, "partition_name")
 
         return sync_get_external_partition_tags(
-            repository_handle, partition_set_name, partition_name
+            instance, repository_handle, partition_set_name, partition_name
         )
 
-    def get_external_partition_names(self, repository_handle, partition_set_name):
+    def get_external_partition_names(self, instance, repository_handle, partition_set_name):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
 
-        return sync_get_external_partition_names(repository_handle, partition_set_name)
+        return sync_get_external_partition_names(instance, repository_handle, partition_set_name)
 
     def get_external_schedule_execution_data(
         self,
@@ -762,12 +794,13 @@ class PythonEnvRepositoryLocation(RepositoryLocation):
         return sync_get_external_executable_params(instance, repository_handle, name)
 
     def get_external_partition_set_execution_param_data(
-        self, repository_handle, partition_set_name, partition_names
+        self, instance, repository_handle, partition_set_name, partition_names
     ):
+        check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
         check.str_param(partition_set_name, "partition_set_name")
         check.list_param(partition_names, "partition_names", of_type=str)
 
         return sync_get_external_partition_set_execution_param_data(
-            repository_handle, partition_set_name, partition_names
+            instance, repository_handle, partition_set_name, partition_names,
         )

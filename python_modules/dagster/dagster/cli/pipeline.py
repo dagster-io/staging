@@ -841,7 +841,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
 
     # Resolve partitions to backfill
     partition_names_or_error = repo_location.get_external_partition_names(
-        repo_handle, partition_set_name,
+        instance, repo_handle, partition_set_name,
     )
 
     if isinstance(partition_names_or_error, ExternalPartitionExecutionErrorData):
@@ -872,6 +872,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
         backfill_id = make_new_backfill_id()
         backfill_tags = PipelineRun.tags_for_backfill_id(backfill_id)
         partition_execution_data = repo_location.get_external_partition_set_execution_param_data(
+            instance=instance,
             repository_handle=repo_handle,
             partition_set_name=partition_set_name,
             partition_names=partition_names,
