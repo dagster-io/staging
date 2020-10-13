@@ -177,8 +177,6 @@ def launch_scheduled_runs_for_schedule(
     check.inst_param(end_datetime_utc, "end_datetime_utc", datetime.datetime)
     check.inst_param(repo_location, "repo_location", RepositoryLocation)
 
-    scheduler = instance.scheduler
-
     latest_tick = instance.get_latest_tick(schedule_state.schedule_origin_id)
 
     if not latest_tick:
@@ -202,7 +200,7 @@ def launch_scheduled_runs_for_schedule(
     timezone_str = (
         external_schedule.execution_timezone
         if external_schedule.execution_timezone
-        else scheduler.default_timezone_str
+        else instance.default_schedule_timezone
     )
 
     end_datetime = end_datetime_utc.in_tz(timezone_str)
