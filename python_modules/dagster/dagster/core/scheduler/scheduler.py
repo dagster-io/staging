@@ -429,6 +429,10 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
             schedule_origin_id (string): The id of the schedule target to retrieve the log path for
         """
 
+    @abc.abstractmethod
+    def get_default_timezone(self):
+        return None
+
 
 class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
     """Scheduler implementation that launches runs from the `dagster scheduler run`
@@ -437,7 +441,7 @@ class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
 
     def __init__(self, inst_data=None, default_timezone_str="UTC"):
         self._inst_data = inst_data
-        self.default_timezone_str = default_timezone_str
+        self._default_timezone_str = default_timezone_str
 
     @property
     def inst_data(self):
@@ -491,6 +495,9 @@ class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
 
         logs_directory = self._get_or_create_logs_directory(instance, schedule_origin_id)
         return os.path.join(logs_directory, "scheduler.log")
+
+    def get_default_timezone(self):
+        return self._default_timezone_str
 
 
 class ScheduleTickStatsSnapshot(
