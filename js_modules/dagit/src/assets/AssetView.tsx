@@ -25,7 +25,7 @@ type AssetKey = AssetsRootQuery_assetsOrError_AssetConnection_nodes_key;
 type GraphMaterialization = AssetQuery_assetOrError_Asset_graphMaterializations;
 type LastMaterialization = AssetQuery_assetOrError_Asset_lastMaterializations;
 
-export const AssetRoot = ({assetKey}: {assetKey: AssetKey}) => {
+export const AssetView = ({assetKey}: {assetKey: AssetKey}) => {
   const assetPath = assetKey.path.join('.');
   useDocumentTitle(`Asset: ${assetPath}`);
   const queryResult = useQuery(ASSET_QUERY, {

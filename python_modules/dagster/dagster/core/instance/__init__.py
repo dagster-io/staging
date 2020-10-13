@@ -917,9 +917,9 @@ class DagsterInstance:
             ),
         )
 
-    def all_asset_keys(self):
+    def all_asset_keys(self, prefix_path=None):
         self.check_asset_aware()
-        return self._event_storage.get_all_asset_keys()
+        return self._event_storage.get_all_asset_keys(prefix_path)
 
     def events_for_asset_key(self, asset_key, cursor=None, limit=None):
         check.inst_param(asset_key, "asset_key", AssetKey)
