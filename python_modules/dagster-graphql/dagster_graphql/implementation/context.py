@@ -106,6 +106,7 @@ class DagsterGraphQLContext:
         return self._repository_locations[
             repository_handle.repository_location_handle.location_name
         ].get_external_partition_config(
+            instance=self.instance,
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_name=partition_name,
@@ -115,6 +116,7 @@ class DagsterGraphQLContext:
         return self._repository_locations[
             repository_handle.repository_location_handle.location_name
         ].get_external_partition_tags(
+            instance=self.instance,
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_name=partition_name,
@@ -123,7 +125,7 @@ class DagsterGraphQLContext:
     def get_external_partition_names(self, repository_handle, partition_set_name):
         return self._repository_locations[
             repository_handle.repository_location_handle.location_name
-        ].get_external_partition_names(repository_handle, partition_set_name)
+        ].get_external_partition_names(self.instance, repository_handle, partition_set_name)
 
     def get_external_schedule_execution_data(self, repository_handle, schedule_name):
         return self._repository_locations[
@@ -143,6 +145,7 @@ class DagsterGraphQLContext:
         return self._repository_locations[
             repository_handle.repository_location_handle.location_name
         ].get_external_partition_set_execution_param_data(
+            instance=self.instance,
             repository_handle=repository_handle,
             partition_set_name=partition_set_name,
             partition_names=partition_names,
