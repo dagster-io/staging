@@ -7,12 +7,12 @@ import pytest
 from airflow.exceptions import AirflowException
 from airflow.utils import timezone
 from dagster_airflow.factory import make_airflow_dag_containerized_for_recon_repo
-from dagster_airflow.test_fixtures import (
+from dagster_airflow_tests.conftest import dagster_docker_image
+from dagster_airflow_tests.marks import nettest, requires_airflow_db
+from dagster_airflow_tests.test_fixtures import (
     dagster_airflow_docker_operator_pipeline,
     execute_tasks_in_dag,
 )
-from dagster_airflow_tests.conftest import dagster_docker_image
-from dagster_airflow_tests.marks import nettest, requires_airflow_db
 from dagster_test.test_project import test_project_environments_path
 
 from dagster.core.definitions.reconstructable import ReconstructableRepository
@@ -38,6 +38,7 @@ def test_fs_storage_no_explicit_base_dir(
             os.path.join(environments_path, "env_filesystem_no_explicit_base_dir.yaml"),
         ],
         image=dagster_docker_image,
+        op_kwargs={"network_mode": "container:test-postgres-db-airflow"},
     )
     validate_pipeline_execution(results)
 
