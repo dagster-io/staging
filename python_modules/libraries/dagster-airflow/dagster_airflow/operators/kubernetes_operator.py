@@ -1,25 +1,19 @@
-import sys
+import json
 import time
 
 from airflow.contrib.kubernetes import kube_client, pod_generator, pod_launcher
 from airflow.exceptions import AirflowException
 from airflow.utils.state import State
 from dagster_airflow.vendor.kubernetes_pod_operator import KubernetesPodOperator
-from dagster_graphql.client.query import RAW_EXECUTE_PLAN_MUTATION
-from dagster_graphql.client.util import construct_execute_plan_variables, parse_raw_log_lines
+from dagster_graphql.client.util import parse_raw_log_lines
 
 from dagster import __version__ as dagster_version
-from dagster import check, seven
-from dagster.core.events import EngineEventData
+from dagster import check
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
-from dagster.utils.error import serializable_error_info_from_exc_info
+from dagster.grpc.types import ExecuteStepArgs
+from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 
-from .util import (
-    airflow_tags_for_ts,
-    check_events_for_failures,
-    check_events_for_skips,
-    get_aws_environment,
-)
+from .util import check_events_for_failures, check_events_for_skips, get_aws_environment
 
 # For retries on log retrieval
 LOG_RETRIEVAL_MAX_ATTEMPTS = 5
@@ -51,13 +45,8 @@ class DagsterKubernetesPodOperator(KubernetesPodOperator):
         self.step_keys = operator_parameters.step_keys
         self.recon_repo = operator_parameters.recon_repo
         self._run_id = None
-        # self.instance might be None in, for instance, a unit test setting where the operator
-        # was being directly instantiated without passing through make_airflow_dag
-        self.instance = (
-            DagsterInstance.from_ref(operator_parameters.instance_ref)
-            if operator_parameters.instance_ref
-            else None
-        )
+        self._instance_ref = operator_parameters.instance_ref
+        self.instance = DagsterInstance.from_ref(self._instance_ref)
 
         # Add AWS creds
         self.env_vars = kwargs.get("env_vars", {})
@@ -92,45 +81,25 @@ class DagsterKubernetesPodOperator(KubernetesPodOperator):
     def query(self, airflow_ts):
         check.opt_str_param(airflow_ts, "airflow_ts")
 
-        variables = construct_execute_plan_variables(
-            self.recon_repo,
-            self.mode,
-            self.run_config,
-            self.pipeline_name,
-            self.run_id,
-            self.step_keys,
-        )
-        tags = airflow_tags_for_ts(airflow_ts)
-        variables["executionParams"]["executionMetadata"]["tags"] = tags
+        recon_pipeline = self.recon_repo.get_reconstructable_pipeline(self.pipeline_name)
 
-        self.log.info(
-            "Executing GraphQL query: {query}\n".format(query=RAW_EXECUTE_PLAN_MUTATION)
-            + "with variables:\n"
-            + seven.json.dumps(variables, indent=2)
+        input_json = serialize_dagster_namedtuple(
+            ExecuteStepArgs(
+                pipeline_origin=recon_pipeline.get_origin(),
+                pipeline_run_id=self.run_id,
+                instance_ref=self._instance_ref,
+                mode=self.mode,
+                step_keys_to_execute=self.step_keys,
+                run_config=self.run_config,
+                retries_dict={},
+            )
         )
 
-        return [
-            "dagster-graphql",
-            "-v",
-            "{}".format(seven.json.dumps(variables)),
-            "-t",
-            "{}".format(RAW_EXECUTE_PLAN_MUTATION),
-        ]
+        command = "dagster api execute_step_with_structured_logs {}".format(json.dumps(input_json))
+        self.log.info("Executing: {command}\n".format(command=command))
+        return command
 
     def execute(self, context):
-        try:
-            from dagster_graphql.client.mutations import (
-                DagsterGraphQLClientError,
-                handle_execution_errors,
-                handle_execute_plan_result_raw,
-            )
-
-        except ImportError:
-            raise AirflowException(
-                "To use the DagsterKubernetesPodOperator, dagster and dagster_graphql must be"
-                " installed in your Airflow environment."
-            )
-
         if "run_id" in self.params:
             self._run_id = self.params["run_id"]
         elif "dag_run" in context and context["dag_run"] is not None:
@@ -175,25 +144,22 @@ class DagsterKubernetesPodOperator(KubernetesPodOperator):
 
             launcher = pod_launcher.PodLauncher(kube_client=client, extract_xcom=self.xcom_push)
             try:
-                if self.instance:
-                    tags = (
-                        {AIRFLOW_EXECUTION_DATE_STR: context.get("ts")} if "ts" in context else {}
-                    )
+                tags = {AIRFLOW_EXECUTION_DATE_STR: context.get("ts")} if "ts" in context else {}
 
-                    run = self.instance.register_managed_run(
-                        pipeline_name=self.pipeline_name,
-                        run_id=self.run_id,
-                        run_config=self.run_config,
-                        mode=self.mode,
-                        solids_to_execute=None,
-                        step_keys_to_execute=None,
-                        tags=tags,
-                        root_run_id=None,
-                        parent_run_id=None,
-                        pipeline_snapshot=self.pipeline_snapshot,
-                        execution_plan_snapshot=self.execution_plan_snapshot,
-                        parent_pipeline_snapshot=self.parent_pipeline_snapshot,
-                    )
+                self.instance.register_managed_run(
+                    pipeline_name=self.pipeline_name,
+                    run_id=self.run_id,
+                    run_config=self.run_config,
+                    mode=self.mode,
+                    solids_to_execute=None,
+                    step_keys_to_execute=None,
+                    tags=tags,
+                    root_run_id=None,
+                    parent_run_id=None,
+                    pipeline_snapshot=self.pipeline_snapshot,
+                    execution_plan_snapshot=self.execution_plan_snapshot,
+                    parent_pipeline_snapshot=self.parent_pipeline_snapshot,
+                )
 
                 # we won't use the "result", which is the pod's xcom json file
                 (final_state, _) = launcher.run_pod(
@@ -213,24 +179,10 @@ class DagsterKubernetesPodOperator(KubernetesPodOperator):
                     time.sleep(LOG_RETRIEVAL_WAITS_BETWEEN_ATTEMPTS_SEC)
                     num_attempts += 1
 
-                try:
-                    handle_execution_errors(res, "executePlan")
-                except DagsterGraphQLClientError as err:
-                    self.instance.report_engine_event(
-                        str(err),
-                        run,
-                        EngineEventData.engine_error(
-                            serializable_error_info_from_exc_info(sys.exc_info())
-                        ),
-                        self.__class__,
-                    )
-                    raise
+                for line in res:
+                    print("GOT LINE: " + line)
 
-                events = handle_execute_plan_result_raw(res)
-
-                if self.instance:
-                    for event in events:
-                        self.instance.handle_new_event(event)
+                events = [deserialize_json_to_dagster_namedtuple(line) for line in res if line]
 
                 events = [e.dagster_event for e in events]
                 check_events_for_failures(events)

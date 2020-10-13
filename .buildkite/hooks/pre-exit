@@ -41,3 +41,8 @@ docker-compose rm -f
 docker-compose -f docker-compose-multi.yml stop
 docker-compose -f docker-compose-multi.yml rm -f
 popd
+
+pushd python_modules/integration_tests/test_suites/airflow-integration-test-suite/
+docker-compose stop
+docker-compose rm -f
+popd
