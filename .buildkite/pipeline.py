@@ -193,6 +193,18 @@ def integration_suite_extra_cmds_fn(version):
     ]
 
 
+def airflow_integration_suite_extra_cmds_fn(version):
+    return integration_suite_extra_cmds_fn(version) + [
+        "pushd integration_tests/test_suites/airflow-integration-test-suite/",
+        "docker-compose up -d --remove-orphans",
+        network_buildkite_container("postgres"),
+        connect_sibling_docker_container(
+            "postgres", "test-postgres-db-airflow-integration", "POSTGRES_TEST_DB_HOST",
+        ),
+        "popd",
+    ]
+
+
 def dagster_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
@@ -480,6 +492,12 @@ def integration_tests():
 
     for integration_suite in integration_suites:
         tox_env_suffixes = None
+        extra_cmds_fn = integration_suite_extra_cmds_fn
+
+        if integration_suite == os.path.join(
+            "integration_tests", "test_suites", "airflow-integration-test-suite"
+        ):
+            extra_cmds_fn = airflow_integration_suite_extra_cmds_fn
         if integration_suite == os.path.join(
             "integration_tests", "test_suites", "k8s-integration-test-suite"
         ):
@@ -501,7 +519,7 @@ def integration_tests():
             ],
             supported_pythons=SupportedPython3s,
             upload_coverage=True,
-            extra_cmds_fn=integration_suite_extra_cmds_fn,
+            extra_cmds_fn=extra_cmds_fn,
             depends_on_fn=test_image_depends_fn,
             tox_env_suffixes=tox_env_suffixes,
             retries=2,

@@ -89,9 +89,9 @@ class DagsterDockerOperator(DockerOperator):
         self.recon_repo = dagster_operator_parameters.recon_repo
         self._run_id = None
 
-        self.instance_ref = dagster_operator_parameters.instance_ref
-        check.invariant(self.instance_ref)
-        self.instance = DagsterInstance.from_ref(self.instance_ref)
+        self._instance_ref = dagster_operator_parameters.instance_ref
+        check.invariant(self._instance_ref)
+        self.instance = DagsterInstance.from_ref(self._instance_ref)
 
         # These shenanigans are so we can override DockerOperator.get_hook in order to configure
         # a docker client using docker.from_env, rather than messing with the logic of
@@ -210,7 +210,7 @@ class DagsterDockerOperator(DockerOperator):
             ExecuteStepArgs(
                 pipeline_origin=recon_pipeline.get_origin(),
                 pipeline_run_id=self.run_id,
-                instance_ref=self.instance_ref,
+                instance_ref=self._instance_ref,
                 mode=self.mode,
                 step_keys_to_execute=self.step_keys,
                 run_config=self.run_config,

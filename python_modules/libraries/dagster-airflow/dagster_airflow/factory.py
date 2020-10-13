@@ -497,6 +497,7 @@ def make_airflow_dag_kubernetized_for_recon_repo(
     dag_description=None,
     dag_kwargs=None,
     op_kwargs=None,
+    instance=None,
 ):
     from .operators.kubernetes_operator import DagsterKubernetesPodOperator
 
@@ -511,6 +512,7 @@ def make_airflow_dag_kubernetized_for_recon_repo(
     op_kwargs = check.opt_dict_param(op_kwargs, "op_kwargs", key_type=str)
     op_kwargs["image"] = check.str_param(image, "image")
     op_kwargs["namespace"] = check.str_param(namespace, "namespace")
+    check.opt_inst_param(instance, "instance", DagsterInstance)
 
     return _make_airflow_dag(
         recon_repo=recon_repo,
@@ -522,4 +524,5 @@ def make_airflow_dag_kubernetized_for_recon_repo(
         dag_kwargs=dag_kwargs,
         op_kwargs=op_kwargs,
         operator=DagsterKubernetesPodOperator,
+        instance=instance,
     )
