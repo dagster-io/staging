@@ -8,7 +8,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import ObjectStoreOperation
+from dagster.core.definitions.events import ObjectStoreOperation, AddressableAssetOperation
 from dagster.core.errors import (
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
@@ -325,12 +325,16 @@ def _set_intermediates(step_context, step_output, step_output_handle, output, ve
         step_output_handle=step_output_handle,
         value=output.value,
         version=version,
+        path=output.address,
     )
 
     if isinstance(res, ObjectStoreOperation):
         yield DagsterEvent.object_store_operation(
             step_context, ObjectStoreOperation.serializable(res, value_name=output.output_name),
         )
+
+    if isinstance(res, AddressableAssetOperation):
+        yield DagsterEvent.addressable_asset_operation(step_context, res)
 
 
 def _create_output_materializations(step_context, output_name, value):

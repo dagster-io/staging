@@ -49,6 +49,7 @@ class DagsterEventType(Enum):
     PIPELINE_FAILURE = "PIPELINE_FAILURE"
 
     OBJECT_STORE_OPERATION = "OBJECT_STORE_OPERATION"
+    ADDRESSABLE_ASSET_OPERATION = "ADDRESSABLE_ASSET_OPERATION"
 
     ENGINE_EVENT = "ENGINE_EVENT"
 
@@ -795,6 +796,23 @@ class DagsterEvent(
         )
 
     @staticmethod
+    def addressable_asset_operation(step_context, addressable_asset_operation):
+        from dagster.core.definitions.events import AddressableAssetOperation
+
+        check.inst_param(
+            addressable_asset_operation, "addressable_asset_operation", AddressableAssetOperation
+        )
+        return DagsterEvent.from_step(
+            event_type=DagsterEventType.ADDRESSABLE_ASSET_OPERATION,
+            step_context=step_context,
+            event_specific_data=AddressableAssetOperationData(addressable_asset_operation),
+            message='addressable asset operation: address "{address}" for {step_output_handle}.'.format(
+                address=addressable_asset_operation.address.to_string(),
+                step_output_handle=addressable_asset_operation.step_output_handle,
+            ),
+        )
+
+    @staticmethod
     def hook_completed(hook_context, hook_def):
         event_type = DagsterEventType.HOOK_COMPLETED
         check.inst_param(hook_context, "hook_context", HookContext)
@@ -896,6 +914,11 @@ class StepExpectationResultData(namedtuple("_StepExpectationResultData", "expect
 class ObjectStoreOperationResultData(
     namedtuple("_ObjectStoreOperationResultData", "op value_name metadata_entries address version")
 ):
+    pass
+
+
+@whitelist_for_serdes
+class AddressableAssetOperationData(namedtuple("_AddressableAssetOperationData", "operation")):
     pass
 
 
