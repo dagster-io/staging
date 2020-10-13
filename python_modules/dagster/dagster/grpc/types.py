@@ -139,9 +139,9 @@ class ListRepositoriesInput(
 
 @whitelist_for_serdes
 class PartitionArgs(
-    namedtuple("_PartitionArgs", "repository_origin partition_set_name partition_name")
+    namedtuple("_PartitionArgs", "repository_origin partition_set_name partition_name instance_ref")
 ):
-    def __new__(cls, repository_origin, partition_set_name, partition_name):
+    def __new__(cls, repository_origin, partition_set_name, partition_name, instance_ref):
         return super(PartitionArgs, cls).__new__(
             cls,
             repository_origin=check.inst_param(
@@ -149,28 +149,33 @@ class PartitionArgs(
             ),
             partition_set_name=check.str_param(partition_set_name, "partition_set_name"),
             partition_name=check.str_param(partition_name, "partition_name"),
+            instance_ref=check.inst_param(instance_ref, "instance_ref", InstanceRef),
         )
 
 
 @whitelist_for_serdes
-class PartitionNamesArgs(namedtuple("_PartitionNamesArgs", "repository_origin partition_set_name")):
-    def __new__(cls, repository_origin, partition_set_name):
+class PartitionNamesArgs(
+    namedtuple("_PartitionNamesArgs", "repository_origin partition_set_name instance_ref")
+):
+    def __new__(cls, repository_origin, partition_set_name, instance_ref):
         return super(PartitionNamesArgs, cls).__new__(
             cls,
             repository_origin=check.inst_param(
                 repository_origin, "repository_origin", RepositoryOrigin
             ),
             partition_set_name=check.str_param(partition_set_name, "partition_set_name"),
+            instance_ref=check.inst_param(instance_ref, "instance_ref", InstanceRef),
         )
 
 
 @whitelist_for_serdes
 class PartitionSetExecutionParamArgs(
     namedtuple(
-        "_PartitionSetExecutionParamArgs", "repository_origin partition_set_name partition_names",
+        "_PartitionSetExecutionParamArgs",
+        "repository_origin partition_set_name partition_names instance_ref",
     )
 ):
-    def __new__(cls, repository_origin, partition_set_name, partition_names):
+    def __new__(cls, repository_origin, partition_set_name, partition_names, instance_ref):
         return super(PartitionSetExecutionParamArgs, cls).__new__(
             cls,
             repository_origin=check.inst_param(
@@ -178,6 +183,7 @@ class PartitionSetExecutionParamArgs(
             ),
             partition_set_name=check.str_param(partition_set_name, "partition_set_name"),
             partition_names=check.list_param(partition_names, "partition_names", of_type=str),
+            instance_ref=check.inst_param(instance_ref, "instance_ref", InstanceRef),
         )
 
 

@@ -8,8 +8,8 @@ from dagster_graphql.test.utils import (
 from dagster.core.test_utils import environ
 
 from .graphql_context_test_suite import (
-    ExecutingGraphQLContextTestMatrix,
     GraphQLContextVariant,
+    OutOfProcessExecutingGraphQLContextTestMatrix,
     make_graphql_context_test_suite,
 )
 from .utils import (
@@ -20,7 +20,7 @@ from .utils import (
 )
 
 
-class TestPartitionBackfill(ExecutingGraphQLContextTestMatrix):
+class TestPartitionBackfill(OutOfProcessExecutingGraphQLContextTestMatrix):
     def test_launch_full_pipeline_backfill(self, graphql_context):
         repository_selector = infer_repository_selector(graphql_context)
         result = execute_dagster_graphql(

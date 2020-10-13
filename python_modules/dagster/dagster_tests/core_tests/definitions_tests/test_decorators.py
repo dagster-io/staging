@@ -457,8 +457,10 @@ def test_schedule_decorators_execution_timezone():
             return {}
 
 
-def _check_partitions(partition_schedule_def, expected_num_partitions, expected_relative_delta):
-    partitions = partition_schedule_def.get_partition_set().partition_fn()
+def _check_partitions(
+    instance, partition_schedule_def, expected_num_partitions, expected_relative_delta
+):
+    partitions = partition_schedule_def.get_partition_set().partition_fn(instance)
     assert len(partitions) == expected_num_partitions
 
     for index, partition in enumerate(partitions):
@@ -479,7 +481,7 @@ def test_partitions_for_hourly_schedule_decorators():
         def hourly_foo_schedule(hourly_time):
             return {"hourly_time": hourly_time.isoformat()}
 
-        _check_partitions(hourly_foo_schedule, 24 * (31 + 26), relativedelta(hours=1))
+        _check_partitions(instance, hourly_foo_schedule, 24 * (31 + 26), relativedelta(hours=1))
 
         assert hourly_foo_schedule.get_run_config(context_without_time) == {
             "hourly_time": datetime(year=2019, month=2, day=26, hour=23, minute=1).isoformat()
@@ -527,7 +529,7 @@ def test_partitions_for_daily_schedule_decorators():
         def daily_foo_schedule(daily_time):
             return {"daily_time": daily_time.isoformat()}
 
-        _check_partitions(daily_foo_schedule, (31 + 26), relativedelta(days=1))
+        _check_partitions(instance, daily_foo_schedule, (31 + 26), relativedelta(days=1))
 
         valid_daily_time = datetime(year=2019, month=1, day=27, hour=9, minute=30)
         context_with_valid_time = ScheduleExecutionContext(instance, valid_daily_time)
@@ -571,7 +573,7 @@ def test_partitions_for_weekly_schedule_decorators():
         }
         assert weekly_foo_schedule.should_execute(context_without_time)
 
-        _check_partitions(weekly_foo_schedule, 8, relativedelta(weeks=1))
+        _check_partitions(instance, weekly_foo_schedule, 8, relativedelta(weeks=1))
 
 
 @freeze_time("2019-02-27 00:01:01")
@@ -601,7 +603,7 @@ def test_partitions_for_monthly_schedule_decorators():
         }
         assert monthly_foo_schedule.should_execute(context_without_time)
 
-        _check_partitions(monthly_foo_schedule, 1, relativedelta(months=1))
+        _check_partitions(instance, monthly_foo_schedule, 1, relativedelta(months=1))
 
 
 def test_schedule_decorators_bad():
