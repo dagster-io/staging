@@ -199,6 +199,7 @@ class DagsterInstance:
             keys.
         ref (Optional[InstanceRef]): Used by internal machinery to pass instances across process
             boundaries.
+        address_store (Optional[AddressStore])
     """
 
     _PROCESS_TEMPDIR = None
@@ -215,6 +216,7 @@ class DagsterInstance:
         run_launcher=None,
         settings=None,
         ref=None,
+        address_store=None,
     ):
         from dagster.core.storage.compute_log_manager import ComputeLogManager
         from dagster.core.storage.event_log import EventLogStorage
@@ -223,6 +225,7 @@ class DagsterInstance:
         from dagster.core.storage.schedules import ScheduleStorage
         from dagster.core.scheduler import Scheduler
         from dagster.core.launcher import RunLauncher
+        from dagster.core.storage.address_store import AddressStore
 
         self._instance_type = check.inst_param(instance_type, "instance_type", InstanceType)
         self._local_artifact_storage = check.inst_param(
@@ -246,10 +249,12 @@ class DagsterInstance:
 
         self._subscribers = defaultdict(list)
 
+        self._address_store = check.opt_inst_param(address_store, "address_store", AddressStore)
+
     # ctors
 
     @staticmethod
-    def ephemeral(tempdir=None, preload=None):
+    def ephemeral(tempdir=None, preload=None, address_store=None):
         from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
         from dagster.core.storage.event_log import InMemoryEventLogStorage
         from dagster.core.storage.root import LocalArtifactStorage
@@ -266,6 +271,8 @@ class DagsterInstance:
             event_storage=InMemoryEventLogStorage(preload=preload),
             compute_log_manager=NoOpComputeLogManager(),
             run_launcher=SyncInMemoryRunLauncher(),
+            # TODO
+            address_store=address_store,
         )
 
     @staticmethod
@@ -410,6 +417,12 @@ class DagsterInstance:
     def compute_log_manager(self):
         return self._compute_log_manager
 
+    # address store
+
+    @property
+    def address_store(self):
+        return self._address_store
+
     def get_settings(self, settings_key):
         check.str_param(settings_key, "settings_key")
         if self._settings and settings_key in self._settings:
@@ -491,6 +504,28 @@ class DagsterInstance:
 
     def get_run_group(self, run_id):
         return self._run_storage.get_run_group(run_id)
+
+    def get_address_store(self, run_id):
+        from dagster.core.events import AddressableAssetOperationData
+
+        if run_id is None:
+            return
+        event_logs = self.all_logs(run_id)
+
+        address_store = {}
+        for record in event_logs:
+            if not record.is_dagster_event:
+                continue
+
+            if not record.dagster_event.is_addressable_asset_operation:
+                continue
+
+            entry_data = record.dagster_event.event_specific_data
+            if isinstance(entry_data, AddressableAssetOperationData):
+                step_output_handle = entry_data.step_output_handle
+                address_store[step_output_handle] = (entry_data.address, entry_data.asset_store)
+
+        return address_store
 
     def resolve_memoized_execution_plan(self, execution_plan, run_config, mode):
         """

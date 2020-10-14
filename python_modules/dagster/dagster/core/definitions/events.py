@@ -623,6 +623,38 @@ class RetryRequested(Exception):  # base exception instead?
         self.seconds_to_wait = check.opt_int_param(seconds_to_wait, "seconds_to_wait")
 
 
+class AddressableAssetOperationType(Enum):
+    SET_ASSET = "SET_ASSET"
+    GET_ASSET = "GET_ASSET"
+
+
+class AddressableAssetOperation(
+    namedtuple(
+        "_AddressableAssetOperation", "op address step_output_handle asset_store_handle obj",
+    )
+):
+    """
+    Event related addressableAssets
+    """
+
+    def __new__(cls, op, address, step_output_handle, asset_store_handle, obj=None):
+        from dagster.core.execution.plan.objects import StepOutputHandle
+        from dagster.core.storage.asset_store import AssetAddress, AssetStoreHandle
+
+        return super(AddressableAssetOperation, cls).__new__(
+            cls,
+            op=op,
+            address=check.inst_param(address, "address", AssetAddress),
+            step_output_handle=check.inst_param(
+                step_output_handle, "step_output_handle", StepOutputHandle
+            ),
+            asset_store_handle=check.inst_param(
+                asset_store_handle, "asset_store_handle", AssetStoreHandle
+            ),
+            obj=obj,
+        )
+
+
 class ObjectStoreOperationType(Enum):
     SET_OBJECT = "SET_OBJECT"
     GET_OBJECT = "GET_OBJECT"
