@@ -70,19 +70,23 @@ class SqlEventLogStorage(EventLogStorage):
             asset_key=asset_key_str,
         )
 
-    def prepare_insert_asset_key(self, event):
-        check.inst(event.dagster_event.asset_key, AssetKey)
-        return AssetKeyTable.insert().values(  # pylint: disable=no-value-for-parameter
-            asset_key=event.dagster_event.asset_key.to_string(), counter=1
-        )
+    def store_asset_key(self, conn, event):
+        check.inst_param(event, "event", EventRecord)
+        if not event.is_dagster_event or not event.dagster_event.asset_key:
+            return
 
-    def prepare_update_asset_key(self, event):
-        check.inst(event.dagster_event.asset_key, AssetKey)
-        return (
-            AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
-            .where(AssetKeyTable.c.asset_key == event.dagster_event.asset_key.to_string())
-            .values(counter=AssetKeyTable.c.counter + 1)
-        )
+        try:
+            conn.execute(
+                AssetKeyTable.insert().values(  # pylint: disable=no-value-for-parameter
+                    asset_key=event.dagster_event.asset_key.to_string(), counter=1
+                )
+            )
+        except db.exc.IntegrityError:
+            conn.execute(
+                AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
+                .where(AssetKeyTable.c.asset_key == event.dagster_event.asset_key.to_string())
+                .values(counter=AssetKeyTable.c.counter + 1)
+            )
 
     def store_event(self, event):
         """Store an event corresponding to a pipeline run.
@@ -97,10 +101,7 @@ class SqlEventLogStorage(EventLogStorage):
         with self.connect(run_id) as conn:
             conn.execute(insert_event_statement)
             if event.is_dagster_event and event.dagster_event.asset_key:
-                try:
-                    conn.execute(self.prepare_insert_asset_key(event))
-                except db.exc.IntegrityError:
-                    conn.execute(self.prepare_update_asset_key(event))
+                self.store_asset_key(conn, event)
 
     def get_logs_for_run_by_log_id(self, run_id, cursor=-1):
         check.str_param(run_id, "run_id")
