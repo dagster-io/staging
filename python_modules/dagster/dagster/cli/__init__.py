@@ -1,6 +1,3 @@
-import os
-import sys
-
 import click
 
 from ..core.instance import DagsterInstance
@@ -10,6 +7,7 @@ from .asset import asset_cli
 from .debug import debug_cli
 from .instance import instance_cli
 from .pipeline import pipeline_cli
+from .queuing import queuing_cli
 from .run import run_cli
 from .schedule import schedule_cli
 
@@ -23,6 +21,7 @@ def create_dagster_cli():
         "schedule": schedule_cli,
         "asset": asset_cli,
         "debug": debug_cli,
+        "queuing": queuing_cli,
     }
 
     @click.group(commands=commands)

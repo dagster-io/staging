@@ -112,7 +112,7 @@ function searchSuggestionsForRuns(
     },
     {
       token: 'status',
-      values: () => ['NOT_STARTED', 'STARTED', 'SUCCESS', 'FAILURE', 'MANAGED'],
+      values: () => ['QUEUED', 'NOT_STARTED', 'STARTED', 'SUCCESS', 'FAILURE', 'MANAGED'],
     },
     {
       token: 'pipeline',
