@@ -123,6 +123,12 @@ userDeployments:
       securityContext: {}
       resources: {}
       replicaCount: 1
+      grpcHealthProbe:
+        enabled: true
+        image:
+          repository: "dagster/grpc-health-probe"
+            tag: latest
+            pullPolicy: Always
 
 ####################################################################################################
 # Pipeline Run: Configuration for user code containers.

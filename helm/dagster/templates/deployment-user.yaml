@@ -81,6 +81,16 @@ spec:
               subPath: dagster.yaml
           resources:
             {{- toYaml $deployment.resources | nindent 12 }}
+        {{- if $deployment.grpcHealthProbe.enabled }}
+        - name: {{ $.Chart.Name }}-probe
+          securityContext:
+            {{- toYaml $deployment.securityContext | nindent 12 }}
+          imagePullPolicy: {{ $deployment.grpcHealthProbe.image.pullPolicy }}
+          image: "{{ $deployment.grpcHealthProbe.image.repository }}:{{ $deployment.grpcHealthProbe.image.tag }}"
+          livenessProbe:
+            exec:
+              command: ["/bin/grpc_health_probe", "-addr=:{{ $deployment.port }}"]
+        {{- end }}
       {{- with $deployment.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
