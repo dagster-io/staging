@@ -7,7 +7,7 @@ from dagster.core.definitions.config import ConfigMapping
 from dagster.core.definitions.config_mappable import IConfigMappable
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.utils import frozendict, frozenlist
-from dagster.utils.backcompat import experimental_arg_warning, rename_warning
+from dagster.utils.backcompat import experimental_arg_warning
 
 from .dependency import SolidHandle
 from .hook import HookDefinition
@@ -261,11 +261,6 @@ class SolidDefinition(ISolidDefinition):
     @property
     def compute_fn(self):
         return self._compute_fn
-
-    @property
-    def config_field(self):
-        rename_warning("config_schema", "config_field", "0.9.0")
-        return self._config_schema
 
     @property
     def config_schema(self):
