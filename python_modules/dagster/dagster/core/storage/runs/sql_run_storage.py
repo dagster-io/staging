@@ -161,6 +161,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             query = query.where(RunsTable.c.status == filters.status.value)
 
         if filters.tags:
+
             query = query.where(
                 db.or_(
                     *(
