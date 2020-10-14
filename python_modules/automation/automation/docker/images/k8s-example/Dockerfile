@@ -4,7 +4,7 @@ FROM "${BASE_IMAGE}"
 ARG DAGSTER_VERSION
 
 RUN apt-get update -yqq && \
-    apt-get install -yqq cron
+    apt-get install -yqq cron wget
 
 RUN pip install \
     dagster==${DAGSTER_VERSION} \
@@ -17,3 +17,5 @@ RUN pip install \
 
 # Get example pipelines
 COPY build_cache/ /
+
+RUN /install-grpc-health-check-probe.sh

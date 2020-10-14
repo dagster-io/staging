@@ -65,7 +65,13 @@ def buildkite_integration_cm(cwd):
 
 @contextlib.contextmanager
 def k8s_example_cm(cwd):
-    with copy_directories(["examples/deploy_k8s/example_project"], cwd):
+    with copy_directories(
+        [
+            "examples/deploy_k8s/example_project",
+            "python_modules/dagster/dagster/grpc/scripts/install-grpc-health-check-probe.sh",
+        ],
+        cwd,
+    ):
         yield
 
 
@@ -83,7 +89,12 @@ def get_core_k8s_dirs():
 @contextlib.contextmanager
 def k8s_example_editable_cm(cwd):
     with copy_directories(
-        get_core_k8s_dirs() + ["python_modules/libraries/dagster-aws",], cwd,
+        get_core_k8s_dirs()
+        + [
+            "python_modules/libraries/dagster-aws",
+            "python_modules/dagster/dagster/grpc/scripts/install-grpc-health-check-probe.sh",
+        ],
+        cwd,
     ):
         with copy_directories(
             ["examples/deploy_k8s/example_project"], cwd, special_folder="example_project"
