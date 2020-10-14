@@ -49,6 +49,7 @@ class DagsterEventType(Enum):
     PIPELINE_FAILURE = "PIPELINE_FAILURE"
 
     OBJECT_STORE_OPERATION = "OBJECT_STORE_OPERATION"
+    ADDRESSABLE_ASSET_OPERATION = "ADDRESSABLE_ASSET_OPERATION"
 
     ENGINE_EVENT = "ENGINE_EVENT"
 
@@ -354,6 +355,10 @@ class DagsterEvent(
     @property
     def is_engine_event(self):
         return self.event_type == DagsterEventType.ENGINE_EVENT
+
+    @property
+    def is_addressable_asset_operation(self):
+        return self.event_type == DagsterEventType.ADDRESSABLE_ASSET_OPERATION
 
     @property
     def asset_key(self):
@@ -795,6 +800,29 @@ class DagsterEvent(
         )
 
     @staticmethod
+    def addressable_asset_operation(step_context, addressable_asset_operation):
+        from dagster.core.definitions.events import AddressableAssetOperation
+
+        check.inst_param(
+            addressable_asset_operation, "addressable_asset_operation", AddressableAssetOperation
+        )
+        return DagsterEvent.from_step(
+            event_type=DagsterEventType.ADDRESSABLE_ASSET_OPERATION,
+            step_context=step_context,
+            event_specific_data=AddressableAssetOperationData(
+                addressable_asset_operation.op,
+                addressable_asset_operation.address,
+                addressable_asset_operation.step_output_handle,
+                addressable_asset_operation.asset_store_handle,
+            ),
+            message='addressable asset operation: {op} address "{address}" for {step_output_handle}.'.format(
+                op=addressable_asset_operation.op.value,
+                address=addressable_asset_operation.address.to_string(),
+                step_output_handle=addressable_asset_operation.step_output_handle,
+            ),
+        )
+
+    @staticmethod
     def hook_completed(hook_context, hook_def):
         event_type = DagsterEventType.HOOK_COMPLETED
         check.inst_param(hook_context, "hook_context", HookContext)
@@ -889,6 +917,13 @@ class StepMaterializationData(namedtuple("_StepMaterializationData", "materializ
 
 @whitelist_for_serdes
 class StepExpectationResultData(namedtuple("_StepExpectationResultData", "expectation_result")):
+    pass
+
+
+@whitelist_for_serdes
+class AddressableAssetOperationData(
+    namedtuple("_AddressableAssetOperationData", "op address step_output_handle asset_store")
+):
     pass
 
 
