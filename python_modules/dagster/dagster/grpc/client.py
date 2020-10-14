@@ -5,6 +5,8 @@ import warnings
 from contextlib import contextmanager
 
 import grpc
+from grpc_health.v1 import health_pb2
+from grpc_health.v1.health_pb2_grpc import HealthStub
 
 from dagster import check, seven
 from dagster.core.events import EngineEventData
@@ -72,6 +74,14 @@ class DagsterGrpcClient(object):
             response = getattr(stub, method)(request_type(**kwargs), timeout=timeout)
         # TODO need error handling here
         return response
+
+    def health_check_query(self):
+        with grpc.insecure_channel(self._server_address) as channel:
+            response = HealthStub(channel).Check(
+                health_pb2.HealthCheckRequest(service="DagsterApi")
+            )
+        status_number = response.status
+        return health_pb2.HealthCheckResponse.ServingStatus.Name(status_number)
 
     def _streaming_query(self, method, request_type, **kwargs):
         with grpc.insecure_channel(self._server_address) as channel:
