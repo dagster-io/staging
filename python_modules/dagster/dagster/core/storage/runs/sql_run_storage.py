@@ -161,6 +161,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             query = query.where(RunsTable.c.status == filters.status.value)
 
         if filters.tags:
+            # First filter down to tags that match
             query = query.where(
                 db.or_(
                     *(
@@ -170,8 +171,8 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                 )
             ).group_by(RunsTable.c.run_body, RunsTable.c.id)
 
-            if len(filters.tags) > 0:
-                query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tags))
+            # Now check that we have matched all tags from the query
+            query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tags))
 
         return query
 
