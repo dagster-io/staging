@@ -37,23 +37,19 @@ def migrate_asset_key_data(instance=None):
         return
 
     query = (
-        db.select([SqlEventLogStorageTable.c.asset_key, db.func.count().label("count"),])
+        db.select([SqlEventLogStorageTable.c.asset_key])
         .where(SqlEventLogStorageTable.c.asset_key != None)
         .group_by(SqlEventLogStorageTable.c.asset_key)
     )
     with event_log_storage.connect() as conn:
         to_insert = conn.execute(query).fetchall()
-        for (asset_key, count) in to_insert:
+        for (asset_key,) in to_insert:
             try:
                 conn.execute(
                     AssetKeyTable.insert().values(  # pylint: disable=no-value-for-parameter
-                        asset_key=asset_key, counter=count,
+                        asset_key=asset_key
                     )
                 )
             except db.exc.IntegrityError:
                 # asset key already present
-                conn.execute(
-                    AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
-                    .where(AssetKeyTable.c.asset_key == asset_key)
-                    .values(counter=count)
-                )
+                pass

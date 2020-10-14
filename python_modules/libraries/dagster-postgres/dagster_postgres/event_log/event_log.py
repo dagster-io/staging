@@ -110,11 +110,8 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
 
         conn.execute(
             db.dialects.postgresql.insert(AssetKeyTable)
-            .values(asset_key=event.dagster_event.asset_key.to_string(), counter=1)
-            .on_conflict_do_update(
-                index_elements=[AssetKeyTable.c.asset_key],
-                set_=dict(counter=AssetKeyTable.c.counter + 1),
-            )
+            .values(asset_key=event.dagster_event.asset_key.to_string())
+            .on_conflict_do_nothing(index_elements=[AssetKeyTable.c.asset_key])
         )
 
     def connect(self, run_id=None):

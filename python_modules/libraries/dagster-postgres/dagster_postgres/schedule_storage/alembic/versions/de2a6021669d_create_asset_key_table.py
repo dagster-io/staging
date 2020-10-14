@@ -29,7 +29,7 @@ def upgrade():
             "asset_keys",
             sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
             sa.Column("asset_key", sa.String, unique=True),
-            sa.Column("counter", sa.Integer, default=0),
+            sa.Column("create_timestamp", sa.DateTime, server_default=sa.text("CURRENT_TIMESTAMP")),
         )
 
 

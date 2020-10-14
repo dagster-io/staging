@@ -78,15 +78,11 @@ class SqlEventLogStorage(EventLogStorage):
         try:
             conn.execute(
                 AssetKeyTable.insert().values(  # pylint: disable=no-value-for-parameter
-                    asset_key=event.dagster_event.asset_key.to_string(), counter=1
+                    asset_key=event.dagster_event.asset_key.to_string()
                 )
             )
         except db.exc.IntegrityError:
-            conn.execute(
-                AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
-                .where(AssetKeyTable.c.asset_key == event.dagster_event.asset_key.to_string())
-                .values(counter=AssetKeyTable.c.counter + 1)
-            )
+            pass
 
     def store_event(self, event):
         """Store an event corresponding to a pipeline run.
@@ -314,22 +310,34 @@ class SqlEventLogStorage(EventLogStorage):
         delete_statement = SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
             SqlEventLogStorageTable.c.run_id == run_id
         )
-        asset_key_query = (
-            db.select([SqlEventLogStorageTable.c.asset_key, db.func.count().label("count"),])
+        removed_asset_key_query = (
+            db.select([SqlEventLogStorageTable.c.asset_key])
             .where(SqlEventLogStorageTable.c.run_id == run_id)
             .where(SqlEventLogStorageTable.c.asset_key != None)
             .group_by(SqlEventLogStorageTable.c.asset_key)
         )
 
         with self.connect(run_id) as conn:
-            removed_asset_keys = conn.execute(asset_key_query).fetchall()
+            removed_asset_keys = [
+                row[0] for row in conn.execute(removed_asset_key_query).fetchall()
+            ]
             conn.execute(delete_statement)
-            for (asset_key, count) in removed_asset_keys:
-                conn.execute(
-                    AssetKeyTable.update()  # pylint: disable=no-value-for-parameter
-                    .where(AssetKeyTable.c.asset_key == asset_key)
-                    .values(counter=AssetKeyTable.c.counter - count)
-                )
+            if len(removed_asset_keys) > 0:
+                remaining_asset_keys = [
+                    row[0]
+                    for row in conn.execute(
+                        db.select([SqlEventLogStorageTable.c.asset_key])
+                        .where(SqlEventLogStorageTable.c.asset_key.in_(removed_asset_keys))
+                        .group_by(SqlEventLogStorageTable.c.asset_key)
+                    )
+                ]
+                to_remove = set(removed_asset_keys) - set(remaining_asset_keys)
+                if to_remove:
+                    conn.execute(
+                        AssetKeyTable.delete().where(  # pylint: disable=no-value-for-parameter
+                            AssetKeyTable.c.asset_key.in_(to_remove)
+                        )
+                    )
 
     @property
     def is_persistent(self):
@@ -435,7 +443,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
         return query
 
     def get_all_asset_keys(self):
-        query = db.select([AssetKeyTable.c.asset_key]).where(AssetKeyTable.c.counter > 0)
+        query = db.select([AssetKeyTable.c.asset_key])
         with self.connect() as conn:
             results = conn.execute(query).fetchall()
 

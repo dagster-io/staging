@@ -19,7 +19,7 @@ AssetKeyTable = db.Table(
     SqlEventLogStorageMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
     db.Column("asset_key", db.String, unique=True),
-    db.Column("counter", db.Integer, default=0),
+    db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
 )
 
 db.Index("idx_run_id", SqlEventLogStorageTable.c.run_id)
