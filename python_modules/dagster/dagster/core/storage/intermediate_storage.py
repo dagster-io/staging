@@ -53,6 +53,12 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
 
             if step_input.is_from_single_output:
                 for source_handle in step_input.source_handles:
+                    if context.address_storage and context.address_storage.has_addressable_asset(
+                        context, source_handle
+                    ):
+                        # skip when source is trakced in address_storage
+                        continue
+
                     if (
                         source_handle in step_input.addresses
                         and not self.has_intermediate_at_address(
@@ -66,6 +72,12 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
             elif step_input.is_from_multiple_outputs:
                 missing_source_handles = []
                 for source_handle in step_input.source_handles:
+                    if context.address_storage and context.address_storage.has_addressable_asset(
+                        context, source_handle
+                    ):
+                        # skip when source is trakced in address_storage
+                        continue
+
                     if (
                         source_handle in step_input.addresses
                         and not self.has_intermediate_at_address(

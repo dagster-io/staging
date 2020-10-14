@@ -199,6 +199,7 @@ class DagsterInstance:
             keys.
         ref (Optional[InstanceRef]): Used by internal machinery to pass instances across process
             boundaries.
+        address_storage (Optional[AddressStorage]): Used to track addressable assets.
     """
 
     _PROCESS_TEMPDIR = None
@@ -215,6 +216,7 @@ class DagsterInstance:
         run_launcher=None,
         settings=None,
         ref=None,
+        address_storage=None,
     ):
         from dagster.core.storage.compute_log_manager import ComputeLogManager
         from dagster.core.storage.event_log import EventLogStorage
@@ -223,6 +225,7 @@ class DagsterInstance:
         from dagster.core.storage.schedules import ScheduleStorage
         from dagster.core.scheduler import Scheduler
         from dagster.core.launcher import RunLauncher
+        from dagster.core.storage.address_storage import AddressStorage
 
         self._instance_type = check.inst_param(instance_type, "instance_type", InstanceType)
         self._local_artifact_storage = check.inst_param(
@@ -246,15 +249,20 @@ class DagsterInstance:
 
         self._subscribers = defaultdict(list)
 
+        self._address_storage = check.opt_inst_param(
+            address_storage, "address_storage", AddressStorage
+        )
+
     # ctors
 
     @staticmethod
-    def ephemeral(tempdir=None, preload=None):
+    def ephemeral(tempdir=None, preload=None, address_storage=None):
         from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
         from dagster.core.storage.event_log import InMemoryEventLogStorage
         from dagster.core.storage.root import LocalArtifactStorage
         from dagster.core.storage.runs import InMemoryRunStorage
         from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
+        from dagster.core.storage.address_storage import EphemeralAddressStorage
 
         if tempdir is None:
             tempdir = DagsterInstance.temp_storage()
@@ -266,6 +274,7 @@ class DagsterInstance:
             event_storage=InMemoryEventLogStorage(preload=preload),
             compute_log_manager=NoOpComputeLogManager(),
             run_launcher=SyncInMemoryRunLauncher(),
+            address_storage=address_storage or EphemeralAddressStorage(),
         )
 
     @staticmethod
@@ -310,6 +319,7 @@ class DagsterInstance:
             run_launcher=instance_ref.run_launcher,
             settings=instance_ref.settings,
             ref=instance_ref,
+            address_storage=instance_ref.address_storage,
         )
 
     # flags
@@ -409,6 +419,12 @@ class DagsterInstance:
     @property
     def compute_log_manager(self):
         return self._compute_log_manager
+
+    # address storage
+
+    @property
+    def address_storage(self):
+        return self._address_storage
 
     def get_settings(self, settings_key):
         check.str_param(settings_key, "settings_key")

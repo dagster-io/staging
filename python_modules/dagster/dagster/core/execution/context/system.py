@@ -157,6 +157,10 @@ class SystemExecutionContext(object):
         return self._execution_context_data.intermediate_storage
 
     @property
+    def address_storage(self):
+        return self.instance.address_storage
+
+    @property
     def file_manager(self):
         return self._execution_context_data.file_manager
 
