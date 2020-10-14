@@ -943,6 +943,7 @@ type PipelineRunStatsSnapshot {
 }
 
 enum PipelineRunStatus {
+  QUEUED
   NOT_STARTED
   MANAGED
   STARTED
