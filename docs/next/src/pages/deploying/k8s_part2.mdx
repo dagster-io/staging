@@ -42,9 +42,12 @@ We increase the robustness of the scheduler by leveraging native Kubernetes obje
 
 ### How to enable:
 
-In order to enable the Dagster K8sScheduler, set `scheduler.k8sEnabled` to `true` in the Helm
-[`values.yaml`](https://github.com/dagster-io/dagster/blob/master/helm/dagster/values.yaml)
-file and fill in the other fields in the `scheduler` section.
+The Dagster K8sScheduler is enabled by default. To configure, fill in the `scheduler` section of
+the Helm [`values.yaml`](https://github.com/dagster-io/dagster/blob/master/helm/dagster/values.yaml)
+file. We recommend using the [`k8s-dagit`](https://hub.docker.com/r/dagster/k8s-dagit) docker
+image for the scheduler.
+
+To use the CronScheduler instead, set `scheduler.k8sEnabled` to `false`.
 
 ### How it works:
 
