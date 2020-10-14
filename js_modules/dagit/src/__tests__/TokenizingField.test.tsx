@@ -1,15 +1,15 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
-import {unmountComponentAtNode} from 'react-dom';
-import {act} from 'react-dom/test-utils';
+import { unmountComponentAtNode } from 'react-dom';
+import { act } from 'react-dom/test-utils';
 import * as TestRenderer from 'react-test-renderer';
 
-import {TokenizingField} from 'src/TokenizingField';
+import { TokenizingField } from 'src/TokenizingField';
 
 // https://github.com/jsdom/jsdom/issues/317
 (global as any).document.createRange = () => ({
-  setStart: () => {},
-  setEnd: () => {},
+  setStart: () => { },
+  setEnd: () => { },
   commonAncestorContainer: {
     nodeName: 'BODY',
     ownerDocument: document,
@@ -19,7 +19,7 @@ import {TokenizingField} from 'src/TokenizingField';
 // https://stackoverflow.com/questions/23892547/what-is-the-best-way-to-trigger-onchange-event-in-react-js
 const setValue = (node: HTMLInputElement, value: string) => {
   Object.getOwnPropertyDescriptor((node as any).__proto__, 'value')!.set!.call(node, value);
-  node.dispatchEvent(new Event('change', {bubbles: true}));
+  node.dispatchEvent(new Event('change', { bubbles: true }));
 };
 
 const suggestions = [
@@ -29,7 +29,7 @@ const suggestions = [
   },
   {
     token: 'status',
-    values: () => ['NOT_STARTED', 'STARTED', 'SUCCESS', 'FAILURE', 'MANAGED'],
+    values: () => ['QUEUED', 'NOT_STARTED', 'STARTED', 'SUCCESS', 'FAILURE', 'MANAGED'],
   },
 ];
 
@@ -73,7 +73,7 @@ it('renders with tokens [snapshot]', () => {
   const onChange = jest.fn();
   const component = TestRenderer.create(
     <TokenizingField
-      values={[{token: 'pipeline', value: 'composition'}, {value: 'freeform'}]}
+      values={[{ token: 'pipeline', value: 'composition' }, { value: 'freeform' }]}
       maxValues={2}
       onChange={onChange}
       suggestionProviders={suggestions}
@@ -143,7 +143,7 @@ it('filters properly when typing a value without the preceding token', () => {
   act(() => {
     inputEl.focus();
     setValue(inputEl, 'airline');
-    inputEl.dispatchEvent(new Event('change', {bubbles: true}));
+    inputEl.dispatchEvent(new Event('change', { bubbles: true }));
   });
   expectOptions(['pipeline:airline_demo_ingest', 'pipeline:airline_demo_warehouse']);
 });

@@ -39,6 +39,7 @@ export enum ObjectStoreOperationType {
 export enum PipelineRunStatus {
   FAILURE = "FAILURE",
   MANAGED = "MANAGED",
+  QUEUED = "QUEUED",
   NOT_STARTED = "NOT_STARTED",
   STARTED = "STARTED",
   SUCCESS = "SUCCESS",

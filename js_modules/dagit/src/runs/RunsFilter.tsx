@@ -1,10 +1,10 @@
 import gql from 'graphql-tag';
 import * as querystring from 'query-string';
 import * as React from 'react';
-import {QueryResult, useQuery} from 'react-apollo';
-import {__RouterContext as RouterContext} from 'react-router';
+import { QueryResult, useQuery } from 'react-apollo';
+import { __RouterContext as RouterContext } from 'react-router';
 
-import {DagsterRepositoryContext, useRepositorySelector} from 'src/DagsterRepositoryContext';
+import { DagsterRepositoryContext, useRepositorySelector } from 'src/DagsterRepositoryContext';
 import {
   SuggestionProvider,
   TokenizingField,
@@ -12,8 +12,8 @@ import {
   stringFromValue,
   tokenizedValuesFromString,
 } from 'src/TokenizingField';
-import {RunsSearchSpaceQuery} from 'src/runs/types/RunsSearchSpaceQuery';
-import {PipelineRunStatus, PipelineRunsFilter} from 'src/types/globalTypes';
+import { RunsSearchSpaceQuery } from 'src/runs/types/RunsSearchSpaceQuery';
+import { PipelineRunStatus, PipelineRunsFilter } from 'src/types/globalTypes';
 
 export type RunFilterTokenType = 'id' | 'status' | 'pipeline' | 'snapshotId' | 'tag';
 
@@ -49,7 +49,7 @@ export const RUN_PROVIDERS_EMPTY = [
  * be provided (eg pipeline:, which is not relevant within pipeline scoped views.)
  */
 export function useRunFiltering(enabledFilters?: RunFilterTokenType[]) {
-  const {history, location} = React.useContext(RouterContext);
+  const { history, location } = React.useContext(RouterContext);
   const qs = querystring.parse(location.search);
 
   const filterTokens = tokenizedValuesFromString(
@@ -60,8 +60,8 @@ export function useRunFiltering(enabledFilters?: RunFilterTokenType[]) {
   );
   const setFilterTokens = (tokens: TokenizingFieldValue[]) => {
     // Note: changing search also clears the cursor so you're back on page 1
-    const params = {...qs, q: stringFromValue(tokens), cursor: undefined};
-    history.push({search: `?${querystring.stringify(params)}`});
+    const params = { ...qs, q: stringFromValue(tokens), cursor: undefined };
+    history.push({ search: `?${querystring.stringify(params)}` });
   };
   return [filterTokens, setFilterTokens] as [typeof filterTokens, typeof setFilterTokens];
 }
@@ -85,9 +85,9 @@ export function runsFilterForSearchTokens(search: TokenizingFieldValue[]) {
     } else if (item.token === 'tag') {
       const [key, value] = item.value.split('=');
       if (obj.tags) {
-        obj.tags.push({key, value});
+        obj.tags.push({ key, value });
       } else {
-        obj.tags = [{key, value}];
+        obj.tags = [{ key, value }];
       }
     }
   }
@@ -112,7 +112,7 @@ function searchSuggestionsForRuns(
     },
     {
       token: 'status',
-      values: () => ['NOT_STARTED', 'STARTED', 'SUCCESS', 'FAILURE', 'MANAGED'],
+      values: () => ['QUEUED', 'NOT_STARTED', 'STARTED', 'SUCCESS', 'FAILURE', 'MANAGED'],
     },
     {
       token: 'pipeline',
@@ -160,7 +160,7 @@ export const RunsFilter: React.FunctionComponent<RunsFilterProps> = ({
     useQuery<RunsSearchSpaceQuery>(RUNS_SEARCH_SPACE_QUERY, {
       fetchPolicy: 'cache-and-network',
       skip: !repoContext?.repository || !repoContext?.repositoryLocation,
-      variables: repoContext?.repository ? {repositorySelector} : {},
+      variables: repoContext?.repository ? { repositorySelector } : {},
     }),
     enabledFilters,
   );
@@ -172,7 +172,7 @@ export const RunsFilter: React.FunctionComponent<RunsFilterProps> = ({
     values: TokenizingFieldValue[],
   ) => {
     const tokens: string[] = [];
-    for (const {token} of values) {
+    for (const { token } of values) {
       if (token) {
         tokens.push(token);
       }

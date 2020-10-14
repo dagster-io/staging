@@ -1,8 +1,8 @@
 import gql from 'graphql-tag';
 import * as React from 'react';
 
-import {RunStatusPipelineRunFragment} from 'src/runs/types/RunStatusPipelineRunFragment';
-import {PipelineRunStatus} from 'src/types/globalTypes';
+import { RunStatusPipelineRunFragment } from 'src/runs/types/RunStatusPipelineRunFragment';
+import { PipelineRunStatus } from 'src/types/globalTypes';
 
 const link = (document.querySelector("link[rel*='icon']") ||
   document.createElement('link')) as HTMLLinkElement;
@@ -16,6 +16,7 @@ const FaviconsForStatus = {
   [PipelineRunStatus.FAILURE]: '/favicon_failed.ico',
   [PipelineRunStatus.STARTED]: '/favicon_pending.ico',
   [PipelineRunStatus.NOT_STARTED]: '/favicon_pending.ico',
+  [PipelineRunStatus.QUEUED]: '/favicon_pending.ico',
   [PipelineRunStatus.SUCCESS]: '/favicon_success.ico',
 };
 
@@ -48,7 +49,7 @@ export class RunStatusToPageAttributes extends React.Component<{
   }
 
   updatePageAttributes() {
-    const {status, pipeline, runId} = this.props.run;
+    const { status, pipeline, runId } = this.props.run;
 
     title.textContent = `${pipeline.name} ${runId} [${status}]`;
     link.href = FaviconsForStatus[status] || '/favicon.ico';
