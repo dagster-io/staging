@@ -17,3 +17,5 @@ RUN pip install \
 
 # Get example pipelines
 COPY build_cache/ /
+
+RUN /install-grpc-health-check-probe.sh
