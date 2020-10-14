@@ -263,11 +263,6 @@ class SolidDefinition(ISolidDefinition):
         return self._compute_fn
 
     @property
-    def config_field(self):
-        rename_warning("config_schema", "config_field", "0.9.0")
-        return self._config_schema
-
-    @property
     def config_schema(self):
         return self._config_schema
 
