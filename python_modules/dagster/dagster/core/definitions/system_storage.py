@@ -5,7 +5,6 @@ from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.core.definitions.config_mappable import IConfigMappable
 from dagster.core.storage.file_manager import FileManager
 from dagster.core.storage.intermediate_storage import IntermediateStorage
-from dagster.utils.backcompat import rename_warning
 
 from .utils import check_valid_name
 
@@ -65,11 +64,6 @@ class SystemStorageDefinition(IConfigMappable):
         self.__configured_config_mapping_fn = check.opt_callable_param(
             _configured_config_mapping_fn, "config_mapping_fn"
         )
-
-    @property
-    def config_field(self):
-        rename_warning("config_schema", "config_field", "0.9.0")
-        return self.config_schema
 
     @property
     def name(self):
