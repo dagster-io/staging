@@ -59,10 +59,18 @@ def define_solid_config_cls(config_schema, inputs_field, outputs_field):
 class EnvironmentClassCreationData(
     namedtuple(
         "EnvironmentClassCreationData",
-        "pipeline_name solids dependency_structure mode_definition logger_defs",
+        "pipeline_name solids dependency_structure mode_definition logger_defs optional_solids",
     )
 ):
-    def __new__(cls, pipeline_name, solids, dependency_structure, mode_definition, logger_defs):
+    def __new__(
+        cls,
+        pipeline_name,
+        solids,
+        dependency_structure,
+        mode_definition,
+        logger_defs,
+        optional_solids,
+    ):
         return super(EnvironmentClassCreationData, cls).__new__(
             cls,
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
@@ -74,6 +82,7 @@ class EnvironmentClassCreationData(
             logger_defs=check.dict_param(
                 logger_defs, "logger_defs", key_type=str, value_type=LoggerDefinition
             ),
+            optional_solids=check.list_param(optional_solids, "optional_solids", of_type=Solid),
         )
 
 
@@ -132,7 +141,9 @@ def define_environment_cls(creation_data):
             {
                 "solids": Field(
                     define_solid_dictionary_cls(
-                        creation_data.solids, creation_data.dependency_structure,
+                        creation_data.solids,
+                        creation_data.optional_solids,
+                        creation_data.dependency_structure,
                     )
                 ),
                 "storage": storage_field,
@@ -246,11 +257,11 @@ def get_outputs_field(solid, handle):
     return Field(Array(output_entry_dict), is_required=False)
 
 
-def filtered_system_dict(fields):
-    return Field(Shape(remove_none_entries(fields)))
+def filtered_system_dict(fields, is_required=True):
+    return Field(Shape(remove_none_entries(fields)), is_required=is_required)
 
 
-def construct_leaf_solid_config(solid, handle, dependency_structure, config_schema):
+def construct_leaf_solid_config(solid, handle, dependency_structure, config_schema, is_required):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
@@ -260,11 +271,12 @@ def construct_leaf_solid_config(solid, handle, dependency_structure, config_sche
             "inputs": get_inputs_field(solid, handle, dependency_structure),
             "outputs": get_outputs_field(solid, handle),
             "config": config_schema,
-        }
+        },
+        is_required=is_required,
     )
 
 
-def define_isolid_field(solid, handle, dependency_structure):
+def define_isolid_field(solid, handle, dependency_structure, is_required=True):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
 
@@ -280,7 +292,7 @@ def define_isolid_field(solid, handle, dependency_structure):
 
     if isinstance(solid.definition, SolidDefinition):
         return construct_leaf_solid_config(
-            solid, handle, dependency_structure, solid.definition.config_schema
+            solid, handle, dependency_structure, solid.definition.config_schema, is_required,
         )
 
     composite_def = check.inst(solid.definition, CompositeSolidDefinition)
@@ -294,6 +306,7 @@ def define_isolid_field(solid, handle, dependency_structure):
             dependency_structure,
             # ...and in both cases, the correct schema for 'config' key is exposed by this property:
             composite_def.config_schema,
+            is_required,
         )
         # This case omits a 'solids' key, thus if a composite solid is `configured` or has a field
         # mapping, the user cannot stub any config, inputs, or outputs for inner (child) solids.
@@ -304,23 +317,34 @@ def define_isolid_field(solid, handle, dependency_structure):
                 "outputs": get_outputs_field(solid, handle),
                 "solids": Field(
                     define_solid_dictionary_cls(
-                        composite_def.solids, composite_def.dependency_structure, handle,
+                        composite_def.solids, [], composite_def.dependency_structure, handle,
                     )
                 ),
-            }
+            },
+            is_required=is_required,
         )
 
 
-def define_solid_dictionary_cls(solids, dependency_structure, parent_handle=None):
+def define_solid_dictionary_cls(
+    solids, optional_solids, dependency_structure, parent_handle=None,
+):
     check.list_param(solids, "solids", of_type=Solid)
+    check.list_param(optional_solids, "optional_solids", of_type=Solid)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
     check.opt_inst_param(parent_handle, "parent_handle", SolidHandle)
 
+    solid_is_requireds = [(solid, None) for solid in solids] + [
+        (solid, False) for solid in optional_solids
+    ]
+
     fields = {}
-    for solid in solids:
+    for solid, is_required in solid_is_requireds:
         if solid.definition.has_config_entry:
             fields[solid.name] = define_isolid_field(
-                solid, SolidHandle(solid.name, parent_handle), dependency_structure,
+                solid,
+                SolidHandle(solid.name, parent_handle),
+                dependency_structure,
+                is_required=is_required,
             )
 
     return Shape(fields)

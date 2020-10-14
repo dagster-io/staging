@@ -751,6 +751,15 @@ def _create_run_config_schema(pipeline_def, mode_definition):
     )
     from .run_config_schema import RunConfigSchema
 
+    if pipeline_def.is_subset_pipeline:
+        optional_solids = [
+            solid
+            for solid in pipeline_def.parent_pipeline_def.solids
+            if not pipeline_def.has_solid_named(solid.name)
+        ]
+    else:
+        optional_solids = []
+
     environment_type = define_environment_cls(
         EnvironmentClassCreationData(
             pipeline_name=pipeline_def.name,
@@ -758,6 +767,7 @@ def _create_run_config_schema(pipeline_def, mode_definition):
             dependency_structure=pipeline_def.dependency_structure,
             mode_definition=mode_definition,
             logger_defs=mode_definition.loggers,
+            optional_solids=optional_solids,
         )
     )
 
