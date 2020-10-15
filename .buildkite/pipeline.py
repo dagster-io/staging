@@ -136,6 +136,18 @@ def airline_demo_extra_cmds_fn(_):
     ]
 
 
+def celery_docker_extra_cmds_fn(version):
+    return celery_extra_cmds_fn(version) + [
+        "pushd python_modules/libraries/dagster-celery-docker/dagster_celery_docker_tests/",
+        "docker-compose up -d --remove-orphans",
+        network_buildkite_container("postgres"),
+        connect_sibling_docker_container(
+            "postgres", "test-postgres-db-celery-docker", "POSTGRES_TEST_DB_HOST",
+        ),
+        "popd",
+    ]
+
+
 def celery_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
@@ -380,7 +392,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
     ModuleBuildSpec(
         "python_modules/libraries/dagster-celery-docker",
         env_vars=["AWS_ACCOUNT_ID", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
-        extra_cmds_fn=celery_extra_cmds_fn,
+        extra_cmds_fn=celery_docker_extra_cmds_fn,
         depends_on_fn=test_image_depends_fn,
     ),
     ModuleBuildSpec(
