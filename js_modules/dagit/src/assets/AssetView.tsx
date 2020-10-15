@@ -13,7 +13,6 @@ import {
   AssetQuery_assetOrError_Asset_graphMaterializations,
   AssetQuery_assetOrError_Asset_lastMaterializations,
 } from 'src/assets/types/AssetQuery';
-import {AssetsRootQuery_assetsOrError_AssetConnection_nodes_key} from 'src/assets/types/AssetsRootQuery';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {MetadataEntries, MetadataEntry} from 'src/runs/MetadataEntry';
 import {RunStatus} from 'src/runs/RunStatusDots';
@@ -21,7 +20,10 @@ import {RunTable} from 'src/runs/RunTable';
 import {titleForRun} from 'src/runs/RunUtils';
 import {PipelineRunStatus} from 'src/types/globalTypes';
 
-type AssetKey = AssetsRootQuery_assetsOrError_AssetConnection_nodes_key;
+interface AssetKey {
+  path: string[];
+}
+
 type GraphMaterialization = AssetQuery_assetOrError_Asset_graphMaterializations;
 type LastMaterialization = AssetQuery_assetOrError_Asset_lastMaterializations;
 
