@@ -31,7 +31,11 @@ type AssetMaterialization {
   partition: String
 }
 
-union AssetOrError = Asset | AssetsNotSupportedError
+type AssetNotFoundError implements Error {
+  message: String!
+}
+
+union AssetOrError = Asset | AssetsNotSupportedError | AssetNotFoundError
 
 type AssetsNotSupportedError implements Error {
   message: String!
