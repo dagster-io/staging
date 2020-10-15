@@ -102,6 +102,12 @@ class TestPostgresInstance:
         from dagster_postgres.utils import wait_for_connection  # pylint: disable=import-error
 
         if BUILDKITE:
+
+            print(
+                "I AM ASSUMING THIS IS ALREADY UP, IS IT???? "
+                + repr(TestPostgresInstance.conn_string(**conn_args))
+            )
+
             yield TestPostgresInstance.conn_string(
                 **conn_args
             )  # buildkite docker is handled in pipeline setup
