@@ -72,6 +72,17 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
     def is_persistent(self):
         return False
 
+    def has_asset_key(self, asset_key):
+        for records in self._logs.values():
+            for record in records:
+                if (
+                    record.is_dagster_event
+                    and record.dagster_event.asset_key
+                    and record.dagster_event.asset_key == asset_key
+                ):
+                    return True
+        return False
+
     def get_all_asset_keys(self, prefix_path=None):
         asset_records = []
         for records in self._logs.values():

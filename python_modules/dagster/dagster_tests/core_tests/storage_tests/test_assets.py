@@ -132,6 +132,16 @@ def test_asset_keys(asset_aware_context):
 
 
 @asset_test
+def test_has_asset_key(asset_aware_context):
+    with asset_aware_context() as ctx:
+        instance, event_log_storage = ctx
+        execute_pipeline(pipeline_one, instance=instance)
+        execute_pipeline(pipeline_two, instance=instance)
+        assert event_log_storage.has_asset_key(AssetKey(["path", "to", "asset_3"]))
+        assert not event_log_storage.has_asset_key(AssetKey(["path", "to", "bogus", "asset"]))
+
+
+@asset_test
 def test_asset_events(asset_aware_context):
     with asset_aware_context() as ctx:
         instance, event_log_storage = ctx

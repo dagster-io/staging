@@ -224,3 +224,21 @@ snapshots['TestAssetAwareEventLog.test_get_prefixed_asset_keys[postgres_with_syn
         ]
     }
 }
+
+snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[in_memory_instance_in_process_env] 1'] = {
+    'assetOrError': {
+        '__typename': 'AssetNotFoundError'
+    }
+}
+
+snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[asset_aware_instance_in_process_env] 1'] = {
+    'assetOrError': {
+        '__typename': 'AssetNotFoundError'
+    }
+}
+
+snapshots['TestAssetAwareEventLog.test_get_asset_key_not_found[postgres_with_sync_run_launcher_in_process_env] 1'] = {
+    'assetOrError': {
+        '__typename': 'AssetNotFoundError'
+    }
+}

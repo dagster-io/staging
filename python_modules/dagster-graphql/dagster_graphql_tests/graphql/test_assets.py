@@ -30,6 +30,9 @@ GET_ASSET_MATERIALIZATION = """
                     }
                 }
             }
+            ... on AssetNotFoundError {
+                __typename
+            }
         }
     }
 """
@@ -125,6 +128,22 @@ class TestAssetAwareEventLog(
         assert result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
         result = execute_dagster_graphql(
             graphql_context, GET_ASSET_MATERIALIZATION, variables={"assetKey": {"path": ["a"]}}
+        )
+        assert result.data
+        snapshot.assert_match(result.data)
+
+    def test_get_asset_key_not_found(self, graphql_context, snapshot):
+        selector = infer_pipeline_selector(graphql_context, "single_asset_pipeline")
+        result = execute_dagster_graphql(
+            graphql_context,
+            LAUNCH_PIPELINE_EXECUTION_MUTATION,
+            variables={"executionParams": {"selector": selector, "mode": "default"}},
+        )
+        assert result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
+        result = execute_dagster_graphql(
+            graphql_context,
+            GET_ASSET_MATERIALIZATION,
+            variables={"assetKey": {"path": ["bogus", "asset"]}},
         )
         assert result.data
         snapshot.assert_match(result.data)

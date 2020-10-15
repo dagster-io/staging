@@ -98,6 +98,10 @@ class EventLogStorage(six.with_metaclass(ABCMeta)):
 
 class AssetAwareEventLogStorage(six.with_metaclass(ABCMeta)):
     @abstractmethod
+    def has_asset_key(self, asset_key):
+        pass
+
+    @abstractmethod
     def get_all_asset_keys(self, prefix_path=None):
         pass
 
