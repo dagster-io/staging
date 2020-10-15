@@ -26,6 +26,7 @@ import {SchedulerRoot} from 'src/schedules/SchedulerRoot';
 import {SchedulesRoot} from 'src/schedules/SchedulesRoot';
 import {SolidDetailsRoot} from 'src/solids/SolidDetailsRoot';
 import {SolidsRoot} from 'src/solids/SolidsRoot';
+import {WorkspaceRoot} from 'src/workspace/WorkspaceRoot';
 
 const AppRoutes = () => (
   <Switch>
@@ -40,6 +41,7 @@ const AppRoutes = () => (
     <Route path="/assets/(/?.*)" component={AssetEntryRoot} />
     <Route path="/instance" component={InstanceDetailsRoot} />
     <Route path="/pipeline/(.*)" component={PipelineRoot} />
+    <Route path="/workspace" component={WorkspaceRoot} />
 
     <DagsterRepositoryContext.Consumer>
       {(context) =>
