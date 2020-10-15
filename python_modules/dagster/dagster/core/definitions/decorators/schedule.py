@@ -6,6 +6,7 @@ import pendulum
 from dagster import check
 from dagster.core.definitions.partition import (
     PartitionSetDefinition,
+    create_cron_partition_selector_fn,
     create_default_partition_selector_fn,
 )
 from dagster.core.errors import DagsterInvalidDefinitionError
@@ -14,6 +15,7 @@ from dagster.utils.partitions import (
     DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE,
     DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
     DEFAULT_MONTHLY_FORMAT,
+    cron_partition_range,
     date_partition_range,
 )
 
@@ -24,8 +26,9 @@ from ..schedule import ScheduleDefinition
 # pylint: disable=C0301
 
 
+# We would deprecate this
 def schedule(
-    cron_schedule,
+    cron_schedule,  # pylint: disable=redefined-outer-name
     pipeline_name,
     name=None,
     tags=None,
@@ -84,6 +87,77 @@ def schedule(
             mode=mode,
             should_execute=should_execute,
             environment_vars=environment_vars,
+            execution_timezone=execution_timezone,
+        )
+
+    return inner
+
+
+def cron_schedule(
+    pipeline_name,
+    start_date,
+    cron_string,
+    name=None,
+    tags_fn_for_date=None,
+    solid_selection=None,
+    mode=None,
+    should_execute=None,
+    environment_vars=None,
+    end_date=None,
+    execution_timezone=None,
+):
+    check.str_param(pipeline_name, "pipeline_name")
+    check.inst_param(start_date, "start_date", datetime.datetime)
+    check.str_param(cron_string, "cron_string")
+    check.opt_str_param(name, "name")
+    check.opt_callable_param(tags_fn_for_date, "tags_fn_for_date")
+    check.opt_nullable_list_param(solid_selection, "solid_selection", of_type=str)
+    mode = check.opt_str_param(mode, "mode", DEFAULT_MODE_NAME)
+    check.opt_callable_param(should_execute, "should_execute")
+    check.opt_dict_param(environment_vars, "environment_vars", key_type=str, value_type=str)
+    check.opt_inst_param(end_date, "end_date", datetime.datetime)
+    check.opt_str_param(execution_timezone, "execution_timezone")
+
+    fmt = (
+        DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE
+        if execution_timezone
+        else DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE
+    )
+
+    partition_fn = cron_partition_range(
+        start_date, end=end_date, fmt=fmt, cron_schedule=cron_string, timezone=execution_timezone,
+    )
+
+    def inner(fn):
+        check.callable_param(fn, "fn")
+
+        schedule_name = name or fn.__name__
+
+        tags_fn_for_partition_value = lambda partition: {}
+        if tags_fn_for_date:
+            tags_fn_for_partition_value = lambda partition: tags_fn_for_date(partition.value)
+
+        partition_set = PartitionSetDefinition(
+            name="{}_partitions".format(schedule_name),
+            pipeline_name=pipeline_name,
+            partition_fn=partition_fn,
+            run_config_fn_for_partition=lambda partition: fn(partition.value),
+            solid_selection=solid_selection,
+            tags_fn_for_partition=tags_fn_for_partition_value,
+            mode=mode,
+        )
+
+        # we could make it configurable whether the partitions map to
+        # the previous execution time (i.e. you run at midnight for the previous day)
+        # or the current execution time?
+        return partition_set.create_schedule_definition(
+            schedule_name,
+            cron_schedule=cron_string,
+            should_execute=should_execute,
+            environment_vars=environment_vars,
+            partition_selector=create_cron_partition_selector_fn(
+                cron_schedule=cron_string, fmt=fmt, timezone=execution_timezone,
+            ),
             execution_timezone=execution_timezone,
         )
 
@@ -167,7 +241,7 @@ def monthly_schedule(
             "between 1 and 31".format(execution_day_of_month)
         )
 
-    cron_schedule = "{minute} {hour} {day} * *".format(
+    cron_string = "{minute} {hour} {day} * *".format(
         minute=execution_time.minute, hour=execution_time.hour, day=execution_day_of_month
     )
 
@@ -198,7 +272,7 @@ def monthly_schedule(
 
         return partition_set.create_schedule_definition(
             schedule_name,
-            cron_schedule,
+            cron_schedule=cron_string,
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(
@@ -281,7 +355,7 @@ def weekly_schedule(
             "between 0 [Sunday] and 6 [Saturday]".format(execution_day_of_week)
         )
 
-    cron_schedule = "{minute} {hour} * * {day}".format(
+    cron_string = "{minute} {hour} * * {day}".format(
         minute=execution_time.minute, hour=execution_time.hour, day=execution_day_of_week
     )
 
@@ -314,7 +388,7 @@ def weekly_schedule(
 
         return partition_set.create_schedule_definition(
             schedule_name,
-            cron_schedule,
+            cron_schedule=cron_string,
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(
@@ -388,7 +462,7 @@ def daily_schedule(
             "Use `execution_time` to execute the schedule later in the day."
         )
 
-    cron_schedule = "{minute} {hour} * * *".format(
+    cron_string = "{minute} {hour} * * *".format(
         minute=execution_time.minute, hour=execution_time.hour
     )
 
@@ -419,7 +493,7 @@ def daily_schedule(
 
         return partition_set.create_schedule_definition(
             schedule_name,
-            cron_schedule,
+            cron_schedule=cron_string,
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(
@@ -504,7 +578,7 @@ def hourly_schedule(
             "datetime.time(minute={minute}, ...) to fix this warning."
         )
 
-    cron_schedule = "{minute} * * * *".format(minute=execution_time.minute)
+    cron_string = "{minute} * * * *".format(minute=execution_time.minute)
 
     fmt = (
         DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE
@@ -537,7 +611,7 @@ def hourly_schedule(
 
         return partition_set.create_schedule_definition(
             schedule_name,
-            cron_schedule,
+            cron_schedule=cron_string,
             should_execute=should_execute,
             environment_vars=environment_vars,
             partition_selector=create_default_partition_selector_fn(

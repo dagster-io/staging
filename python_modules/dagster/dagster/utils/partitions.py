@@ -1,6 +1,7 @@
 import datetime
 
 import pendulum
+from croniter import croniter
 
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
@@ -9,6 +10,65 @@ DEFAULT_MONTHLY_FORMAT = "%Y-%m"
 DEFAULT_DATE_FORMAT = "%Y-%m-%d"
 DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE = "%Y-%m-%d-%H:%M"
 DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE = DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE + "%z"
+
+
+def cron_partition_range(start, fmt, cron_schedule, timezone, end, inclusive=False):
+    from dagster.core.definitions.partition import Partition
+
+    check.inst_param(start, "start", datetime.datetime)
+    check.opt_inst_param(end, "end", datetime.datetime)
+    check.str_param(cron_schedule, "cron_schedule")
+    check.str_param(fmt, "fmt")
+    check.opt_str_param(timezone, "timezone")
+
+    if end and start > end:
+        raise DagsterInvariantViolationError(
+            'Selected date range start "{start}" is after date range end "{end}'.format(
+                start=start.strftime(fmt), end=end.strftime(fmt),
+            )
+        )
+
+    def get_cron_range_partitions():
+        tz = timezone if timezone else pendulum.now().timezone.name
+
+        _start = (
+            start.in_tz(tz)
+            if isinstance(start, pendulum.Pendulum)
+            else pendulum.instance(start, tz=tz)
+        )
+
+        if not end:
+            _end = pendulum.now(tz)
+        elif isinstance(end, pendulum.Pendulum):
+            _end = end.in_tz(tz)
+        else:
+            _end = pendulum.instance(end, tz=tz)
+
+        date_iter = croniter(cron_schedule, _start)
+        # Go back one iteration so that the next iteration is the first time that is >= start_datetime
+        # and matches the cron schedule
+        date_iter.get_prev(datetime.datetime)
+
+        partitions = []
+        current = date_iter.get_next(datetime.datetime)
+
+        while current <= _end:
+            # During DST transitions, croniter returns datetimes that don't actually match the
+            # cron schedule, so add a guard here
+            if croniter.match(cron_schedule, current):
+                partitions.append(Partition(value=current, name=current.strftime(fmt)))
+
+            current = date_iter.get_next(datetime.datetime)
+
+        # We don't include the last element here by default since we only want
+        # fully completed intervals, and the _end time is in the middle of the interval
+        # represented by the last element of date_names
+        if inclusive:
+            return partitions
+
+        return partitions[:-1]
+
+    return get_cron_range_partitions
 
 
 def date_partition_range(

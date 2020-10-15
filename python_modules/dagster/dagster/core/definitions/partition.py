@@ -1,4 +1,8 @@
+import datetime
 from collections import namedtuple
+
+import pendulum
+from croniter import croniter
 
 from dagster import check
 from dagster.core.definitions.schedule import ScheduleDefinition, ScheduleExecutionContext
@@ -55,6 +59,42 @@ def create_default_partition_selector_fn(
         return partition_set_def.get_partition(partition_name)
 
     return default_partition_selector
+
+
+def create_cron_partition_selector_fn(
+    cron_schedule, fmt, timezone,
+):
+    check.str_param(cron_schedule, "cron_schedule")
+    check.str_param(fmt, "fmt")
+
+    def cron_partition_selector(context, partition_set_def):
+        check.inst_param(context, "context", ScheduleExecutionContext)
+        check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
+
+        if not context.scheduled_execution_time:
+            return last_partition(context, partition_set_def)
+
+        partition_time = context.scheduled_execution_time
+
+        date_iter = croniter(cron_schedule, partition_time)
+
+        while True:
+            prev_partition_time = date_iter.get_prev(datetime.datetime)
+
+            # During DST transitions, croniter returns datetimes that don't actually match the
+            # cron schedule, so add a guard here
+            if croniter.match(cron_schedule, prev_partition_time):
+                break
+
+        tz = timezone if timezone else pendulum.now().timezone.name
+        partition_name = pendulum.instance(prev_partition_time).in_tz(tz).strftime(fmt)
+
+        if not partition_name in partition_set_def.get_partition_names():
+            return None
+
+        return partition_set_def.get_partition(partition_name)
+
+    return cron_partition_selector
 
 
 def last_partition(context, partition_set_def):
