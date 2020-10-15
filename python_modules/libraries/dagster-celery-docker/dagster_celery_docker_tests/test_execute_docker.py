@@ -67,7 +67,7 @@ def test_execute_celery_docker():
     docker_config = {
         "image": docker_image,
         "env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",],
-        "network": "container:test-postgres-db-celery-docker",
+        #        "network": "container:test-postgres-db-celery-docker",
     }
 
     if IS_BUILDKITE:
@@ -97,30 +97,30 @@ def test_execute_celery_docker():
         except docker.errors.ImageNotFound:
             build_and_tag_test_image(docker_image)
 
-        run_config = merge_dicts(
-            merge_yamls(
-                [
-                    os.path.join(test_project_environments_path(), "env.yaml"),
-                    os.path.join(test_project_environments_path(), "env_s3.yaml"),
-                ]
-            ),
-            {
-                "execution": {
-                    "celery-docker": {
-                        "config": {
-                            "docker": docker_config,
-                            "config_source": {"task_always_eager": True},
-                        }
+    run_config = merge_dicts(
+        merge_yamls(
+            [
+                os.path.join(test_project_environments_path(), "env.yaml"),
+                os.path.join(test_project_environments_path(), "env_s3.yaml"),
+            ]
+        ),
+        {
+            "execution": {
+                "celery-docker": {
+                    "config": {
+                        "docker": docker_config,
+                        "config_source": {"task_always_eager": True},
                     }
-                },
+                }
             },
+        },
+    )
+
+    with postgres_instance() as instance:
+
+        result = execute_pipeline(
+            get_test_project_recon_pipeline("docker_celery_pipeline"),
+            run_config=run_config,
+            instance=instance,
         )
-
-        with postgres_instance() as instance:
-
-            result = execute_pipeline(
-                get_test_project_recon_pipeline("docker_celery_pipeline"),
-                run_config=run_config,
-                instance=instance,
-            )
-            assert result.success
+        assert result.success
