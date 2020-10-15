@@ -1,41 +1,39 @@
-from slackclient import SlackClient
+from slack import WebClient
 
-from dagster import Field, StringSource, resource, seven
+from dagster import Field, StringSource, resource
 
 
 class SlackConnection:
-    def __init__(self, token):
-        self.token = token
-        self.sc = SlackClient(self.token)
+    DAGSTER_ICON_URL = "https://user-images.githubusercontent.com/609349/57993619-9ff2ee00-7a6e-11e9-9184-b3414e3eeb30.png"
+    DAGSTER_SLACK_USERNAME = "dagsterbot"
+
+    def __init__(self, token: str):
+        self._token = token
+        self.sc = WebClient(self._token)
 
         class _Chat:
             @classmethod
-            def post_message(
-                cls,
-                channel="#noise",
-                username="dagsterbot",
-                text="Hello from Dagster!",
-                # pylint: disable=line-too-long
-                icon_url="https://user-images.githubusercontent.com/609349/57993619-9ff2ee00-7a6e-11e9-9184-b3414e3eeb30.png",
-                attachments=None,
-            ):
+            def post_message(cls, channel: str, text: str, **kwargs):
                 """slack_resource.chat.post_message() : chat.postMessage
 
                 See https://api.slack.com/methods/chat.postMessage
                 """
-                api_params = {
-                    "channel": channel,
-                    "username": username,
-                    "text": text,
-                    "icon_url": icon_url,
-                    "attachments": seven.json.dumps(attachments),
-                }
-                return self.sc.api_call("chat.postMessage", **api_params)
+                return self.sc.chat_postMessage(
+                    channel=channel,
+                    text=text,
+                    icon_url=SlackConnection.DAGSTER_ICON_URL,
+                    username=SlackConnection.DAGSTER_SLACK_USERNAME,
+                    **kwargs,
+                )
 
         self.chat = _Chat
 
-    def api_call(self, method, timeout=None, **kwargs):
-        return self.sc.api_call(method, timeout, **kwargs)
+    def api_call(self, api_method: str, **kwargs):
+        """ slack_resource.api_call()
+
+        See https://slack.dev/python-slackclient/basic_usage.html#calling-any-api-methods
+        """
+        return self.sc.api_call(api_method, **kwargs)
 
 
 @resource(
