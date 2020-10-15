@@ -16,7 +16,7 @@ def test_slack_resource():
                 status=200,
                 json={
                     "ok": True,
-                    "channel": "SOME_CHANNEL",
+                    "channel": "#random",
                     "ts": "1555993892.000300",
                     "headers": {"Content-Type": "application/json; charset=utf-8"},
                 },
