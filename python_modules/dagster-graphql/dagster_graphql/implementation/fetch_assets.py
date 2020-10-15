@@ -24,6 +24,9 @@ def get_asset(graphene_info, asset_key):
             message="The configured event log storage is not asset aware."
         )
 
+    if not instance.has_asset_key(asset_key):
+        return graphene_info.schema.type_named("AssetNotFoundError")(asset_key=asset_key)
+
     return graphene_info.schema.type_named("Asset")(key=asset_key)
 
 
