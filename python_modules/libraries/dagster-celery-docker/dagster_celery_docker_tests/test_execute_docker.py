@@ -116,11 +116,11 @@ def test_execute_celery_docker():
             },
         )
 
-        with postgres_instance() as instance:
+    with postgres_instance() as instance:
 
-            result = execute_pipeline(
-                get_test_project_recon_pipeline("docker_celery_pipeline"),
-                run_config=run_config,
-                instance=instance,
-            )
-            assert result.success
+        result = execute_pipeline(
+            get_test_project_recon_pipeline("docker_celery_pipeline"),
+            run_config=run_config,
+            instance=instance,
+        )
+        assert result.success
