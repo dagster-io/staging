@@ -73,11 +73,12 @@ def ensure_valid_config(external_pipeline, mode, run_config):
 
 
 def ensure_valid_step_keys(full_external_execution_plan, step_keys):
+    print('in ensure_valid_step_keys')
     check.inst_param(
         full_external_execution_plan, 'full_external_execution_plan', ExternalExecutionPlan
     )
     check.opt_list_param(step_keys, 'step_keys', of_type=str)
-
+    return  # hack
     if not step_keys:
         return
 
@@ -85,6 +86,7 @@ def ensure_valid_step_keys(full_external_execution_plan, step_keys):
         if not full_external_execution_plan.has_step(step_key):
             from dagster_graphql.schema.errors import DauphinInvalidStepError
 
+            print("raise DauphinInvalidStepError with key", step_key)
             raise UserFacingGraphQLError(DauphinInvalidStepError(invalid_step_key=step_key))
 
 
@@ -97,7 +99,7 @@ def get_external_execution_plan_or_raise(
         mode=mode,
         step_keys_to_execute=None,
     )
-
+    print("full_external_execution_plan, ", full_external_execution_plan.step_keys_in_plan)
     if not step_keys_to_execute:
         return full_external_execution_plan
 

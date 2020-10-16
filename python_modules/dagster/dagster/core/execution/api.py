@@ -44,6 +44,8 @@ from .results import PipelineExecutionResult
 
 
 def execute_run_iterator(pipeline, pipeline_run, instance):
+    # goes through here
+    print('in execute_run_iterator')
     check.inst_param(pipeline, 'pipeline', ExecutablePipeline)
     check.inst_param(pipeline_run, 'pipeline_run', PipelineRun)
     check.inst_param(instance, 'instance', DagsterInstance)
@@ -67,6 +69,7 @@ def execute_run_iterator(pipeline, pipeline_run, instance):
             pipeline = pipeline.subset_for_execution_from_existing_pipeline(
                 pipeline_run.solids_to_execute
             )
+    print('pipeline_run.step_keys_to_execute', pipeline_run.step_keys_to_execute)
     execution_plan = create_execution_plan(
         pipeline,
         run_config=pipeline_run.run_config,
@@ -104,6 +107,7 @@ def execute_run(pipeline, pipeline_run, instance, raise_on_error=False):
     Returns:
         PipelineExecutionResult: The result of the execution.
     '''
+    print('in execute_run')
     if isinstance(pipeline, PipelineDefinition):
         raise DagsterInvariantViolationError(
             'execute_run requires an ExecutablePipeline but received a PipelineDefinition '
@@ -390,6 +394,7 @@ def reexecute_pipeline(
 
     For the asynchronous version, see :py:func:`reexecute_pipeline_iterator`.
     '''
+    print('in reexecute pipeline')
     check.str_param(parent_run_id, 'parent_run_id')
 
     (pipeline, run_config, instance, mode, tags, _, _) = _check_execute_pipeline_args(
@@ -464,6 +469,7 @@ def reexecute_pipeline_iterator(
     '''
     check.str_param(parent_run_id, 'parent_run_id')
 
+    print('in reexecute_pipeline_iterator')
     (pipeline, run_config, instance, mode, tags, _, _) = _check_execute_pipeline_args(
         pipeline=pipeline,
         run_config=run_config,
@@ -499,6 +505,7 @@ def reexecute_pipeline_iterator(
 def execute_plan_iterator(
     execution_plan, pipeline_run, instance, retries=None, run_config=None,
 ):
+    print("in execute_plan_iterator")
     check.inst_param(execution_plan, 'execution_plan', ExecutionPlan)
     check.inst_param(pipeline_run, 'pipeline_run', PipelineRun)
     check.inst_param(instance, 'instance', DagsterInstance)
@@ -527,6 +534,7 @@ def execute_plan(
     '''This is the entry point of dagster-graphql executions. For the dagster CLI entry point, see
     execute_pipeline() above.
     '''
+    print("in execute_plan")
     check.inst_param(execution_plan, 'execution_plan', ExecutionPlan)
     check.inst_param(instance, 'instance', DagsterInstance)
     check.inst_param(pipeline_run, 'pipeline_run', PipelineRun)

@@ -20,6 +20,7 @@ def launch_pipeline_execution(graphene_info, execution_params):
 
 
 def do_launch(graphene_info, execution_params, is_reexecuted=False):
+    print("in do_launch with execution_params", execution_params)
     check.inst_param(graphene_info, 'graphene_info', ResolveInfo)
     check.inst_param(execution_params, 'execution_params', ExecutionParams)
     check.bool_param(is_reexecuted, 'is_reexecuted')

@@ -460,6 +460,7 @@ def create_execution_params_and_launch_pipeline_reexec(graphene_info, execution_
 
 
 class DauphinLaunchPipelineReexecutionMutation(dauphin.Mutation):
+    # might be here?
     class Meta(object):
         name = 'DauphinLaunchPipelineReexecutionMutation'
         description = 'Re-launch a pipeline run via the run launcher configured on the instance'
@@ -470,6 +471,10 @@ class DauphinLaunchPipelineReexecutionMutation(dauphin.Mutation):
     Output = dauphin.NonNull('LaunchPipelineReexecutionResult')
 
     def mutate(self, graphene_info, **kwargs):
+        print(
+            'in DauphinLaunchPipelineReexecutionMutation with execution params',
+            kwargs['executionParams'],
+        )
         return create_execution_params_and_launch_pipeline_reexec(
             graphene_info, execution_params_dict=kwargs['executionParams'],
         )

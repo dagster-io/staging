@@ -28,6 +28,12 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
 
     for record in parent_run_logs:
         if record.dagster_event and record.dagster_event.step_key:
+            print(
+                'processing step ',
+                record.dagster_event.step_key,
+                ' of type ',
+                record.dagster_event_type,
+            )
             all_steps_in_parent_run_logs.add(record.dagster_event.step_key)
             if record.dagster_event_type == DagsterEventType.STEP_FAILURE:
                 failed_steps_in_parent_run_logs.add(record.dagster_event.step_key)
@@ -44,10 +50,15 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
         ):
             interrupted_steps_in_parent_run_logs.add(step_key)
 
+    print('failed_steps_in_parent_run_logs', failed_steps_in_parent_run_logs)
+    print('successful_steps_in_parent_run_logs', successful_steps_in_parent_run_logs)
+    print('skipped_steps_in_parent_run_logs', skipped_steps_in_parent_run_logs)
     to_retry = []
 
     execution_deps = execution_plan.execution_deps()
+    print('execution_deps', execution_deps)
     for step in execution_plan.topological_steps():
+        print('current step', step)
         if parent_run.step_keys_to_execute and step.key not in parent_run.step_keys_to_execute:
             continue
 
@@ -66,7 +77,8 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
         if step_deps.intersection(to_retry):
             # this step is downstream of a step we are about to retry
             to_retry.append(step.key)
-
+    to_retry = to_retry + list(failed_steps_in_parent_run_logs)  # hack
+    print('to_retry is ', to_retry)
     return to_retry
 
 
@@ -78,6 +90,8 @@ def compute_step_keys_to_execute(graphene_info, external_pipeline, execution_par
     instance = graphene_info.context.instance
 
     if not execution_params.step_keys and is_resume_retry(execution_params):
+        # i guess the problem is here?
+        print(" at if not execution_params.step_keys and is_resume_retry(execution_params):")
         # Get step keys from parent_run_id if it's a resume/retry
         external_execution_plan = get_external_execution_plan_or_raise(
             graphene_info=graphene_info,
@@ -86,6 +100,7 @@ def compute_step_keys_to_execute(graphene_info, external_pipeline, execution_par
             run_config=execution_params.run_config,
             step_keys_to_execute=None,
         )
+        print('external_execution_plan', external_execution_plan)
         return get_retry_steps_from_execution_plan(
             instance, external_execution_plan, execution_params.execution_metadata.parent_run_id
         )

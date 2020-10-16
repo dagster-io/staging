@@ -54,23 +54,32 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
 
     output_handles_for_current_run = output_handles_from_execution_plan(execution_plan)
     output_handles_from_previous_run = output_handles_from_event_logs(parent_run_logs)
-    output_handles_to_copy = output_handles_for_current_run.intersection(
-        output_handles_from_previous_run
-    )
+    # output_handles_to_copy = output_handles_for_current_run.intersection(
+    #     output_handles_from_previous_run
+    # )
+    output_handles_to_copy = output_handles_from_previous_run  # hack
     output_handles_to_copy_by_step = defaultdict(list)
     for handle in output_handles_to_copy:
         output_handles_to_copy_by_step[handle.step_key].append(handle)
 
     intermediate_storage = pipeline_context.intermediate_storage
-    for step in execution_plan.topological_steps():
+    print('execution_plan.step_dict', execution_plan.step_dict)
+    print('output_handles_from_previous_run', output_handles_from_previous_run)
+    print('output_handles_for_current_run', output_handles_for_current_run)
+    print('output_handles_to_copy_by_step', output_handles_to_copy_by_step)
+    for step in execution_plan.steps:  # hack attack  # <-- breaking here 2
+        print('step', step)
         step_context = pipeline_context.for_step(step)
         for handle in output_handles_to_copy_by_step.get(step.key, []):
+            print('copying handle!!')  # i think this isn't happening?
             if intermediate_storage.has_intermediate(pipeline_context, handle):
+                print('skipping copy since has_intermediate is true')
                 continue
 
             operation = intermediate_storage.copy_intermediate_from_run(
                 pipeline_context, parent_run_id, handle
             )
+            print('intermediate copied for handle', handle.step_key)
             yield DagsterEvent.object_store_operation(
                 step_context,
                 ObjectStoreOperation.serializable(operation, value_name=handle.output_name),
@@ -93,6 +102,7 @@ def is_intermediate_storage_write_event(record):
 
 
 def output_handles_from_event_logs(event_logs):
+    print('in output_handles_from_event_logs')
     output_handles_from_previous_run = set()
     failed_step_keys = set(
         record.dagster_event.step_key
@@ -102,9 +112,11 @@ def output_handles_from_event_logs(event_logs):
 
     for record in event_logs:
         if not is_intermediate_storage_write_event(record):
+            print('continue 1')
             continue
 
         if record.dagster_event.step_key in failed_step_keys:
+            print('continue 2')
             # skip output events from failed steps
             continue
 
@@ -113,7 +125,9 @@ def output_handles_from_event_logs(event_logs):
                 record.dagster_event.step_key, record.dagster_event.event_specific_data.value_name
             )
         )
+        print('added to output_handles_from_previous_run')
 
+    print('returning ', output_handles_from_previous_run)
     return output_handles_from_previous_run
 
 
