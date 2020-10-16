@@ -51,6 +51,7 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         self._engine = create_engine(
             self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
         )
+        self._summary_data_cache = {}
         self._disposed = False
 
         with self.connect() as conn:
@@ -102,6 +103,16 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
 
     def connect(self, run_id=None):
         return create_pg_connection(self._engine, __file__, "event log")
+
+    def has_summary_data(self, name, run_id=None):
+        if name not in self._summary_data_cache:
+            self._summary_data_cache[name] = super().has_summary_data(name, run_id)
+        return self._summary_data_cache[name]
+
+    def mark_summary_data_complete(self, name, run_id=None):
+        super().mark_summary_data_complete(name)
+        if name in self._summary_data_cache:
+            del self._summary_data_cache[name]
 
     def watch(self, run_id, start_cursor, callback):
         self._event_watcher.watch_run(run_id, start_cursor, callback)
