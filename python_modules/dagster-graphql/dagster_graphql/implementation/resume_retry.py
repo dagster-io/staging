@@ -66,7 +66,8 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
         if step_deps.intersection(to_retry):
             # this step is downstream of a step we are about to retry
             to_retry.append(step.key)
-
+    to_retry = to_retry + list(failed_steps_in_parent_run_logs)  # hack
+    print('to_retry is ', to_retry)
     return to_retry
 
 
@@ -86,6 +87,7 @@ def compute_step_keys_to_execute(graphene_info, external_pipeline, execution_par
             run_config=execution_params.run_config,
             step_keys_to_execute=None,
         )
+
         return get_retry_steps_from_execution_plan(
             instance, external_execution_plan, execution_params.execution_metadata.parent_run_id
         )

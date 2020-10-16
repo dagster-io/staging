@@ -111,6 +111,14 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def _get_paths(self, step_output_handle):
+        if step_output_handle.special_index is not None:
+            return [
+                'intermediates',
+                step_output_handle.step_key,
+                step_output_handle.output_name,
+                step_output_handle.special_index,
+            ]
+
         return ['intermediates', step_output_handle.step_key, step_output_handle.output_name]
 
     def get_intermediate_object(self, dagster_type, step_output_handle):
@@ -206,7 +214,6 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
 
         src = self.object_store.key_for_paths([self.root_for_run_id(run_id)] + paths)
         dst = self.object_store.key_for_paths([self.root] + paths)
-
         return self.object_store.cp_object(src, dst)
 
     def uri_for_paths(self, paths, protocol=None):

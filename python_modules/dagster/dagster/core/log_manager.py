@@ -162,6 +162,9 @@ class DagsterLogManager(namedtuple('_DagsterLogManager', 'run_id logging_tags lo
             DagsterLogManager: a new DagsterLogManager namedtuple with updated tags for the same
                 run ID and loggers.
         '''
+        print('new_tags')
+        print(new_tags)
+        print(type(new_tags))
         return self._replace(logging_tags=merge_dicts(self.logging_tags, new_tags))
 
     def _prepare_message(self, orig_message, message_props):

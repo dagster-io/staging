@@ -7,11 +7,12 @@ from dagster.core.definitions import (
     Solid,
     SolidHandle,
 )
+from dagster.core.definitions.events import SpecialOutput
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
 
-from .objects import ExecutionStep, StepInput, StepKind, StepOutput
+from .objects import ExecutionStep, StepInput, StepKind, StepOutput, UnresolvedExecutionStep
 
 
 def create_compute_step(pipeline_name, environment_config, solid, step_inputs, handle):
@@ -31,7 +32,7 @@ def create_compute_step(pipeline_name, environment_config, solid, step_inputs, h
 
     return ExecutionStep(
         pipeline_name=pipeline_name,
-        key_suffix='compute',
+        key_tag=None,  # janky shit should be fixed
         step_inputs=step_inputs,
         step_outputs=[
             StepOutput(
@@ -71,7 +72,9 @@ def _yield_compute_results(compute_context, inputs, compute_fn):
         return
 
     for event in user_event_sequence:
-        if isinstance(event, (Output, AssetMaterialization, Materialization, ExpectationResult)):
+        if isinstance(
+            event, (SpecialOutput, Output, AssetMaterialization, Materialization, ExpectationResult)
+        ):
             yield event
         else:
             raise DagsterInvariantViolationError(

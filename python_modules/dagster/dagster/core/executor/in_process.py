@@ -32,6 +32,10 @@ class InProcessExecutor(Executor):
             event_specific_data=EngineEventData.in_process(os.getpid(), step_keys_to_execute),
         )
 
+        #  event_specific_data = {"error": null, "marker_end": null, "marker_start": null,
+        #  "metadata_entries": [["pid", null, ["27965"]], ["step_keys", null,
+        # ["['echo_again[emit.compute:result:2].compute']"]]]}
+
         with time_execution_scope() as timer_result:
             for event in inner_plan_execution_iterator(pipeline_context, execution_plan):
                 yield event

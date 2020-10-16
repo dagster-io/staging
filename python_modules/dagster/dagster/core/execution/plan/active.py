@@ -1,9 +1,11 @@
 import time
+from collections import defaultdict
 
 from dagster import check
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.retries import Retries
 
+from .objects import ExecutionStep, UnresolvedExecutionStep
 from .plan import ExecutionPlan
 
 
@@ -19,6 +21,13 @@ class ActiveExecution(object):
         self._plan = check.inst_param(execution_plan, 'execution_plan', ExecutionPlan)
         self._retries = check.inst_param(retries, 'retries', Retries)
         self._sort_key_fn = check.opt_callable_param(sort_key_fn, 'sort_key_fn', _default_sort_key)
+
+        self._step_dict = dict(self._plan.step_dict)  # copy
+
+        self._unresolved = self._plan.resolution_deps()
+        self._special_outputs = defaultdict(
+            list
+        )  # UnresolvedStepOutputHandle -> List[StepOutputHandle]
 
         # All steps to be executed start out here in _pending
         self._pending = self._plan.execution_deps()
@@ -45,6 +54,23 @@ class ActiveExecution(object):
         '''Moves steps from _pending to _executable / _pending_skip / _pending_retry
            as a function of what has been _completed
         '''
+
+        unresolved_to_clear = []
+        for unresolved_key, requirements in self._unresolved.items():
+            if requirements.issubset(self._completed):
+                unresolved_step = self.get_step_by_key(unresolved_key)
+                execution_steps = unresolved_step.resolve(self._special_outputs)
+                for step in execution_steps:
+                    self._step_dict[step.key] = step
+                    self._pending[step.key] = set()
+                    for step_input in step.step_inputs:
+                        self._pending[step.key].update(step_input.dependency_keys)
+
+                unresolved_to_clear.append(unresolved_key)
+
+        for key in unresolved_to_clear:
+            del self._unresolved[key]
+
         new_steps_to_execute = []
         new_steps_to_skip = []
         for step_key, requirements in self._pending.items():
@@ -114,7 +140,7 @@ class ActiveExecution(object):
         return step
 
     def get_step_by_key(self, step_key):
-        return self._plan.get_step_by_key(step_key)
+        return self._step_dict[step_key]
 
     def get_steps_to_execute(self, limit=None):
         check.opt_int_param(limit, 'limit')
@@ -232,6 +258,9 @@ class ActiveExecution(object):
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,
             )
+        elif dagster_event.is_successful_output and dagster_event.step_output_data.special_index:
+            handle = dagster_event.step_output_data.step_output_handle
+            self._special_outputs[handle.special_form].append(handle)
 
     def verify_complete(self, pipeline_context, step_key):
         '''Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
@@ -253,4 +282,5 @@ class ActiveExecution(object):
             and len(self._pending_skip) == 0
             and len(self._pending_retry) == 0
             and len(self._waiting_to_retry) == 0
+            and len(self._unresolved) == 0
         )

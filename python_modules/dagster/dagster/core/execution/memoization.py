@@ -54,15 +54,16 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
 
     output_handles_for_current_run = output_handles_from_execution_plan(execution_plan)
     output_handles_from_previous_run = output_handles_from_event_logs(parent_run_logs)
-    output_handles_to_copy = output_handles_for_current_run.intersection(
-        output_handles_from_previous_run
-    )
+    # output_handles_to_copy = output_handles_for_current_run.intersection(
+    #     output_handles_from_previous_run
+    # )
+    output_handles_to_copy = output_handles_from_previous_run  # hack attack
     output_handles_to_copy_by_step = defaultdict(list)
     for handle in output_handles_to_copy:
         output_handles_to_copy_by_step[handle.step_key].append(handle)
 
     intermediate_storage = pipeline_context.intermediate_storage
-    for step in execution_plan.topological_steps():
+    for step in execution_plan.steps:  # hack
         step_context = pipeline_context.for_step(step)
         for handle in output_handles_to_copy_by_step.get(step.key, []):
             if intermediate_storage.has_intermediate(pipeline_context, handle):
