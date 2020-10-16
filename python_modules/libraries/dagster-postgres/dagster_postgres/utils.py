@@ -1,6 +1,6 @@
 import logging
 import time
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 
 import psycopg2
 import six
@@ -8,6 +8,7 @@ import sqlalchemy
 from dagster import Field, IntSource, Selector, StringSource, check
 from dagster.core.storage.sql import get_alembic_config, handle_schema_errors
 from dagster.seven import quote_plus as urlquote
+from psycopg2 import OperationalError, extensions
 
 
 class DagsterPostgresException(Exception):
@@ -94,21 +95,58 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
     else:
         storage_type_desc = ""
 
-    conn = None
-    try:
-        # Retry connection to gracefully handle transient connection issues
-        conn = retry_pg_connection_fn(engine.connect)
-        with handle_schema_errors(
-            conn,
-            get_alembic_config(dunder_file),
-            msg="Postgres {}storage requires migration".format(storage_type_desc),
-        ):
-            yield conn
-    finally:
-        if conn:
-            conn.close()
+    with lock_if_needed():
+        conn = None
+        try:
+            # Retry connection to gracefully handle transient connection issues
+            conn = retry_pg_connection_fn(engine.connect)
+            with handle_schema_errors(
+                conn,
+                get_alembic_config(dunder_file),
+                msg="Postgres {}storage requires migration".format(storage_type_desc),
+            ):
+                yield conn
+        finally:
+            if conn:
+                conn.close()
 
 
 def pg_statement_timeout(millis):
     check.int_param(millis, "millis")
     return "-c statement_timeout={}".format(millis)
+
+
+# reference https://github.com/gevent/gevent/blob/master/examples/psycopg2_pool.py
+def _gevent_wait_callback(conn, timeout=None):
+    from gevent.socket import wait_read, wait_write
+
+    while 1:
+        state = conn.poll()
+        if state == extensions.POLL_OK:
+            break
+        elif state == extensions.POLL_READ:
+            wait_read(conn.fileno(), timeout=timeout)
+        elif state == extensions.POLL_WRITE:
+            wait_write(conn.fileno(), timeout=timeout)
+        else:
+            raise OperationalError("Bad result from poll: {}".format(state))
+
+
+_GEVENT_CONNECTION_LOCK = None
+
+
+def enable_gevent_cooperation():
+    from gevent.lock import RLock
+
+    global _GEVENT_CONNECTION_LOCK
+    if _GEVENT_CONNECTION_LOCK is None:
+        extensions.set_wait_callback(_gevent_wait_callback)
+        _GEVENT_CONNECTION_LOCK = RLock()
+
+
+def lock_if_needed():
+    global _GEVENT_CONNECTION_LOCK
+    if _GEVENT_CONNECTION_LOCK is not None:
+        return _GEVENT_CONNECTION_LOCK
+    else:
+        return nullcontext()
