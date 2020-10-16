@@ -10,7 +10,7 @@ from dagster.utils import frozentags
 
 from .hook import HookDefinition
 from .input import InputDefinition
-from .output import OutputDefinition
+from .output import OutputDefinition, SpecialOutputDefinition
 from .utils import DEFAULT_OUTPUT, struct_to_string, validate_tags
 
 
@@ -93,7 +93,10 @@ class Solid(object):
 
         output_handles = {}
         for name, output_def in self.definition.output_dict.items():
-            output_handles[name] = SolidOutputHandle(self, output_def)
+            if isinstance(output_def, SpecialOutputDefinition):
+                output_handles[name] = SpecialSolidOutputHandle(self, output_def)
+            else:
+                output_handles[name] = SolidOutputHandle(self, output_def)
 
         self._output_handles = output_handles
 
@@ -355,6 +358,36 @@ class SolidOutputHandle(namedtuple('_SolidOutputHandle', 'solid output_def')):
         return self.solid.name
 
 
+class SpecialSolidOutputHandle(namedtuple('_SolidOutputHandle', 'solid output_def')):
+    def __new__(cls, solid, output_def):
+        return super(SpecialSolidOutputHandle, cls).__new__(
+            cls,
+            check.inst_param(solid, 'solid', Solid),
+            check.inst_param(output_def, 'output_def', SpecialOutputDefinition),
+        )
+
+    def _inner_str(self):
+        return struct_to_string(
+            'SolidOutputHandle', solid_name=self.solid.name, output_name=self.output_def.name,
+        )
+
+    def __str__(self):
+        return self._inner_str()
+
+    def __repr__(self):
+        return self._inner_str()
+
+    def __hash__(self):
+        return hash((self.solid.name, self.output_def.name))
+
+    def __eq__(self, other):
+        return self.solid.name == other.solid.name and self.output_def.name == other.output_def.name
+
+    @property
+    def solid_name(self):
+        return self.solid.name
+
+
 class InputToOutputHandleDict(defaultdict):
     def __init__(self):
         defaultdict.__init__(self, list)
@@ -365,7 +398,9 @@ class InputToOutputHandleDict(defaultdict):
 
     def __setitem__(self, key, val):
         check.inst_param(key, 'key', SolidInputHandle)
-        if not (isinstance(val, SolidOutputHandle) or isinstance(val, list)):
+        if not (
+            isinstance(val, (SpecialSolidOutputHandle, SolidOutputHandle)) or isinstance(val, list)
+        ):
             check.failed(
                 'Value must be SolidOutoutHandle or List[SolidOutputHandle], got {val}'.format(
                     val=type(val)
@@ -456,6 +491,21 @@ class DependencyStructure(object):
         '''
         check.str_param(solid_name, 'solid_name')
         return self._solid_output_index[solid_name]
+
+    def has_special_dep(self, solid_input_handle):
+        check.inst_param(solid_input_handle, 'solid_input_handle', SolidInputHandle)
+        return isinstance(self._handle_dict.get(solid_input_handle), SpecialSolidOutputHandle)
+
+    def get_special_dep(self, solid_input_handle):
+        check.inst_param(solid_input_handle, 'solid_input_handle', SolidInputHandle)
+        dep = self._handle_dict[solid_input_handle]
+        check.invariant(
+            isinstance(dep, SpecialSolidOutputHandle),
+            'Can not call get_singular_dep when dep is not singular, got {dep}'.format(
+                dep=type(dep)
+            ),
+        )
+        return dep
 
     def has_singular_dep(self, solid_input_handle):
         check.inst_param(solid_input_handle, 'solid_input_handle', SolidInputHandle)

@@ -66,7 +66,7 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
         if step_deps.intersection(to_retry):
             # this step is downstream of a step we are about to retry
             to_retry.append(step.key)
-
+    to_retry = to_retry + list(failed_steps_in_parent_run_logs)  # cat hack
     return to_retry
 
 
