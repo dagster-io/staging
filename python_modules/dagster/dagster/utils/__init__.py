@@ -347,6 +347,7 @@ def start_termination_thread(termination_event):
 
 
 _received_interrupt = {"received": False}
+_stack_cnt = {"cnt": 0}
 
 
 def setup_windows_interrupt_support():
@@ -361,6 +362,8 @@ def _replace_interrupt_signal(new_signal_handler):
     setup_windows_interrupt_support()
 
 
+
+
 # Wraps code that we don't want a SIGINT to interrupt (but throw a KeyboardInterrupt if a
 # SIGINT was received while it ran). You can also call raise_delayed_interrupts within this
 # context when you reach a checkpoint where it's safe to raise a KeyboardInterrupt, or open a
@@ -368,9 +371,15 @@ def _replace_interrupt_signal(new_signal_handler):
 # interrupts.
 @contextlib.contextmanager
 def delay_interrupts():
+
+    the_cnt = _stack_cnt["cnt"]
+
+    _stack_cnt["cnt"] = _stack_cnt["cnt"] + 1
+    sys.stderr.write("DELAYING INTERRUPTS " + repr(the_cnt) + "\n")
     original_signal_handler = signal.getsignal(signal.SIGINT)
 
     def _new_signal_handler(_signo, _):
+        sys.stderr.write("RECEIVED A SIGNAL!!!! \n")
         _received_interrupt["received"] = True
 
     signal_replaced = False
@@ -384,7 +393,9 @@ def delay_interrupts():
             pass
         yield
     finally:
+        _stack_cnt["cnt"] = _stack_cnt["cnt"] - 1
         if signal_replaced:
+            sys.stderr.write("RESTORING ORIGINAL SIGNAL HANDLER " + repr(the_cnt) + "\n")
             _replace_interrupt_signal(original_signal_handler)
             raise_delayed_interrupts()
 
@@ -395,10 +406,20 @@ def delay_interrupts():
 # where an interrupt was received.
 @contextlib.contextmanager
 def raise_interrupts_immediately():
+    sys.stderr.write("CHECKING FOR ANY DELAYED INTERRUPTS IN RAISE IMMEDAITELY \n")
+
     raise_delayed_interrupts()
     original_signal_handler = signal.getsignal(signal.SIGINT)
 
+    the_cnt = _stack_cnt["cnt"]
+
+    _stack_cnt["cnt"] = _stack_cnt["cnt"] + 1
+
+    sys.stderr.write("REPLACING WITH THROWING SIGNAL HANDLER " + repr(the_cnt) + "\n")
+
     def _new_signal_handler(signo, _):
+        sys.stderr.write("RAISING INTERRUPT FROM NORMAL SIGNAL HANDLER\n")
+
         raise KeyboardInterrupt
 
     signal_replaced = False
@@ -412,8 +433,13 @@ def raise_interrupts_immediately():
             pass
         yield
     finally:
+
+        _stack_cnt["cnt"] = _stack_cnt["cnt"] - 1
+
+        sys.stderr.write("LEAVING RAISE INTERRUPTS IMMEDIATELY! " + repr(the_cnt) + "\n")
         if signal_replaced:
             _replace_interrupt_signal(original_signal_handler)
+
 
 
 # Call within a `delay_interrupts` context whenever you reach a checkpoint where it's safe to
@@ -421,7 +447,11 @@ def raise_interrupts_immediately():
 def raise_delayed_interrupts():
     if _received_interrupt["received"]:
         _received_interrupt["received"] = False
+        sys.stderr.write("RAISING A DELAYED INTERRUPT \n")
+
         raise KeyboardInterrupt
+    else:
+        sys.stderr.write("NOT RAISING A DELAYED INTERRUPT \n")
 
 
 def check_received_delayed_interrupt():
