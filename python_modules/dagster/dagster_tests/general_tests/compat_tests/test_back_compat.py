@@ -319,6 +319,22 @@ def test_0_8_0_scheduler_migration():
         instance.all_stored_schedule_state()
 
 
+def test_secondary_index_table():
+    test_dir = file_relative_path(__file__, "snapshot_0_9_16_pre_secondary_index_migration/sqlite")
+    with restore_directory(test_dir):
+        db_path = os.path.join(
+            test_dir, "history", "runs", "5b5bf65b-32b8-4b8f-a672-37358ca47907.db"
+        )
+        assert get_current_alembic_version(db_path) == "c34498c29964"
+        assert "secondary_indexes" not in get_sqlite3_tables(db_path)
+
+        # Make sure the schema is migrated
+        instance = DagsterInstance.from_ref(InstanceRef.from_dir(test_dir))
+        instance.upgrade()
+
+        assert "secondary_indexes" in get_sqlite3_tables(db_path)
+
+
 def instance_from_debug_payloads(payload_files):
     debug_payloads = []
     for input_file in payload_files:

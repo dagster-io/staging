@@ -148,6 +148,12 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             conn.close()
         engine.dispose()
 
+    def has_summary_data(self, name, run_id=None):
+        return False
+
+    def mark_summary_data_complete(self, name, run_id=None):
+        pass
+
     def wipe(self):
         for filename in (
             glob.glob(os.path.join(self._base_dir, "*.db"))
