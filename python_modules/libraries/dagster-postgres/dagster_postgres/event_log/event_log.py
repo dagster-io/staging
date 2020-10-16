@@ -19,7 +19,13 @@ from dagster.serdes import (
 )
 
 from ..pynotify import await_pg_notifications
-from ..utils import create_pg_connection, pg_config, pg_statement_timeout, pg_url_from_config
+from ..utils import (
+    create_pg_connection,
+    enable_gevent_cooperation,
+    pg_config,
+    pg_statement_timeout,
+    pg_url_from_config,
+)
 
 CHANNEL_NAME = "run_events"
 
@@ -67,6 +73,8 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
             pool_size=1,
             connect_args={"options": pg_statement_timeout(statement_timeout)},
         )
+        # and cooperatively multitask while waiting for data
+        enable_gevent_cooperation()
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)

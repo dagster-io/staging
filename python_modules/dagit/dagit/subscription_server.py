@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+import gevent
 from graphql_ws.constants import GQL_COMPLETE, GQL_DATA
 from graphql_ws.gevent import GeventSubscriptionServer, SubscriptionObserver
 from rx import Observable
@@ -33,6 +34,12 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
             return self.send_message(connection_context, op_id, GQL_DATA, result)
 
     def on_start(self, connection_context, op_id, params):
+        # start each graphql response as its own greenlet so that later requests can
+        # be processed if an earlier request is blocked on the DB
+        thread = gevent.spawn(self._on_start, connection_context, op_id, params)
+        thread.name = "graphql_{}".format(op_id)
+
+    def _on_start(self, connection_context, op_id, params):
         try:
             execution_result = self.execute(connection_context.request_context, params)
             if not isinstance(execution_result, Observable):
@@ -48,6 +55,7 @@ class DagsterSubscriptionServer(GeventSubscriptionServer):
                 connection_context.register_operation(op_id, observable)
 
             def on_complete(conn_context):
+                print(self._time(), "complete", op_id)
                 # unsubscribe from the completed operation
                 self.on_stop(conn_context, op_id)
 

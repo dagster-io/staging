@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import psycopg2
 import six
 import sqlalchemy
+from psycopg2 import OperationalError, extensions
 
 from dagster import Field, IntSource, Selector, StringSource, check
 from dagster.core.storage.sql import get_alembic_config, handle_schema_errors
@@ -113,3 +114,23 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
 def pg_statement_timeout(millis):
     check.int_param(millis, "millis")
     return "-c statement_timeout={}".format(millis)
+
+
+# reference https://github.com/gevent/gevent/blob/master/examples/psycopg2_pool.py
+def _gevent_wait_callback(conn, timeout=None):
+    from gevent.socket import wait_read, wait_write
+
+    while 1:
+        state = conn.poll()
+        if state == extensions.POLL_OK:
+            break
+        elif state == extensions.POLL_READ:
+            wait_read(conn.fileno(), timeout=timeout)
+        elif state == extensions.POLL_WRITE:
+            wait_write(conn.fileno(), timeout=timeout)
+        else:
+            raise OperationalError("Bad result from poll: {}".format(state))
+
+
+def enable_gevent_cooperation():
+    extensions.set_wait_callback(_gevent_wait_callback)

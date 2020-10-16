@@ -5,7 +5,13 @@ from dagster.core.storage.runs import RunStorageSqlMetadata, SqlRunStorage
 from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
-from ..utils import create_pg_connection, pg_config, pg_statement_timeout, pg_url_from_config
+from ..utils import (
+    create_pg_connection,
+    enable_gevent_cooperation,
+    pg_config,
+    pg_statement_timeout,
+    pg_url_from_config,
+)
 
 
 class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
@@ -47,6 +53,8 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
             pool_size=1,
             connect_args={"options": pg_statement_timeout(statement_timeout)},
         )
+        # and cooperatively multitask while waiting for data
+        enable_gevent_cooperation()
 
     @property
     def inst_data(self):
