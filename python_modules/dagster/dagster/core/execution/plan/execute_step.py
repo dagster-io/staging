@@ -8,6 +8,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
+from dagster.core.definitions.events import SpecialOutput
 from dagster.core.errors import (
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
@@ -51,7 +52,7 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
     seen_outputs = set()
 
     for user_event in user_event_sequence:
-        if not isinstance(user_event, Output):
+        if not isinstance(user_event, (Output, SpecialOutput)):
             yield user_event
             continue
 
@@ -67,12 +68,14 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
             )
 
         if output.output_name in seen_outputs:
-            raise DagsterInvariantViolationError(
-                'Core compute for solid "{handle}" returned an output '
-                '"{output.output_name}" multiple times'.format(
-                    handle=str(step.solid_handle), output=output
+            # temp  - would need to also check for dupe keys
+            if output.key is None:
+                raise DagsterInvariantViolationError(
+                    'Core compute for solid "{handle}" returned an output '
+                    '"{output.output_name}" multiple times'.format(
+                        handle=str(step.solid_handle), output=output
+                    )
                 )
-            )
 
         yield output
         seen_outputs.add(output.output_name)
@@ -171,7 +174,7 @@ def _create_step_output_event(step_context, output, type_check, success):
         step_context=step_context,
         step_output_data=StepOutputData(
             step_output_handle=StepOutputHandle.from_step(
-                step=step_context.step, output_name=output.output_name
+                step=step_context.step, output_name=output.output_name, special_index=output.key
             ),
             type_check_data=TypeCheckData(
                 success=success,
@@ -185,7 +188,7 @@ def _create_step_output_event(step_context, output, type_check, success):
 
 def _type_checked_step_output_event_sequence(step_context, output):
     check.inst_param(step_context, 'step_context', SystemStepExecutionContext)
-    check.inst_param(output, 'output', Output)
+    check.inst_param(output, 'output', (Output, SpecialOutput))
 
     step_output = step_context.step.step_output_named(output.output_name)
     with user_code_error_boundary(
@@ -269,7 +272,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
             _step_output_error_checked_user_event_sequence(step_context, user_event_sequence)
         ):
 
-            if isinstance(user_event, Output):
+            if isinstance(user_event, (Output, SpecialOutput)):
                 for evt in _create_step_events_for_output(step_context, user_event):
                     yield evt
             elif isinstance(user_event, (AssetMaterialization, Materialization)):
@@ -290,7 +293,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
 
 def _create_step_events_for_output(step_context, output):
     check.inst_param(step_context, 'step_context', SystemStepExecutionContext)
-    check.inst_param(output, 'output', Output)
+    check.inst_param(output, 'output', (Output, SpecialOutput))
 
     step = step_context.step
     step_output = step.step_output_named(output.output_name)
@@ -298,7 +301,9 @@ def _create_step_events_for_output(step_context, output):
     for output_event in _type_checked_step_output_event_sequence(step_context, output):
         yield output_event
 
-    step_output_handle = StepOutputHandle.from_step(step=step, output_name=output.output_name)
+    step_output_handle = StepOutputHandle.from_step(
+        step=step, output_name=output.output_name, special_index=output.key
+    )
 
     for evt in _set_intermediates(step_context, step_output, step_output_handle, output):
         yield evt
