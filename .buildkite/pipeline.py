@@ -270,7 +270,7 @@ def graphql_pg_extra_cmds_fn(_):
     return [
         "pushd python_modules/dagster-graphql/dagster_graphql_tests/graphql/",
         "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit,
-        # Can't use host networking on buildkite and communicate via localhost
+        # Can't useeee host networking on buildkite and communicate via localhost
         # between these sibling containers, so pass along the ip.
         network_buildkite_container("postgres"),
         connect_sibling_docker_container(
