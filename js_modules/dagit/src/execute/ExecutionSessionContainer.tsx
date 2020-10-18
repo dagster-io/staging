@@ -7,10 +7,12 @@ import styled from 'styled-components/macro';
 import * as yaml from 'yaml';
 
 import {showCustomAlert} from 'src/CustomAlertProvider';
+import {mergeDeep} from 'src/DomUtils';
 import {PipelineRunTag} from 'src/LocalStorage';
 import {IExecutionSession, IStorageData} from 'src/LocalStorage';
 import {ShortcutHandler} from 'src/ShortcutHandler';
 import {SecondPanelToggle, SplitPanelContainer} from 'src/SplitPanelContainer';
+import {assertUnreachable} from 'src/Util';
 import {
   ConfigEditor,
   ConfigEditorHelpContext,
@@ -21,7 +23,10 @@ import {
   CONFIG_EDITOR_VALIDATION_FRAGMENT,
   responseToYamlValidationResult,
 } from 'src/configeditor/ConfigEditorUtils';
-import {ConfigEditorRunConfigSchemaFragment} from 'src/configeditor/types/ConfigEditorRunConfigSchemaFragment';
+import {
+  ConfigEditorRunConfigSchemaFragment,
+  ConfigEditorRunConfigSchemaFragment_allConfigTypes,
+} from 'src/configeditor/types/ConfigEditorRunConfigSchemaFragment';
 import {
   CONFIG_EDITOR_GENERATOR_PARTITION_SETS_FRAGMENT,
   CONFIG_EDITOR_GENERATOR_PIPELINE_FRAGMENT,
@@ -186,6 +191,96 @@ export class ExecutionSessionContainer extends React.Component<
         deletePropertyPath(runConfigData, path);
       }
 
+      const runConfigYaml = yaml.stringify(runConfigData);
+      this.props.onSaveSession({runConfigYaml});
+    } catch (err) {
+      showCustomAlert({title: 'Invalid YAML', body: YAML_SYNTAX_INVALID});
+      return;
+    }
+  };
+
+  onScaffoldMissingConfig = () => {
+    const {currentSession} = this.props;
+
+    const scaffoldType = (
+      configTypeKey: string,
+      typeLookup: {[key: string]: ConfigEditorRunConfigSchemaFragment_allConfigTypes},
+    ): any => {
+      const type = typeLookup[configTypeKey];
+      if (type.__typename === 'CompositeConfigType') {
+        if (type.isSelector) {
+          // Could potentially do something better here, like scaffold out
+          // all the types and let the user delete the ones they don't want.
+          return '<selector>';
+        }
+
+        const config = {};
+        for (const field of type.fields) {
+          const {name, isRequired, configTypeKey} = field;
+          if (isRequired) {
+            config[name] = scaffoldType(configTypeKey, typeLookup);
+          }
+        }
+
+        return config;
+      } else if (type.__typename === 'ArrayConfigType') {
+        return [];
+      } else if (type.__typename === 'NullableConfigType') {
+        // This is debatable, but if a type is nullable we include it in the scaffolded config
+        // by using the inner type
+        const innerType = type.typeParamKeys[0];
+        return scaffoldType(innerType, typeLookup);
+      } else if (type.__typename === 'EnumConfigType') {
+        // Here we just join all the potential enum values with a |. The user needs to delete
+        // all the values but the ones they want to use.
+        return type.values.map((i) => i.value).join('|');
+      } else if (type.__typename === 'ScalarUnionConfigType') {
+        // Also debatable. Here we just scaffold the scalar value.
+        const {scalarTypeKey} = type;
+        return scaffoldType(scalarTypeKey, typeLookup);
+      } else if (type.__typename === 'RegularConfigType') {
+        const defaults = {
+          String: '',
+          Int: 0,
+          Bool: true,
+          Any: 'AnyType',
+        };
+
+        return defaults[type.key];
+      }
+
+      // Do not delete: This is to make sure we handle every case above
+      assertUnreachable(type.__typename);
+    };
+
+    const scaffoldPipelineConfig = (configSchema: ConfigEditorRunConfigSchemaFragment) => {
+      const {allConfigTypes, rootConfigType} = configSchema;
+
+      const typeLookup: {[key: string]: ConfigEditorRunConfigSchemaFragment_allConfigTypes} = {};
+      for (const type of allConfigTypes) {
+        typeLookup[type.key] = type;
+      }
+
+      const config = scaffoldType(rootConfigType.key, typeLookup);
+      return config;
+    };
+
+    let config = {};
+    const runConfigSchema = this.getRunConfigSchema();
+    if (runConfigSchema) {
+      config = scaffoldPipelineConfig(runConfigSchema);
+    }
+
+    let runConfigData = {};
+    try {
+      // Note: parsing `` returns null rather than an empty object,
+      // which is preferable for representing empty config.
+      runConfigData = yaml.parse(currentSession.runConfigYaml || '') || {};
+      console.log(config, runConfigData);
+
+      // TODO: Need a smarter merge algorithm. This can potentially be destructive
+      // and get rid of user changes
+      runConfigData = mergeDeep({}, config, runConfigData);
       const runConfigYaml = yaml.stringify(runConfigData);
       this.props.onSaveSession({runConfigYaml});
     } catch (err) {
@@ -441,6 +536,7 @@ export class ExecutionSessionContainer extends React.Component<
               runConfigSchema={runConfigSchema}
               onHighlightPath={(path) => this.editor.current?.moveCursorToPath(path)}
               onRemoveExtraPaths={(paths) => this.onRemoveExtraPaths(paths)}
+              onScaffoldMissingConfig={() => this.onScaffoldMissingConfig()}
               actions={
                 <LaunchRootExecutionButton
                   pipelineName={pipeline.name}

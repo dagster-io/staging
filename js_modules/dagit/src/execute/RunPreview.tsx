@@ -124,6 +124,52 @@ const RemoveExtraConfigButton = ({
   );
 };
 
+const ScaffoldConfigButton = ({
+  onScaffoldMissingConfig,
+  missingNodes,
+}: {
+  missingNodes: string[];
+  onScaffoldMissingConfig: () => void;
+}) => {
+  const confirm = useConfirmation();
+
+  return (
+    <div style={{marginTop: 5}}>
+      <Button
+        small={true}
+        onClick={async () => {
+          await confirm({
+            title: 'Scaffold extra config',
+            description: (
+              <div>
+                {missingNodes.length > 0 && (
+                  <>
+                    <p>Missing paths:</p>
+                    <ul>
+                      {missingNodes.map((v) => (
+                        <li key={v}>
+                          <Code>{v}</Code>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                <p>
+                  Clicking confirm will automatically remove this extra configuration from your run
+                  config.
+                </p>{' '}
+              </div>
+            ),
+          });
+          onScaffoldMissingConfig();
+        }}
+      >
+        Scaffold Missing Config
+      </Button>
+    </div>
+  );
+};
+
 interface RunPreviewProps {
   validation: RunPreviewValidationFragment | null;
   document: object | null;
@@ -132,6 +178,7 @@ interface RunPreviewProps {
   runConfigSchema?: ConfigEditorRunConfigSchemaFragment;
   onHighlightPath: (path: string[]) => void;
   onRemoveExtraPaths: (paths: string[]) => void;
+  onScaffoldMissingConfig: () => void;
 }
 
 interface RunPreviewState {
@@ -229,7 +276,14 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
   };
 
   render() {
-    const {actions, document, validation, onHighlightPath, onRemoveExtraPaths} = this.props;
+    const {
+      actions,
+      document,
+      validation,
+      onHighlightPath,
+      onRemoveExtraPaths,
+      onScaffoldMissingConfig,
+    } = this.props;
     const {errorsOnly} = this.state;
 
     const extraNodes: string[] = [];
@@ -240,7 +294,6 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
     }[] = [];
 
     if (validation && validation.__typename === 'PipelineConfigValidationInvalid') {
-      console.log(validation.errors);
       validation.errors.forEach((e) => {
         const path = errorStackToYamlPath(e.stack.entries);
 
@@ -352,13 +405,21 @@ export class RunPreview extends React.Component<RunPreviewProps, RunPreviewState
               ))}
             </Section>
 
-            {extraNodes.length > 0 && (
+            {(extraNodes.length > 0 || missingNodes.length > 0) && (
               <Section>
                 <SectionTitle>Bulk Actions:</SectionTitle>
-                <RemoveExtraConfigButton
-                  onRemoveExtraPaths={onRemoveExtraPaths}
-                  extraNodes={extraNodes}
-                />
+                {extraNodes.length ? (
+                  <RemoveExtraConfigButton
+                    onRemoveExtraPaths={onRemoveExtraPaths}
+                    extraNodes={extraNodes}
+                  />
+                ) : null}
+                {missingNodes.length ? (
+                  <ScaffoldConfigButton
+                    onScaffoldMissingConfig={onScaffoldMissingConfig}
+                    missingNodes={missingNodes}
+                  />
+                ) : null}
               </Section>
             )}
           </ErrorListContainer>
