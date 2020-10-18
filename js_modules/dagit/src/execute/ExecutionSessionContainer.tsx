@@ -1,5 +1,6 @@
 import {Button, Colors, NonIdealState, Spinner} from '@blueprintjs/core';
 import ApolloClient from 'apollo-client';
+import merge from 'deepmerge';
 import gql from 'graphql-tag';
 import * as React from 'react';
 import {ApolloConsumer} from 'react-apollo';
@@ -34,6 +35,7 @@ import {ModeNotFoundError} from 'src/execute/ModeNotFoundError';
 import {RunPreview} from 'src/execute/RunPreview';
 import {SolidSelector} from 'src/execute/SolidSelector';
 import {TagContainer, TagEditor} from 'src/execute/TagEditor';
+import {scaffoldPipelineConfig} from 'src/execute/scaffoldType';
 import {ExecutionSessionContainerPartitionSetsFragment} from 'src/execute/types/ExecutionSessionContainerPartitionSetsFragment';
 import {ExecutionSessionContainerPipelineFragment} from 'src/execute/types/ExecutionSessionContainerPipelineFragment';
 import {ExecutionSessionContainerRunConfigSchemaFragment} from 'src/execute/types/ExecutionSessionContainerRunConfigSchemaFragment';
@@ -191,6 +193,30 @@ export class ExecutionSessionContainer extends React.Component<
     } catch (err) {
       showCustomAlert({title: 'Invalid YAML', body: YAML_SYNTAX_INVALID});
       return;
+    }
+  };
+
+  onScaffoldMissingConfig = () => {
+    const {currentSession} = this.props;
+
+    let config = {};
+    const runConfigSchema = this.getRunConfigSchema();
+    if (runConfigSchema) {
+      config = scaffoldPipelineConfig(runConfigSchema);
+    }
+
+    try {
+      // Note: parsing `` returns null rather than an empty object,
+      // which is preferable for representing empty config.
+      const runConfigData = yaml.parse(currentSession.runConfigYaml || '') || {};
+
+      // TODO: Need a smarter merge algorithm. This can potentially be destructive
+      // and get rid of user changes
+      const updatedRunConfigData = merge(config, runConfigData);
+      const runConfigYaml = yaml.stringify(updatedRunConfigData);
+      this.props.onSaveSession({runConfigYaml});
+    } catch (err) {
+      showCustomAlert({title: 'Invalid YAML', body: YAML_SYNTAX_INVALID});
     }
   };
 
@@ -441,6 +467,7 @@ export class ExecutionSessionContainer extends React.Component<
               runConfigSchema={runConfigSchema}
               onHighlightPath={(path) => this.editor.current?.moveCursorToPath(path)}
               onRemoveExtraPaths={(paths) => this.onRemoveExtraPaths(paths)}
+              onScaffoldMissingConfig={this.onScaffoldMissingConfig}
               actions={
                 <LaunchRootExecutionButton
                   pipelineName={pipeline.name}
