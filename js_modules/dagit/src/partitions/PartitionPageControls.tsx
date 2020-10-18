@@ -17,22 +17,23 @@ export const PartitionPageControls: React.FunctionComponent<PartitionPageControl
   paginationProps,
 }) => (
   <PartitionPagerContainer>
-    <ButtonGroup>
-      {[7, 30, 120].map((size) => (
-        <Button
-          key={size}
-          active={!paginationProps.hasPrevPage && pageSize === size}
-          onClick={() => setPageSize(size)}
-        >
-          Last {size}
+    <PartitionPagerLeftContainer>
+      <ButtonGroup>
+        {[7, 30, 120].map((size) => (
+          <Button
+            key={size}
+            active={!paginationProps.hasPrevCursor && pageSize === size}
+            onClick={() => setPageSize(size)}
+          >
+            Last {size}
+          </Button>
+        ))}
+        <Button active={pageSize === undefined} onClick={() => setPageSize(undefined)}>
+          All
         </Button>
-      ))}
-      <Button active={pageSize === undefined} onClick={() => setPageSize(undefined)}>
-        All
-      </Button>
-    </ButtonGroup>
-    {children}
-    <div style={{flex: 1}} />
+      </ButtonGroup>
+      {children}
+    </PartitionPagerLeftContainer>
     <CursorHistoryControls {...paginationProps} />
   </PartitionPagerContainer>
 );
@@ -40,5 +41,11 @@ export const PartitionPageControls: React.FunctionComponent<PartitionPageControl
 const PartitionPagerContainer = styled.div`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin: 10px 0;
+`;
+
+const PartitionPagerLeftContainer = styled.div`
+  display: flex;
+  align-items: center;
 `;

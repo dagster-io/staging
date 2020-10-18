@@ -57,7 +57,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
         pageSize={pageSize}
         setPageSize={(next: number) => {
           setPageSize(next);
-          paginationProps.onReset();
+          paginationProps.reset();
         }}
       >
         {loading && (

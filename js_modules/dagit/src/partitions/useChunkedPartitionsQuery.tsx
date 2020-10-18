@@ -13,6 +13,15 @@ import {RunTable} from 'src/runs/RunTable';
 
 type Partition = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results;
 
+interface DataState {
+  results: Partition[];
+  loading: boolean;
+  cursorStack: string[];
+  cursor: string | null;
+}
+
+const InitialDataState: DataState = {results: [], cursor: null, cursorStack: [], loading: false};
+
 /**
  * This React hook mirrors `useCursorPaginatedQuery` but collects each page of partitions
  * in slices that are smaller than pageSize and cause the results to load incrementally.
@@ -22,18 +31,14 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
   const client = useApolloClient();
 
   const version = React.useRef(0);
-  const [results, setResults] = React.useState<Partition[]>([]);
-  const [loading, setLoading] = React.useState(false);
-
-  const [cursorStack, setCursorStack] = React.useState<string[]>([]);
-  const [cursor, setCursor] = React.useState<string | undefined>();
+  const [dataState, setDataState] = React.useState<DataState>(InitialDataState);
+  const {cursor, loading, results, cursorStack} = dataState;
 
   React.useEffect(() => {
     const v = version.current + 1;
     version.current = v;
 
-    setResults([]);
-    setLoading(true);
+    setDataState((dataState) => ({...dataState, results: [], loading: true}));
 
     let c = cursor;
     let accumulated: Partition[] = [];
@@ -57,40 +62,48 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
       }
       const fetched = partitionsFromResult(result.data);
       accumulated = [...fetched, ...accumulated];
-      if (accumulated.length < pageSize && fetched.length > 0) {
+      const more = accumulated.length < pageSize && fetched.length > 0;
+
+      setDataState((dataState) => ({...dataState, results: accumulated, loading: more}));
+
+      if (more) {
         c = accumulated[0].name;
         fetchOne();
-      } else {
-        setLoading(false);
       }
-      setResults(accumulated);
     };
 
     fetchOne();
   }, [pageSize, cursor, client, partitionSetName, repositoryName, repositoryLocationName]);
 
+  // Note: cursor === null is page zero and cursors specify subsequent pages.
+
   return {
     loading,
     partitions: [...buildEmptyPartitions(pageSize - results.length), ...results],
     paginationProps: {
-      hasPrevPage: cursor !== undefined,
-      hasNextPage: results.length === pageSize,
-      onPrevPage: () => {
-        setResults([]);
-        setCursor(cursorStack.pop());
-        setCursorStack(cursorStack.slice(0, cursorStack.length - 1));
-      },
-      onNextPage: () => {
-        if (cursor) {
-          setCursorStack([...cursorStack, cursor]);
+      hasPrevCursor: cursor !== null,
+      hasNextCursor: results.length >= pageSize,
+      popCursor: () => {
+        if (cursor === null) {
+          return;
         }
-        setResults([]);
-        setCursor(results[0].name);
+        setDataState({
+          results: [],
+          cursor: cursorStack.length ? cursorStack[cursorStack.length - 1] : null,
+          cursorStack: cursorStack.slice(0, cursorStack.length - 1),
+          loading: false,
+        });
       },
-      onReset: () => {
-        setResults([]);
-        setCursor(undefined);
-        setCursorStack([]);
+      advanceCursor: () => {
+        setDataState({
+          loading: false,
+          cursorStack: cursor ? [...cursorStack, cursor] : cursorStack,
+          cursor: results[0].name,
+          results: [],
+        });
+      },
+      reset: () => {
+        setDataState(InitialDataState);
       },
     },
   };

@@ -3,38 +3,38 @@ import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 
 export interface CursorPaginationProps {
-  hasPrevPage: boolean;
-  hasNextPage: boolean;
-  onPrevPage: () => void;
-  onNextPage: () => void;
-  onReset: () => void;
+  hasPrevCursor: boolean;
+  hasNextCursor: boolean;
+  popCursor: () => void;
+  advanceCursor: () => void;
+  reset: () => void;
 }
 
 export const CursorPaginationControls: React.FunctionComponent<CursorPaginationProps> = ({
-  hasPrevPage,
-  hasNextPage,
-  onPrevPage,
-  onNextPage,
+  hasPrevCursor,
+  hasNextCursor,
+  popCursor,
+  advanceCursor,
 }) => {
   return (
     <div style={{textAlign: 'center', marginBottom: 10}}>
       <Button
         style={{
-          visibility: hasPrevPage ? 'initial' : 'hidden',
+          visibility: hasPrevCursor ? 'initial' : 'hidden',
           marginRight: 4,
         }}
         icon={IconNames.ARROW_LEFT}
-        onClick={onPrevPage}
+        onClick={popCursor}
       >
         Prev Page
       </Button>
       <Button
         style={{
-          visibility: hasNextPage ? 'initial' : 'hidden',
+          visibility: hasNextCursor ? 'initial' : 'hidden',
           marginLeft: 4,
         }}
         rightIcon={IconNames.ARROW_RIGHT}
-        onClick={onNextPage}
+        onClick={advanceCursor}
       >
         Next Page
       </Button>
@@ -43,26 +43,26 @@ export const CursorPaginationControls: React.FunctionComponent<CursorPaginationP
 };
 
 export const CursorHistoryControls: React.FunctionComponent<CursorPaginationProps> = ({
-  hasPrevPage,
-  hasNextPage,
-  onPrevPage,
-  onNextPage,
+  hasPrevCursor,
+  hasNextCursor,
+  popCursor,
+  advanceCursor,
 }) => {
   return (
     <div style={{textAlign: 'center', marginBottom: 10}}>
       <Button
         style={{marginRight: 4}}
-        disabled={!hasNextPage}
+        disabled={!hasNextCursor}
         icon={IconNames.ARROW_LEFT}
-        onClick={onNextPage}
+        onClick={advanceCursor}
       >
         Older
       </Button>
       <Button
         style={{marginLeft: 4}}
-        disabled={!hasPrevPage}
+        disabled={!hasPrevCursor}
         rightIcon={IconNames.ARROW_RIGHT}
-        onClick={onPrevPage}
+        onClick={popCursor}
       >
         Newer
       </Button>
