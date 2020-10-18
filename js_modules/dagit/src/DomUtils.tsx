@@ -33,3 +33,8 @@ export async function copyValue(event: React.MouseEvent<any>, value: string) {
     intent: Intent.NONE,
   });
 }
+
+// From: https://stackoverflow.com/questions/27936772/how-to-deep-merge-instead-of-shallow-merge
+export function isObject(item: any) {
+  return item && typeof item === 'object' && !Array.isArray(item);
+}
