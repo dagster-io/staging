@@ -1,12 +1,4 @@
-import {
-  Callout,
-  Checkbox,
-  Divider,
-  Icon,
-  Intent,
-  NonIdealState,
-  ProgressBar,
-} from '@blueprintjs/core';
+import {Callout, Checkbox, Icon, Intent, NonIdealState, ProgressBar} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import gql from 'graphql-tag';
 import * as React from 'react';
@@ -17,7 +9,6 @@ import {useRepositorySelector} from 'src/DagsterRepositoryContext';
 import {SharedToaster} from 'src/DomUtils';
 import {filterByQuery} from 'src/GraphQueryImpl';
 import {GraphQueryInput} from 'src/GraphQueryInput';
-import {Header} from 'src/ListComponents';
 import {PipelineRunTag} from 'src/LocalStorage';
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
 import {OptionsDivider} from 'src/VizComponents';
@@ -57,8 +48,6 @@ export const PartitionsBackfill: React.FunctionComponent<{
         paddingBottom: 10,
       }}
     >
-      <Header>Launch Partition Backfill</Header>
-      <Divider />
       {isOpen ? (
         <PartitionsBackfillPartitionSelector
           partitionSetName={partitionSetName}
