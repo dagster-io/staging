@@ -34,7 +34,6 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
     },
   );
   const [selected, setSelected] = React.useState<PartitionSet | undefined>();
-  const [runTags, setRunTags] = React.useState<{[key: string]: string}>({});
 
   if (snapshotId) {
     return <Redirect to={`/pipeline/${pipelineName}/partitions`} />;
@@ -83,7 +82,6 @@ export const PipelinePartitionsRoot: React.FunctionComponent<RouteComponentProps
               partitionSets={partitionSetsOrError.results}
               onChangePartitionSet={setSelected}
               pipelineName={pipelineName}
-              runTags={runTags}
             />
           </PartitionRootContainer>
         );

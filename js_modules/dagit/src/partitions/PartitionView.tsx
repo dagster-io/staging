@@ -1,5 +1,6 @@
-import {Spinner} from '@blueprintjs/core';
+import {Spinner, Button} from '@blueprintjs/core';
 import {Colors} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
@@ -10,6 +11,7 @@ import {PIPELINE_LABEL, PartitionGraph} from 'src/partitions/PartitionGraph';
 import {PartitionPageSizeSelector} from 'src/partitions/PartitionPageSizeSelector';
 import {PartitionRunMatrix} from 'src/partitions/PartitionRunMatrix';
 import {PartitionSetSelector} from 'src/partitions/PartitionSetSelector';
+import {PartitionsBackfillPartitionSelector} from 'src/partitions/PartitionsBackfill';
 import {
   PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results,
   PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs,
@@ -27,7 +29,6 @@ interface PartitionViewProps {
   partitionSet: PartitionSet;
   partitionSets: PartitionSet[];
   onChangePartitionSet: (set: PartitionSet) => void;
-  runTags?: {[key: string]: string};
 }
 
 export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
@@ -35,9 +36,10 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
   partitionSet,
   partitionSets,
   onChangePartitionSet,
-  runTags,
 }) => {
   const [pageSize, setPageSize] = React.useState<number | 'all'>(30);
+  const [runTags, setRunTags] = React.useState<{[key: string]: string}>({});
+  const [showBackfillSetup, setShowBackfillSetup] = React.useState(false);
   const {loading, partitions, paginationProps} = useChunkedPartitionsQuery(
     partitionSet.name,
     pageSize,
@@ -57,6 +59,16 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
 
   return (
     <div>
+      {showBackfillSetup && (
+        <PartitionsBackfillPartitionSelector
+          partitionSetName={partitionSet.name}
+          pipelineName={pipelineName}
+          onLaunch={(backfillId: string) => {
+            setRunTags({'dagster/backfill': backfillId});
+            setShowBackfillSetup(false);
+          }}
+        />
+      )}
       <PartitionPagerContainer>
         <PartitionSetSelector
           selected={partitionSet}
@@ -79,6 +91,14 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
           </div>
         )}
         <div style={{flex: 1}} />
+        <Button
+          onClick={() => setShowBackfillSetup(!showBackfillSetup)}
+          icon={IconNames.ADD}
+          active={showBackfillSetup}
+        >
+          Launch a partition backfill
+        </Button>
+        <div style={{width: 10}} />
         <CursorHistoryControls {...paginationProps} />
       </PartitionPagerContainer>
       <div style={{position: 'relative'}}>
