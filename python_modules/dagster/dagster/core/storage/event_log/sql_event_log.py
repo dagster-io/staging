@@ -339,7 +339,7 @@ class SqlEventLogStorage(EventLogStorage):
             )
             return conn.execute(query).fetchone()
 
-    def has_summary_data(self, name, run_id=None):
+    def has_secondary_index(self, name, run_id=None):
         """This method uses a checkpoint migration table to see if summary data has been constructed
         in a secondary index table.  Can be used to checkpoint event_log data migrations.
         """
@@ -354,7 +354,7 @@ class SqlEventLogStorage(EventLogStorage):
 
         return len(results) > 0
 
-    def mark_summary_data_complete(self, name, run_id=None):
+    def enable_secondary_index(self, name, run_id=None):
         """This method marks an event_log data migration as complete, to indicate that a summary
         data migration is complete.
         """

@@ -148,10 +148,10 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             conn.close()
         engine.dispose()
 
-    def has_summary_data(self, name, run_id=None):
+    def has_secondary_index(self, name, run_id=None):
         return False
 
-    def mark_summary_data_complete(self, name, run_id=None):
+    def enable_secondary_index(self, name, run_id=None):
         pass
 
     def wipe(self):
