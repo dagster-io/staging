@@ -17,6 +17,7 @@ from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.asset_store import AssetStore
 from dagster.core.storage.file_manager import FileManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -285,6 +286,20 @@ class SystemStepExecutionContext(SystemExecutionContext):
 
     def for_hook(self, hook_def):
         return HookContext(self._execution_context_data, self.log, hook_def, self.step)
+
+    def get_asset_store_handle(self, step_output_handle):
+        from dagster.core.execution.plan.objects import StepOutputHandle
+        from dagster.core.execution.plan.objects import StepOutput
+
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        step = self.execution_plan.get_step_by_key(step_output_handle.step_key)
+        step_output = step.step_output_named(step_output_handle.output_name)
+        check.inst(step_output, StepOutput)
+        return step_output.asset_store_handle
+
+    def get_asset_store(self, asset_store_handle):
+        asset_store = getattr(self.resources, asset_store_handle.asset_store_key)
+        return check.inst(asset_store, AssetStore)
 
 
 class SystemComputeExecutionContext(SystemStepExecutionContext):
