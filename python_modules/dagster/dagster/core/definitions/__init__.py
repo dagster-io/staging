@@ -53,7 +53,7 @@ from .hook import HookDefinition
 from .input import InputDefinition, InputMapping
 from .intermediate_storage import IntermediateStorageDefinition, intermediate_storage
 from .logger import LoggerDefinition, logger
-from .mode import ModeDefinition
+from .mode import ModeDefinition, mode
 from .output import OutputDefinition, OutputMapping
 from .partition import Partition, PartitionSetDefinition
 from .pipeline import PipelineDefinition

@@ -12,6 +12,21 @@ from .utils import check_for_invalid_name_and_warn
 DEFAULT_MODE_NAME = "default"
 
 
+def mode(name=None, intermediate_storage_defs=None):
+    if callable(name):
+        fn, fn_name = name, name.__name__
+        return ModeDefinition(name=fn_name, resource_defs=fn())
+
+    def _wrap(resources_def_fn):
+        return ModeDefinition(
+            name=name or resources_def_fn.__name__,
+            resource_defs=resources_def_fn(),
+            intermediate_storage_defs=intermediate_storage_defs,
+        )
+
+    return _wrap
+
+
 class ModeDefinition(
     namedtuple(
         "_ModeDefinition",
