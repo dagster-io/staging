@@ -639,7 +639,6 @@ type Mutation {
   reloadRepositoryLocation(repositoryLocationName: String!): ReloadRepositoryLocationMutationResult!
   launchPartitionBackfill(backfillParams: PartitionBackfillParams!): PartitionBackfillResult!
   triggerExecution(triggerSelector: TriggerSelector!): TriggerMutationResult!
-  executePlan(executionParams: ExecutionParams!, retries: Retries): ExecutePlanResult!
 }
 
 type NullableConfigType implements ConfigType & WrappingConfigType {

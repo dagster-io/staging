@@ -29,7 +29,6 @@ if __name__ == "__main__":
         install_requires=[
             "bokeh",
             "dagster",
-            "dagster_graphql",
             "dask[dataframe]>=1.2.2",
             "distributed>=1.28.1",
         ],
