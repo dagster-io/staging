@@ -120,18 +120,6 @@ class RepositoryLocation(six.with_metaclass(ABCMeta)):
         pass
 
     @abstractmethod
-    def execute_plan(
-        self,
-        instance,
-        external_pipeline,
-        run_config,
-        pipeline_run,
-        step_keys_to_execute,
-        retries=None,
-    ):
-        pass
-
-    @abstractmethod
     def execute_pipeline(
         self, instance, external_pipeline, pipeline_run,
     ):
@@ -279,38 +267,6 @@ class InProcessRepositoryLocation(RepositoryLocation):
                 external_pipeline.identifying_pipeline_snapshot_id,
             ),
             represented_pipeline=external_pipeline,
-        )
-
-    def execute_plan(
-        self,
-        instance,
-        external_pipeline,
-        run_config,
-        pipeline_run,
-        step_keys_to_execute,
-        retries=None,
-    ):
-        check.inst_param(instance, "instance", DagsterInstance)
-        check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
-        check.dict_param(run_config, "run_config")
-        check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
-        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
-
-        execution_plan = create_execution_plan(
-            pipeline=self.get_reconstructable_pipeline(
-                external_pipeline.name
-            ).subset_for_execution_from_existing_pipeline(external_pipeline.solids_to_execute),
-            run_config=run_config,
-            mode=pipeline_run.mode,
-            step_keys_to_execute=step_keys_to_execute,
-        )
-
-        execute_plan(
-            execution_plan=execution_plan,
-            instance=instance,
-            pipeline_run=pipeline_run,
-            run_config=run_config,
-            retries=retries,
         )
 
     def execute_pipeline(
@@ -486,17 +442,6 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             represented_pipeline=external_pipeline,
         )
 
-    def execute_plan(
-        self,
-        instance,
-        external_pipeline,
-        run_config,
-        pipeline_run,
-        step_keys_to_execute,
-        retries=None,
-    ):
-        raise NotImplementedError("execute_plan is not implemented for grpc servers")
-
     def execute_pipeline(
         self, instance, external_pipeline, pipeline_run,
     ):
@@ -656,19 +601,6 @@ class PythonEnvRepositoryLocation(RepositoryLocation):
         return ExternalExecutionPlan(
             execution_plan_snapshot=execution_plan_snapshot_or_error,
             represented_pipeline=external_pipeline,
-        )
-
-    def execute_plan(
-        self,
-        instance,
-        external_pipeline,
-        run_config,
-        pipeline_run,
-        step_keys_to_execute,
-        retries=None,
-    ):
-        raise NotImplementedError(
-            "execute_plan is not supported for out-of-process repository locations."
         )
 
     def execute_pipeline(
