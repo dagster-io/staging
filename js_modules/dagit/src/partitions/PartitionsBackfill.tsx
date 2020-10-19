@@ -38,6 +38,13 @@ type SelectionRange = {
   end: string;
 };
 
+function placeholderForPartitions(names: string[]) {
+  if (names.length < 4) {
+    return `ex: ${names[0]}, ${names[1]}`;
+  }
+  return `ex: ${names[0]}, ${names[1]}, [${names[2]}...${names[names.length - 1]}]`;
+}
+
 function partitionsToText(selected: string[], all: string[]) {
   const remaining = [...selected].sort((a, b) => all.indexOf(a) - all.indexOf(b));
 
@@ -278,6 +285,7 @@ export const PartitionsBackfillPartitionSelector: React.FunctionComponent<{
         growVertically
         small
         fill
+        placeholder={placeholderForPartitions(partitionNames)}
         key={selectedString}
         defaultValue={selectedString}
         onBlur={(e) => {
@@ -299,22 +307,23 @@ export const PartitionsBackfillPartitionSelector: React.FunctionComponent<{
               checked={options.reexecute}
               onChange={() => {
                 setSelected([]);
-                setOptions({...options, reexecute: !options.reexecute});
+                setQuery('');
+                setOptions(
+                  options.reexecute
+                    ? {...options, reexecute: false, fromFailure: false}
+                    : {...options, reexecute: true},
+                );
               }}
             />
             <div style={{width: 20}} />
             <Checkbox
               label="Re-execute From Failure"
-              checked={
-                (options.reexecute || !partitionsWithLastRunSuccess.length) && options.fromFailure
-              }
-              disabled={
-                partitionsWithLastRunFailure.length === 0 ||
-                (!!partitionsWithLastRunSuccess.length && !options.reexecute)
-              }
+              checked={options.fromFailure}
+              disabled={partitionsWithLastRunFailure.length === 0 || !options.reexecute}
               onChange={() => {
                 setSelected([]);
-                setOptions({...options, fromFailure: !options.fromFailure});
+                setQuery('');
+                setOptions({...options, reexecute: true, fromFailure: !options.fromFailure});
               }}
             />
           </div>
@@ -338,7 +347,7 @@ export const PartitionsBackfillPartitionSelector: React.FunctionComponent<{
         <div style={{opacity: 0.5}}>Click or drag to edit selected partitions</div>
       </div>
       <div style={{display: 'flex'}}>
-        {options.reexecute && !options.fromFailure && (
+        {query && (
           <GridFloatingContainer floating={true}>
             <GridColumn disabled>
               <TopLabel></TopLabel>
@@ -417,11 +426,9 @@ export const PartitionsBackfillPartitionSelector: React.FunctionComponent<{
           partitionNames={selected}
           partitionSetName={partitionSet.name}
           reexecutionSteps={
-            options.reexecute && !options.fromFailure
-              ? stepRows.map((step) => `${step.name}.compute`)
-              : undefined
+            !options.fromFailure ? stepRows.map((step) => `${step.name}.compute`) : undefined
           }
-          fromFailure={options.reexecute && options.fromFailure}
+          fromFailure={options.fromFailure}
           tags={tags}
           onSuccess={onSuccess}
         />
