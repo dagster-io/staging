@@ -11,7 +11,7 @@ from dagster_aws.s3 import (
 )
 from dagster_pyspark import pyspark_resource
 
-from dagster import ModeDefinition, PresetDefinition, composite_solid, local_file_manager, pipeline
+from dagster import PresetDefinition, composite_solid, local_file_manager, mode, pipeline
 from dagster.core.definitions.no_step_launcher import no_step_launcher
 from dagster.core.storage.file_cache import fs_file_cache
 from dagster.core.storage.temp_file_manager import tempfile_resource
@@ -37,9 +37,11 @@ from .solids import (
 )
 
 # start_pipelines_marker_2
-test_mode = ModeDefinition(
-    name="test",
-    resource_defs={
+
+
+@mode(intermediate_storage_defs=s3_plus_default_intermediate_storage_defs)
+def test():
+    return {
         "pyspark_step_launcher": no_step_launcher,
         "pyspark": pyspark_resource,
         "db_info": redshift_db_info_resource,
@@ -47,14 +49,12 @@ test_mode = ModeDefinition(
         "s3": s3_resource,
         "file_cache": fs_file_cache,
         "file_manager": local_file_manager,
-    },
-    intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-)
+    }
 
 
-local_mode = ModeDefinition(
-    name="local",
-    resource_defs={
+@mode(intermediate_storage_defs=s3_plus_default_intermediate_storage_defs)
+def local():
+    return {
         "pyspark_step_launcher": no_step_launcher,
         "pyspark": pyspark_resource,
         "s3": s3_resource,
@@ -62,14 +62,12 @@ local_mode = ModeDefinition(
         "tempfile": tempfile_resource,
         "file_cache": fs_file_cache,
         "file_manager": local_file_manager,
-    },
-    intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-)
+    }
 
 
-prod_mode = ModeDefinition(
-    name="prod",
-    resource_defs={
+@mode(intermediate_storage_defs=s3_plus_default_intermediate_storage_defs)
+def prod():
+    return {
         "pyspark_step_launcher": emr_pyspark_step_launcher,
         "pyspark": pyspark_resource,
         "s3": s3_resource,
@@ -77,9 +75,8 @@ prod_mode = ModeDefinition(
         "tempfile": tempfile_resource,
         "file_cache": s3_file_cache,
         "file_manager": s3_file_manager,
-    },
-    intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
-)
+    }
+
 
 # end_pipelines_marker_2
 
@@ -87,7 +84,7 @@ prod_mode = ModeDefinition(
 # start_pipelines_marker_0
 @pipeline(
     # ordered so the local is first and therefore the default
-    mode_defs=[local_mode, test_mode, prod_mode],
+    mode_defs=[local, test, prod],
     # end_pipelines_marker_0
     preset_defs=[
         PresetDefinition.from_pkg_resources(
@@ -158,7 +155,7 @@ def process_delays_by_geo() -> S3FileHandle:
 
 
 @pipeline(
-    mode_defs=[test_mode, local_mode, prod_mode],
+    mode_defs=[test, local, prod],
     preset_defs=[
         PresetDefinition.from_pkg_resources(
             name="local",

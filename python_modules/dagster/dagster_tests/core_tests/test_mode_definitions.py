@@ -23,6 +23,7 @@ from dagster import (
     resource,
     solid,
 )
+from dagster.core.definitions.mode import mode
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.utils.test import execute_solids_within_pipeline
 
@@ -384,3 +385,23 @@ def test_system_storage_deprecated():
     ):
         a = ModeDefinition(system_storage_defs=default_system_storage_defs)
         assert isinstance(a, ModeDefinition)
+
+
+def test_mode_decorator_takes_a_name():
+    @mode
+    def a_mode():
+        return {}
+
+    pipeline_def = PipelineDefinition(name="takesamode", solid_defs=[], mode_defs=[a_mode])
+    assert pipeline_def
+
+
+def test_mode_decorator_takes_a_name_name_override():
+    @mode(name="override")
+    def a_mode():
+        return {}
+
+    assert a_mode.name == "override"
+
+    pipeline_def = PipelineDefinition(name="takesamode", solid_defs=[], mode_defs=[a_mode])
+    assert pipeline_def
