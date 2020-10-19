@@ -49,12 +49,12 @@ function partitionsToText(selected: string[], all: string[]) {
     let endIdxInSelected = -1;
     while (
       endIdx < all.length - 1 &&
-      (endIdxInSelected = remaining.indexOf(all[endIdx + 1])) != -1
+      (endIdxInSelected = remaining.indexOf(all[endIdx + 1])) !== -1
     ) {
       endIdx++;
       remaining.splice(endIdxInSelected, 1);
     }
-    if (endIdx != startIdx) {
+    if (endIdx !== startIdx) {
       str += `[${start}...${all[endIdx]}], `;
     } else {
       str += `${start}, `;
@@ -291,17 +291,6 @@ export const PartitionsBackfillPartitionSelector: React.FunctionComponent<{
       />
       <div style={{display: 'flex', marginTop: 10}}>
         <div>
-          <strong style={{display: 'block', marginBottom: 4}}>Step Subset</strong>
-          <GraphQueryInput
-            small
-            width={260}
-            items={solids}
-            value={query}
-            placeholder="Type a Step Subset"
-            onChange={setQuery}
-          />
-        </div>
-        <div style={{marginLeft: 20}}>
           <strong style={{display: 'block', marginBottom: 4}}>Options</strong>
           <div style={{display: 'flex'}}>
             <Checkbox
@@ -329,6 +318,18 @@ export const PartitionsBackfillPartitionSelector: React.FunctionComponent<{
               }}
             />
           </div>
+        </div>
+        <div style={{marginLeft: 20}}>
+          <strong style={{display: 'block', marginBottom: 4}}>Step Subset</strong>
+          <GraphQueryInput
+            small
+            disabled={!(options.reexecute && !options.fromFailure)}
+            width={260}
+            items={solids}
+            value={query}
+            placeholder="Type a Step Subset"
+            onChange={setQuery}
+          />
         </div>
       </div>
 
