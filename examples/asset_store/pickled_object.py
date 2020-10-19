@@ -1,12 +1,15 @@
 from dagster import (
+    DagsterInstance,
     ModeDefinition,
     OutputDefinition,
     PresetDefinition,
     execute_pipeline,
     pipeline,
+    reexecute_pipeline,
     solid,
 )
 from dagster.core.definitions.utils import struct_to_string
+from dagster.core.storage.address_storage import AddressStorage
 from dagster.core.storage.asset_store import default_filesystem_asset_store
 
 
@@ -72,4 +75,25 @@ def model_pipeline():
 
 
 if __name__ == "__main__":
-    result = execute_pipeline(model_pipeline, preset="local")
+    instance = DagsterInstance.ephemeral(address_storage=AddressStorage())
+
+    result = execute_pipeline(model_pipeline, instance=instance)
+
+    # print("---reexecution 1 ⬇️---")
+
+    re1_result = reexecute_pipeline(
+        model_pipeline,
+        result.run_id,
+        preset="local",
+        instance=instance,
+        step_selection=["parse_df.compute"],
+    )
+    # print("---reexecution 2 ⬇️---")
+
+    re2_result = reexecute_pipeline(
+        model_pipeline,
+        re1_result.run_id,
+        preset="local",
+        instance=instance,
+        step_selection=["parse_df.compute"],
+    )

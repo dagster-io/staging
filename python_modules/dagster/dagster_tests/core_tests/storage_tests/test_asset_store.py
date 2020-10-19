@@ -12,7 +12,8 @@ from dagster import (
 from dagster.core.definitions.events import AddressableAssetOperationType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.plan.objects import StepOutputHandle
-from dagster.core.storage.asset_store import default_filesystem_asset_store
+from dagster.core.storage.address_storage import AddressStorage
+from dagster.core.storage.asset_store import AssetStoreHandle, default_filesystem_asset_store
 
 
 def define_asset_pipeline(asset_store, asset_metadata_dict):
@@ -124,3 +125,37 @@ def test_step_subset():
             assert not evt.is_failure
         # only the selected step subset was executed
         assert set([evt.step_key for evt in step_subset_events]) == {"solid_b.compute"}
+
+
+def test_address_storage():
+    with seven.TemporaryDirectory() as tmpdir_path:
+        test_asset_store = default_filesystem_asset_store
+        # .configured({"base_dir": tmpdir_path})
+        test_asset_metadata_dict = {
+            "solid_a": {"path": os.path.join(tmpdir_path, "a")},
+            "solid_b": {"path": os.path.join(tmpdir_path, "b")},
+        }
+        pipeline_def = define_asset_pipeline(test_asset_store, test_asset_metadata_dict,)
+
+        instance = DagsterInstance.ephemeral(address_storage=AddressStorage())
+        result = execute_pipeline(pipeline_def, instance=instance)
+        assert result.success
+
+        assert instance.address_storage
+        asset_address_a, asset_store_handle_a = instance.address_storage.mapping[
+            StepOutputHandle("solid_a.compute", "result")
+        ]
+        assert asset_address_a.asset_metadata == test_asset_metadata_dict["solid_a"]
+        assert asset_store_handle_a == AssetStoreHandle(
+            asset_store_key="default_fs_asset_store",
+            asset_metadata=test_asset_metadata_dict["solid_a"],
+        )
+
+        asset_address_b, asset_store_handle_b = instance.address_storage.mapping[
+            StepOutputHandle("solid_b.compute", "result")
+        ]
+        assert asset_address_b.asset_metadata == test_asset_metadata_dict["solid_b"]
+        assert asset_store_handle_b == AssetStoreHandle(
+            asset_store_key="default_fs_asset_store",
+            asset_metadata=test_asset_metadata_dict["solid_b"],
+        )

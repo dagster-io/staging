@@ -58,6 +58,13 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
                         continue
 
                     if (
+                        context.instance.address_storage
+                        and context.instance.address_storage.has_addressable_asset(source_handle)
+                    ):
+                        # skip when source is trakced in address_storage
+                        continue
+
+                    if (
                         source_handle in step_input.addresses
                         and not self.has_intermediate_at_address(
                             step_input.addresses[source_handle]
@@ -72,6 +79,13 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
                 for source_handle in step_input.source_handles:
                     if context.get_asset_store_handle(source_handle) is not None:
                         # skip when the source output has asset store configured
+                        continue
+
+                    if (
+                        context.instance.address_storage
+                        and context.instance.address_storage.has_addressable_asset(source_handle)
+                    ):
+                        # skip when source is trakced in address_storage
                         continue
 
                     if (

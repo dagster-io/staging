@@ -8,11 +8,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import (
-    AddressableAssetOperation,
-    AddressableAssetOperationType,
-    ObjectStoreOperation,
-)
+from dagster.core.definitions.events import AddressableAssetOperation, ObjectStoreOperation
 from dagster.core.errors import (
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
@@ -329,38 +325,14 @@ def _create_step_events_for_output(step_context, output):
         yield evt
 
 
-def _get_addressable_asset(context, step_output_handle, asset_store_handle):
-    check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
-
-    asset_store = context.get_asset_store(asset_store_handle)
-    obj = asset_store.get_asset(context, asset_store_handle.asset_metadata)
-
-    return AddressableAssetOperation(
-        AddressableAssetOperationType.GET_ASSET,
-        None,
-        step_output_handle,
-        asset_store_handle,
-        obj=obj,
-    )
-
-
-def _set_addressable_asset(context, step_output_handle, asset_store_handle, value):
-    check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
-
-    asset_store = context.get_asset_store(asset_store_handle)
-    address = asset_store.set_asset(context, value, asset_store_handle.asset_metadata)
-    check.inst(address, AssetAddress)
-
-    return AddressableAssetOperation(
-        AddressableAssetOperationType.SET_ASSET, address, step_output_handle, asset_store_handle
-    )
-
-
 def _set_intermediates(step_context, step_output, step_output_handle, output, version):
-    if step_output.asset_store_handle:
-        # use asset_store if it's configured on provided by the user
-        res = _set_addressable_asset(
-            step_context, step_output_handle, step_output.asset_store_handle, output.value
+    if step_output.asset_store_handle and step_context.instance.address_storage:
+        # use address_storage if it's configured on the instance and asset_store is provided by the user
+        res = step_context.instance.address_storage.set_addressable_asset(
+            context=step_context,
+            asset_store_handle=step_output.asset_store_handle,
+            step_output_handle=step_output_handle,
+            value=output.value,
         )
 
         if isinstance(res, AddressableAssetOperation):
@@ -494,9 +466,12 @@ def _input_values_from_intermediate_storage(step_context):
             input_value = []
             for source_handle in step_input.source_handles:
                 source_asset_store_handle = step_context.get_asset_store_handle(source_handle)
-                if source_asset_store_handle:
-                    input_value = _get_addressable_asset(
-                        step_context, source_handle, source_asset_store_handle
+                if (
+                    step_context.instance.address_storage
+                    and step_context.instance.address_storage.has_addressable_asset(source_handle)
+                ):
+                    input_value = step_context.instance.address_storage.get_addressable_asset(
+                        context=step_context, step_output_handle=step_input.source_handles[0],
                     )
                 elif (
                     source_handle in step_input.addresses
@@ -532,9 +507,12 @@ def _input_values_from_intermediate_storage(step_context):
         elif step_input.is_from_single_output:
             source_handle = step_input.source_handles[0]
             source_asset_store_handle = step_context.get_asset_store_handle(source_handle)
-            if source_asset_store_handle:
-                input_value = _get_addressable_asset(
-                    step_context, source_handle, source_asset_store_handle
+            if (
+                step_context.instance.address_storage
+                and step_context.instance.address_storage.has_addressable_asset(source_handle)
+            ):
+                input_value = step_context.instance.address_storage.get_addressable_asset(
+                    context=step_context, step_output_handle=step_input.source_handles[0],
                 )
             elif source_handle in step_input.addresses:
                 input_value = step_context.intermediate_storage.get_intermediate_from_address(
@@ -542,6 +520,13 @@ def _input_values_from_intermediate_storage(step_context):
                     dagster_type=step_input.dagster_type,
                     step_output_handle=source_handle,
                     address=step_input.addresses[source_handle],
+                )
+            elif (
+                step_context.instance.address_storage
+                and step_context.instance.address_storage.has_addressable_asset(source_handle)
+            ):
+                input_value = step_context.instance.address_storage.get_addressable_asset(
+                    context=step_context, step_output_handle=step_input.source_handles[0],
                 )
             else:
                 input_value = step_context.intermediate_storage.get_intermediate(
