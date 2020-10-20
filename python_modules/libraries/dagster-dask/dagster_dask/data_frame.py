@@ -490,19 +490,25 @@ def dataframe_materializer(_context, config, dask_df):
             yield AssetMaterialization.file(to_path)
 
 
-def df_type_check(_, value):
-    if not isinstance(value, dd.DataFrame):
-        return TypeCheck(success=False)
-    return TypeCheck(
-        success=True,
-        metadata_entries=[
-            # string cast columns since they may be things like datetime
-            EventMetadataEntry.json({"columns": list(map(str, value.columns))}, "metadata"),
-        ],
-    )
+def _default_event_metadata_entry(value):
+    return [
+        # string cast columns since they may be things like datetime
+        EventMetadataEntry.json({"columns": list(map(str, value.columns))}, "metadata"),
+    ]
 
 
-DataFrame = DagsterType(
+def create_df_type_check(event_metadata_fn):
+    def _df_type_check(_, value):
+        return (
+            TypeCheck(success=True, metadata_entries=event_metadata_fn(value))
+            if isinstance(value, dd.DataFrame)
+            else TypeCheck(success=False)
+        )
+
+    return _df_type_check
+
+
+def create_dask_dataframe(
     name="DaskDataFrame",
     description="""A Dask DataFrame is a large parallel DataFrame composed of many smaller Pandas DataFrames, split along the index.
     These Pandas DataFrames may live on disk for larger-than-memory computing on a single machine, or on many different machines in a cluster.
@@ -510,5 +516,15 @@ DataFrame = DagsterType(
     See https://docs.dask.org/en/latest/dataframe.html""",
     loader=dataframe_loader,
     materializer=dataframe_materializer,
-    type_check_fn=df_type_check,
-)
+    event_metadata_entry_fn=_default_event_metadata_entry,
+):
+    return DagsterType(
+        name=name,
+        description=description,
+        loader=loader,
+        materializer=materializer,
+        type_check_fn=create_df_type_check(event_metadata_entry_fn),
+    )
+
+
+DataFrame = create_dask_dataframe()
