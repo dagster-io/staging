@@ -715,13 +715,13 @@ def python_steps():
     for m in DAGSTER_PACKAGES_WITH_CUSTOM_TESTS:
         steps += m.get_tox_build_steps()
 
-    steps += extra_library_tests()
+    # steps += extra_library_tests()
 
-    # https://github.com/dagster-io/dagster/issues/2785
-    steps += pipenv_smoke_tests()
-    steps += version_equality_checks()
-    steps += next_docs_build_tests()
-    steps += examples_tests()
+    # # https://github.com/dagster-io/dagster/issues/2785
+    # steps += pipenv_smoke_tests()
+    # steps += version_equality_checks()
+    # steps += next_docs_build_tests()
+    # steps += examples_tests()
     steps += integration_tests()
 
     return steps
