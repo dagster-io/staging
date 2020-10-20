@@ -502,7 +502,7 @@ def df_type_check(_, value):
     )
 
 
-DataFrame = DagsterType(
+def create_dask_dataframe(
     name="DaskDataFrame",
     description="""A Dask DataFrame is a large parallel DataFrame composed of many smaller Pandas DataFrames, split along the index.
     These Pandas DataFrames may live on disk for larger-than-memory computing on a single machine, or on many different machines in a cluster.
@@ -510,5 +510,14 @@ DataFrame = DagsterType(
     See https://docs.dask.org/en/latest/dataframe.html""",
     loader=dataframe_loader,
     materializer=dataframe_materializer,
-    type_check_fn=df_type_check,
-)
+):
+    return DagsterType(
+        name=name,
+        description=description,
+        loader=loader,
+        materializer=materializer,
+        type_check_fn=df_type_check,
+    )
+
+
+DataFrame = create_dask_dataframe()
