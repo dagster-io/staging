@@ -5,6 +5,7 @@ from dagster.core.definitions import (
     CompositeSolidDefinition,
     IPipeline,
     InputDefinition,
+    PipelineDefinition,
     Solid,
     SolidDefinition,
     SolidHandle,
@@ -161,7 +162,7 @@ class _PlanBuilder(object):
 
             ### 2b. RECURSE
             # Recurse over the solids contained in an instance of CompositeSolidDefinition
-            elif isinstance(solid.definition, CompositeSolidDefinition):
+            elif isinstance(solid.definition, (CompositeSolidDefinition, PipelineDefinition)):
                 self._build_from_sorted_solids(
                     solid.definition.solids_in_topological_order,
                     solid.definition.dependency_structure,
