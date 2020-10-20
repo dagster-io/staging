@@ -268,6 +268,27 @@ celery:
     failureThreshold: 3
 
 ####################################################################################################
+# K8s Run Launcher: configuration values for the celery-less run launcher
+####################################################################################################
+k8s_run_launcher:
+  ## The image to use for the launched Job's Dagster container. Note that when loading a pipeline
+  ## from a gRPC server, the image should not be specified.
+  # image:
+  #   repository: ""
+  #   tag: ""
+  #   pull_policy: Always
+  # The K8s namespace where new jobs will be launched.
+  job_namespace: "default"
+  # Set to true to load kubeconfig from within cluster.
+  load_incluster_config: true
+  # File to load kubeconfig from. Only set this if loadInclusterConfig is false.
+  kubeconfig_file: ~
+  # A list of custom ConfigMapEnvSource names from which to draw environment variables for the Job.
+  env_config_maps: ~
+  # A list of custom Secret names from which to draw environment variables for the Job.
+  env_secrets: ~
+
+####################################################################################################
 # RabbitMQ: Configuration values for rabbitmq. Only one of RabbitMQ / Redis should be enabled.
 ####################################################################################################
 rabbitmq:
