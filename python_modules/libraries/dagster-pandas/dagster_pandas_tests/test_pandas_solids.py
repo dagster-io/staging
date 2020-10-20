@@ -1,8 +1,6 @@
 import datetime
 
 import pandas as pd
-from dagster_pandas import DataFrame
-
 from dagster import (
     DependencyDefinition,
     InputDefinition,
