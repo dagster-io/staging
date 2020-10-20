@@ -12,13 +12,92 @@ from ..composition import (
 from ..config import ConfigMapping
 from ..inference import (
     has_explicit_return_type,
-    infer_input_definitions_for_composite_solid,
+    infer_input_definitions_for_graph,
     infer_output_definitions,
 )
 from ..input import InputDefinition
 from ..output import OutputDefinition
 from ..solid import CompositeSolidDefinition
 from .solid import validate_solid_fn
+
+
+def do_composition(
+    decorator_name, name, fn, provided_input_defs, provided_output_defs, config_schema, config_fn,
+):
+    actual_input_defs, actual_output_defs, explicit_outputs = (
+        (
+            infer_input_definitions_for_graph(decorator_name, name, fn),
+            infer_output_definitions(decorator_name, name, fn),
+            has_explicit_return_type(fn),
+        )
+        if provided_output_defs is None
+        else (provided_input_defs, provided_output_defs, True)
+    )
+
+    positional_inputs = validate_solid_fn(
+        "@composite_solid", name, fn, actual_input_defs, exclude_nothing=False
+    )
+
+    kwargs = {input_def.name: InputMappingNode(input_def) for input_def in actual_input_defs}
+
+    output = None
+    mapping = None
+    enter_composition(name, decorator_name)
+    try:
+        output = fn(**kwargs)
+        mapping = composite_mapping_from_output(output, actual_output_defs, name)
+    finally:
+        context = exit_composition(mapping)
+
+    check.invariant(
+        context.name == name,
+        "Composition context stack desync: received context for "
+        '"{context.name}" expected "{name}"'.format(context=context, name=name),
+    )
+
+    # line up mappings in definition order
+    input_mappings = []
+    for defn in actual_input_defs:
+        mappings = [
+            mapping for mapping in context.input_mappings if mapping.definition.name == defn.name
+        ]
+
+        if len(mappings) == 0:
+            raise DagsterInvalidDefinitionError(
+                "{decorator_name} '{solid_name}' has unmapped input '{input_name}'. "
+                "Remove it or pass it to the appropriate solid invocation.".format(
+                    decorator_name=decorator_name, solid_name=name, input_name=defn.name
+                )
+            )
+
+        input_mappings += mappings
+
+    output_mappings = []
+    for defn in actual_output_defs:
+        mapping = context.output_mapping_dict.get(defn.name)
+        if mapping is None:
+            # if we inferred output_defs we will be flexible and either take a mapping or not
+            if not explicit_outputs:
+                continue
+
+            raise DagsterInvalidDefinitionError(
+                "{decorator_name} '{solid_name}' has unmapped output '{output_name}'. "
+                "Remove it or return a value from the appropriate solid invocation.".format(
+                    decorator_name=decorator_name, solid_name=name, output_name=defn.name
+                )
+            )
+        output_mappings.append(mapping)
+
+    config_mapping = _get_validated_config_mapping(name, config_schema, config_fn)
+
+    return (
+        input_mappings,
+        output_mappings,
+        context.dependencies,
+        context.solid_defs,
+        config_mapping,
+        positional_inputs,
+    )
 
 
 class _CompositeSolid(object):
@@ -48,86 +127,29 @@ class _CompositeSolid(object):
         if not self.name:
             self.name = fn.__name__
 
-        input_defs = (
-            self.input_defs
-            if self.input_defs is not None
-            else infer_input_definitions_for_composite_solid(self.name, fn)
-        )
-
-        explicit_outputs = False
-        if self.output_defs is not None:
-            explicit_outputs = True
-            output_defs = self.output_defs
-        else:
-            explicit_outputs = has_explicit_return_type(fn)
-            output_defs = infer_output_definitions("@composite_solid", self.name, fn)
-
-        positional_inputs = validate_solid_fn(
-            "@composite_solid", self.name, fn, input_defs, exclude_nothing=False
-        )
-
-        kwargs = {input_def.name: InputMappingNode(input_def) for input_def in input_defs}
-
-        output = None
-        mapping = None
-        enter_composition(self.name, "@composite_solid")
-        try:
-            output = fn(**kwargs)
-            mapping = composite_mapping_from_output(output, output_defs, self.name)
-        finally:
-            context = exit_composition(mapping)
-
-        check.invariant(
-            context.name == self.name,
-            "Composition context stack desync: received context for "
-            '"{context.name}" expected "{self.name}"'.format(context=context, self=self),
-        )
-
-        # line up mappings in definition order
-        input_mappings = []
-        for defn in input_defs:
-            mappings = [
-                mapping
-                for mapping in context.input_mappings
-                if mapping.definition.name == defn.name
-            ]
-
-            if len(mappings) == 0:
-                raise DagsterInvalidDefinitionError(
-                    "@composite_solid '{solid_name}' has unmapped input '{input_name}'. "
-                    "Remove it or pass it to the appropriate solid invocation.".format(
-                        solid_name=self.name, input_name=defn.name
-                    )
-                )
-
-            input_mappings += mappings
-
-        output_mappings = []
-        for defn in output_defs:
-            mapping = context.output_mapping_dict.get(defn.name)
-            if mapping is None:
-                # if we inferred output_defs we will be flexible and either take a mapping or not
-                if not explicit_outputs:
-                    continue
-
-                raise DagsterInvalidDefinitionError(
-                    "@composite_solid '{solid_name}' has unmapped output '{output_name}'. "
-                    "Remove it or return a value from the appropriate solid invocation.".format(
-                        solid_name=self.name, output_name=defn.name
-                    )
-                )
-            output_mappings.append(mapping)
-
-        config_mapping = _get_validated_config_mapping(
-            self.name, self.config_schema, self.config_fn
+        (
+            input_mappings,
+            output_mappings,
+            dependencies,
+            solid_defs,
+            config_mapping,
+            positional_inputs,
+        ) = do_composition(
+            "@composite_solid",
+            self.name,
+            fn,
+            self.input_defs,
+            self.output_defs,
+            self.config_schema,
+            self.config_fn,
         )
 
         composite_def = CompositeSolidDefinition(
             name=self.name,
             input_mappings=input_mappings,
             output_mappings=output_mappings,
-            dependencies=context.dependencies,
-            solid_defs=context.solid_defs,
+            dependencies=dependencies,
+            solid_defs=solid_defs,
             description=self.description,
             config_mapping=config_mapping,
             positional_inputs=positional_inputs,
