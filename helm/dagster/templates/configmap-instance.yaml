@@ -78,7 +78,15 @@ data:
       module: dagster_k8s
       class: K8sRunLauncher
       config:
+        load_incluster_config: {{ .Values.k8s_run_launcher.load_incluster_config }}
+        job_namespace: {{ .Values.k8s_run_launcher.job_namespace }}
         service_account_name: {{ include "dagster.serviceAccountName" . }}
+        {{- with .Values.k8s_run_launcher }}
+        {{- if .image }}
+        job_image: "{{- .image.repository -}}:{{- .image.tag -}}"
+        image_pull_policy: {{- .image.pull_policy -}}
+        {{- end }}
+        {{- end }}
         dagster_home:
           env: DAGSTER_HOME
         instance_config_map:
@@ -87,6 +95,17 @@ data:
           env: DAGSTER_K8S_PG_PASSWORD_SECRET
         env_config_maps:
           - env: DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP
+          {{- range $name := $.Values.k8s_run_launcher.env_config_maps }}
+          {{- if $name }}
+          - {{ $name }}
+          {{- end }}
+          {{- end }}
+        env_secrets:
+          {{- range $name := $.Values.k8s_run_launcher.env_secrets }}
+          {{- if $name }}
+          - {{ $name }}
+          {{- end }}
+          {{- end }}
       {{- end }}
 
     run_storage:
