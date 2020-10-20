@@ -2,12 +2,11 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import defaultdict
 
 import six
-from toposort import CircularDependencyError
-
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort_flatten
+from toposort import CircularDependencyError
 
 from .dependency import DependencyStructure, IDependencyDefinition, Solid, SolidInvocation
 
