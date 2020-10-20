@@ -229,12 +229,16 @@ def default_repo(user_process_api):
         yield RepositoryLocation.from_handle(handle).get_repository("the_repo")
 
 
+@contextmanager
 def cli_api_repo():
-    return default_repo(UserProcessApi.CLI)
+    with default_repo(UserProcessApi.CLI) as repo:
+        yield repo
 
 
+@contextmanager
 def grpc_repo():
-    return default_repo(UserProcessApi.GRPC)
+    with default_repo(UserProcessApi.GRPC) as repo:
+        yield repo
 
 
 def repos():
