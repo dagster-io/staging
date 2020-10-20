@@ -4,6 +4,8 @@ import warnings
 import six
 
 from dagster import check
+from dagster.core.definitions.config import ConfigMapping
+from dagster.core.definitions.solid import ISolidDefinition
 from dagster.core.errors import (
     DagsterInvalidDefinitionError,
     DagsterInvalidSubsetError,
@@ -18,11 +20,12 @@ from .dependency import (
     SolidHandle,
     SolidInvocation,
 )
+from .graph import GraphDefinition
 from .hook import HookDefinition
 from .mode import ModeDefinition
 from .preset import PresetDefinition
 from .solid import ISolidDefinition
-from .solid_container import IContainSolids, create_execution_structure, validate_dependency_dict
+from .solid_container import create_execution_structure, validate_dependency_dict
 from .utils import check_valid_name, validate_tags
 
 
@@ -57,7 +60,7 @@ def _anonymous_pipeline_name():
     return "__pipeline__" + str(uuid.uuid4()).replace("-", "")
 
 
-class PipelineDefinition(IContainSolids):
+class PipelineDefinition(GraphDefinition):
     """Defines a Dagster pipeline.
 
     A pipeline is made up of
@@ -153,7 +156,13 @@ class PipelineDefinition(IContainSolids):
         preset_defs=None,
         tags=None,
         hook_defs=None,
+        input_mappings=None,
+        output_mappings=None,
+        config_mapping=None,
+        positional_inputs=None,
         _parent_pipeline_def=None,  # https://github.com/dagster-io/dagster/issues/2115
+        _configured_config_mapping_fn=None,
+        _configured_config_schema=None,
     ):
         if not name:
             warnings.warn(
@@ -190,9 +199,10 @@ class PipelineDefinition(IContainSolids):
         self._dependencies = validate_dependency_dict(dependencies)
 
         dependency_structure, solid_dict = create_execution_structure(
-            self._current_level_solid_defs, self._dependencies, container_definition=None
+            self._current_level_solid_defs, self._dependencies, container_definition=self
         )
 
+        self._solid_defs = solid_defs
         self._solid_dict = solid_dict
         self._dependency_structure = dependency_structure
 
@@ -239,6 +249,138 @@ class PipelineDefinition(IContainSolids):
         )
         self._cached_run_config_schemas = {}
         self._cached_external_pipeline = None
+
+        # new solid stuff below
+
+        from dagster.core.definitions.solid import _validate_in_mappings, _validate_out_mappings
+
+        input_mappings, input_def_list = _validate_in_mappings(
+            check.opt_list_param(input_mappings, "input_mappings"), solid_dict, name, "Pipeline"
+        )
+
+        output_mappings = _validate_out_mappings(
+            check.opt_list_param(output_mappings, "output_mappings"), solid_dict, name, "Pipeline"
+        )
+
+        input_defs = input_def_list
+        output_defs = [output_mapping.definition for output_mapping in output_mappings]
+        self._config_mapping = check.opt_inst_param(config_mapping, "config_mapping", ConfigMapping)
+
+        self.__configured_config_mapping_fn = check.opt_callable_param(
+            _configured_config_mapping_fn, "config_mapping_fn"
+        )
+        self.__configured_config_schema = _configured_config_schema
+
+        super(PipelineDefinition, self).__init__(
+            name=self._name,
+            input_defs=input_defs,
+            output_defs=output_defs,
+            description=description,
+            tags=check.opt_dict_param(tags, "tags", key_type=str),
+            positional_inputs=positional_inputs,
+            input_mappings=input_mappings,
+            output_mappings=output_mappings,
+        )
+
+    # start ISolidDefinition requirements
+
+    @property
+    def _configured_config_mapping_fn(self):
+        return self.__configured_config_mapping_fn
+
+    @property
+    def config_schema(self):
+        if self.is_preconfigured:
+            return self.__configured_config_schema
+        elif self.has_config_mapping:
+            return self.config_mapping.config_schema
+
+    @property
+    def has_config_mapping(self):
+        return self._config_mapping is not None
+
+    @property
+    def config_mapping(self):
+        return self._config_mapping
+
+    def configured(self, config_or_config_fn, config_schema=None, **kwargs):
+        """
+        Returns a new :py:class:`PipelineDefinition` that bundles this definition with the
+        specified config or config function.
+
+        Args:
+            config_or_config_fn (Union[Any, Callable[[Any], Any]]): Either (1) Run configuration
+                that fully satisfies this composite solid's config schema or (2) A function that accepts run
+                configuration and returns run configuration that fully satisfies this composite solid's
+                config schema.  In the latter case, config_schema must be specified.  When
+                passing a function, it's easiest to use :py:func:`configured`.
+            config_schema (ConfigSchema): If config_or_config_fn is a function, the config schema
+                that its input must satisfy.
+            name (str): Name of the new (configured) composite solid. Must be unique within any
+                :py:class:`PipelineDefinition` using the composite solid.
+            **kwargs: Arbitrary keyword arguments that will be passed to the initializer of the
+                returned composite solid.
+
+        Returns (CompositeSolidDefinition): A configured version of this composite solid definition.
+        """
+        if not self.has_config_mapping:
+            raise DagsterInvalidDefinitionError(
+                "Only pipelines utilizing config mapping can be pre-configured. The solid "
+                '"{solid_name}" does not have a config mapping, and thus has nothing to be '
+                "configured.".format(solid_name=self.name)
+            )
+
+        fn_name = config_or_config_fn.__name__ if callable(config_or_config_fn) else None
+        name = kwargs.get("name", fn_name)
+        if not name:
+            raise DagsterInvalidDefinitionError(
+                'Missing string param "name" while attempting to configure the pipeline'
+                '"{name}". When configuring a solid, you must specify a name for the '
+                "resulting pipeline definition as a keyword param or use `configured` in decorator "
+                "form. For examples, visit https://docs.dagster.io/overview/configuration#configured.".format(
+                    name=self.name
+                )
+            )
+
+        wrapped_config_mapping_fn = self._get_wrapped_config_mapping_fn(
+            config_or_config_fn, config_schema
+        )
+
+        return PipelineDefinition(
+            solid_defs=self._solid_defs,
+            name=name,
+            description=kwargs.get("description", self.description),
+            dependencies=self._dependencies,
+            mode_defs=self._mode_definitions,
+            preset_defs=self.preset_defs,
+            hook_defs=self.hook_defs,
+            input_mappings=self._input_mappings,
+            output_mappings=self._output_mappings,
+            config_mapping=self._config_mapping,
+            positional_inputs=self.positional_inputs,
+            _parent_pipeline_def=self._parent_pipeline_def,
+            _configured_config_schema=config_schema,
+            _configured_config_mapping_fn=wrapped_config_mapping_fn,
+        )
+
+    def iterate_solid_defs(self):
+        yield self
+        for outer_solid_def in self._solid_defs:
+            for solid_def in outer_solid_def.iterate_solid_defs():
+                yield solid_def
+
+    def resolve_output_to_origin(self, output_name, handle):
+        check.str_param(output_name, "output_name")
+        check.inst_param(handle, "handle", SolidHandle)
+
+        mapping = self.get_output_mapping(output_name)
+        check.invariant(mapping, "Can only resolve outputs for valid output names")
+        mapped_solid = self.solid_named(mapping.solid_name)
+        return mapped_solid.definition.resolve_output_to_origin(
+            mapping.output_name, SolidHandle(mapped_solid.name, handle),
+        )
+
+    # end ISolidDefinition requirements
 
     def get_run_config_schema(self, mode=None):
         check.str_param(mode, "mode")

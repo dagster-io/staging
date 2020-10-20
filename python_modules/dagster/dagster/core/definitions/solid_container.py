@@ -174,6 +174,7 @@ def create_execution_structure(solid_defs, dependencies_dict, container_definiti
 
     as well as a dagster.core.definitions.dependency.DependencyStructure object.
     """
+    from .pipeline import PipelineDefinition
     from .solid import ISolidDefinition, CompositeSolidDefinition
 
     check.list_param(solid_defs, "solid_defs", of_type=ISolidDefinition)
@@ -184,7 +185,9 @@ def create_execution_structure(solid_defs, dependencies_dict, container_definiti
         value_type=dict,
     )
     # container_definition is none in the context of a pipeline
-    check.opt_inst_param(container_definition, "container_definition", CompositeSolidDefinition)
+    check.opt_inst_param(
+        container_definition, "container_definition", (CompositeSolidDefinition, PipelineDefinition)
+    )
 
     # Same as dep_dict but with SolidInvocation replaced by alias string
     aliased_dependencies_dict = {}

@@ -96,7 +96,7 @@ def _composite_descent(parent_stack, solids_config_dict):
         current_solid_config = solids_config_dict.get(solid.name, {})
 
         # the base case
-        if not isinstance(solid.definition, CompositeSolidDefinition):
+        if not isinstance(solid.definition, (CompositeSolidDefinition, PipelineDefinition)):
             config_mapped_solid_config = solid.definition.apply_config_mapping(
                 {"config": current_solid_config.get("config")}
             )
@@ -113,7 +113,7 @@ def _composite_descent(parent_stack, solids_config_dict):
             yield SolidConfigEntry(current_handle, SolidConfig.from_dict(complete_config_object))
             continue
 
-        composite_def = check.inst(solid.definition, CompositeSolidDefinition)
+        composite_def = check.inst(solid.definition, (CompositeSolidDefinition, PipelineDefinition))
 
         yield SolidConfigEntry(
             current_handle,
