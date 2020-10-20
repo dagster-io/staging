@@ -47,7 +47,7 @@ def _assign_python_env_location_name(repository_code_pointer_dict):
             "If there is one than more repository you must provide a location name"
         )
 
-    return next(iter(repository_code_pointer_dict.keys()))
+    return next(iter(repository_code_pointer_dict.keys())) + "_location"
 
 
 # Which API the host process should use to communicate with the process
