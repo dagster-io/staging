@@ -3,14 +3,13 @@ import os
 
 import dateutil.parser
 from airflow.exceptions import AirflowException, AirflowSkipException
-from dagster_graphql.client.mutations import execute_execute_plan_mutation
-from dagster_graphql.client.query import EXECUTE_PLAN_MUTATION
-from dagster_graphql.client.util import construct_execute_plan_variables
-
 from dagster import DagsterEventType, check, seven
 from dagster.core.events import DagsterEvent
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
 from dagster.utils.hosted_user_process import create_in_process_ephemeral_workspace
+from dagster_graphql.client.mutations import execute_execute_plan_mutation
+from dagster_graphql.client.query import EXECUTE_PLAN_MUTATION
+from dagster_graphql.client.util import construct_execute_plan_variables
 
 
 def check_events_for_failures(events):

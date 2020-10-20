@@ -1,9 +1,5 @@
 from collections import defaultdict
 
-from dagster_graphql.cli import execute_query
-from dagster_graphql.client.query import EXECUTE_PLAN_MUTATION
-from dagster_graphql.client.util import HANDLED_EVENTS, dagster_event_from_dict, parse_raw_log_lines
-
 from dagster import (
     AssetMaterialization,
     Bool,
@@ -26,6 +22,9 @@ from dagster.core.execution.api import create_execution_plan
 from dagster.core.host_representation.handle import IN_PROCESS_NAME
 from dagster.core.instance import DagsterInstance
 from dagster.utils.hosted_user_process import create_in_process_ephemeral_workspace
+from dagster_graphql.cli import execute_query
+from dagster_graphql.client.query import EXECUTE_PLAN_MUTATION
+from dagster_graphql.client.util import HANDLED_EVENTS, dagster_event_from_dict, parse_raw_log_lines
 
 
 def test_can_handle_all_step_events():

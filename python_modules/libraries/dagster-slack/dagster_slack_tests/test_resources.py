@@ -1,7 +1,6 @@
 import responses
-from dagster_slack import slack_resource
-
 from dagster import ModeDefinition, execute_solid, solid
+from dagster_slack import slack_resource
 
 
 @responses.activate

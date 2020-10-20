@@ -1,12 +1,6 @@
 import re
 
 import pytest
-from dagster_graphql.client.mutations import (
-    DagsterGraphQLClientError,
-    execute_execute_plan_mutation,
-    execute_execute_plan_mutation_raw,
-)
-
 from dagster import file_relative_path
 from dagster.cli.workspace.cli_target import PythonFileTarget, workspace_from_load_target
 from dagster.core.definitions.reconstructable import (
@@ -19,6 +13,11 @@ from dagster.core.host_representation.handle import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.utils.hosted_user_process import create_in_process_ephemeral_workspace
+from dagster_graphql.client.mutations import (
+    DagsterGraphQLClientError,
+    execute_execute_plan_mutation,
+    execute_execute_plan_mutation_raw,
+)
 
 EXPECTED_EVENTS = {
     ("STEP_INPUT", "sleeper.compute"),

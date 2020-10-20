@@ -3,7 +3,6 @@ import time
 from contextlib import contextmanager
 
 import yaml
-
 from dagster import (
     DagsterInvariantViolationError,
     Output,

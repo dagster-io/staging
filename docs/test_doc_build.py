@@ -3,7 +3,6 @@ import subprocess
 import sys
 
 import pytest
-
 from dagster.utils import file_relative_path
 
 

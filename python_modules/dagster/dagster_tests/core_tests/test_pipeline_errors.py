@@ -3,7 +3,6 @@ import sys
 import warnings
 
 import pytest
-
 from dagster import (
     DagsterInvariantViolationError,
     DagsterTypeCheckDidNotPass,

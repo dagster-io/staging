@@ -1,7 +1,5 @@
 import dask
 import dask.distributed
-from dagster_graphql.client.mutations import execute_execute_plan_mutation
-
 # Dask resource requirements are specified under this key
 from dagster import Executor, Field, Permissive, Selector, check, seven
 from dagster.core.definitions.executor import check_cross_process_constraints, executor
@@ -11,6 +9,7 @@ from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import Retries
 from dagster.utils import frozentags, iterate_with_context, raise_interrupts_immediately
 from dagster.utils.hosted_user_process import create_in_process_ephemeral_workspace
+from dagster_graphql.client.mutations import execute_execute_plan_mutation
 
 DASK_RESOURCE_REQUIREMENTS_KEY = "dagster-dask/resource_requirements"
 
