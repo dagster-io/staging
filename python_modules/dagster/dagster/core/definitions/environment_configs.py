@@ -16,6 +16,7 @@ from dagster.utils import check, ensure_single_item
 from .dependency import DependencyStructure, Solid, SolidHandle, SolidInputHandle
 from .logger import LoggerDefinition
 from .mode import ModeDefinition
+from .pipeline import PipelineDefinition
 from .resource import ResourceDefinition
 from .solid import CompositeSolidDefinition, ISolidDefinition, SolidDefinition
 
@@ -283,7 +284,7 @@ def define_isolid_field(solid, handle, dependency_structure):
             solid, handle, dependency_structure, solid.definition.config_schema
         )
 
-    composite_def = check.inst(solid.definition, CompositeSolidDefinition)
+    composite_def = check.inst(solid.definition, (CompositeSolidDefinition, PipelineDefinition))
 
     if composite_def.has_config_mapping:
         # has_config_mapping covers cases 2 & 4 from above (only config mapped composite solids can
@@ -332,7 +333,7 @@ def iterate_solid_def_config_types(solid_def):
         if solid_def.config_schema:
             for config_type in iterate_config_types(solid_def.config_schema.config_type):
                 yield config_type
-    elif isinstance(solid_def, CompositeSolidDefinition):
+    elif isinstance(solid_def, (CompositeSolidDefinition, PipelineDefinition)):
         for solid in solid_def.solids:
             for config_type in iterate_solid_def_config_types(solid.definition):
                 yield config_type
