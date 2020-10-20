@@ -19,7 +19,7 @@ def test_streaming_terminate():
         stream_events_result_thread.start()
         while not streaming_results:
             time.sleep(0.001)
-        res = api_client.shutdown_server()
+        res = api_client.shutdown_server(timeout=30)
         assert res.success
         assert res.serializable_error_info is None
 
