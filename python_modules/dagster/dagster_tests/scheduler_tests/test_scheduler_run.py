@@ -198,6 +198,10 @@ def schedule_instance(overrides=None):
                     "module": "dagster.core.scheduler",
                     "class": "DagsterCommandLineScheduler",
                 },
+                "run_launcher": {
+                    "module": "dagster.core.test_utils",
+                    "class": "InMemoryTestRunLauncher",
+                },
             },
             (overrides if overrides else {}),
         )
