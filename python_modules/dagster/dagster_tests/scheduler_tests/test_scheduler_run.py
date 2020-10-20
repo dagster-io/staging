@@ -238,7 +238,7 @@ def grpc_repo():
 
 
 def repos():
-    return [cli_api_repo, grpc_repo]
+    return [grpc_repo]
 
 
 def validate_tick(
