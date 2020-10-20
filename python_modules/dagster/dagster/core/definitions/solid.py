@@ -6,6 +6,7 @@ from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.core.definitions.config import ConfigMapping
 from dagster.core.definitions.config_mappable import IConfigMappable
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.utils import frozendict, frozenlist
 from dagster.utils.backcompat import experimental_arg_warning, rename_warning
 
@@ -166,6 +167,10 @@ class ISolidDefinition(IConfigMappable):
         hook_defs = frozenset(check.set_param(hook_defs, "hook_defs", of_type=HookDefinition))
 
         return CallableSolidNode(self, hook_defs=hook_defs)
+
+    @abstractproperty
+    def required_resource_keys(self):
+        raise NotImplementedError()
 
 
 class SolidDefinition(ISolidDefinition):
@@ -677,15 +682,17 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
         )
 
 
-def _validate_in_mappings(input_mappings, solid_dict, name):
+def _validate_in_mappings(input_mappings, solid_dict, name, class_name="CompositeSolid"):
     input_def_dict = OrderedDict()
     for mapping in input_mappings:
         if isinstance(mapping, InputMapping):
             if input_def_dict.get(mapping.definition.name):
                 if input_def_dict[mapping.definition.name] != mapping.definition:
                     raise DagsterInvalidDefinitionError(
-                        "In CompositeSolid {name} multiple input mappings with same "
-                        "definition name but different definitions".format(name=name),
+                        "In {class_name} {name} multiple input mappings with same "
+                        "definition name but different definitions".format(
+                            name=name, class_name=class_name
+                        ),
                     )
             else:
                 input_def_dict[mapping.definition.name] = mapping.definition
@@ -693,80 +700,85 @@ def _validate_in_mappings(input_mappings, solid_dict, name):
             target_solid = solid_dict.get(mapping.solid_name)
             if target_solid is None:
                 raise DagsterInvalidDefinitionError(
-                    "In CompositeSolid '{name}' input mapping references solid "
+                    "In {class_name} '{name}' input mapping references solid "
                     "'{solid_name}' which it does not contain.".format(
-                        name=name, solid_name=mapping.solid_name
+                        name=name, solid_name=mapping.solid_name, class_name=class_name
                     )
                 )
             if not target_solid.has_input(mapping.input_name):
                 raise DagsterInvalidDefinitionError(
-                    "In CompositeSolid '{name}' input mapping to solid '{mapping.solid_name}' "
+                    "In {class_name} '{name}' input mapping to solid '{mapping.solid_name}' "
                     "which contains no input named '{mapping.input_name}'".format(
-                        name=name, mapping=mapping
+                        name=name, mapping=mapping, class_name=class_name
                     )
                 )
 
             target_input = target_solid.input_def_named(mapping.input_name)
             if target_input.dagster_type != mapping.definition.dagster_type:
                 raise DagsterInvalidDefinitionError(
-                    "In CompositeSolid '{name}' input "
+                    "In {class_name} '{name}' input "
                     "'{mapping.definition.name}' of type {mapping.definition.dagster_type.display_name} maps to "
                     "{mapping.solid_name}.{mapping.input_name} of different type "
                     "{target_input.dagster_type.display_name}. InputMapping source and "
                     "destination must have the same type.".format(
-                        mapping=mapping, name=name, target_input=target_input
+                        mapping=mapping, name=name, target_input=target_input, class_name=class_name
                     )
                 )
 
         elif isinstance(mapping, InputDefinition):
             raise DagsterInvalidDefinitionError(
-                "In CompositeSolid '{name}' you passed an InputDefinition "
+                "In {class_name} '{name}' you passed an InputDefinition "
                 "named '{input_name}' directly in to input_mappings. Return "
                 "an InputMapping by calling mapping_to on the InputDefinition.".format(
-                    name=name, input_name=mapping.name,
+                    name=name, input_name=mapping.name, class_name=class_name
                 )
             )
         else:
             raise DagsterInvalidDefinitionError(
-                "In CompositeSolid '{name}' received unexpected type '{type}' in input_mappings. "
+                "In {class_name} '{name}' received unexpected type '{type}' in input_mappings. "
                 "Provide an OutputMapping using InputDefinition(...).mapping_to(...)".format(
-                    type=type(mapping), name=name,
+                    type=type(mapping), name=name, class_name=class_name
                 )
             )
 
     return input_mappings, input_def_dict.values()
 
 
-def _validate_out_mappings(output_mappings, solid_dict, name):
+def _validate_out_mappings(output_mappings, solid_dict, name, class_name="CompositeSolid"):
     for mapping in output_mappings:
         if isinstance(mapping, OutputMapping):
 
             target_solid = solid_dict.get(mapping.solid_name)
             if target_solid is None:
                 raise DagsterInvalidDefinitionError(
-                    "In CompositeSolid '{name}' output mapping references solid "
+                    "In {class_name} '{name}' output mapping references solid "
                     "'{solid_name}' which it does not contain.".format(
-                        name=name, solid_name=mapping.solid_name
+                        name=name, solid_name=mapping.solid_name, class_name=class_name
                     )
                 )
             if not target_solid.has_output(mapping.output_name):
                 raise DagsterInvalidDefinitionError(
-                    "In CompositeSolid {name} output mapping from solid '{mapping.solid_name}' "
+                    "In {class_name} {name} output mapping from solid '{mapping.solid_name}' "
                     "which contains no output named '{mapping.output_name}'".format(
-                        name=name, mapping=mapping
+                        name=name, mapping=mapping, class_name=class_name
                     )
                 )
 
             target_output = target_solid.output_def_named(mapping.output_name)
 
-            if target_output.dagster_type != mapping.definition.dagster_type:
+            if mapping.definition.dagster_type.kind != DagsterTypeKind.ANY and (
+                target_output.dagster_type != mapping.definition.dagster_type
+            ):
                 raise DagsterInvalidDefinitionError(
-                    "In CompositeSolid '{name}' output "
+                    "In {class_name} '{name}' output "
                     "'{mapping.definition.name}' of type {mapping.definition.dagster_type.display_name} "
                     "maps from {mapping.solid_name}.{mapping.output_name} of different type "
                     "{target_output.dagster_type.display_name}. OutputMapping source "
                     "and destination must have the same type.".format(
-                        mapping=mapping, name=name, target_output=target_output
+                        class_name=class_name,
+                        mapping=mapping,
+                        name=name,
+                        target_output=target_output,
                     )
                 )
 
