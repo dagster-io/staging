@@ -1,12 +1,11 @@
 import pytest
+from dagster import execute_pipeline
+from dagster.seven import json, mock
 from dagster_graphql.implementation.fetch_pipelines import (
     _get_dauphin_pipeline_snapshot_from_instance,
 )
 from dagster_graphql.implementation.utils import UserFacingGraphQLError
 from dagster_graphql.test.utils import execute_dagster_graphql
-
-from dagster import execute_pipeline
-from dagster.seven import json, mock
 
 from .setup import main_repo_location_name, main_repo_name, noop_pipeline
 

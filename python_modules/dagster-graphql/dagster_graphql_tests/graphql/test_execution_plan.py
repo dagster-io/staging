@@ -1,12 +1,11 @@
 import re
 
-from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
-
 from dagster import check
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.intermediate_storage import build_fs_intermediate_storage
 from dagster.utils import file_relative_path, merge_dicts
 from dagster.utils.test import get_temp_file_name
+from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
 
 from .graphql_context_test_suite import ReadonlyGraphQLContextTestMatrix
 from .setup import (

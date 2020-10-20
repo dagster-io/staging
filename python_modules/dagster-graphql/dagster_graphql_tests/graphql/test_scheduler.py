@@ -1,10 +1,9 @@
+from dagster.core.scheduler.scheduler import ScheduleStatus
 from dagster_graphql.test.utils import (
     execute_dagster_graphql,
     infer_repository_selector,
     infer_schedule_selector,
 )
-
-from dagster.core.scheduler.scheduler import ScheduleStatus
 
 from .setup import main_repo_location_name, main_repo_name
 

@@ -1,6 +1,5 @@
-from dagster_aws.emr.pyspark_step_launcher import EmrPySparkStepLauncher
-
 from dagster.seven import mock
+from dagster_aws.emr.pyspark_step_launcher import EmrPySparkStepLauncher
 
 EVENTS = [object(), object(), object()]
 

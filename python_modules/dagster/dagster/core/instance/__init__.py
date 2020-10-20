@@ -9,8 +9,6 @@ from typing import Optional
 
 import six
 import yaml
-from rx import Observable
-
 from dagster import check, seven
 from dagster.config import Field, Permissive
 from dagster.core.definitions.events import AssetKey
@@ -31,6 +29,7 @@ from dagster.serdes import ConfigurableClass, whitelist_for_serdes
 from dagster.seven import get_current_datetime_in_utc
 from dagster.utils.merger import merge_dicts
 from dagster.utils.yaml_utils import load_yaml_from_globs
+from rx import Observable
 
 from .config import DAGSTER_CONFIG_YAML_FILENAME
 from .ref import InstanceRef, compute_logs_directory

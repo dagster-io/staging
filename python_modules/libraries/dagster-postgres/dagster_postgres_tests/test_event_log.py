@@ -4,9 +4,6 @@ from collections import Counter
 
 import mock
 import yaml
-from dagster_postgres.event_log import PostgresEventLogStorage
-from dagster_postgres.utils import get_conn
-
 from dagster import (
     AssetKey,
     AssetMaterialization,
@@ -25,6 +22,8 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.utils import make_new_run_id
 from dagster.loggers import colored_console_logger
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
+from dagster_postgres.event_log import PostgresEventLogStorage
+from dagster_postgres.utils import get_conn
 
 TEST_TIMEOUT = 5
 

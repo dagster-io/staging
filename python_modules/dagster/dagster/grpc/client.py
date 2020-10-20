@@ -5,7 +5,6 @@ import warnings
 from contextlib import contextmanager
 
 import grpc
-
 from dagster import check, seven
 from dagster.core.events import EngineEventData
 from dagster.core.instance import DagsterInstance

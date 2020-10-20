@@ -4,7 +4,6 @@ import os
 import sys
 
 import pendulum
-
 from dagster import check
 from dagster.core.definitions import ExecutableContext, ScheduleExecutionContext
 from dagster.core.definitions.reconstructable import (

@@ -6,10 +6,6 @@ import signal
 
 import click
 import requests
-from graphql import graphql
-from graphql.execution.executors.gevent import GeventExecutor
-from graphql.execution.executors.sync import SyncExecutor
-
 from dagster import check, seven
 from dagster.cli.workspace import workspace_target_argument
 from dagster.cli.workspace.cli_target import WORKSPACE_TARGET_WARNING, get_workspace_from_kwargs
@@ -18,6 +14,9 @@ from dagster.core.instance import DagsterInstance
 from dagster.seven import urljoin, urlparse
 from dagster.utils import DEFAULT_REPOSITORY_YAML_FILENAME
 from dagster.utils.log import get_stack_trace_array
+from graphql import graphql
+from graphql.execution.executors.gevent import GeventExecutor
+from graphql.execution.executors.sync import SyncExecutor
 
 from .client.query import EXECUTE_PLAN_MUTATION, LAUNCH_PIPELINE_EXECUTION_MUTATION
 from .implementation.context import DagsterGraphQLContext

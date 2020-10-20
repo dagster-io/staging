@@ -1,7 +1,6 @@
 import warnings
 
 import six
-
 from dagster import check
 from dagster.core.errors import (
     DagsterInvalidDefinitionError,
