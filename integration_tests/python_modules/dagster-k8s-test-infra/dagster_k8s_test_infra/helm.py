@@ -71,7 +71,8 @@ def helm_namespace(
 def helm_namespace_for_k8s_run_launcher(
     cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    yield _helm_namespace_helper(helm_chart_for_k8s_run_launcher, request)
+    with _helm_namespace_helper(helm_chart_for_k8s_run_launcher, request) as namespace:
+        yield namespace
 
 
 @contextmanager
