@@ -580,6 +580,16 @@ def test_run_step_stats_with_retries(conn_string):
     def should_retry(context, _input):
         raise RetryRequested(max_retries=3)
 
+
+@solid(retries=3)
+def my_flakey_solid(_):
+    pass
+
+
+@solid(retries=RetryConfig(max_retries=3, seconds_to_wait=10))
+def my_flakey_solid(_):
+    pass
+
     def _one():
         should_retry(should_succeed())
 
