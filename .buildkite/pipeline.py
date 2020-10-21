@@ -632,6 +632,17 @@ def next_docs_build_tests():
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
+        StepBuilder("next export index")
+        .run(
+            "make dev_install",
+            "pip install -e python_modules/automation",
+            "pip install -r docs-requirements.txt -qqq",
+            "cd docs",
+            "make updateindex",
+            "git diff --exit-code",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
     ]
 
 
