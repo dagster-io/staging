@@ -127,6 +127,14 @@ class StepSuccessData(namedtuple("_StepSuccessData", "duration_ms")):
 
 
 @whitelist_for_serdes
+class StepRestartedData(namedtuple("_StepRetryData", "attempt_number")):
+    def __new__(cls, attempt_number):
+        return super(StepRestartedData, cls).__new__(
+            cls, attempt_number=check.int_param(attempt_number, "attempt_number")
+        )
+
+
+@whitelist_for_serdes
 class StepKind(Enum):
     COMPUTE = "COMPUTE"
 
