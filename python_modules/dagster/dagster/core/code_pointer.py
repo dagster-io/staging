@@ -84,6 +84,14 @@ def load_python_file(python_file, working_directory):
     Takes a path to a python file and returns a loaded module
     """
     check.str_param(python_file, "python_file")
+
+    try:
+        os.stat(python_file)
+    except OSError:
+        raise DagsterInvariantViolationError(
+            "Could not find python file at {python_file}".format(python_file=python_file)
+        )
+
     module_name = os.path.splitext(os.path.basename(python_file))[0]
     cwd = sys.path[0]
     if working_directory:

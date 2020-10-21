@@ -226,7 +226,7 @@ def python_target_click_options():
         click.option(
             "--python-file",
             "-f",
-            type=click.Path(exists=True),
+            type=click.Path(),
             help="Specify python file where repository or pipeline function lives",
         ),
         click.option(
