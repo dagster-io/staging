@@ -133,6 +133,13 @@ doctest:
 livehtml:
 	sphinx-autobuild -a -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 
+searchindex:
+	make clean && make json
+	rm -rf next/src/data
+	mkdir next/src/data
+	cp _build/json/searchindex.json next/src/data/searchindex.json
+	NODE_ENV=$(or $(NODE_ENV), development) yarn --cwd next process --step
+
 buildnext:
 	make clean && make json
 	rm -rf next/src/data

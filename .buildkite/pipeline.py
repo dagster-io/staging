@@ -632,6 +632,16 @@ def next_docs_build_tests():
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
+        StepBuilder("next searchindex")
+        .run(
+            "pip install -e python_modules/automation",
+            "pip install -r docs-requirements.txt -qqq",
+            "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
+            "cd docs",
+            "make searchindex",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
     ]
 
 

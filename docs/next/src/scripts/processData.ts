@@ -3,12 +3,11 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import algoliasearch from 'algoliasearch';
 import data from '../data/searchindex.json';
+import assert from 'assert';
 
 // Folder paths
 const DATA_PATH = path.join(__dirname, '../data');
 const MODULE_PATH = path.join(DATA_PATH, '_modules');
-const EXAMPLES_PATH = path.join(__dirname, '../../../../examples');
-const EXAMPLES_FOLDER_PATH = path.join(__dirname, '../pages/examples');
 
 process.on('unhandledRejection', (error) => {
   console.error(error); // This prints error with stack included (as for normal errors)
@@ -181,15 +180,25 @@ async function createAlgoliaIndex() {
   }
 }
 
-const steps = [
-  preProcess,
-  rewriteRelativeLinks,
-  createModuleIndex,
-  createAlgoliaIndex,
-];
+const steps: { [key: string]: any } = {
+  preProcess: preProcess,
+  rewriteRelativeLinks: rewriteRelativeLinks,
+  createModuleIndex: createModuleIndex,
+  // createAlgoliaIndex: createAlgoliaIndex,
+};
 
-(async () => {
-  for (const step of steps) {
-    await step();
-  }
-})();
+const args: string[] = process.argv;
+if (args.length > 2) {
+  assert(args[2] == '--step', 'Only valid argument is step');
+  assert(args.length == 4, 'Can only provide one value for --step');
+  assert(steps[args[3]], 'Invalid step name');
+  (async () => {
+    steps[args[3]]();
+  })();
+} else {
+  (async () => {
+    for (const [, fn] of Object.entries(steps)) {
+      await fn();
+    }
+  })();
+}
