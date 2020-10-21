@@ -53,6 +53,7 @@ from ..temp_file import (
     get_temp_file_names,
 )
 from ..typing_api import is_typing_type
+from .test_documented_exports import assert_documented_exports
 
 
 def create_test_pipeline_execution_context(logger_defs=None):
