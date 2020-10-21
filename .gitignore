@@ -126,6 +126,7 @@ docs/next/.mdx-data
 docs/next/public/sitemap.xml
 # Data
 data
+!data/exportindex.json
 # Don't ignore data folders in examples
 !examples/*/data
 !examples/**/**/data
