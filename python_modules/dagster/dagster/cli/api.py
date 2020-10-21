@@ -417,23 +417,68 @@ def execute_step_with_structured_logs_command(input_json):
             step_keys_to_execute=step_keys_to_execute
         ),
     )
+    step_key = step_keys_to_execute[0]
 
     with (
         DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
     ) as instance:
         pipeline_run = instance.get_run_by_id(args.pipeline_run_id)
         recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
+        retries = Retries.from_config(args.retries_dict)
+
+        if args.should_verify_step:
+            current_attempt = retries.get_attempt_count(step_key) + 1
+            step_stats = instance.get_run_step_stats(pipeline_run.run_id, step_keys=[step_key])
+
+            # When using the k8s executor, it is possible to get into an edge case when deleting
+            # a step pod. K8s will restart the pod immediately even though we don't want it to.
+            # Pod can be deleted manually or due to or node failures (for example, when runnong on
+            # a spot instance that is evicted).
+            #
+            # If we encounter one of the error cases below, we exit with a success exit code
+            # so that we don't cause the "Encountered failed job pods" error.
+            #
+            # Instead, the step will be marked as being in an unknown state by the executor and the
+            # pipeline will fail accordingly.
+            if current_attempt == 1 and step_stats:
+                # If this is the first attempt, there shouldn't be any step stats for this
+                # event yet.
+                instance.report_engine_event(
+                    "Attempted to run {step_key} again even though it was already started. "
+                    "Exiting to prevent re-running the step.".format(step_key=step_key),
+                    pipeline_run,
+                )
+                sys.exit(0)
+            elif current_attempt > 1 and step_stats:
+                # If this is a retry, then the number of previous attempts should be exactly one less
+                # than the current attempt
+                step_stat = step_stats[0]
+                if step_stat.attempts != current_attempt - 1:
+                    instance.report_engine_event(
+                        "Attempted to run retry attempt {current_attempt} for step {step_key} again "
+                        "even though it was already started. Exiting to prevent re-running "
+                        "the step.".format(current_attempt=current_attempt, step_key=step_key),
+                        pipeline_run,
+                    )
+                    sys.exit(0)
+            elif current_attempt > 1 and not step_stats:
+                instance.report_engine_event(
+                    "Attempting to retry attempt {current_attempt} for step {step_key} "
+                    "but there is no record of the original attempt".format(
+                        current_attempt=current_attempt, step_key=step_key
+                    ),
+                    pipeline_run,
+                )
+                sys.exit(0)
 
         execution_plan = create_execution_plan(
             recon_pipeline.subset_for_execution_from_existing_pipeline(
                 pipeline_run.solids_to_execute
             ),
             run_config=args.run_config,
-            step_keys_to_execute=step_keys_to_execute,
+            step_keys_to_execute=[step_key],
             mode=args.mode,
         )
-
-        retries = Retries.from_config(args.retries_dict)
 
         buff = []
         for event in execute_plan_iterator(
