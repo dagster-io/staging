@@ -7,6 +7,7 @@ from dagster import check
 from dagster.core.definitions import AssetMaterialization, ExpectationResult, Materialization
 from dagster.core.events import DagsterEventType, StepExpectationResultData, StepMaterializationData
 from dagster.core.events.log import EventRecord
+from dagster.core.execution.plan.objects import StepRestartedData
 from dagster.core.storage.pipeline_run import PipelineRunStatsSnapshot
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import datetime_as_float
@@ -82,9 +83,12 @@ def build_run_step_stats_from_events(run_id, records):
 
         if event.dagster_event.event_type == DagsterEventType.STEP_START:
             by_step_key[step_key]["start_time"] = event.timestamp
+            by_step_key[step_key]["attempts"] = 1
         if event.dagster_event.event_type == DagsterEventType.STEP_FAILURE:
             by_step_key[step_key]["end_time"] = event.timestamp
             by_step_key[step_key]["status"] = StepEventStatus.FAILURE
+        if event.dagster_event.event_type == DagsterEventType.STEP_RESTARTED:
+            by_step_key[step_key]["attempts"] = by_step_key[step_key].get("attempts") + 1
         if event.dagster_event.event_type == DagsterEventType.STEP_SUCCESS:
             by_step_key[step_key]["end_time"] = event.timestamp
             by_step_key[step_key]["status"] = StepEventStatus.SUCCESS
@@ -114,7 +118,9 @@ def build_run_step_stats_from_events(run_id, records):
 class RunStepKeyStatsSnapshot(
     namedtuple(
         "_RunStepKeyStatsSnapshot",
-        ("run_id step_key status start_time end_time materializations expectation_results"),
+        (
+            "run_id step_key status start_time end_time materializations expectation_results attempts"
+        ),
     )
 ):
     def __new__(
@@ -126,6 +132,7 @@ class RunStepKeyStatsSnapshot(
         end_time=None,
         materializations=None,
         expectation_results=None,
+        attempts=None,
     ):
 
         return super(RunStepKeyStatsSnapshot, cls).__new__(
@@ -141,4 +148,5 @@ class RunStepKeyStatsSnapshot(
             expectation_results=check.opt_list_param(
                 expectation_results, "expectation_results", ExpectationResult
             ),
+            attempts=check.opt_int_param(attempts, "attempts"),
         )
