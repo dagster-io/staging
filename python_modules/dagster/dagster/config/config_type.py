@@ -144,6 +144,13 @@ class Any(ConfigType):
 
 
 class Noneable(ConfigType):
+    """Defines a configuration type that either is a value of type ``inner_type`` or is ``None``.
+
+    Args:
+        inner_type (type):
+            The type of elements that this configuration type can contain.
+    """
+
     def __init__(self, inner_type):
         from .field import resolve_to_config_type
 
@@ -156,6 +163,13 @@ class Noneable(ConfigType):
 
 
 class Array(ConfigType):
+    """Defines an array (list) configuration type that contains values of type ``inner_type``.
+
+    Args:
+        inner_type (type):
+            The type of elements that this configuration type can contain.
+    """
+
     def __init__(self, inner_type):
         from .field import resolve_to_config_type
 
@@ -172,14 +186,15 @@ class Array(ConfigType):
 
 
 class EnumValue(object):
-    """Define an entry in a :py:func:`Enum`.
+    """Define an entry in a :py:class:`Enum`.
 
     Args:
         config_value (str):
             The string representation of the config to accept when passed.
         python_value (Optional[Any]):
             The python value to convert the enum entry in to. Defaults to the ``config_value``.
-        description (Optional[str])
+        description (Optional[str]):
+            A human-readable description of the enum entry.
 
     """
 
@@ -195,25 +210,28 @@ class Enum(ConfigType):
 
     Args:
         name (str):
+            The name of the enum configuration type.
         enum_values (List[EnumValue]):
+            The set of possible values for the enum configuration type.
 
-    Example:
-        .. code-block:: python
+    **Examples:**
 
-            @solid(
-                config_schema=Field(
-                    Enum(
-                        'CowboyType',
-                        [
-                            EnumValue('good'),
-                            EnumValue('bad'),
-                            EnumValue('ugly'),
-                        ]
-                    )
+    .. code-block:: python
+
+        @solid(
+            config_schema=Field(
+                Enum(
+                    'CowboyType',
+                    [
+                        EnumValue('good'),
+                        EnumValue('bad'),
+                        EnumValue('ugly'),
+                    ]
                 )
             )
-            def resolve_standoff(context):
-                # ...
+        )
+        def resolve_standoff(context):
+            # ...
     """
 
     def __init__(self, name, enum_values):
