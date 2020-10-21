@@ -1,5 +1,4 @@
 """Structured representations of system events."""
-import logging
 import os
 from collections import namedtuple
 from enum import Enum
@@ -11,7 +10,6 @@ from dagster.core.definitions import (
     ExpectationResult,
     Materialization,
     SolidHandle,
-    TypeCheck,
 )
 from dagster.core.definitions.events import ObjectStoreOperationType
 from dagster.core.execution.context.system import (
@@ -19,7 +17,7 @@ from dagster.core.execution.context.system import (
     SystemExecutionContext,
     SystemStepExecutionContext,
 )
-from dagster.core.execution.plan.objects import StepOutputData
+from dagster.core.execution.plan.objects import StepOutputData, StepRestartedData
 from dagster.core.log_manager import DagsterLogManager
 from dagster.serdes import register_serdes_tuple_fallbacks, whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
@@ -108,6 +106,8 @@ def _validate_event_specific_data(event_type, event_specific_data):
         check.inst_param(event_specific_data, "event_specific_data", StepFailureData)
     elif event_type == DagsterEventType.STEP_SUCCESS:
         check.inst_param(event_specific_data, "event_specific_data", StepSuccessData)
+    elif event_type == DagsterEventType.STEP_RESTARTED:
+        check.inst_param(event_specific_data, "event_specific_data", StepRestartedData)
     elif event_type == DagsterEventType.STEP_MATERIALIZATION:
         check.inst_param(event_specific_data, "event_specific_data", StepMaterializationData)
     elif event_type == DagsterEventType.STEP_EXPECTATION_RESULT:
@@ -515,6 +515,7 @@ class DagsterEvent(
         return DagsterEvent.from_step(
             event_type=DagsterEventType.STEP_RESTARTED,
             step_context=step_context,
+            event_specific_data=StepRestartedData(attempt_number=previous_attempts + 1),
             message='Started re-execution (attempt # {n}) of step "{step_key}".'.format(
                 step_key=step_context.step.key, n=previous_attempts + 1
             ),

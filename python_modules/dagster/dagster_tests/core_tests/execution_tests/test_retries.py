@@ -1,6 +1,7 @@
 import os
 import time
 from collections import defaultdict
+from dagster.core.execution.plan.objects import StepRestartedData
 
 import pytest
 
@@ -130,6 +131,10 @@ def test_step_retry(environment):
     assert len(events[DagsterEventType.STEP_START]) == 1
     assert len(events[DagsterEventType.STEP_UP_FOR_RETRY]) == 1
     assert len(events[DagsterEventType.STEP_RESTARTED]) == 1
+    assert isinstance(
+        events[DagsterEventType.STEP_RESTARTED][0].event_specific_data, StepRestartedData
+    )
+    assert events[DagsterEventType.STEP_RESTARTED][0].event_specific_data.attempt_number == 2
     assert len(events[DagsterEventType.STEP_SUCCESS]) == 1
 
 
@@ -176,6 +181,11 @@ def test_step_retry_limit(environment):
     assert len(events[DagsterEventType.STEP_START]) == 1
     assert len(events[DagsterEventType.STEP_UP_FOR_RETRY]) == 3
     assert len(events[DagsterEventType.STEP_RESTARTED]) == 3
+    for i in range(3):
+        # Attempt numbers should be 2, 3, 4 (which is i + 2)
+        assert (
+            events[DagsterEventType.STEP_RESTARTED][i].event_specific_data.attempt_number == i + 2
+        )
     assert len(events[DagsterEventType.STEP_FAILURE]) == 1
 
 
