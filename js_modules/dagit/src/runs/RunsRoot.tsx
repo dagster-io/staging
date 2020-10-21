@@ -10,6 +10,7 @@ import {ScrollContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {TopNav} from 'src/nav/TopNav';
+import {RunTableRunFragment} from 'src/runs/RunFragments';
 import {RunTable} from 'src/runs/RunTable';
 import {RunsQueryRefetchContext} from 'src/runs/RunUtils';
 import {RunsFilter, runsFilterForSearchTokens, useRunFiltering} from 'src/runs/RunsFilter';
@@ -80,7 +81,9 @@ export const RunsRoot: React.FunctionComponent<RouteComponentProps> = () => {
                     runs={pipelineRunsOrError.results.slice(0, PAGE_SIZE)}
                     onSetFilter={setFilterTokens}
                   />
-                  <CursorPaginationControls {...paginationProps} />
+                  <div style={{marginTop: '16px'}}>
+                    <CursorPaginationControls {...paginationProps} />
+                  </div>
                 </>
               );
             }}
@@ -108,7 +111,7 @@ export const RUNS_ROOT_QUERY = gql`
     }
   }
 
-  ${RunTable.fragments.RunTableRunFragment}
+  ${RunTableRunFragment}
 `;
 
 const Filters = styled.div`

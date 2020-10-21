@@ -10,6 +10,7 @@ import {ScrollContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
 import {explorerPathFromString} from 'src/PipelinePathUtils';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
+import {RunTableRunFragment} from 'src/runs/RunFragments';
 import {RunTable} from 'src/runs/RunTable';
 import {RunsQueryRefetchContext} from 'src/runs/RunUtils';
 import {
@@ -96,10 +97,15 @@ export const PipelineRunsRoot: React.FunctionComponent<RouteComponentProps<{
               }
               const runs = pipelineRunsOrError.results;
               const displayed = runs.slice(0, PAGE_SIZE);
+              const {hasNextCursor, hasPrevCursor} = paginationProps;
               return (
                 <>
                   <RunTable runs={displayed} onSetFilter={setFilterTokens} />
-                  <CursorPaginationControls {...paginationProps} />
+                  {hasNextCursor || hasPrevCursor ? (
+                    <div style={{marginTop: '20px'}}>
+                      <CursorPaginationControls {...paginationProps} />
+                    </div>
+                  ) : null}
                 </>
               );
             }}
@@ -133,5 +139,5 @@ export const PIPELINE_RUNS_ROOT_QUERY = gql`
     }
   }
 
-  ${RunTable.fragments.RunTableRunFragment}
+  ${RunTableRunFragment}
 `;

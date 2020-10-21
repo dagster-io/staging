@@ -9,7 +9,7 @@ import {
   PartitionLongitudinalQueryVariables,
   PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results,
 } from 'src/partitions/types/PartitionLongitudinalQuery';
-import {RunTable} from 'src/runs/RunTable';
+import {RunTableRunFragment} from 'src/runs/RunFragments';
 
 type Partition = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results;
 
@@ -196,5 +196,5 @@ const PARTITION_SET_QUERY = gql`
     }
   }
   ${PythonErrorInfo.fragments.PythonErrorFragment}
-  ${RunTable.fragments.RunTableRunFragment}
+  ${RunTableRunFragment}
 `;

@@ -5,6 +5,7 @@ import {RunMetadataProvider} from 'src/RunMetadataProvider';
 import {GaantChart} from 'src/gaant/GaantChart';
 import {LogsScrollingTable} from 'src/runs/LogsScrollingTable';
 import {RunStatusToPageAttributes} from 'src/runs/RunStatusToPageAttributes';
+import {RunComponentFragments} from 'src/runs/RunUtils';
 
 export const RunFragments = {
   RunFragment: gql`
@@ -72,3 +73,26 @@ export const RunFragments = {
     ${PythonErrorInfo.fragments.PythonErrorFragment}
   `,
 };
+
+export const RunTableRunFragment = gql`
+  fragment RunTableRunFragment on PipelineRun {
+    runId
+    status
+    stepKeysToExecute
+    canTerminate
+    mode
+    rootRunId
+    parentRunId
+    pipelineSnapshotId
+    pipelineName
+    solidSelection
+    tags {
+      key
+      value
+    }
+    ...RunTimeFragment
+  }
+
+  ${PythonErrorInfo.fragments.PythonErrorFragment}
+  ${RunComponentFragments.RUN_TIME_FRAGMENT}
+`;
