@@ -69,9 +69,8 @@ def k8s_example_cm(cwd):
         yield
 
 
-def get_core_k8s_dirs():
+def get_k8s_library_dirs():
     return [
-        "python_modules/dagster",
         "python_modules/libraries/dagster-postgres",
         "python_modules/libraries/dagster-cron",
         "python_modules/libraries/dagster-celery",
@@ -80,32 +79,39 @@ def get_core_k8s_dirs():
     ]
 
 
+def get_core_k8s_dirs():
+    return ["python_modules/dagster",] + get_k8s_library_dirs()
+
+
 @contextlib.contextmanager
 def k8s_example_editable_cm(cwd):
     with copy_directories(
-        get_core_k8s_dirs() + ["python_modules/libraries/dagster-aws",], cwd,
+        get_k8s_library_dirs() + ["python_modules/libraries/dagster-aws",], cwd,
     ):
-        with copy_directories(
-            ["examples/deploy_k8s/example_project"], cwd, special_folder="example_project"
-        ):
-            yield
+        with copy_directories(["python_modules/dagster"], cwd, special_folder="dagster"):
+            with copy_directories(
+                ["examples/deploy_k8s/example_project"], cwd, special_folder="example_project"
+            ):
+                yield
 
 
 @contextlib.contextmanager
 def k8s_dagit_editable_cm(cwd):
     print("!!!!! WARNING: You must call `make rebuild_dagit` after making changes to Dagit !!!!\n")
     with copy_directories(
-        get_core_k8s_dirs() + ["python_modules/dagster-graphql", "python_modules/dagit",], cwd,
+        get_k8s_library_dirs() + ["python_modules/dagster-graphql", "python_modules/dagit",], cwd,
     ):
-        yield
+        with copy_directories(["python_modules/dagster"], cwd, special_folder="dagster"):
+            yield
 
 
 @contextlib.contextmanager
 def k8s_celery_worker_editable_cm(cwd):
     with copy_directories(
-        get_core_k8s_dirs(), cwd,
+        get_k8s_library_dirs() + ["python_modules/dagster-graphql", "python_modules/dagit",], cwd,
     ):
-        yield
+        with copy_directories(["python_modules/dagster"], cwd, special_folder="dagster"):
+            yield
 
 
 # Some images have custom build context manager functions, listed here

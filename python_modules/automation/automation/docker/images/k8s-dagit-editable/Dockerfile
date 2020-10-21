@@ -9,7 +9,6 @@ RUN apt-get update -yqq && \
 COPY build_cache/ /
 
 RUN pip install \
-    -e dagster \
     -e dagster-graphql \
     -e dagster-postgres \
     -e dagster-cron \
@@ -17,3 +16,7 @@ RUN pip install \
     -e dagster-k8s \
     -e dagster-celery-k8s \
     -e dagit
+
+COPY dagster/ /
+
+RUN pip install -e dagster

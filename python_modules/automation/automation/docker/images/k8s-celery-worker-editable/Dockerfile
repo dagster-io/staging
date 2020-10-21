@@ -8,10 +8,12 @@ RUN apt-get update -yqq && \
 
 COPY build_cache/ /
 
-RUN pip install \
-    -e dagster \
-    -e dagster-postgres \
+RUN pip install -e dagster-postgres \
     -e dagster-cron \
     -e dagster-celery[flower,redis,kubernetes] \
     -e dagster-k8s \
     -e dagster-celery-k8s
+
+COPY dagster/ /
+
+RUN pip install -e dagster
