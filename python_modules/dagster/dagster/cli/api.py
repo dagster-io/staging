@@ -409,6 +409,15 @@ def execute_step_with_structured_logs_command(input_json):
 
     args = check.inst(deserialize_json_to_dagster_namedtuple(input_json), ExecuteStepArgs)
 
+    step_keys_to_execute = args.step_keys_to_execute
+    check.invariant(
+        len(step_keys_to_execute) == 1,
+        "The CLI API command execute_step_with_structured_logs should only be called for a single "
+        "step, but was called with step keys {step_keys_to_execute}".format(
+            step_keys_to_execute=step_keys_to_execute
+        ),
+    )
+
     with (
         DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
     ) as instance:
@@ -420,7 +429,7 @@ def execute_step_with_structured_logs_command(input_json):
                 pipeline_run.solids_to_execute
             ),
             run_config=args.run_config,
-            step_keys_to_execute=args.step_keys_to_execute,
+            step_keys_to_execute=step_keys_to_execute,
             mode=args.mode,
         )
 
