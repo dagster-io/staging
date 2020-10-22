@@ -2,26 +2,26 @@
 
 import datetime
 
-from dagster import InputDefinition, daily_schedule, lambda_solid, pipeline, repository
+from dagster import InputDefinition, daily_schedule, pipeline, repository, solid
 
 
-@lambda_solid
-def return_one():
+@solid
+def return_one(_):
     return 1
 
 
-@lambda_solid
-def return_two():
+@solid
+def return_two(_):
     return 2
 
 
-@lambda_solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
-def add(left, right):
+@solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
+def add(_, left, right):
     return left + right
 
 
-@lambda_solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
-def subtract(left, right):
+@solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
+def subtract(_, left, right):
     return left - right
 
 

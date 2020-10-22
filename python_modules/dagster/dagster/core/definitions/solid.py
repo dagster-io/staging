@@ -175,8 +175,8 @@ class SolidDefinition(ISolidDefinition):
     For more details on what a solid is, refer to the
     `Solid Guide <../../learn/guides/solid/solid>`_ .
 
-    End users should prefer the :func:`@solid <solid>` and :func:`@lambda_solid <lambda_solid>`
-    decorators. SolidDefinition is generally intended to be used by framework authors.
+    End users should prefer the :func:`@solid <solid>` decorator. SolidDefinition is generally
+    intended to be used by framework authors.
 
     Args:
         name (str): Name of the solid. Must be unique within any :py:class:`PipelineDefinition`
@@ -392,8 +392,8 @@ class CompositeSolidDefinition(ISolidDefinition, IContainSolids):
 
         .. code-block:: python
 
-            @lambda_solid
-            def add_one(num: int) -> int:
+            @solid
+            def add_one(_, num: int) -> int:
                 return num + 1
 
             add_two = CompositeSolidDefinition(

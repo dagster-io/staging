@@ -12,7 +12,6 @@ from dagster import (
     RetryRequested,
     execute_pipeline,
     execute_pipeline_iterator,
-    lambda_solid,
     pipeline,
     reconstructable,
     reexecute_pipeline,
@@ -134,12 +133,12 @@ def test_step_retry(environment):
 
 
 def define_retry_limit_pipeline():
-    @lambda_solid
-    def default_max():
+    @solid
+    def default_max(_):
         raise RetryRequested()
 
-    @lambda_solid
-    def three_max():
+    @solid
+    def three_max(_):
         raise RetryRequested(max_retries=3)
 
     @pipeline

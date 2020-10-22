@@ -11,7 +11,7 @@ from dagster import (
     check,
     execute_pipeline,
     execute_solid,
-    lambda_solid,
+    solid,
 )
 from dagster.core.test_utils import single_output_solid
 
@@ -58,28 +58,26 @@ def create_sum_table():
     )
 
 
-@lambda_solid(
-    input_defs=[InputDefinition("num_csv", DataFrame)], output_def=OutputDefinition(DataFrame)
+@solid(
+    input_defs=[InputDefinition("num_csv", DataFrame)], output_defs=[OutputDefinition(DataFrame)]
 )
-def sum_table(num_csv):
+def sum_table(_, num_csv):
     check.inst_param(num_csv, "num_csv", pd.DataFrame)
     num_csv["sum"] = num_csv["num1"] + num_csv["num2"]
     return num_csv
 
 
-@lambda_solid(
-    input_defs=[InputDefinition("sum_df", DataFrame)], output_def=OutputDefinition(DataFrame)
-)
-def sum_sq_table(sum_df):
+@solid(input_defs=[InputDefinition("sum_df", DataFrame)], output_defs=[OutputDefinition(DataFrame)])
+def sum_sq_table(_, sum_df):
     sum_df["sum_squared"] = sum_df["sum"] * sum_df["sum"]
     return sum_df
 
 
-@lambda_solid(
+@solid(
     input_defs=[InputDefinition("sum_table_renamed", DataFrame)],
-    output_def=OutputDefinition(DataFrame),
+    output_defs=[OutputDefinition(DataFrame)],
 )
-def sum_sq_table_renamed_input(sum_table_renamed):
+def sum_sq_table_renamed_input(_, sum_table_renamed):
     sum_table_renamed["sum_squared"] = sum_table_renamed["sum"] * sum_table_renamed["sum"]
     return sum_table_renamed
 
@@ -163,8 +161,8 @@ def _result_for_solid(results, name):
 
 
 def load_num_csv_solid(name):
-    @lambda_solid(name=name)
-    def _return_num_csv():
+    @solid(name=name)
+    def _return_num_csv(_):
         return pd.DataFrame({"num1": [1, 3], "num2": [2, 4]})
 
     return _return_num_csv
@@ -218,8 +216,8 @@ def test_rename_input():
 
 
 def test_date_column():
-    @lambda_solid(output_def=OutputDefinition(DataFrame))
-    def dataframe_constant():
+    @solid(output_defs=[OutputDefinition(DataFrame)])
+    def dataframe_constant(_):
         return pd.DataFrame([{datetime.date(2019, 1, 1): 0}])
 
     assert execute_solid(dataframe_constant).success

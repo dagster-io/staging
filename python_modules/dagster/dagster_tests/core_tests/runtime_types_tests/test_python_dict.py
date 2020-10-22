@@ -8,21 +8,21 @@ from dagster import (
     InputDefinition,
     OutputDefinition,
     execute_solid,
-    lambda_solid,
+    solid,
 )
 
 
 def test_basic_python_dictionary_output():
-    @lambda_solid(output_def=OutputDefinition(dict))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(dict)])
+    def emit_dict(_):
         return {"key": "value"}
 
     assert execute_solid(emit_dict).output_value() == {"key": "value"}
 
 
 def test_basic_python_dictionary_input():
-    @lambda_solid(input_defs=[InputDefinition("data", dict)], output_def=OutputDefinition(str))
-    def input_dict(data):
+    @solid(input_defs=[InputDefinition("data", dict)], output_defs=[OutputDefinition(str)])
+    def input_dict(_, data):
         return data["key"]
 
     assert (
@@ -31,8 +31,8 @@ def test_basic_python_dictionary_input():
 
 
 def test_basic_python_dictionary_wrong():
-    @lambda_solid(output_def=OutputDefinition(dict))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(dict)])
+    def emit_dict(_):
         return 1
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
@@ -40,8 +40,8 @@ def test_basic_python_dictionary_wrong():
 
 
 def test_basic_python_dictionary_input_wrong():
-    @lambda_solid(input_defs=[InputDefinition("data", dict)], output_def=OutputDefinition(str))
-    def input_dict(data):
+    @solid(input_defs=[InputDefinition("data", dict)], output_defs=[OutputDefinition(str)])
+    def input_dict(_, data):
         return data["key"]
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
@@ -49,8 +49,8 @@ def test_basic_python_dictionary_input_wrong():
 
 
 def test_execute_dict_from_config():
-    @lambda_solid(input_defs=[InputDefinition("data", dict)], output_def=OutputDefinition(str))
-    def input_dict(data):
+    @solid(input_defs=[InputDefinition("data", dict)], output_defs=[OutputDefinition(str)])
+    def input_dict(_, data):
         return data["key"]
 
     assert (
@@ -63,16 +63,16 @@ def test_execute_dict_from_config():
 
 
 def test_dagster_dictionary_output():
-    @lambda_solid(output_def=OutputDefinition(dict))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(dict)])
+    def emit_dict(_):
         return {"key": "value"}
 
     assert execute_solid(emit_dict).output_value() == {"key": "value"}
 
 
 def test_basic_dagster_dictionary_input():
-    @lambda_solid(input_defs=[InputDefinition("data", Dict)], output_def=OutputDefinition(str))
-    def input_dict(data):
+    @solid(input_defs=[InputDefinition("data", Dict)], output_defs=[OutputDefinition(str)])
+    def input_dict(_, data):
         return data["key"]
 
     assert (
@@ -81,18 +81,16 @@ def test_basic_dagster_dictionary_input():
 
 
 def test_basic_typing_dictionary_output():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict)])
+    def emit_dict(_):
         return {"key": "value"}
 
     assert execute_solid(emit_dict).output_value() == {"key": "value"}
 
 
 def test_basic_typing_dictionary_input():
-    @lambda_solid(
-        input_defs=[InputDefinition("data", typing.Dict)], output_def=OutputDefinition(str)
-    )
-    def input_dict(data):
+    @solid(input_defs=[InputDefinition("data", typing.Dict)], output_defs=[OutputDefinition(str)])
+    def input_dict(_, data):
         return data["key"]
 
     assert (
@@ -101,8 +99,8 @@ def test_basic_typing_dictionary_input():
 
 
 def test_basic_closed_typing_dictionary_wrong():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict[int, int]))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict[int, int])])
+    def emit_dict(_):
         return 1
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
@@ -110,8 +108,8 @@ def test_basic_closed_typing_dictionary_wrong():
 
 
 def test_basic_closed_typing_dictionary_output():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict[str, str]))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict[str, str])])
+    def emit_dict(_):
         return {"key": "value"}
 
     assert execute_solid(emit_dict).output_value() == {"key": "value"}
@@ -121,11 +119,11 @@ def test_basic_closed_typing_dictionary_output():
 
 
 def test_basic_closed_typing_dictionary_input():
-    @lambda_solid(
+    @solid(
         input_defs=[InputDefinition("data", typing.Dict[str, str])],
-        output_def=OutputDefinition(str),
+        output_defs=[OutputDefinition(str)],
     )
-    def input_dict(data):
+    def input_dict(_, data):
         return data["key"]
 
     assert (
@@ -134,8 +132,8 @@ def test_basic_closed_typing_dictionary_input():
 
 
 def test_basic_closed_typing_dictionary_key_wrong():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict[str, str]))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict[str, str])])
+    def emit_dict(_):
         return {1: "foo"}
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
@@ -143,8 +141,8 @@ def test_basic_closed_typing_dictionary_key_wrong():
 
 
 def test_basic_closed_typing_dictionary_value_wrong():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict[str, str]))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict[str, str])])
+    def emit_dict(_):
         return {"foo": 1}
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
@@ -152,16 +150,16 @@ def test_basic_closed_typing_dictionary_value_wrong():
 
 
 def test_complicated_dictionary_typing_pass():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict[str, typing.List[typing.Dict[int, int]]]))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict[str, typing.List[typing.Dict[int, int]]])])
+    def emit_dict(_):
         return {"foo": [{1: 1, 2: 2}]}
 
     assert execute_solid(emit_dict).output_value() == {"foo": [{1: 1, 2: 2}]}
 
 
 def test_complicated_dictionary_typing_fail():
-    @lambda_solid(output_def=OutputDefinition(typing.Dict[str, typing.List[typing.Dict[int, int]]]))
-    def emit_dict():
+    @solid(output_defs=[OutputDefinition(typing.Dict[str, typing.List[typing.Dict[int, int]]])])
+    def emit_dict(_):
         return {"foo": [{1: 1, "2": 2}]}
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
