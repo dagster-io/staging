@@ -6,14 +6,10 @@ from .job import JobDefinition
 from .partition import PartitionScheduleDefinition, PartitionSetDefinition
 from .pipeline import PipelineDefinition
 from .schedule import ScheduleDefinition
+from .sensor import SensorDefinition
 from .utils import check_valid_name
 
-VALID_REPOSITORY_DATA_DICT_KEYS = {
-    "pipelines",
-    "partition_sets",
-    "schedules",
-    "jobs",
-}
+VALID_REPOSITORY_DATA_DICT_KEYS = {"pipelines", "partition_sets", "schedules", "jobs", "sensors"}
 
 
 class _CacheingDefinitionIndex(object):
@@ -125,7 +121,7 @@ class RepositoryData(object):
     of repository members.
     """
 
-    def __init__(self, pipelines, partition_sets, schedules, jobs):
+    def __init__(self, pipelines, partition_sets, schedules, jobs, sensors=None):
         """Constructs a new RepositoryData object.
 
         You may pass pipeline, partition_set, and schedule definitions directly, or you may pass
@@ -152,6 +148,7 @@ class RepositoryData(object):
         check.dict_param(partition_sets, "partition_sets", key_type=str)
         check.dict_param(schedules, "schedules", key_type=str)
         check.dict_param(jobs, "jobs", key_type=str)
+        sensors = check.opt_dict_param(sensors, "sensors", key_type=str)
 
         self._pipelines = _CacheingDefinitionIndex(
             PipelineDefinition, "PipelineDefinition", "pipeline", pipelines
@@ -173,7 +170,10 @@ class RepositoryData(object):
                 partition_sets,
             ),
         )
-        self._jobs = _CacheingDefinitionIndex(JobDefinition, "JobDefinition", "job", jobs,)
+        self._jobs = _CacheingDefinitionIndex(JobDefinition, "JobDefinition", "job", jobs)
+        self._sensors = _CacheingDefinitionIndex(
+            SensorDefinition, "SensorDefinition", "sensor", sensors
+        )
         self._all_pipelines = None
         self._solids = None
         self._all_solids = None
@@ -231,6 +231,7 @@ class RepositoryData(object):
         partition_sets = {}
         schedules = {}
         jobs = {}
+        sensors = {}
         for definition in repository_definitions:
             if isinstance(definition, PipelineDefinition):
                 if definition.name in pipelines:
@@ -272,6 +273,14 @@ class RepositoryData(object):
                         "Duplicate job definition found for job {name}".format(name=definition.name)
                     )
                 jobs[definition.name] = definition
+            elif isinstance(definition, SensorDefinition):
+                if definition.name in sensors:
+                    raise DagsterInvalidDefinitionError(
+                        "Duplicate sensor definition found for sensor {name}".format(
+                            name=definition.name
+                        )
+                    )
+                sensors[definition.name] = definition
 
         return RepositoryData(
             pipelines=pipelines, partition_sets=partition_sets, schedules=schedules, jobs=jobs,
