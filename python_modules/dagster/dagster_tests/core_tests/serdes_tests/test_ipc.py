@@ -1,11 +1,11 @@
 import os
-import subprocess
 import sys
 import time
 
 import pytest
 
 from dagster.serdes.ipc import (
+    DagsterIPCProtocolError,
     interrupt_ipc_subprocess,
     interrupt_ipc_subprocess_pid,
     open_ipc_subprocess,
