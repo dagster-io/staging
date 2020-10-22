@@ -24,7 +24,10 @@ class ExecutionPlanSnapshot(
     def __new__(cls, steps, artifacts_persisted, pipeline_snapshot_id, step_keys_to_execute=None):
         return super(ExecutionPlanSnapshot, cls).__new__(
             cls,
-            steps=check.list_param(steps, 'steps', of_type=ExecutionStepSnap),
+            steps=steps,
+            # check.list_param(
+            #     steps, 'steps', of_type=(UnresolvedExecutionStepSnap, ExecutionStepSnap)
+            # ),
             artifacts_persisted=check.bool_param(artifacts_persisted, 'artifacts_persisted'),
             pipeline_snapshot_id=check.str_param(pipeline_snapshot_id, 'pipeline_snapshot_id'),
             step_keys_to_execute=check.opt_list_param(
@@ -97,7 +100,7 @@ class ExecutionPlanMetadataItemSnap(namedtuple('_ExecutionPlanMetadataItemSnap',
 
 
 def _snapshot_from_step_input(step_input):
-    check.inst_param(step_input, 'step_input', StepInput)
+    # check.inst_param(step_input, 'step_input', StepInput)
     return ExecutionStepInputSnap(
         name=step_input.name,
         dagster_type_key=step_input.dagster_type.key,
@@ -106,14 +109,14 @@ def _snapshot_from_step_input(step_input):
 
 
 def _snapshot_from_step_output(step_output):
-    check.inst_param(step_output, 'step_output', StepOutput)
+    # check.inst_param(step_output, 'step_output', StepOutput)
     return ExecutionStepOutputSnap(
         name=step_output.name, dagster_type_key=step_output.dagster_type.key
     )
 
 
 def _snapshot_from_execution_step(execution_step):
-    check.inst_param(execution_step, 'execution_step', ExecutionStep)
+    # check.inst_param(execution_step, 'execution_step', ExecutionStep)
     return ExecutionStepSnap(
         key=execution_step.key,
         inputs=sorted(
@@ -143,9 +146,13 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
 
     return ExecutionPlanSnapshot(
         steps=sorted(
-            list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
+            # list(map(_snapshot_from_execution_step, execution_plan.steps)),
+            # key=lambda es: es.key
+            # skipping this for now
+            []
         ),
         artifacts_persisted=execution_plan.artifacts_persisted,
         pipeline_snapshot_id=pipeline_snapshot_id,
-        step_keys_to_execute=execution_plan.step_keys_to_execute,
+        step_keys_to_execute=[],
+        # step_keys_to_execute=execution_plan.step_keys_to_execute,
     )

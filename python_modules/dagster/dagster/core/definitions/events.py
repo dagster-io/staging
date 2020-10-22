@@ -343,6 +343,17 @@ class Output(namedtuple('_Output', 'value output_name')):
     def __new__(cls, value, output_name=DEFAULT_OUTPUT):
         return super(Output, cls).__new__(cls, value, check.str_param(output_name, 'output_name'))
 
+    @property
+    def key(self):  # hack to avoid instanceof check
+        return None
+
+
+class SpecialOutput(namedtuple('_Output', 'value key output_name')):
+    def __new__(cls, value, key, output_name=DEFAULT_OUTPUT):
+        return super(SpecialOutput, cls).__new__(
+            cls, value, check.str_param(key, 'key'), check.str_param(output_name, 'output_name')
+        )
+
 
 @whitelist_for_persistence
 class AssetMaterialization(

@@ -25,6 +25,8 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
 
     retries = pipeline_context.retries
 
+    # by here, we have the intended execution plan of one step (the failed step) but...
+    # no way to rebuild the plan
     for event in copy_required_intermediates_for_execution(pipeline_context, execution_plan):
         yield event
 
@@ -54,9 +56,10 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
             step_context.pipeline_run, step_context.step.key
         ):
             # capture all of the logs for this step
-            uncovered_inputs = pipeline_context.intermediate_storage.uncovered_inputs(
-                step_context, step
-            )
+            uncovered_inputs = None  # hack
+            # uncovered_inputs = pipeline_context.intermediate_storage.uncovered_inputs(
+            #     step_context, step
+            # )
             if uncovered_inputs:
                 # In partial pipeline execution, we may end up here without having validated the
                 # missing dependent outputs were optional

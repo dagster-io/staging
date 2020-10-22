@@ -54,23 +54,38 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
 
     output_handles_for_current_run = output_handles_from_execution_plan(execution_plan)
     output_handles_from_previous_run = output_handles_from_event_logs(parent_run_logs)
-    output_handles_to_copy = output_handles_for_current_run.intersection(
-        output_handles_from_previous_run
-    )
+    # output_handles_to_copy = output_handles_for_current_run.intersection(
+    #     output_handles_from_previous_run
+    # )
+    output_handles_to_copy = output_handles_from_previous_run  # cat hack attack
     output_handles_to_copy_by_step = defaultdict(list)
+    print('output_handles_to_copy_by_step', output_handles_to_copy_by_step)
     for handle in output_handles_to_copy:
-        output_handles_to_copy_by_step[handle.step_key].append(handle)
+        import re
 
+        m = re.match(r"(.*)\[(.*):(.*):(.*)\]\.compute", handle.step_key)
+        if m:
+            # echo[?].compute
+            output_handles_to_copy_by_step[m.group(1) + '[?].compute'].append(handle)
+        else:
+            output_handles_to_copy_by_step[handle.step_key].append(handle)
+
+    print('output_handles_to_copy_by_step', output_handles_to_copy_by_step)
     intermediate_storage = pipeline_context.intermediate_storage
-    for step in execution_plan.topological_steps():
+    print('execution_plan.steps', execution_plan.steps)
+    # why are step.key echo[?].compute and step.key echo_again[?].compute showing up in execution plan again
+    for step in execution_plan.steps:  # cat hack
         step_context = pipeline_context.for_step(step)
+        print('step.key', step.key)
         for handle in output_handles_to_copy_by_step.get(step.key, []):
             if intermediate_storage.has_intermediate(pipeline_context, handle):
+                print('  has_intermediate true')
                 continue
 
             operation = intermediate_storage.copy_intermediate_from_run(
                 pipeline_context, parent_run_id, handle
             )
+            print('  copying..')
             yield DagsterEvent.object_store_operation(
                 step_context,
                 ObjectStoreOperation.serializable(operation, value_name=handle.output_name),

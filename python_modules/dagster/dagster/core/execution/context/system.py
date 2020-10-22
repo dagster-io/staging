@@ -14,6 +14,7 @@ from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.execution.plan.objects import UnresolvedExecutionStep
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
 from dagster.core.log_manager import DagsterLogManager
@@ -184,7 +185,7 @@ class SystemExecutionContext(object):
     def for_step(self, step):
         from dagster.core.execution.plan.objects import ExecutionStep
 
-        check.inst_param(step, 'step', ExecutionStep)
+        check.inst_param(step, 'step', (UnresolvedExecutionStep, ExecutionStep))
 
         return SystemStepExecutionContext(
             self._execution_context_data, self._log_manager.with_tags(**step.logging_tags), step,
@@ -213,7 +214,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
         from dagster.core.execution.plan.objects import ExecutionStep
         from dagster.core.execution.resources_init import get_required_resource_keys_for_step
 
-        self._step = check.inst_param(step, 'step', ExecutionStep)
+        self._step = check.inst_param(step, 'step', (UnresolvedExecutionStep, ExecutionStep))
         super(SystemStepExecutionContext, self).__init__(execution_context_data, log_manager)
         self._required_resource_keys = get_required_resource_keys_for_step(
             step,
