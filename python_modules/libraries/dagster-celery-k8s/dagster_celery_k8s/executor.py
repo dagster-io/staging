@@ -428,7 +428,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 # There is an existing job with the same name so do not procede.
                 instance.report_engine_event(
                     "Did not create Kubernetes job {} for step {} since job name already "
-                    "exists, exiting.".format(job_name, step_key),
+                    "exists, proceeding with existing job.".format(job_name, step_key),
                     pipeline_run,
                     EngineEventData(
                         [
@@ -453,7 +453,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                     CeleryK8sJobExecutor,
                     step_key=step_key,
                 )
-            return []
+                return []
 
         try:
             wait_for_job_success(
