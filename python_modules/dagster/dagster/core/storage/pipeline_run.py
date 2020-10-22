@@ -19,6 +19,7 @@ from .tags import (
 
 @whitelist_for_serdes
 class PipelineRunStatus(Enum):
+    QUEUED = "QUEUED"
     NOT_STARTED = "NOT_STARTED"
     MANAGED = "MANAGED"
     STARTED = "STARTED"
@@ -106,6 +107,14 @@ class PipelineRun(
         check.opt_list_param(solid_selection, "solid_selection", of_type=str)
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
 
+        # if status == PipelineRunStatus:
+        #     check.inst_param(
+        #         pipeline_origin,
+        #         "pipeline_origin",
+        #         PipelineOrigin,
+        #         desc="pipeline_origin is required for queued runs",
+        #     )
+
         return super(PipelineRun, cls).__new__(
             cls,
             pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
@@ -125,9 +134,7 @@ class PipelineRun(
             execution_plan_snapshot_id=check.opt_str_param(
                 execution_plan_snapshot_id, "execution_plan_snapshot_id"
             ),
-            pipeline_origin=check.opt_inst_param(
-                pipeline_origin, "pipeline_origin", PipelineOrigin
-            ),
+            pipeline_origin=check.inst_param(pipeline_origin, "pipeline_origin", PipelineOrigin),
         )
 
     @classmethod
