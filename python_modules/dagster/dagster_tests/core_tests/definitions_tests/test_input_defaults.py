@@ -8,14 +8,14 @@ from dagster import (
     composite_solid,
     execute_pipeline,
     execute_solid,
-    lambda_solid,
     pipeline,
+    solid,
 )
 
 
 def test_none():
-    @lambda_solid(input_defs=[InputDefinition("x", Optional[int], default_value=None)])
-    def none_x(x):
+    @solid(input_defs=[InputDefinition("x", Optional[int], default_value=None)])
+    def none_x(_, x):
         return x
 
     result = execute_solid(none_x)
@@ -23,8 +23,8 @@ def test_none():
 
 
 def test_none_infer():
-    @lambda_solid
-    def none_x(x=None):
+    @solid
+    def none_x(_, x=None):
         return x
 
     result = execute_solid(none_x)
@@ -32,8 +32,8 @@ def test_none_infer():
 
 
 def test_int():
-    @lambda_solid(input_defs=[InputDefinition("x", Optional[int], default_value=1337)])
-    def int_x(x):
+    @solid(input_defs=[InputDefinition("x", Optional[int], default_value=1337)])
+    def int_x(_, x):
         return x
 
     result = execute_solid(int_x)
@@ -41,8 +41,8 @@ def test_int():
 
 
 def test_int_infer():
-    @lambda_solid
-    def int_x(x=1337):
+    @solid
+    def int_x(_, x=1337):
         return x
 
     result = execute_solid(int_x)
@@ -55,8 +55,8 @@ def test_early_fail():
         match="Type check failed for the default_value of InputDefinition x of type Int",
     ):
 
-        @lambda_solid(input_defs=[InputDefinition("x", int, default_value="foo")])
-        def _int_x(x):
+        @solid(input_defs=[InputDefinition("x", int, default_value="foo")])
+        def _int_x(_, x):
             return x
 
     with pytest.raises(
@@ -64,15 +64,15 @@ def test_early_fail():
         match="Type check failed for the default_value of InputDefinition x of type String",
     ):
 
-        @lambda_solid(input_defs=[InputDefinition("x", str, default_value=1337)])
-        def _int_x(x):
+        @solid(input_defs=[InputDefinition("x", str, default_value=1337)])
+        def _int_x(_, x):
             return x
 
 
 # we can't catch bad default_values except for scalars until runtime since the type_check function depends on
 # a context that has access to resources etc.
-@lambda_solid(input_defs=[InputDefinition("x", Optional[int], default_value="number")])
-def bad_default(x):
+@solid(input_defs=[InputDefinition("x", Optional[int], default_value="number")])
+def bad_default(_, x):
     return x
 
 
@@ -93,8 +93,8 @@ def test_env_precedence():
 
 
 def test_input_precedence():
-    @lambda_solid
-    def emit_one():
+    @solid
+    def emit_one(_):
         return 1
 
     @pipeline
@@ -109,14 +109,14 @@ def test_input_precedence():
 def test_nothing():
     with pytest.raises(DagsterInvalidDefinitionError):
 
-        @lambda_solid(input_defs=[InputDefinition("x", Nothing, default_value=None)])
-        def _nothing():
+        @solid(input_defs=[InputDefinition("x", Nothing, default_value=None)])
+        def _nothing(_):
             pass
 
 
 def test_composite_outer_default():
-    @lambda_solid(input_defs=[InputDefinition("x", Optional[int])])
-    def int_x(x):
+    @solid(input_defs=[InputDefinition("x", Optional[int])])
+    def int_x(_, x):
         return x
 
     @composite_solid(input_defs=[InputDefinition("y", Optional[int], default_value=42)])
@@ -129,8 +129,8 @@ def test_composite_outer_default():
 
 
 def test_composite_inner_default():
-    @lambda_solid(input_defs=[InputDefinition("x", Optional[int], default_value=1337)])
-    def int_x(x):
+    @solid(input_defs=[InputDefinition("x", Optional[int], default_value=1337)])
+    def int_x(_, x):
         return x
 
     @composite_solid(input_defs=[InputDefinition("y", Optional[int])])
@@ -143,8 +143,8 @@ def test_composite_inner_default():
 
 
 def test_composite_precedence_default():
-    @lambda_solid(input_defs=[InputDefinition("x", Optional[int], default_value=1337)])
-    def int_x(x):
+    @solid(input_defs=[InputDefinition("x", Optional[int], default_value=1337)])
+    def int_x(_, x):
         return x
 
     @composite_solid(input_defs=[InputDefinition("y", Optional[int], default_value=42)])
@@ -157,8 +157,8 @@ def test_composite_precedence_default():
 
 
 def test_composite_mid_default():
-    @lambda_solid(input_defs=[InputDefinition("x", Optional[int])])
-    def int_x(x):
+    @solid(input_defs=[InputDefinition("x", Optional[int])])
+    def int_x(_, x):
         return x
 
     @composite_solid(input_defs=[InputDefinition("y", Optional[int], default_value=42)])

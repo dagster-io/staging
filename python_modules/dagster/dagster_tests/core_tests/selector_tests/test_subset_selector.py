@@ -1,6 +1,6 @@
 import pytest
 
-from dagster import InputDefinition, lambda_solid, pipeline
+from dagster import InputDefinition, pipeline, solid
 from dagster.core.errors import DagsterInvalidSubsetError
 from dagster.core.selector.subset_selector import (
     MAX_NUM,
@@ -12,28 +12,28 @@ from dagster.core.selector.subset_selector import (
 )
 
 
-@lambda_solid
-def return_one():
+@solid
+def return_one(_):
     return 1
 
 
-@lambda_solid
-def return_two():
+@solid
+def return_two(_):
     return 2
 
 
-@lambda_solid(input_defs=[InputDefinition("num1"), InputDefinition("num2")])
-def add_nums(num1, num2):
+@solid(input_defs=[InputDefinition("num1"), InputDefinition("num2")])
+def add_nums(_, num1, num2):
     return num1 + num2
 
 
-@lambda_solid(input_defs=[InputDefinition("num")])
-def multiply_two(num):
+@solid(input_defs=[InputDefinition("num")])
+def multiply_two(_, num):
     return num * 2
 
 
-@lambda_solid(input_defs=[InputDefinition("num")])
-def add_one(num):
+@solid(input_defs=[InputDefinition("num")])
+def add_one(_, num):
     return num + 1
 
 

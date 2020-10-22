@@ -1,6 +1,6 @@
 from dagster_pandas import DataFrame
 
-from dagster import InputDefinition, OutputDefinition, execute_solid, lambda_solid
+from dagster import InputDefinition, OutputDefinition, execute_solid, solid
 from dagster.core.test_utils import single_output_solid
 from dagster.utils import file_relative_path
 
@@ -43,17 +43,18 @@ def create_definition_based_solid():
         name="hello_world",
         input_defs=[table_input],
         compute_fn=compute_fn,
-        output_def=OutputDefinition(DataFrame),
+        output_defs=[OutputDefinition(DataFrame)],
     )
 
     return hello_world
 
 
 def create_decorator_based_solid():
-    @lambda_solid(
-        input_defs=[InputDefinition("num_csv", DataFrame)], output_def=OutputDefinition(DataFrame)
+    @solid(
+        input_defs=[InputDefinition("num_csv", DataFrame)],
+        output_defs=[OutputDefinition(DataFrame)],
     )
-    def hello_world(num_csv):
+    def hello_world(_, num_csv):
         num_csv["sum"] = num_csv["num1"] + num_csv["num2"]
         return num_csv
 

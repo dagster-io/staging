@@ -7,18 +7,17 @@ from dagster import (
     PipelineDefinition,
     SolidInvocation,
     execute_pipeline,
-    lambda_solid,
     solid,
 )
 
 
 def test_aliased_solids():
-    @lambda_solid()
-    def first():
+    @solid
+    def first(_):
         return ["first"]
 
-    @lambda_solid(input_defs=[InputDefinition(name="prev")])
-    def not_first(prev):
+    @solid(input_defs=[InputDefinition(name="prev")])
+    def not_first(_, prev):
         return prev + ["not_first"]
 
     pipeline = PipelineDefinition(
@@ -39,12 +38,12 @@ def test_aliased_solids():
 
 
 def test_only_aliased_solids():
-    @lambda_solid()
-    def first():
+    @solid
+    def first(_):
         return ["first"]
 
-    @lambda_solid(input_defs=[InputDefinition(name="prev")])
-    def not_first(prev):
+    @solid(input_defs=[InputDefinition(name="prev")])
+    def not_first(_, prev):
         return prev + ["not_first"]
 
     pipeline = PipelineDefinition(

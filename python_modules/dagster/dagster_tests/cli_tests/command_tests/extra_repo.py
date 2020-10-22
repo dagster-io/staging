@@ -1,8 +1,8 @@
-from dagster import lambda_solid, pipeline, repository
+from dagster import pipeline, repository, solid
 
 
-@lambda_solid
-def do_something():
+@solid
+def do_something(_):
     return 1
 
 

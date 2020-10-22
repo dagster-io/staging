@@ -1,9 +1,9 @@
-from dagster import DagsterInstance, execute_pipeline, lambda_solid, pipeline, reconstructable
+from dagster import DagsterInstance, execute_pipeline, pipeline, reconstructable, solid
 
 
 def define_pipeline():
-    @lambda_solid
-    def ping():
+    @solid
+    def ping(_):
         return "ping"
 
     @pipeline

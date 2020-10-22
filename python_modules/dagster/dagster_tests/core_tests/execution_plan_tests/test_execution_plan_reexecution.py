@@ -7,8 +7,8 @@ from dagster import (
     OutputDefinition,
     PipelineDefinition,
     execute_pipeline,
-    lambda_solid,
     reexecute_pipeline,
+    solid,
 )
 from dagster.core.errors import (
     DagsterInvalidSubsetError,
@@ -28,16 +28,16 @@ def env_with_fs(run_config):
 
 
 def define_addy_pipeline():
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_one(_, num):
         return num + 1
 
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_two(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_two(_, num):
         return num + 2
 
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_three(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_three(_, num):
         return num + 3
 
     pipeline_def = PipelineDefinition(

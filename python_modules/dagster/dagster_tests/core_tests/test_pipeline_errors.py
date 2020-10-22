@@ -17,7 +17,6 @@ from dagster import (
     check,
     execute_pipeline,
     execute_solid,
-    lambda_solid,
     pipeline,
     solid,
 )
@@ -233,16 +232,16 @@ def test_user_error_propogation():
     class UserError(Exception):
         pass
 
-    @lambda_solid
-    def throws_user_error():
+    @solid
+    def throws_user_error(_):
         raise UserError(err_msg)
 
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -258,8 +257,8 @@ def test_user_error_propogation():
 
 
 def test_explicit_failure():
-    @lambda_solid
-    def throws_failure():
+    @solid
+    def throws_failure(_):
         raise DagsterTypeCheckDidNotPass(
             description="Always fails.",
             metadata_entries=[EventMetadataEntry.text("why", label="always_fails")],

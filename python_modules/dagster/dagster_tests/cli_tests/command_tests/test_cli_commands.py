@@ -15,7 +15,6 @@ from dagster import (
     ScheduleDefinition,
     Shape,
     check,
-    lambda_solid,
     pipeline,
     repository,
     seven,
@@ -40,13 +39,13 @@ def no_print(_):
     return None
 
 
-@lambda_solid
-def do_something():
+@solid
+def do_something(_):
     return 1
 
 
-@lambda_solid
-def do_input(x):
+@solid
+def do_input(_, x):
     return x
 
 
