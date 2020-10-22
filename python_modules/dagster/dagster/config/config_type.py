@@ -144,11 +144,21 @@ class Any(ConfigType):
 
 
 class Noneable(ConfigType):
-    """Defines a configuration type that either is a value of type ``inner_type`` or is ``None``.
+    """Defines a configuration type that is the union of ``NoneType`` and the type ``inner_type``.
 
     Args:
         inner_type (type):
-            The type of values that this configuration type can contain.
+            The type of the values that this configuration type can contain.
+
+    **Examples:**
+
+    .. code-block:: python
+
+       config_schema={"name": Noneable(str)}
+
+       config={"name": "Hello"}  # Ok
+       config={"name": None}     # Ok
+       config={}                 # Error
     """
 
     def __init__(self, inner_type):
@@ -167,7 +177,7 @@ class Array(ConfigType):
 
     Args:
         inner_type (type):
-            The type of values that this configuration type can contain.
+            The type of the values that this configuration type can contain.
     """
 
     def __init__(self, inner_type):
