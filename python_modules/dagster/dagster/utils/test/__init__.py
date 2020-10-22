@@ -17,8 +17,8 @@ from dagster import (
     TypeCheck,
     check,
     execute_pipeline,
-    lambda_solid,
     seven,
+    solid,
 )
 from dagster.core.definitions.logger import LoggerDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
@@ -92,7 +92,7 @@ def create_test_pipeline_execution_context(logger_defs=None):
     )
 
 
-def _dep_key_of(solid):
+def _dep_key_of(solid):  # pylint: disable=redefined-outer-name
     return SolidInvocation(solid.definition.name, solid.name)
 
 
@@ -116,7 +116,7 @@ def build_pipeline_with_input_stubs(pipeline_def, inputs):
                 ).format(solid_name=solid_name, pipeline_name=pipeline_def.name)
             )
 
-        solid = pipeline_def.solid_named(solid_name)
+        solid = pipeline_def.solid_named(solid_name)  # pylint: disable=redefined-outer-name
         for input_name, input_value in input_dict.items():
             stub_solid_def = define_stub_solid(
                 "__stub_{solid_name}_{input_name}".format(
@@ -299,8 +299,8 @@ def execute_solid(
     solid_defs = [solid_def]
 
     def create_value_solid(input_name, input_value):
-        @lambda_solid(name=input_name)
-        def input_solid():
+        @solid(name=input_name)
+        def input_solid(_):
             return input_value
 
         return input_solid

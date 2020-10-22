@@ -12,7 +12,6 @@ from dagster import (
     PresetDefinition,
     check,
     execute_pipeline,
-    lambda_solid,
     pipeline,
     solid,
 )
@@ -26,8 +25,8 @@ def test_presets():
             raise Exception("I did an error")
         return "cool"
 
-    @lambda_solid
-    def always_fail():
+    @solid
+    def always_fail(_):
         raise Exception("I always do this")
 
     pipe = PipelineDefinition(
@@ -110,8 +109,8 @@ def test_presets():
 
 
 def test_invalid_preset():
-    @lambda_solid
-    def lil_solid():
+    @solid
+    def lil_solid(_):
         return ";)"
 
     with pytest.raises(DagsterInvalidDefinitionError, match='mode "mode_b" which is not defined'):
@@ -124,8 +123,8 @@ def test_invalid_preset():
 
 
 def test_conflicting_preset():
-    @lambda_solid
-    def lil_solid():
+    @solid
+    def lil_solid(_):
         return ";)"
 
     with pytest.raises(
@@ -193,8 +192,8 @@ def test_from_pkg_resources():
 
 
 def test_tags():
-    @lambda_solid
-    def a_solid():
+    @solid
+    def a_solid(_):
         return "solid"
 
     @pipeline(

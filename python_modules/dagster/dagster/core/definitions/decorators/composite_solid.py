@@ -211,8 +211,8 @@ def composite_solid(
 
         .. code-block:: python
 
-            @lambda_solid
-            def add_one(num: int) -> int:
+            @solid
+            def add_one(_, num: int) -> int:
                 return num + 1
 
             @composite_solid

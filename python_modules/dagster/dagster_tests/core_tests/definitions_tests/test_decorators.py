@@ -22,11 +22,11 @@ from dagster import (
     composite_solid,
     execute_pipeline,
     execute_solid,
-    lambda_solid,
     pipeline,
     schedule,
     solid,
 )
+from dagster.core.definitions import lambda_solid
 from dagster.core.definitions.decorators import (
     daily_schedule,
     hourly_schedule,

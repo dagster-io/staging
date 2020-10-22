@@ -146,15 +146,15 @@ class Lakehouse:
 
             # If you have multiple solids which need to run first:
 
-            @lambda_solid
-            def other_side_effect() -> Nothing:
+            @solid
+            def other_side_effect(_) -> Nothing:
                 # Perhaps this writes to a database or some other required source table.
                 pass
 
-            @lambda_solid(
+            @solid(
                 input_defs=[InputDefinition("orders", Nothing), InputDefinition("other", Nothing)]
             )
-            def wait_until_complete() -> Nothing:
+            def wait_until_complete(_) -> Nothing:
                 pass
 
             @pipeline(mode_defs=[mode_def], preset_defs=[preset_def])

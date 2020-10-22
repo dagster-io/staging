@@ -1,9 +1,9 @@
-from dagster import EventMetadataEntry, Failure, execute_pipeline, lambda_solid, pipeline
+from dagster import EventMetadataEntry, Failure, execute_pipeline, pipeline, solid
 
 
 def test_failure():
-    @lambda_solid
-    def throw():
+    @solid
+    def throw(_):
         raise Failure(
             description="it Failure",
             metadata_entries=[

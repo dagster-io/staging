@@ -26,7 +26,6 @@ from dagster import (
     RetryRequested,
     String,
     default_executors,
-    lambda_solid,
     pipeline,
     repository,
     resource,
@@ -55,16 +54,16 @@ def multiply_the_word(context, word):
     return word * context.solid_config["factor"]
 
 
-@lambda_solid(input_defs=[InputDefinition("word")])
-def count_letters(word):
+@solid(input_defs=[InputDefinition("word")])
+def count_letters(_, word):
     counts = defaultdict(int)
     for letter in word:
         counts[letter] += 1
     return dict(counts)
 
 
-@lambda_solid()
-def error_solid():
+@solid
+def error_solid(_):
     raise Exception("Unusual error")
 
 

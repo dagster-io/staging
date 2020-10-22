@@ -17,8 +17,8 @@ from dagster import (
     String,
     check,
     execute_pipeline,
-    lambda_solid,
     pipeline,
+    solid,
     usable_as_dagster_type,
 )
 from dagster.core.events import DagsterEventType
@@ -54,16 +54,16 @@ nettest = pytest.mark.nettest
 
 
 def define_inty_pipeline(should_throw=True):
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_one(_, num):
         return num + 1
 
-    @lambda_solid
-    def user_throw_exception():
+    @solid
+    def user_throw_exception(_):
         raise Exception("whoops")
 
     @pipeline(
