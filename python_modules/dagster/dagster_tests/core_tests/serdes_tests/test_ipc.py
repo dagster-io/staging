@@ -1,11 +1,13 @@
 import os
-import subprocess
+import re
 import sys
 import time
 
 import pytest
 
+from dagster.api.utils import execute_command_in_subprocess
 from dagster.serdes.ipc import (
+    DagsterIPCProtocolError,
     interrupt_ipc_subprocess,
     interrupt_ipc_subprocess_pid,
     open_ipc_subprocess,
@@ -293,3 +295,10 @@ def test_interrupt_compute_log_tail_grandchild(
         for stderr_pid in stderr_pids:
             if stderr_pid is not None:
                 wait_for_process(stderr_pid)
+
+
+def test_open_subprocess_error():
+    with pytest.raises(DagsterIPCProtocolError, match=re.escape("Subprocess threw an exception")):
+        execute_command_in_subprocess(
+            [sys.executable, file_relative_path(__file__, "non_zero_error_code_subprocess.py")]
+        )
