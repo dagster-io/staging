@@ -16,18 +16,58 @@ from dagster.utils.error import SerializableErrorInfo
 
 
 @whitelist_for_serdes
-class StepOutputHandle(namedtuple('_StepOutputHandle', 'step_key output_name')):
+class StepOutputHandle(namedtuple('_StepOutputHandle', 'step_key output_name special_index')):
     @staticmethod
-    def from_step(step, output_name='result'):
+    def from_step(step, output_name='result', special_index=None):
         check.inst_param(step, 'step', ExecutionStep)
 
-        return StepOutputHandle(step.key, output_name)
+        return StepOutputHandle(step.key, output_name, special_index)
 
-    def __new__(cls, step_key, output_name='result'):
+    def __new__(cls, step_key, output_name='result', special_index=None):
         return super(StepOutputHandle, cls).__new__(
             cls,
             step_key=check.str_param(step_key, 'step_key'),
             output_name=check.str_param(output_name, 'output_name'),
+            special_index=check.opt_str_param(special_index, 'special_index'),
+        )
+
+    @property
+    def special_form(self):
+        check.invariant(self.special_index, 'special_form only valid if special index present')
+        return SpecialStepOutputHandle(self.step_key, self.output_name)
+
+    @property
+    def special_tag(self):
+        check.invariant(self.special_index, 'special_tag only valid if special index present')
+        return '[{}:{}:{}]'.format(self.step_key, self.output_name, self.special_index)
+
+
+@whitelist_for_serdes
+class SpecialStepOutputHandle(namedtuple('_SpecialStepOutputHandle', 'step_key output_name')):
+    def __new__(cls, step_key, output_name='result'):
+        return super(SpecialStepOutputHandle, cls).__new__(
+            cls,
+            step_key=check.str_param(step_key, 'step_key'),
+            output_name=check.str_param(output_name, 'output_name'),
+        )
+
+
+@whitelist_for_serdes
+class UnresolvedStepOutputHandle(
+    namedtuple('_UnresolvedStepOutputHandle', 'unresolved_key output_name special_upstream')
+):
+    def __new__(cls, unresolved_key, output_name, special_upstream):
+        return super(UnresolvedStepOutputHandle, cls).__new__(
+            cls,
+            unresolved_key=check.str_param(unresolved_key, 'unresolved_key'),
+            output_name=check.str_param(output_name, 'output_name'),
+            special_upstream=special_upstream,
+        )
+
+    def resolve(self, special_output_handle):
+        return StepOutputHandle(
+            step_key=self.unresolved_key.replace('[?]', special_output_handle.special_tag),
+            output_name=self.output_name,
         )
 
 
@@ -89,6 +129,10 @@ class StepOutputData(
     @property
     def output_name(self):
         return self.step_output_handle.output_name
+
+    @property
+    def special_index(self):
+        return self.step_output_handle.special_index
 
 
 @whitelist_for_serdes
@@ -178,6 +222,72 @@ class StepInput(
         return {handle.step_key for handle in self.source_handles}
 
 
+class SpecialStepInput(namedtuple('_StepInput', 'name dagster_type special_handles')):
+    def __new__(cls, name, dagster_type, special_handles):
+        return super(SpecialStepInput, cls).__new__(
+            cls,
+            name=check.str_param(name, 'name'),
+            dagster_type=check.inst_param(dagster_type, 'dagster_type', DagsterType),
+            special_handles=check.list_param(
+                special_handles, 'special_handles', SpecialStepOutputHandle
+            ),
+        )
+
+    @property
+    def dependency_keys(self):
+        return {h.step_key for h in self.special_handles}
+
+    # @property
+    # def special_handles(self):  # hacks
+    #     return []
+
+    # @property
+    # def source_handles(self):
+    #     return []
+
+    @property
+    def source_type(self):  # hacks
+        return None
+
+    def resolve(self, output_handle):
+        return StepInput(
+            name=self.name,
+            dagster_type=self.dagster_type,
+            source_type=StepInputSourceType.SINGLE_OUTPUT,
+            source_handles=[output_handle],
+        )
+
+
+class UnresolvedStepInput(namedtuple('_StepInput', 'name dagster_type source_handle')):
+    def __new__(cls, name, dagster_type, source_handle):
+        return super(UnresolvedStepInput, cls).__new__(
+            cls,
+            name=check.str_param(name, 'name'),
+            dagster_type=check.inst_param(dagster_type, 'dagster_type', DagsterType),
+            source_handle=source_handle,
+        )
+
+    @property
+    def special_handles(self):
+        return self.source_handle.special_upstream
+
+    @property
+    def dependency_keys(self):
+        return {self.source_handle.unresolved_key}
+
+    @property
+    def source_type(self):  # hacks
+        return None
+
+    def resolve(self, output_handle):
+        return StepInput(
+            name=self.name,
+            dagster_type=self.dagster_type,
+            source_type=StepInputSourceType.SINGLE_OUTPUT,
+            source_handles=[self.source_handle.resolve(output_handle)],
+        )
+
+
 class StepOutput(namedtuple('_StepOutput', 'name dagster_type optional should_materialize')):
     def __new__(
         cls, name, dagster_type=None, optional=None, should_materialize=None,
@@ -195,7 +305,7 @@ class ExecutionStep(
     namedtuple(
         '_ExecutionStep',
         (
-            'pipeline_name key_suffix step_inputs step_input_dict step_outputs step_output_dict '
+            'pipeline_name key_tag step_inputs step_input_dict step_outputs step_output_dict '
             'compute_fn kind solid_handle logging_tags tags hook_defs'
         ),
     )
@@ -203,7 +313,7 @@ class ExecutionStep(
     def __new__(
         cls,
         pipeline_name,
-        key_suffix,
+        key_tag,
         step_inputs,
         step_outputs,
         compute_fn,
@@ -214,10 +324,11 @@ class ExecutionStep(
         tags=None,
         hook_defs=None,
     ):
+        key_tag = check.opt_str_param(key_tag, 'key_tag', '')
         return super(ExecutionStep, cls).__new__(
             cls,
             pipeline_name=check.str_param(pipeline_name, 'pipeline_name'),
-            key_suffix=check.str_param(key_suffix, 'key_suffix'),
+            key_tag=key_tag,
             step_inputs=check.list_param(step_inputs, 'step_inputs', of_type=StepInput),
             step_input_dict={si.name: si for si in step_inputs},
             step_outputs=check.list_param(step_outputs, 'step_outputs', of_type=StepOutput),
@@ -227,7 +338,7 @@ class ExecutionStep(
             solid_handle=check.inst_param(solid_handle, 'solid_handle', SolidHandle),
             logging_tags=merge_dicts(
                 {
-                    'step_key': str(solid_handle) + '.' + key_suffix,
+                    'step_key': str(solid_handle) + key_tag + '.compute',
                     'pipeline': pipeline_name,
                     'solid': solid_handle.name,
                     'solid_definition': solid.definition.name,
@@ -240,7 +351,7 @@ class ExecutionStep(
 
     @property
     def key(self):
-        return str(self.solid_handle) + '.' + self.key_suffix
+        return str(self.solid_handle) + self.key_tag + '.compute'
 
     @property
     def solid_name(self):
@@ -261,3 +372,108 @@ class ExecutionStep(
     def step_input_named(self, name):
         check.str_param(name, 'name')
         return self.step_input_dict[name]
+
+
+class UnresolvedExecutionStep(
+    namedtuple('_UnresolvedExecutionStep', 'pipeline_name solid step_inputs solid_handle',)
+):
+    def __new__(cls, pipeline_name, solid, step_inputs, solid_handle):
+        return super(UnresolvedExecutionStep, cls).__new__(
+            cls,
+            pipeline_name=pipeline_name,
+            solid=solid,
+            step_inputs=step_inputs,
+            solid_handle=solid_handle,
+        )
+
+    @property
+    def key(self):
+        return "{}[?].compute".format(self.solid_handle.to_string())
+
+    @property  # hack
+    def kind(self):
+        from dagster.core.execution.plan.objects import StepKind
+
+        return StepKind.COMPUTE
+
+    def get_special_upstream(self):
+        handles = []
+        for s in self.step_inputs:
+            if not isinstance(s, StepInput):
+                handles += s.special_handles
+
+        return handles
+
+    @property
+    def step_outputs(self):  # hack to deal with required resource key grabbing
+        return []
+
+    @property
+    def hook_defs(self):  # hack hack hack
+        return []
+
+    @property
+    def logging_tags(self):  # hack hack hack
+        return {
+            'step_key': str(self.solid_handle) + self.key,  # + '.compute',
+            'pipeline': self.pipeline_name,
+            'solid': self.solid_handle.name,
+            'solid_definition': self.solid.definition.name,
+        }
+
+    @property
+    def tags(self):  # hack -- user should be able to pass in solid tags
+        return self.logging_tags
+
+    def step_output_named(self, name):
+        check.str_param(name, 'name')
+        step_outputs = [
+            StepOutput(
+                name=name,
+                dagster_type=output_def.dagster_type,
+                optional=output_def.optional,
+                should_materialize=False,
+            )
+            for name, output_def in self.solid.definition.output_dict.items()
+        ]
+        step_output_dict = {so.name: so for so in step_outputs}
+        return step_output_dict[name]
+
+    def resolve(self, handle_map):
+        from .compute import _execute_core_compute
+
+        execution_steps = []
+        # only support one for now
+        step_input = self.step_inputs[0]
+        special_handle = step_input.special_handles[0]
+        step_output_handles = handle_map[special_handle]
+        solid = self.solid
+        for step_output_handle in step_output_handles:
+            resolved_step_input = step_input.resolve(step_output_handle)
+
+            execution_steps.append(
+                ExecutionStep(
+                    pipeline_name=self.pipeline_name,
+                    key_tag=step_output_handle.special_tag,
+                    step_inputs=[resolved_step_input],
+                    step_outputs=[
+                        StepOutput(
+                            name=name,
+                            dagster_type=output_def.dagster_type,
+                            optional=output_def.optional,
+                            should_materialize=False,
+                        )
+                        for name, output_def in solid.definition.output_dict.items()
+                    ],
+                    compute_fn=lambda step_context, inputs: _execute_core_compute(
+                        step_context.for_compute(), inputs, solid.definition.compute_fn
+                    ),
+                    kind=StepKind.COMPUTE,
+                    solid_handle=self.solid_handle,
+                    solid=solid,
+                    tags=solid.tags,
+                    hook_defs=solid.hook_defs,
+                )
+            )
+
+        return execution_steps
