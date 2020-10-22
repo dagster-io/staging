@@ -19,6 +19,7 @@ from .tags import (
 
 @whitelist_for_serdes
 class PipelineRunStatus(Enum):
+    QUEUED = "QUEUED"
     NOT_STARTED = "NOT_STARTED"
     MANAGED = "MANAGED"
     STARTED = "STARTED"
