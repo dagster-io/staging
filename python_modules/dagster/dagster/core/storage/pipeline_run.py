@@ -19,6 +19,7 @@ from .tags import (
 
 @whitelist_for_serdes
 class PipelineRunStatus(Enum):
+    QUEUED = "QUEUED"
     NOT_STARTED = "NOT_STARTED"
     MANAGED = "MANAGED"
     STARTED = "STARTED"
@@ -105,6 +106,14 @@ class PipelineRun(
         # possible to be None when only solids_to_execute is set by the user directly
         check.opt_list_param(solid_selection, "solid_selection", of_type=str)
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+
+        if status == PipelineRunStatus.QUEUED:
+            check.inst_param(
+                pipeline_origin,
+                "pipeline_origin",
+                PipelineOrigin,
+                "pipeline_origin is required for queued runs",
+            )
 
         return super(PipelineRun, cls).__new__(
             cls,
