@@ -1,4 +1,4 @@
-from dagster import InputDefinition, Output, OutputDefinition, SolidDefinition, check, lambda_solid
+from dagster import InputDefinition, Output, OutputDefinition, SolidDefinition, check, solid
 
 
 def _compute_fn(context, inputs):
@@ -20,8 +20,8 @@ def _compute_fn(context, inputs):
 def define_stub_solid(name, value):
     check.str_param(name, "name")
 
-    @lambda_solid(name=name)
-    def _stub():
+    @solid(name=name)
+    def _stub(_):
         return value
 
     return _stub

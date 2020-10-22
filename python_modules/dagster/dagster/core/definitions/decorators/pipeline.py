@@ -91,13 +91,13 @@ def pipeline(
                 yield Output(4, "four")
 
 
-            @lambda_solid
-            def add_one(num: int) -> int:
+            @solid
+            def add_one(_, num: int) -> int:
                 return num + 1
 
 
-            @lambda_solid
-            def mult_two(num: int) -> int:
+            @solid
+            def mult_two(_, num: int) -> int:
                 return num * 2
 
 

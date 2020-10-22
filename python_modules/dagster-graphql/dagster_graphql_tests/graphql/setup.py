@@ -43,7 +43,6 @@ from dagster import (
     dagster_type_materializer,
     daily_schedule,
     hourly_schedule,
-    lambda_solid,
     logger,
     monthly_schedule,
     pipeline,
@@ -115,22 +114,22 @@ def get_main_external_repo(instance):
     ).get_repository(main_repo_name())
 
 
-@lambda_solid(
+@solid(
     input_defs=[InputDefinition("num", PoorMansDataFrame)],
-    output_def=OutputDefinition(PoorMansDataFrame),
+    output_defs=[OutputDefinition(PoorMansDataFrame)],
 )
-def sum_solid(num):
+def sum_solid(_, num):
     sum_df = deepcopy(num)
     for x in sum_df:
         x["sum"] = int(x["num1"]) + int(x["num2"])
     return sum_df
 
 
-@lambda_solid(
+@solid(
     input_defs=[InputDefinition("sum_df", PoorMansDataFrame)],
-    output_def=OutputDefinition(PoorMansDataFrame),
+    output_defs=[OutputDefinition(PoorMansDataFrame)],
 )
-def sum_sq_solid(sum_df):
+def sum_sq_solid(_, sum_df):
     sum_sq_df = deepcopy(sum_df)
     for x in sum_sq_df:
         x["sum_sq"] = int(x["sum"]) ** 2
@@ -365,8 +364,8 @@ def csv_hello_world_df_input():
 
 @pipeline
 def no_config_pipeline():
-    @lambda_solid
-    def return_hello():
+    @solid
+    def return_hello(_):
         return "Hello"
 
     return return_hello()
@@ -374,12 +373,12 @@ def no_config_pipeline():
 
 @pipeline
 def no_config_chain_pipeline():
-    @lambda_solid
-    def return_foo():
+    @solid
+    def return_foo(_):
         return "foo"
 
-    @lambda_solid
-    def return_hello_world(_):
+    @solid
+    def return_hello_world(_, _in):
         return "Hello World"
 
     return return_hello_world(return_foo())
@@ -387,20 +386,20 @@ def no_config_chain_pipeline():
 
 @pipeline
 def scalar_output_pipeline():
-    @lambda_solid(output_def=OutputDefinition(String))
-    def return_str():
+    @solid(output_defs=[OutputDefinition(String)])
+    def return_str(_):
         return "foo"
 
-    @lambda_solid(output_def=OutputDefinition(Int))
-    def return_int():
+    @solid(output_defs=[OutputDefinition(Int)])
+    def return_int(_):
         return 34234
 
-    @lambda_solid(output_def=OutputDefinition(Bool))
-    def return_bool():
+    @solid(output_defs=[OutputDefinition(Bool)])
+    def return_bool(_):
         return True
 
-    @lambda_solid(output_def=OutputDefinition(Any))
-    def return_any():
+    @solid(output_defs=[OutputDefinition(Any)])
+    def return_any(_):
         return "dkjfkdjfe"
 
     return_str()
@@ -429,8 +428,8 @@ def pipeline_with_enum_config():
 
 @pipeline
 def naughty_programmer_pipeline():
-    @lambda_solid
-    def throw_a_thing():
+    @solid
+    def throw_a_thing(_):
         raise Exception("bad programmer, bad")
 
     return throw_a_thing()
@@ -565,12 +564,12 @@ def multi_mode_with_loggers():
 
 @pipeline
 def composites_pipeline():
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_one(_, num):
         return num + 1
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def div_two(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def div_two(_, num):
         return num / 2
 
     @composite_solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
@@ -747,8 +746,8 @@ def retry_multi_output_pipeline():
 
 @pipeline(tags={"foo": "bar"})
 def tagged_pipeline():
-    @lambda_solid
-    def simple_solid():
+    @solid
+    def simple_solid(_):
         return "Hello"
 
     return simple_solid()
@@ -756,8 +755,8 @@ def tagged_pipeline():
 
 @pipeline
 def retry_multi_input_early_terminate_pipeline():
-    @lambda_solid(output_def=OutputDefinition(Int))
-    def return_one():
+    @solid(output_defs=[OutputDefinition(Int)])
+    def return_one(_):
         return 1
 
     @solid(
@@ -782,11 +781,11 @@ def retry_multi_input_early_terminate_pipeline():
                 time.sleep(0.1)
         return one
 
-    @lambda_solid(
+    @solid(
         input_defs=[InputDefinition("input_one", Int), InputDefinition("input_two", Int)],
-        output_def=OutputDefinition(Int),
+        output_defs=[OutputDefinition(Int)],
     )
-    def sum_inputs(input_one, input_two):
+    def sum_inputs(_, input_one, input_two):
         return input_one + input_two
 
     step_one = return_one()
@@ -1018,19 +1017,19 @@ def define_executables():
 
 @pipeline
 def chained_failure_pipeline():
-    @lambda_solid
-    def always_succeed():
+    @solid
+    def always_succeed(_):
         return "hello"
 
-    @lambda_solid
-    def conditionally_fail(_):
+    @solid
+    def conditionally_fail(_, _in):
         if os.environ.get("TEST_SOLID_SHOULD_FAIL"):
             raise Exception("blah")
 
         return "hello"
 
-    @lambda_solid
-    def after_failure(_):
+    @solid
+    def after_failure(_, _in):
         return "world"
 
     return after_failure(conditionally_fail(always_succeed()))

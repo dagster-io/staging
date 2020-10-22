@@ -17,8 +17,8 @@ from dagster import (
     TypeCheck,
     check,
     execute_pipeline,
-    lambda_solid,
     seven,
+    solid,
 )
 from dagster.core.definitions.logger import LoggerDefinition
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
@@ -299,8 +299,8 @@ def execute_solid(
     solid_defs = [solid_def]
 
     def create_value_solid(input_name, input_value):
-        @lambda_solid(name=input_name)
-        def input_solid():
+        @solid(name=input_name)
+        def input_solid(_):
             return input_value
 
         return input_solid

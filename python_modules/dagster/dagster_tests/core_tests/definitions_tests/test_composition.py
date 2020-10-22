@@ -11,7 +11,6 @@ from dagster import (
     SolidDefinition,
     composite_solid,
     execute_pipeline,
-    lambda_solid,
     pipeline,
     repository,
     solid,
@@ -25,33 +24,33 @@ def builder(graph):
     return graph.add_one(graph.return_one())
 
 
-@lambda_solid(output_def=OutputDefinition(Int))
-def echo(blah):
+@solid(output_defs=[OutputDefinition(Int)])
+def echo(_, blah):
     return blah
 
 
-@lambda_solid
-def return_one():
+@solid
+def return_one(_):
     return 1
 
 
-@lambda_solid
-def return_two():
+@solid
+def return_two(_):
     return 2
 
 
-@lambda_solid
-def return_tuple():
+@solid
+def return_tuple(_):
     return (1, 2)
 
 
-@lambda_solid(input_defs=[InputDefinition("num")])
-def add_one(num):
+@solid(input_defs=[InputDefinition("num")])
+def add_one(_, num):
     return num + 1
 
 
-@lambda_solid(input_defs=[InputDefinition("num")])
-def pipe(num):
+@solid(input_defs=[InputDefinition("num")])
+def pipe(_, num):
     return num
 
 
@@ -201,12 +200,12 @@ def test_multiple():
 
 
 def test_two_inputs_with_dsl():
-    @lambda_solid(input_defs=[InputDefinition("num_one"), InputDefinition("num_two")])
-    def subtract(num_one, num_two):
+    @solid(input_defs=[InputDefinition("num_one"), InputDefinition("num_two")])
+    def subtract(_, num_one, num_two):
         return num_one - num_two
 
-    @lambda_solid
-    def return_three():
+    @solid
+    def return_three(_):
         return 3
 
     @composite_solid
@@ -240,8 +239,8 @@ def test_diamond_graph():
         yield Output(1, "value_one")
         yield Output(2, "value_two")
 
-    @lambda_solid(input_defs=[InputDefinition("num_one"), InputDefinition("num_two")])
-    def subtract(num_one, num_two):
+    @solid(input_defs=[InputDefinition("num_one"), InputDefinition("num_two")])
+    def subtract(_, num_one, num_two):
         return num_one - num_two
 
     @composite_solid
@@ -255,10 +254,8 @@ def test_diamond_graph():
 
 
 def test_mapping():
-    @lambda_solid(
-        input_defs=[InputDefinition("num_in", Int)], output_def=OutputDefinition(Int, "num_out")
-    )
-    def double(num_in):
+    @solid(input_defs=[InputDefinition("num_in", Int)], output_defs=[OutputDefinition(Int, "num_out")])
+    def double(_, num_in):
         return num_in * 2
 
     @composite_solid(
@@ -285,8 +282,8 @@ def test_mapping():
 
 
 def test_mapping_args_kwargs():
-    @lambda_solid
-    def take(a, b, c):
+    @solid
+    def take(_, a, b, c):
         return (a, b, c)
 
     @composite_solid
@@ -363,24 +360,24 @@ def test_deep_graph():
     def download_num(context):
         return context.solid_config
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def unzip_num(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def unzip_num(_, num):
         return num
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def ingest_num(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def ingest_num(_, num):
         return num
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def subsample_num(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def subsample_num(_, num):
         return num
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def canonicalize_num(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def canonicalize_num(_, num):
         return num
 
-    @lambda_solid(input_defs=[InputDefinition("num")], output_def=OutputDefinition(Int))
-    def load_num(num):
+    @solid(input_defs=[InputDefinition("num")], output_defs=[OutputDefinition(Int)])
+    def load_num(_, num):
         return num + 3
 
     @composite_solid(output_defs=[OutputDefinition(Int)])
@@ -478,8 +475,8 @@ def test_repository_has_solid_def():
 
 
 def test_mapping_args_ordering():
-    @lambda_solid
-    def take(a, b, c):
+    @solid
+    def take(_, a, b, c):
         assert a == "a"
         assert b == "b"
         assert c == "c"
@@ -528,8 +525,8 @@ def test_calling_solid_outside_fn():
         return_one()
 
 
-@lambda_solid
-def single_input_solid():
+@solid
+def single_input_solid(_):
     return
 
 
@@ -698,8 +695,8 @@ def test_multiple_pending_invocations():
 
 
 def test_compose_nothing():
-    @lambda_solid(input_defs=[InputDefinition("start", Nothing)])
-    def go():
+    @solid(input_defs=[InputDefinition("start", Nothing)])
+    def go(_):
         pass
 
     @composite_solid(input_defs=[InputDefinition("start", Nothing)])

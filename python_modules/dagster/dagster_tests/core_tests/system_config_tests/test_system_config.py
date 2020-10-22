@@ -14,7 +14,6 @@ from dagster import (
     SolidInvocation,
     String,
     execute_pipeline,
-    lambda_solid,
     pipeline,
     solid,
 )
@@ -538,8 +537,8 @@ def test_optional_and_required_context():
 
 
 def test_required_inputs():
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -570,15 +569,15 @@ def test_required_inputs():
 
 
 def test_mix_required_inputs():
-    @lambda_solid(
+    @solid(
         input_defs=[InputDefinition("left", Int), InputDefinition("right", Int)],
-        output_def=OutputDefinition(Int),
+        output_defs=[OutputDefinition(Int)],
     )
-    def add_numbers(left, right):
+    def add_numbers(_, left, right):
         return left + right
 
-    @lambda_solid
-    def return_three():
+    @solid
+    def return_three(_):
         return 3
 
     pipeline_def = PipelineDefinition(
