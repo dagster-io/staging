@@ -8,6 +8,7 @@ from ..partition import PartitionSetDefinition
 from ..pipeline import PipelineDefinition
 from ..repository import VALID_REPOSITORY_DATA_DICT_KEYS, RepositoryData, RepositoryDefinition
 from ..schedule import ScheduleDefinition
+from ..sensor import SensorDefinition
 
 
 class _Repository(object):
@@ -42,6 +43,7 @@ class _Repository(object):
                     or isinstance(definition, PartitionSetDefinition)
                     or isinstance(definition, ScheduleDefinition)
                     or isinstance(definition, JobDefinition)
+                    or isinstance(definition, SensorDefinition)
                 ):
                     bad_definitions.append((i, type(definition)))
             if bad_definitions:
