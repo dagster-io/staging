@@ -148,7 +148,7 @@ class Noneable(ConfigType):
 
     Args:
         inner_type (type):
-            The type of elements that this configuration type can contain.
+            The type of values that this configuration type can contain.
     """
 
     def __init__(self, inner_type):
@@ -167,7 +167,7 @@ class Array(ConfigType):
 
     Args:
         inner_type (type):
-            The type of elements that this configuration type can contain.
+            The type of values that this configuration type can contain.
     """
 
     def __init__(self, inner_type):
@@ -205,8 +205,7 @@ class EnumValue(object):
 
 
 class Enum(ConfigType):
-    """
-    Defines a enum configuration type that allows one of a defined set of possible values.
+    """Defines a enum configuration type that allows one of a defined set of possible values.
 
     Args:
         name (str):
@@ -295,6 +294,47 @@ class Enum(ConfigType):
 
 
 class ScalarUnion(ConfigType):
+    """Defines a configuration type that accepts a scalar value OR a non-scalar value like a
+    :py:class:`~dagster.List`, :py:class:`~dagster.Dict`, or :py:class:`~dagster.Selector`.
+
+    This allows runtime scalars to be configured without a dictionary with the key ``value`` and
+    instead just use the scalar value directly. However this still leaves the option to
+    load scalars from a json or pickle file.
+
+    Args:
+        scalar_type (type):
+            The scalar type of values that this configuration type can hold. For example,
+            :py:class:`~python:int`, :py:class:`~python:float`, :py:class:`~python:bool`,
+            or :py:class:`~python:str`.
+        non_scalar_schema (ConfigSchema):
+            The schema of a non-scalar Dagster configuration type. For example, :py:class:`List`,
+            :py:class:`Dict`, or :py:class:`~dagster.Selector`.
+        key (Optional[str]):
+            The configuation type's unique key. If not set, then the key will be set to
+            ``ScalarUnion.{scalar_type}-{non_scalar_schema}``.
+
+    **Examples:**
+
+    .. code-block:: yaml
+
+        solids:
+          transform_word:
+            inputs:
+              word:
+                value: foobar
+
+
+    becomes, optionally,
+
+
+    .. code-block:: yaml
+
+        solids:
+          transform_word:
+            inputs:
+              word: foobar
+    """
+
     def __init__(
         self, scalar_type, non_scalar_schema, _key=None,
     ):
