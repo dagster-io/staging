@@ -6,7 +6,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from dagster import daily_schedule, pipeline, repository, solid
+from dagster import daily_schedule, pipeline, repository, seven, solid
 from dagster.api.launch_scheduled_execution import sync_launch_scheduled_execution
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.instance import DagsterInstance
@@ -220,6 +220,10 @@ def test_wrong_config(schedule_origin_context):
             assert ticks[0].status == ScheduleTickStatus.SUCCESS
 
 
+@pytest.mark.skipif(
+    seven.IS_WINDOWS,
+    reason="gRPC Server hanging when trying to load repository that does not exist",
+)
 def test_bad_load():
     with instance_for_test() as instance:
         instance = DagsterInstance.get()
