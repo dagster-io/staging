@@ -40,7 +40,7 @@ def _check_solids_arg(pipeline_name, solid_defs):
             raise DagsterInvalidDefinitionError(
                 """You have passed a lambda or function {func} into pipeline {name} that is
                 not a solid. You have likely forgetten to annotate this function with
-                an @solid or @lambda_solid decorator.'
+                a @solid decorator.'
                 """.format(
                     name=pipeline_name, func=solid_def.__name__
                 )
@@ -106,8 +106,8 @@ class PipelineDefinition(IContainSolids):
 
         .. code-block:: python
 
-            @lambda_solid
-            def return_one():
+            @solid
+            def return_one(_):
                 return 1
 
 

@@ -5,7 +5,6 @@ from dagster import (
     Output,
     OutputDefinition,
     PipelineDefinition,
-    lambda_solid,
     solid,
 )
 from dagster.core.execution.api import create_execution_plan, execute_plan
@@ -13,12 +12,12 @@ from dagster.core.instance import DagsterInstance
 
 
 def define_two_int_pipeline():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def add_one(_, num):
         return num + 1
 
     return PipelineDefinition(

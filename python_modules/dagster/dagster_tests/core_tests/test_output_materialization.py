@@ -14,7 +14,6 @@ from dagster import (
     String,
     dagster_type_materializer,
     execute_pipeline,
-    lambda_solid,
     solid,
 )
 from dagster.core.errors import DagsterInvariantViolationError
@@ -25,16 +24,16 @@ from dagster.utils.test import get_temp_file_name, get_temp_file_names
 
 
 def single_int_output_pipeline():
-    @lambda_solid(output_def=OutputDefinition(Int))
-    def return_one():
+    @solid(output_defs=[OutputDefinition(Int)])
+    def return_one(_):
         return 1
 
     return PipelineDefinition(name="single_int_output_pipeline", solid_defs=[return_one])
 
 
 def single_string_output_pipeline():
-    @lambda_solid(output_def=OutputDefinition(String))
-    def return_foo():
+    @solid(output_defs=[OutputDefinition(String)])
+    def return_foo(_):
         return "foo"
 
     return PipelineDefinition(name="single_string_output_pipeline", solid_defs=[return_foo])
@@ -50,8 +49,8 @@ def multiple_output_pipeline():
 
 
 def single_int_named_output_pipeline():
-    @lambda_solid(output_def=OutputDefinition(Int, name="named"))
-    def return_named_one():
+    @solid(output_defs=[OutputDefinition(Int, name="named")])
+    def return_named_one(_):
         return Output(1, "named")
 
     return PipelineDefinition(
@@ -337,8 +336,8 @@ def yield_two_materializations(*_args, **_kwargs):
 def test_basic_yield_multiple_materializations():
     SomeDagsterType = create_any_type(name="SomeType", materializer=yield_two_materializations)
 
-    @lambda_solid(output_def=OutputDefinition(SomeDagsterType))
-    def return_one():
+    @solid(output_defs=[OutputDefinition(SomeDagsterType)])
+    def return_one(_):
         return 1
 
     pipeline_def = PipelineDefinition(name="single_int_output_pipeline", solid_defs=[return_one])
@@ -367,8 +366,8 @@ def return_int(*_args, **_kwargs):
 def test_basic_bad_output_materialization():
     SomeDagsterType = create_any_type(name="SomeType", materializer=return_int)
 
-    @lambda_solid(output_def=OutputDefinition(SomeDagsterType))
-    def return_one():
+    @solid(output_defs=[OutputDefinition(SomeDagsterType)])
+    def return_one(_):
         return 1
 
     pipeline_def = PipelineDefinition(name="single_int_output_pipeline", solid_defs=[return_one])
