@@ -2,8 +2,10 @@ import inspect
 import os
 
 from dagster import check
+from dagster.core.definitions.decorators.sensor import sensor
 from dagster.core.definitions.sensor import RunRequest, SensorDefinition, SkipReason
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.utils import utc_datetime_from_timestamp
 
 
 def directory_file_sensor(
@@ -94,4 +96,29 @@ def get_toys_sensors():
                 },
             )
 
-    return [toy_file_sensor]
+    bucket = os.environ.get("DAGSTER_TOY_SENSOR_S3_BUCKET")
+
+    from dagster_aws.s3.sensor import get_s3_updates
+
+    @sensor(pipeline_name="log_s3_pipeline")
+    def s3_bucket_sensor(context):
+        if not bucket:
+            yield SkipReason(
+                "S3 bucket not specified at environment variable `DAGSTER_TOY_SENSOR_S3_BUCKET`."
+            )
+            return
+
+        updated_keys = get_s3_updates(
+            bucket, since=utc_datetime_from_timestamp(context.last_completion_time)
+        )
+        if not updated_keys:
+            yield SkipReason(f"No s3 updates found for bucket {bucket}.")
+            return
+
+        for key in updated_keys:
+            yield RunRequest(
+                run_key=key,
+                run_config={"solids": {"read_key": {"config": {"bucket": bucket, "key": key}}}},
+            )
+
+    return [toy_file_sensor, s3_bucket_sensor]
