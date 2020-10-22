@@ -1,5 +1,3 @@
-from collections import namedtuple
-
 from dagster import check
 from dagster.core.instance import DagsterInstance
 from dagster.utils.backcompat import experimental_class_warning
@@ -7,7 +5,7 @@ from dagster.utils.backcompat import experimental_class_warning
 from .mode import DEFAULT_MODE_NAME
 
 
-class JobContext(namedtuple("JobContext", "instance")):
+class JobContext(object):
     """Context for generating the execution parameters for an JobDefinition at runtime.
 
     An instance of this class is made available as the first argument to the JobDefinition
@@ -17,13 +15,15 @@ class JobContext(namedtuple("JobContext", "instance")):
         instance (DagsterInstance): The instance configured to launch the job
     """
 
-    def __new__(
-        cls, instance,
-    ):
+    __slots__ = ["_instance"]
+
+    def __init__(self, instance):
         experimental_class_warning("JobContext")
-        return super(JobContext, cls).__new__(
-            cls, check.inst_param(instance, "instance", DagsterInstance),
-        )
+        self._instance = check.inst_param(instance, "instance", DagsterInstance)
+
+    @property
+    def instance(self):
+        return self._instance
 
 
 class JobDefinition(object):
