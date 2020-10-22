@@ -2,6 +2,8 @@ import datetime
 from collections import defaultdict
 
 from dagster import PartitionSetDefinition, ScheduleExecutionContext
+from dagster.core.definitions.job import JobDefinition
+from dagster.core.definitions.sensor import SensorDefinition
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.utils.partitions import date_partition_range
 
@@ -179,3 +181,10 @@ def get_toys_schedules():
             },
         ),
     ]
+
+
+def get_toy_sensors():
+    job = JobDefinition(
+        name="events_job", pipeline_name="many_events", tags_fn=lambda _: {"sensor": "events_job"}
+    )
+    return [SensorDefinition(name="blah", job_definition=job, should_execute=lambda _: True)]
