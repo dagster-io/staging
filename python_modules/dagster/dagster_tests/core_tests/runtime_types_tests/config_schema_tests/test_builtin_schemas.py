@@ -53,16 +53,26 @@ def define_test_all_scalars_pipeline():
     def take_bool(bool_value):
         return bool_value
 
+<<<<<<< Updated upstream
     @lambda_solid(output_def=OutputDefinition(Bool))
     def produce_bool():
+=======
+    @solid(output_defs=[OutputDefinition(Bool)])
+    def produce_bool(_):
+>>>>>>> Stashed changes
         return True
 
     @lambda_solid(input_defs=[InputDefinition("any_value", Any)])
     def take_any(any_value):
         return any_value
 
+<<<<<<< Updated upstream
     @lambda_solid(output_def=OutputDefinition(Any))
     def produce_any():
+=======
+    @solid(output_defs=[OutputDefinition(Any)])
+    def produce_any(_):
+>>>>>>> Stashed changes
         return True
 
     @lambda_solid(input_defs=[InputDefinition("string_list", List[String])])

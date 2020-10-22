@@ -32,7 +32,11 @@ def sum_sq_solid(sum_df):
 
 @lambda_solid(
     input_defs=[InputDefinition("sum_sq_solid", dagster_pd.DataFrame)],
+<<<<<<< Updated upstream
     output_def=OutputDefinition(dagster_pd.DataFrame),
+=======
+    output_defs=[OutputDefinition(dagster_pd.DataFrame)],
+>>>>>>> Stashed changes
 )
 def always_fails_solid(**_kwargs):
     raise Exception("I am a programmer and I make error")
