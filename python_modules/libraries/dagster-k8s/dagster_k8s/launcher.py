@@ -236,7 +236,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         job_name = "dagster-run-{}".format(run.run_id)
         pod_name = job_name
 
-        user_defined_k8s_config = get_user_defined_k8s_config(frozentags(external_pipeline.tags))
+        user_defined_k8s_config = get_user_defined_k8s_config(frozentags(run.tags))
 
         pipeline_origin = None
         job_config = None
