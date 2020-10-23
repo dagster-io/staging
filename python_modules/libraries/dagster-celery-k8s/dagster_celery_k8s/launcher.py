@@ -219,7 +219,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
             env_secrets=exc_config.get("env_secrets"),
         )
 
-        user_defined_k8s_config = get_user_defined_k8s_config(frozentags(external_pipeline.tags))
+        user_defined_k8s_config = get_user_defined_k8s_config(frozentags(run.tags))
 
         from dagster.cli.api import ExecuteRunArgs
 
