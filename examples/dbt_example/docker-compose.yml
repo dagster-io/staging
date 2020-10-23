@@ -1,0 +1,20 @@
+version: "3.7"
+
+services:
+  dbt_example_postgresql:
+    image: postgres:11
+    container_name: dbt_example_postgresql
+    ports:
+      # Avoid collisions with other test dbs on 5432 -- this is not a long-term viable strategy
+      - "5477:5477"
+    environment:
+      POSTGRES_USER: "dbt_example"
+      POSTGRES_PASSWORD: "dbt_example"
+      POSTGRES_DB: "dbt_example"
+    networks:
+      - postgres
+
+networks:
+  postgres:
+    driver: bridge
+    name: postgres
