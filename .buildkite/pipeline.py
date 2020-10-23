@@ -171,28 +171,6 @@ def celery_docker_extra_cmds_fn(version):
     ]
 
 
-def integration_suite_extra_cmds_fn(version):
-    return [
-        'export AIRFLOW_HOME="/airflow"',
-        "mkdir -p $${AIRFLOW_HOME}",
-        "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
-        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com"',
-        "aws ecr get-login --no-include-email --region us-west-1 | sh",
-        r"aws s3 cp s3://\${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json "
-        + GCP_CREDS_LOCAL_FILE,
-        "export GOOGLE_APPLICATION_CREDENTIALS=" + GCP_CREDS_LOCAL_FILE,
-        "pushd python_modules/libraries/dagster-celery",
-        # Run the rabbitmq db. We are in docker running docker
-        # so this will be a sibling container.
-        "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit,
-        # Can't use host networking on buildkite and communicate via localhost
-        # between these sibling containers, so pass along the ip.
-        network_buildkite_container("rabbitmq"),
-        connect_sibling_docker_container("rabbitmq", "test-rabbitmq", "DAGSTER_CELERY_BROKER_HOST"),
-        "popd",
-    ]
-
-
 def dagster_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
@@ -464,51 +442,6 @@ def extra_library_tests():
     return tests
 
 
-def integration_tests():
-    tests = []
-    tests += ModuleBuildSpec(
-        os.path.join("integration_tests", "python_modules", "dagster-k8s-test-infra"),
-        supported_pythons=SupportedPython3s,
-        upload_coverage=True,
-    ).get_tox_build_steps()
-
-    integration_suites_root = os.path.join(SCRIPT_PATH, "..", "integration_tests", "test_suites")
-    integration_suites = [
-        os.path.join("integration_tests", "test_suites", suite)
-        for suite in os.listdir(integration_suites_root)
-    ]
-
-    for integration_suite in integration_suites:
-        tox_env_suffixes = None
-        if integration_suite == os.path.join(
-            "integration_tests", "test_suites", "k8s-integration-test-suite"
-        ):
-            tox_env_suffixes = ["-default", "-markscheduler"]
-        elif integration_suite == os.path.join(
-            "integration_tests", "test_suites", "celery-k8s-integration-test-suite"
-        ):
-            tox_env_suffixes = ["-default", "-markusercodedeployment"]
-
-        tests += ModuleBuildSpec(
-            integration_suite,
-            env_vars=[
-                "AIRFLOW_HOME",
-                "AWS_ACCOUNT_ID",
-                "AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY",
-                "BUILDKITE_SECRETS_BUCKET",
-                "GOOGLE_APPLICATION_CREDENTIALS",
-            ],
-            supported_pythons=SupportedPython3s,
-            upload_coverage=True,
-            extra_cmds_fn=integration_suite_extra_cmds_fn,
-            depends_on_fn=test_image_depends_fn,
-            tox_env_suffixes=tox_env_suffixes,
-            retries=2,
-        ).get_tox_build_steps()
-    return tests
-
-
 def examples_tests():
     """Auto-discover and test all new examples"""
 
@@ -741,7 +674,6 @@ def python_steps():
     steps += version_equality_checks()
     steps += next_docs_build_tests()
     steps += examples_tests()
-    steps += integration_tests()
 
     return steps
 
