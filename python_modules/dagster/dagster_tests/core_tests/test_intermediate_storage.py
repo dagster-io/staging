@@ -203,3 +203,17 @@ def test_file_system_intermediate_storage_with_composite_type_storage_plugin():
                 StepOutputHandle("obj_name"),
                 ["hello"],
             )
+
+
+def test_required_resource_keys():
+    from dagster import pipeline, ModeDefinition, intermediate_storage, execute_pipeline
+
+    @intermediate_storage(required_resource_keys={"abc"})
+    def my_intermediate_storage(_):
+        pass
+
+    @pipeline(mode_defs=[ModeDefinition(intermediate_storage_defs=[my_intermediate_storage])])
+    def my_pipeline():
+        pass
+
+    execute_pipeline(my_pipeline)
