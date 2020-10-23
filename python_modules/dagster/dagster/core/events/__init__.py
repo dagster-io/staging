@@ -629,7 +629,9 @@ class DagsterEvent(
         return DagsterEvent.from_resource(
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
             log_manager=check.inst_param(log_manager, "log_manager", DagsterLogManager),
-            message="Starting initialization of resources [{}].".format(", ".join(resource_keys)),
+            message="Starting initialization of resources [{}].".format(
+                ", ".join(sorted(resource_keys))
+            ),
             event_specific_data=EngineEventData(metadata_entries=[], marker_start="resources"),
         )
 
