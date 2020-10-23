@@ -766,6 +766,9 @@ class DagsterInstance:
 
         return execution_plan_snapshot_id
 
+    def store_run(self, pipeline_run):
+        return self._run_storage.add_run(pipeline_run)
+
     def create_run(
         self,
         pipeline_name,
@@ -802,7 +805,7 @@ class DagsterInstance:
             parent_pipeline_snapshot=parent_pipeline_snapshot,
             pipeline_origin=pipeline_origin,
         )
-        return self._run_storage.add_run(pipeline_run)
+        return self.store_run(pipeline_run)
 
     def register_managed_run(
         self,
