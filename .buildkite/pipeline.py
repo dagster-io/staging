@@ -704,7 +704,11 @@ def helm_steps():
         .on_integration_image(SupportedPython.V3_7)
         .build(),
         StepBuilder("validate helm schema")
-        .run("helm lint helm/dagster -f helm/dagster/values.yaml")
+        .run(
+            "pip install -e python_modules/automation",
+            "dagster-helm schema | git diff --no-index --exit-code -- helm/dagster/values.schema.json -",
+            "helm lint helm/dagster -f helm/dagster/values.yaml",
+        )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
     ]
