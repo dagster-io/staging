@@ -1,6 +1,8 @@
 import threading
 import time
 
+import pytest
+
 from dagster.grpc.client import ephemeral_grpc_api_client
 
 
@@ -9,6 +11,8 @@ def _stream_events_target(results, api_client):
         results.append(result)
 
 
+# https://github.com/dagster-io/dagster/issues/3147
+@pytest.mark.xfail
 def test_streaming_terminate():
     with ephemeral_grpc_api_client() as api_client:
         streaming_results = []
