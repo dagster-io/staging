@@ -40,6 +40,8 @@ from dagster.core.host_representation.external_data import (
     ExternalRepositoryData,
     ExternalScheduleExecutionData,
     ExternalScheduleExecutionErrorData,
+    ExternalSensorExecutionData,
+    ExternalSensorExecutionErrorData,
 )
 from dagster.core.host_representation.selector import PipelineSelector
 from dagster.core.instance import DagsterInstance
@@ -64,6 +66,7 @@ from dagster.grpc.impl import (
     get_external_job_params,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
+    get_external_sensor_execution,
     get_partition_config,
     get_partition_names,
     get_partition_set_execution_param_data,
@@ -83,6 +86,7 @@ from dagster.grpc.types import (
     PartitionSetExecutionParamArgs,
     PipelineSubsetSnapshotArgs,
     ScheduleExecutionDataMode,
+    SensorExecutionArgs,
 )
 from dagster.grpc.utils import get_loadable_targets
 from dagster.serdes import (
@@ -272,6 +276,20 @@ def partition_set_execution_param_command(args):
 def schedule_execution_data_command(args):
     recon_repo = recon_repository_from_origin(args.repository_origin)
     return get_external_schedule_execution(recon_repo, args)
+
+
+@unary_api_cli_command(
+    name="sensor_config",
+    help_str=(
+        "[INTERNAL] Return the execution data a sensor. This is an internal utility. Users should "
+        "generally not invoke this command interactively."
+    ),
+    input_cls=SensorExecutionArgs,
+    output_cls=(ExternalSensorExecutionData, ExternalSensorExecutionErrorData),
+)
+def sensor_execution_data_command(args):
+    recon_repo = recon_repository_from_origin(args.repository_origin)
+    return get_external_sensor_execution(recon_repo, args)
 
 
 @unary_api_cli_command(
@@ -761,6 +779,7 @@ def create_api_cli_group():
     group.add_command(partition_names_command)
     group.add_command(partition_set_execution_param_command)
     group.add_command(schedule_execution_data_command)
+    group.add_command(sensor_execution_data_command)
     group.add_command(job_params_command)
     group.add_command(launch_scheduled_execution)
     group.add_command(grpc_command)

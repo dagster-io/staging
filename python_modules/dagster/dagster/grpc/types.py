@@ -243,6 +243,23 @@ class ExternalScheduleExecutionArgs(
 
 
 @whitelist_for_serdes
+class SensorExecutionArgs(
+    namedtuple("_SensorExecutionArgs", "repository_origin instance_ref sensor_name")
+):
+    def __new__(
+        cls, repository_origin, instance_ref, sensor_name,
+    ):
+        return super(SensorExecutionArgs, cls).__new__(
+            cls,
+            repository_origin=check.inst_param(
+                repository_origin, "repository_origin", RepositoryOrigin
+            ),
+            instance_ref=check.inst_param(instance_ref, "instance_ref", InstanceRef),
+            sensor_name=check.str_param(sensor_name, "sensor_name"),
+        )
+
+
+@whitelist_for_serdes
 class ExternalJobArgs(namedtuple("_ExternalJobArgs", "repository_origin instance_ref name",)):
     def __new__(cls, repository_origin, instance_ref, name):
         return super(ExternalJobArgs, cls).__new__(
