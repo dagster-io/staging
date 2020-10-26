@@ -11,6 +11,7 @@ from dagster.core.definitions.reconstructable import (
     ReconstructablePipeline,
     ReconstructableRepository,
 )
+from dagster.core.definitions.sensor import SensorExecutionContext
 from dagster.core.errors import (
     DagsterInvalidSubsetError,
     DagsterRunNotFoundError,
@@ -18,6 +19,7 @@ from dagster.core.errors import (
     JobError,
     PartitionExecutionError,
     ScheduleExecutionError,
+    SensorExecutionError,
     user_code_error_boundary,
 )
 from dagster.core.events import EngineEventData
@@ -26,6 +28,7 @@ from dagster.core.host_representation import external_pipeline_data_from_def
 from dagster.core.host_representation.external_data import (
     ExternalExecutionParamsData,
     ExternalExecutionParamsErrorData,
+    ExternalJobExecutionData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionExecutionParamData,
@@ -35,6 +38,8 @@ from dagster.core.host_representation.external_data import (
     ExternalPipelineSubsetResult,
     ExternalScheduleExecutionData,
     ExternalScheduleExecutionErrorData,
+    ExternalSensorExecutionData,
+    ExternalSensorExecutionErrorData,
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.snap.execution_plan_snapshot import (
@@ -49,6 +54,7 @@ from dagster.grpc.types import (
     PartitionArgs,
     PartitionNamesArgs,
     ScheduleExecutionDataMode,
+    SensorExecutionArgs,
 )
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from dagster.serdes.ipc import IPCErrorMessage
@@ -279,6 +285,52 @@ def get_external_schedule_execution(recon_repo, external_schedule_execution_args
             )
         except ScheduleExecutionError:
             return ExternalScheduleExecutionErrorData(
+                serializable_error_info_from_exc_info(sys.exc_info())
+            )
+
+
+def get_external_sensor_execution(recon_repo, sensor_execution_args):
+    check.inst_param(
+        recon_repo, "recon_repo", ReconstructableRepository,
+    )
+    check.inst_param(
+        sensor_execution_args, "sensor_execution_args", SensorExecutionArgs,
+    )
+
+    definition = recon_repo.get_definition()
+    sensor_def = definition.get_sensor_def(sensor_execution_args.sensor_name)
+
+    with DagsterInstance.from_ref(sensor_execution_args.instance_ref) as instance:
+        sensor_context = SensorExecutionContext(instance, last_execution_time=None)
+
+        try:
+            with user_code_error_boundary(
+                SensorExecutionError,
+                lambda: "Error occurred during the execution of should_execute for sensor "
+                "{sensor_name}".format(sensor_name=sensor_def.name),
+            ):
+                if not sensor_def.should_execute(sensor_context):
+                    return ExternalSensorExecutionData(should_execute=False, job_data=None)
+
+            with user_code_error_boundary(
+                SensorExecutionError,
+                lambda: "Error occurred during the execution of run_config_fn for sensor "
+                "{sensor_name}".format(sensor_name=sensor_def.name),
+            ):
+                run_config = sensor_def.job.get_run_config(sensor_context)
+
+            with user_code_error_boundary(
+                SensorExecutionError,
+                lambda: "Error occurred during the execution of tags_fn for sensor "
+                "{sensor_name}".format(sensor_name=sensor_def.name),
+            ):
+                tags = sensor_def.job.get_tags(sensor_context)
+
+            return ExternalSensorExecutionData(
+                should_execute=True, job_data=ExternalJobExecutionData(run_config, tags)
+            )
+        except SensorExecutionError:
+            return ExternalSensorExecutionErrorData(
                 serializable_error_info_from_exc_info(sys.exc_info())
             )
 

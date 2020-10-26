@@ -13,6 +13,7 @@ from dagster import (
     usable_as_dagster_type,
 )
 from dagster.core.definitions.decorators import job
+from dagster.core.definitions.decorators.sensor import sensor
 
 
 @lambda_solid
@@ -142,6 +143,16 @@ def job_error(_):
     raise Exception("womp womp")
 
 
+@sensor(job_foo)
+def sensor_foo(_):
+    return True
+
+
+@sensor(job_foo)
+def sensor_error(_):
+    raise Exception("womp womp")
+
+
 @repository
 def bar_repo():
     return {
@@ -153,4 +164,5 @@ def bar_repo():
         "schedules": define_bar_schedules(),
         "partition_sets": define_baz_partitions(),
         "jobs": {"job_foo": job_foo, "job_error": lambda: job_error,},
+        "sensors": {"sensor_foo": sensor_foo, "sensor_error": lambda: sensor_error},
     }
