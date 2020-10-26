@@ -209,13 +209,13 @@ export const StepSelector = ({
   );
 };
 
-const NavSectionHeader = styled.div`
+export const NavSectionHeader = styled.div`
   border-bottom: 1px solid ${Colors.GRAY5};
   margin-bottom: 10px;
   padding-bottom: 5px;
   display: flex;
 `;
-const NavSection = styled.div`
+export const NavSection = styled.div`
   margin-bottom: 30px;
 `;
 const Item = styled.div`
