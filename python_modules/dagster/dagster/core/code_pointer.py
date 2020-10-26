@@ -215,7 +215,7 @@ def load_python_module(module_name, warn_only=False, remove_from_path_fn=None):
                     (
                         "Module {module} was resolved using the working directory. The ability to "
                         "load uninstalled modules from the working directory is deprecated and "
-                        "will be removed in a future release.  Please use the python-file based "
+                        "will be removed in the 0.10.0 release.  Please use the python-file based "
                         "load arguments or install {module} to your python environment."
                     ).format(module=module_name)
                 )
