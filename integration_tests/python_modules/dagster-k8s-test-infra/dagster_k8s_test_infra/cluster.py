@@ -14,6 +14,7 @@ from dagster_test.test_project import build_and_tag_test_image, test_project_doc
 
 from dagster import check
 from dagster.core.instance import DagsterInstance, InstanceType
+from dagster.core.queuer import InstantRunQueuer
 from dagster.core.storage.noop_compute_log_manager import NoOpComputeLogManager
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
@@ -168,6 +169,7 @@ def dagster_instance_with_k8s_scheduler(
             run_storage=SqliteRunStorage.from_local(os.path.join(schedule_tempdir, "runs")),
             event_storage=PostgresEventLogStorage(postgres_url),
             compute_log_manager=NoOpComputeLogManager(),
+            run_queuer=InstantRunQueuer(),
             run_launcher=run_launcher,
             schedule_storage=SqliteScheduleStorage.from_local(
                 os.path.join(schedule_tempdir, "schedules")
