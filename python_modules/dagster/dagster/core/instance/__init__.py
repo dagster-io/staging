@@ -184,6 +184,8 @@ class DagsterInstance:
             :py:class:`dagster.core.storage.local_compute_log_manager.LocalComputeLogManager`.
             Configurable in ``dagster.yaml`` using the
             :py:class:`~dagster.serdes.ConfigurableClass` machinery.
+        runs_coordinator (RunsCoordinator): A runs coordinator may be used to manage the execution
+            of pipeline runs.
         run_launcher (Optional[RunLauncher]): Optionally, a run launcher may be used to enable
             a Dagster instance to launch pipeline runs, e.g. on a remote Kubernetes cluster, in
             addition to running them locally.
@@ -205,6 +207,7 @@ class DagsterInstance:
         compute_log_manager,
         schedule_storage=None,
         scheduler=None,
+        runs_coordinator=None,
         run_launcher=None,
         settings=None,
         ref=None,
@@ -215,6 +218,7 @@ class DagsterInstance:
         from dagster.core.storage.runs import RunStorage
         from dagster.core.storage.schedules import ScheduleStorage
         from dagster.core.scheduler import Scheduler
+        from dagster.core.runs_coordinator import RunsCoordinator
         from dagster.core.launcher import RunLauncher
 
         self._instance_type = check.inst_param(instance_type, "instance_type", InstanceType)
@@ -230,6 +234,10 @@ class DagsterInstance:
             schedule_storage, "schedule_storage", ScheduleStorage
         )
         self._scheduler = check.opt_inst_param(scheduler, "scheduler", Scheduler)
+        self._runs_coordinator = check.inst_param(
+            runs_coordinator, "runs_coordinator", RunsCoordinator
+        )
+        self._runs_coordinator.initialize(self)
         self._run_launcher = check.inst_param(run_launcher, "run_launcher", RunLauncher)
         self._run_launcher.initialize(self)
 
@@ -243,6 +251,7 @@ class DagsterInstance:
 
     @staticmethod
     def ephemeral(tempdir=None, preload=None):
+        from dagster.core.runs_coordinator import LaunchImmediateRunsCoordinator
         from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
         from dagster.core.storage.event_log import InMemoryEventLogStorage
         from dagster.core.storage.root import LocalArtifactStorage
@@ -258,6 +267,7 @@ class DagsterInstance:
             run_storage=InMemoryRunStorage(preload=preload),
             event_storage=InMemoryEventLogStorage(preload=preload),
             compute_log_manager=NoOpComputeLogManager(),
+            runs_coordinator=LaunchImmediateRunsCoordinator(),
             run_launcher=SyncInMemoryRunLauncher(),
         )
 
@@ -300,6 +310,7 @@ class DagsterInstance:
             compute_log_manager=instance_ref.compute_log_manager,
             schedule_storage=instance_ref.schedule_storage,
             scheduler=instance_ref.scheduler,
+            runs_coordinator=instance_ref.runs_coordinator,
             run_launcher=instance_ref.run_launcher,
             settings=instance_ref.settings,
             ref=instance_ref,
@@ -359,6 +370,7 @@ class DagsterInstance:
             "compute_logs:\n{compute}\n"
             "schedule_storage:\n{schedule_storage}\n"
             "scheduler:\n{scheduler}\n"
+            "runs_coordinator:\n{runs_coordinator}\n"
             "run_launcher:\n{run_launcher}\n"
             "".format(
                 artifact=self._info(self._local_artifact_storage),
@@ -367,6 +379,7 @@ class DagsterInstance:
                 compute=self._info(self._compute_log_manager),
                 schedule_storage=self._info(self._schedule_storage),
                 scheduler=self._info(self._scheduler),
+                runs_coordinator=self._info(self._runs_coordinator),
                 run_launcher=self._info(self._run_launcher),
             )
             + "\n".join(
@@ -390,6 +403,12 @@ class DagsterInstance:
     @property
     def scheduler(self):
         return self._scheduler
+
+    # run coordinator
+
+    @property
+    def runs_coordinator(self):
+        return self._runs_coordinator
 
     # run launcher
 
@@ -451,6 +470,7 @@ class DagsterInstance:
 
     def dispose(self):
         self._run_storage.dispose()
+        self.runs_coordinator.dispose()
         self._run_launcher.dispose()
         self._event_storage.dispose()
         self._compute_log_manager.dispose()
@@ -1052,6 +1072,38 @@ class DagsterInstance:
 
     def schedules_directory(self):
         return self._local_artifact_storage.schedules_dir
+
+    # Runs coordinator
+
+    def submit_run(self, run_id, external_pipeline):
+        """Submit a pipeline run to the coordinator.
+
+        This method delegates to the ``RunsCoordinator``, configured on the instance, and will
+        call its implementation of ``RunsCoordinator.submit_run()`` to send the run to the
+        coordinator for execution. Runs should be created in the instance (e.g., by calling
+        ``DagsterInstance.create_run()``) *before* this method is called, and
+        should be in the ``PipelineRunStatus.NOT_STARTED`` state.
+
+        Args:
+            run_id (str): The id of the run.
+        """
+        run = self.get_run_by_id(run_id)
+
+        try:
+            submitted_run = self._runs_coordinator.submit_run(
+                run, external_pipeline=external_pipeline
+            )
+        except:
+            from dagster.core.events import EngineEventData
+
+            error = serializable_error_info_from_exc_info(sys.exc_info())
+            self.report_engine_event(
+                error.message, run, EngineEventData.engine_error(error),
+            )
+            self.report_run_failed(run)
+            raise
+
+        return submitted_run
 
     # Run launcher
 

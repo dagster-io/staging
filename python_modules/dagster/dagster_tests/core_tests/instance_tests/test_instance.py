@@ -1,6 +1,7 @@
 import re
 
 import pytest
+from dagster_tests.api_tests.utils import get_foo_pipeline_handle
 
 from dagster import PipelineDefinition, check, execute_pipeline, pipeline, solid
 from dagster.core.errors import DagsterInvariantViolationError
@@ -95,6 +96,30 @@ def test_create_execution_plan_snapshot():
 
     assert run.execution_plan_snapshot_id == ep_snapshot_id
     assert run.execution_plan_snapshot_id == create_execution_plan_snapshot_id(ep_snapshot)
+
+
+def test_submit_run():
+    foo = get_foo_pipeline_handle()
+    instance = DagsterInstance.local_temp(
+        overrides={
+            "runs_coordinator": {
+                "module": "dagster.core.test_utils",
+                "class": "MockedRunsCoordinator",
+            }
+        },
+    )
+
+    run = create_run_for_test(
+        instance=instance,
+        pipeline_name=foo.pipeline_name,
+        run_id="foo-bar",
+        pipeline_origin=foo.get_origin(),
+    )
+
+    instance.submit_run(run.run_id, None)
+
+    assert len(instance.runs_coordinator.queue()) == 1
+    assert instance.runs_coordinator.queue()[0].run_id == "foo-bar"
 
 
 def test_dagster_home_not_set():
