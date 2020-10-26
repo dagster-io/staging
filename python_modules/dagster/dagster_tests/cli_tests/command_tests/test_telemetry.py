@@ -11,7 +11,7 @@ from dagster.cli.pipeline import pipeline_execute_command
 from dagster.core.definitions.reconstructable import get_ephemeral_repository_name
 from dagster.core.instance import DagsterInstance
 from dagster.core.telemetry import UPDATE_REPO_STATS, get_dir_from_dagster_home, hash_name
-from dagster.core.test_utils import environ
+from dagster.core.test_utils import environ, instance_for_test
 from dagster.utils import file_relative_path, pushd, script_relative_path
 
 EXPECTED_KEYS = set(
@@ -39,56 +39,45 @@ def path_to_file(path):
     os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
 )
 def test_dagster_telemetry_enabled(caplog):
-    with seven.TemporaryDirectory() as temp_dir:
-        with environ({"DAGSTER_HOME": temp_dir}):
-            with open(os.path.join(temp_dir, "dagster.yaml"), "w") as fd:
-                yaml.dump({"telemetry": {"enabled": True}}, fd, default_flow_style=False)
+    with instance_for_test(enable_telemetry=True):
+        runner = CliRunner()
+        with pushd(path_to_file("")):
+            pipeline_attribute = "foo_pipeline"
+            pipeline_name = "foo"
+            result = runner.invoke(
+                pipeline_execute_command,
+                ["-f", path_to_file("test_cli_commands.py"), "-a", pipeline_attribute,],
+            )
 
-            DagsterInstance.local_temp(temp_dir)
-            runner = CliRunner(env={"DAGSTER_HOME": temp_dir})
-            with pushd(path_to_file("")):
-                pipeline_attribute = "foo_pipeline"
-                pipeline_name = "foo"
-                result = runner.invoke(
-                    pipeline_execute_command,
-                    ["-f", path_to_file("test_cli_commands.py"), "-a", pipeline_attribute,],
-                )
-
-                for record in caplog.records:
-                    message = json.loads(record.getMessage())
-                    if message.get("action") == UPDATE_REPO_STATS:
-                        assert message.get("pipeline_name_hash") == hash_name(pipeline_name)
-                        assert message.get("num_pipelines_in_repo") == str(1)
-                        assert message.get("repo_hash") == hash_name(
-                            get_ephemeral_repository_name(pipeline_name)
-                        )
-                    assert set(message.keys()) == EXPECTED_KEYS
-                assert len(caplog.records) == 5
-                assert result.exit_code == 0
+            for record in caplog.records:
+                message = json.loads(record.getMessage())
+                if message.get("action") == UPDATE_REPO_STATS:
+                    assert message.get("pipeline_name_hash") == hash_name(pipeline_name)
+                    assert message.get("num_pipelines_in_repo") == str(1)
+                    assert message.get("repo_hash") == hash_name(
+                        get_ephemeral_repository_name(pipeline_name)
+                    )
+                assert set(message.keys()) == EXPECTED_KEYS
+            assert len(caplog.records) == 5
+            assert result.exit_code == 0
 
 
 @pytest.mark.skipif(
     os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
 )
 def test_dagster_telemetry_disabled(caplog):
-    with seven.TemporaryDirectory() as temp_dir:
-        with environ({"DAGSTER_HOME": temp_dir}):
-            with open(os.path.join(temp_dir, "dagster.yaml"), "w") as fd:
-                yaml.dump({"telemetry": {"enabled": False}}, fd, default_flow_style=False)
+    with instance_for_test(enable_telemetry=False):
+        runner = CliRunner()
+        with pushd(path_to_file("")):
+            pipeline_name = "foo_pipeline"
+            result = runner.invoke(
+                pipeline_execute_command,
+                ["-f", path_to_file("test_cli_commands.py"), "-a", pipeline_name,],
+            )
 
-            DagsterInstance.local_temp(temp_dir)
-
-            runner = CliRunner(env={"DAGSTER_HOME": temp_dir})
-            with pushd(path_to_file("")):
-                pipeline_name = "foo_pipeline"
-                result = runner.invoke(
-                    pipeline_execute_command,
-                    ["-f", path_to_file("test_cli_commands.py"), "-a", pipeline_name,],
-                )
-
-            assert not os.path.exists(os.path.join(get_dir_from_dagster_home("logs"), "event.log"))
-            assert len(caplog.records) == 0
-            assert result.exit_code == 0
+        assert not os.path.exists(os.path.join(get_dir_from_dagster_home("logs"), "event.log"))
+        assert len(caplog.records) == 0
+        assert result.exit_code == 0
 
 
 @pytest.mark.skipif(
