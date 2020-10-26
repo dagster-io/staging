@@ -9,7 +9,7 @@ from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterTypeKind
 
 from .dependency import DependencyStructure, Solid, SolidHandle
-from .i_solid_definition import ISolidDefinition
+from .i_solid_definition import NodeDefinition
 from .input import InputDefinition, InputMapping
 from .output import OutputDefinition, OutputMapping
 from .solid_container import create_execution_structure, validate_dependency_dict
@@ -23,7 +23,7 @@ def _check_solids_arg(graph_name, solid_defs):
             )
         )
     for solid_def in solid_defs:
-        if isinstance(solid_def, ISolidDefinition):
+        if isinstance(solid_def, NodeDefinition):
             continue
         elif callable(solid_def):
             raise DagsterInvalidDefinitionError(
@@ -70,7 +70,7 @@ def _create_adjacency_lists(solids, dep_structure):
     return (forward_edges, backward_edges)
 
 
-class GraphDefinition(ISolidDefinition):
+class GraphDefinition(NodeDefinition):
     def __init__(
         self,
         name,

@@ -76,10 +76,10 @@ class Solid(object):
 
     def __init__(self, name, definition, graph_definition, tags=None, hook_defs=None):
         from .graph import GraphDefinition
-        from .solid import ISolidDefinition
+        from .solid import NodeDefinition
 
         self.name = check.str_param(name, "name")
-        self.definition = check.inst_param(definition, "definition", ISolidDefinition)
+        self.definition = check.inst_param(definition, "definition", NodeDefinition)
         self.graph_definition = check.inst_param(
             graph_definition, "graph_definition", GraphDefinition,
         )

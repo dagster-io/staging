@@ -18,7 +18,7 @@ from .graph import GraphDefinition
 from .logger import LoggerDefinition
 from .mode import ModeDefinition
 from .resource import ResourceDefinition
-from .solid import ISolidDefinition, SolidDefinition
+from .solid import NodeDefinition, SolidDefinition
 
 
 def _is_selector_field_optional(config_type):
@@ -339,7 +339,7 @@ def iterate_solid_def_config_types(solid_def):
                 yield config_type
 
     else:
-        check.invariant("Unexpected ISolidDefinition type {type}".format(type=type(solid_def)))
+        check.invariant("Unexpected NodeDefinition type {type}".format(type=type(solid_def)))
 
 
 def _gather_all_schemas(solid_defs):
@@ -354,7 +354,7 @@ def _gather_all_schemas(solid_defs):
 
 
 def _gather_all_config_types(solid_defs, environment_type):
-    check.list_param(solid_defs, "solid_defs", ISolidDefinition)
+    check.list_param(solid_defs, "solid_defs", NodeDefinition)
     check.inst_param(environment_type, "environment_type", ConfigType)
 
     for solid_def in solid_defs:
@@ -366,7 +366,7 @@ def _gather_all_config_types(solid_defs, environment_type):
 
 
 def construct_config_type_dictionary(solid_defs, environment_type):
-    check.list_param(solid_defs, "solid_defs", ISolidDefinition)
+    check.list_param(solid_defs, "solid_defs", NodeDefinition)
     check.inst_param(environment_type, "environment_type", ConfigType)
 
     type_dict_by_name = {t.given_name: t for t in ALL_CONFIG_BUILTINS if t.given_name}

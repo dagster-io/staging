@@ -4,7 +4,7 @@ import warnings
 import six
 
 from dagster import check
-from dagster.core.definitions.solid import ISolidDefinition
+from dagster.core.definitions.solid import NodeDefinition
 from dagster.core.errors import (
     DagsterInvalidDefinitionError,
     DagsterInvalidSubsetError,
@@ -24,7 +24,7 @@ from .graph import GraphDefinition
 from .hook import HookDefinition
 from .mode import ModeDefinition
 from .preset import PresetDefinition
-from .solid import ISolidDefinition
+from .solid import NodeDefinition
 from .utils import validate_tags
 
 
@@ -584,7 +584,7 @@ def _validate_resource_dependencies(mode_definitions, solid_defs, solid_dict, pi
     by each solid.
     """
     check.list_param(mode_definitions, "mode_definitions", of_type=ModeDefinition)
-    check.list_param(solid_defs, "solid_defs", of_type=ISolidDefinition)
+    check.list_param(solid_defs, "solid_defs", of_type=NodeDefinition)
     check.set_param(pipeline_hook_defs, "pipeline_hook_defs", of_type=HookDefinition)
 
     for mode_def in mode_definitions:

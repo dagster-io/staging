@@ -19,9 +19,9 @@ class DauphinSolidContainer(dauphin.Interface):
     solids = dauphin.non_null_list("Solid")
 
 
-class DauphinISolidDefinition(dauphin.Interface):
+class DauphinNodeDefinition(dauphin.Interface):
     class Meta(object):
-        name = "ISolidDefinition"
+        name = "NodeDefinition"
 
     name = dauphin.NonNull(dauphin.String)
     description = dauphin.String()
@@ -96,7 +96,7 @@ class DauphinSolid(dauphin.ObjectType):
         name = "Solid"
 
     name = dauphin.NonNull(dauphin.String)
-    definition = dauphin.NonNull("ISolidDefinition")
+    definition = dauphin.NonNull("NodeDefinition")
     inputs = dauphin.non_null_list("Input")
     outputs = dauphin.non_null_list("Output")
 
@@ -150,7 +150,7 @@ class DauphinSolid(dauphin.ObjectType):
 class DauphinSolidDefinition(dauphin.ObjectType, IDauphinSolidDefinitionMixin):
     class Meta(object):
         name = "SolidDefinition"
-        interfaces = [DauphinISolidDefinition]
+        interfaces = [DauphinNodeDefinition]
 
     config_field = dauphin.Field("ConfigTypeField")
 
@@ -176,7 +176,7 @@ class DauphinSolidDefinition(dauphin.ObjectType, IDauphinSolidDefinitionMixin):
 class DauphinCompositeSolidDefinition(dauphin.ObjectType, IDauphinSolidDefinitionMixin):
     class Meta(object):
         name = "CompositeSolidDefinition"
-        interfaces = [DauphinISolidDefinition, DauphinSolidContainer]
+        interfaces = [DauphinNodeDefinition, DauphinSolidContainer]
 
     solids = dauphin.non_null_list("Solid")
     input_mappings = dauphin.non_null_list("InputMapping")
@@ -481,7 +481,7 @@ class DauphinUsedSolid(dauphin.ObjectType):
         name = "UsedSolid"
         description = """A solid definition and it's invocations within the repo."""
 
-    definition = dauphin.NonNull("ISolidDefinition")
+    definition = dauphin.NonNull("NodeDefinition")
     invocations = dauphin.non_null_list("SolidInvocationSite")
 
 

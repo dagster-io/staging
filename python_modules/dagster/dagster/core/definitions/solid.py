@@ -4,12 +4,12 @@ from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.utils.backcompat import experimental_arg_warning, rename_warning
 
 from .graph import GraphDefinition
-from .i_solid_definition import ISolidDefinition
+from .i_solid_definition import NodeDefinition
 from .input import InputDefinition
 from .output import OutputDefinition
 
 
-class SolidDefinition(ISolidDefinition):
+class SolidDefinition(NodeDefinition):
     """
     The definition of a Solid that performs a user-defined computation.
 
