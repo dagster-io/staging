@@ -4,7 +4,7 @@ from dagster.core.test_utils import create_run_for_test, instance_for_test
 from dagster.utils.external import external_pipeline_from_run
 
 
-def test_get_external_pipeline_from_run():
+def test_external_pipeline_from_run():
     with instance_for_test() as instance:
         pipeline_handle = get_foo_pipeline_handle()
         run = create_run_for_test(

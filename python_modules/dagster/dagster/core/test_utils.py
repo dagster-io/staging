@@ -11,7 +11,8 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
 from dagster.core.launcher.default_run_launcher import DefaultRunLauncher
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
-from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.queuer import RunQueuer
+from dagster.core.storage.pipeline_run import PipelineOrigin, PipelineRun
 from dagster.serdes import ConfigurableClass
 from dagster.utils import merge_dicts
 
@@ -270,6 +271,41 @@ class MockedRunLauncher(RunLauncher, ConfigurableClass):
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
         self._queue.append(run)
         return run
+
+    def queue(self):
+        return self._queue
+
+    @classmethod
+    def config_type(cls):
+        return Shape({})
+
+    @classmethod
+    def from_config_value(cls, inst_data, config_value):
+        return cls(inst_data=inst_data,)
+
+    @property
+    def inst_data(self):
+        return self._inst_data
+
+    def can_terminate(self, run_id):
+        return False
+
+    def terminate(self, run_id):
+        check.not_implemented("Termintation not supported")
+
+
+class MockedRunQueuer(RunQueuer, ConfigurableClass):
+    def __init__(self, inst_data=None):
+        self._inst_data = inst_data
+        self._queue = []
+
+    def enqueue_run(self, instance, pipeline_run, external_pipeline):
+        check.inst_param(instance, "instance", DagsterInstance)
+        check.inst_param(pipeline_run, "run", PipelineRun)
+        check.opt_inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+        check.inst(pipeline_run.pipeline_origin, PipelineOrigin)
+        self._queue.append(pipeline_run)
+        return pipeline_run
 
     def queue(self):
         return self._queue

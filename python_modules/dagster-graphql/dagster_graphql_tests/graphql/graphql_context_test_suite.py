@@ -13,6 +13,7 @@ from dagster.core.host_representation import RepositoryLocationHandle
 from dagster.core.host_representation.handle import UserProcessApi
 from dagster.core.instance import DagsterInstance, InstanceType
 from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
+from dagster.core.queuer import InstantRunQueuer
 from dagster.core.storage.event_log import InMemoryEventLogStorage
 from dagster.core.storage.event_log.sqlite import ConsolidatedSqliteEventLogStorage
 from dagster.core.storage.local_compute_log_manager import LocalComputeLogManager
@@ -95,6 +96,7 @@ class InstanceManagers:
                     event_storage=InMemoryEventLogStorage(),
                     compute_log_manager=LocalComputeLogManager(temp_dir),
                     run_launcher=SyncInMemoryRunLauncher(),
+                    run_queuer=InstantRunQueuer(),
                     schedule_storage=SqliteScheduleStorage.from_local(temp_dir),
                 )
 
@@ -112,6 +114,7 @@ class InstanceManagers:
                     event_storage=InMemoryEventLogStorage(),
                     compute_log_manager=LocalComputeLogManager(temp_dir),
                     run_launcher=ExplodingRunLauncher(),
+                    run_queuer=InstantRunQueuer(),
                     schedule_storage=SqliteScheduleStorage.from_local(temp_dir),
                 )
 
@@ -249,6 +252,7 @@ class InstanceManagers:
                     run_storage=InMemoryRunStorage(),
                     event_storage=ConsolidatedSqliteEventLogStorage(temp_dir),
                     compute_log_manager=LocalComputeLogManager(temp_dir),
+                    run_queuer=InstantRunQueuer(),
                     run_launcher=SyncInMemoryRunLauncher(),
                 )
                 yield instance
