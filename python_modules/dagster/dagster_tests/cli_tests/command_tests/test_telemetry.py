@@ -2,7 +2,9 @@ import json
 import os
 from difflib import SequenceMatcher
 
+import mock
 import pytest
+import responses
 import yaml
 from click.testing import CliRunner
 
@@ -10,8 +12,14 @@ from dagster import seven
 from dagster.cli.pipeline import pipeline_execute_command
 from dagster.core.definitions.reconstructable import get_ephemeral_repository_name
 from dagster.core.instance import DagsterInstance
-from dagster.core.telemetry import UPDATE_REPO_STATS, get_dir_from_dagster_home, hash_name
-from dagster.core.test_utils import environ
+from dagster.core.telemetry import (
+    DAGSTER_TELEMETRY_URL,
+    UPDATE_REPO_STATS,
+    get_dir_from_dagster_home,
+    hash_name,
+    upload_logs,
+)
+from dagster.core.test_utils import environ, instance_for_test
 from dagster.utils import file_relative_path, pushd, script_relative_path
 
 EXPECTED_KEYS = set(
@@ -122,6 +130,51 @@ def test_dagster_telemetry_unset(caplog):
 
                 assert len(caplog.records) == 5
                 assert result.exit_code == 0
+
+
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
+@responses.activate
+def test_dagster_telemetry_upload():
+    with instance_for_test(enable_telemetry=True):
+        runner = CliRunner()
+        with pushd(path_to_file("")):
+            pipeline_attribute = "foo_pipeline"
+            runner.invoke(
+                pipeline_execute_command,
+                ["-f", path_to_file("test_cli_commands.py"), "-a", pipeline_attribute],
+            )
+
+        mock_stop_event = mock.MagicMock()
+        mock_stop_event.is_set.return_value = False
+
+        def side_effect():
+            mock_stop_event.is_set.return_value = True
+
+        mock_stop_event.wait.side_effect = side_effect
+
+        upload_logs(mock_stop_event)
+        assert responses.assert_call_count(DAGSTER_TELEMETRY_URL, 1)
+
+
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
+@responses.activate
+def test_dagster_telemetry_no_buildkite_upload():
+    with environ({"BUILDKITE": "True"}):
+        with instance_for_test(enable_telemetry=True):
+            runner = CliRunner()
+            with pushd(path_to_file("")):
+                pipeline_attribute = "foo_pipeline"
+                runner.invoke(
+                    pipeline_execute_command,
+                    ["-f", path_to_file("test_cli_commands.py"), "-a", pipeline_attribute],
+                )
+
+            upload_logs(mock.MagicMock())
+            assert responses.assert_call_count(DAGSTER_TELEMETRY_URL, 0)
 
 
 @pytest.mark.skipif(
