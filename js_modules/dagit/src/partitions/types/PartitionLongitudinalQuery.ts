@@ -19,6 +19,10 @@ export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_par
   value: string;
 }
 
+export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PythonError {
+  __typename: "PythonError";
+}
+
 export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PipelineRunStatsSnapshot {
   __typename: "PipelineRunStatsSnapshot";
   startTime: number | null;
@@ -26,20 +30,7 @@ export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_par
   materializations: number;
 }
 
-export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PythonError_cause {
-  __typename: "PythonError";
-  message: string;
-  stack: string[];
-}
-
-export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PythonError {
-  __typename: "PythonError";
-  message: string;
-  stack: string[];
-  cause: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PythonError_cause | null;
-}
-
-export type PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PipelineRunStatsSnapshot | PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PythonError;
+export type PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PythonError | PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats_PipelineRunStatsSnapshot;
 
 export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats_materializations {
   __typename: "Materialization";
@@ -52,29 +43,21 @@ export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_par
 
 export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats {
   __typename: "PipelineRunStepStats";
-  stepKey: string;
   startTime: number | null;
   endTime: number | null;
-  status: StepEventStatus | null;
+  stepKey: string;
   materializations: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats_materializations[];
   expectationResults: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats_expectationResults[];
+  status: StepEventStatus | null;
 }
 
 export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs {
   __typename: "PipelineRun";
   runId: string;
-  pipelineName: string;
+  status: PipelineRunStatus;
   tags: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_tags[];
   stats: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stats;
-  status: PipelineRunStatus;
   stepStats: PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs_stepStats[];
-  stepKeysToExecute: string[] | null;
-  canTerminate: boolean;
-  mode: string;
-  rootRunId: string | null;
-  parentRunId: string | null;
-  pipelineSnapshotId: string | null;
-  solidSelection: string[] | null;
 }
 
 export interface PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results {

@@ -1,25 +1,25 @@
 import {ChartOptions} from 'chart.js';
+import gql from 'graphql-tag';
 import * as React from 'react';
 import {Line, ChartData} from 'react-chartjs-2';
 import {createGlobalStyle} from 'styled-components/macro';
 
 import {RowContainer} from 'src/ListComponents';
-import {PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs} from 'src/partitions/types/PartitionLongitudinalQuery';
+import {PartitionTablePartitionRunFragment} from 'src/partitions/types/PartitionTablePartitionRunFragment';
 import {RUN_STATUS_COLORS, RUN_STATUS_HOVER_COLORS} from 'src/runs/RunStatusDots';
 import {openRunInBrowser} from 'src/runs/RunUtils';
 
-type Run = PartitionLongitudinalQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs;
 interface Point {
   x: string;
   y: number;
   runId: string;
-  pipelineName: string;
   status: string;
+  pipelineName: string;
 }
 
 export const PartitionTable: React.FunctionComponent<{
   title: string;
-  runsByPartitionName: {[name: string]: Run[]};
+  runsByPartitionName: {[name: string]: PartitionTablePartitionRunFragment[]};
 }> = ({title, runsByPartitionName}) => {
   React.useEffect(() => {
     return destroyCustomTooltip;
@@ -38,8 +38,8 @@ export const PartitionTable: React.FunctionComponent<{
           x: partitionName,
           y: i,
           runId: run.runId,
-          pipelineName: run.pipelineName,
           status: run.status,
+          pipelineName: run.pipelineName,
         };
         runs[run.status] = [...(runs[run.status] || []), point];
       });
@@ -148,6 +148,14 @@ export const PartitionTable: React.FunctionComponent<{
     </RowContainer>
   );
 };
+
+export const PARTITION_TABLE_PARTITION_RUN_FRAGMENT = gql`
+  fragment PartitionTablePartitionRunFragment on PipelineRun {
+    runId
+    status
+    pipelineName
+  }
+`;
 
 const buildCustomTooltip = (chart: any, datasets: any[]) => {
   // TODO: (prha) rewrite this to use a pre-constructed React component
