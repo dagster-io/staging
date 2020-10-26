@@ -11,7 +11,6 @@ from dagster.cli.workspace.autodiscovery import (
 )
 from dagster.core.code_pointer import CodePointer
 from dagster.core.definitions.reconstructable import repository_def_from_pointer
-from dagster.seven import mock
 from dagster.utils import alter_sys_path, file_relative_path, restore_sys_modules
 
 
@@ -133,7 +132,7 @@ def test_local_directory_module():
         match=re.escape(
             "Module autodiscover_in_module was resolved using the working directory. The ability "
             "to load uninstalled modules from the working directory is deprecated and will be "
-            "removed in a future release.  Please use the python-file based load arguments or "
+            "removed in the 0.10.0 dagster release. Please use the python-file based load arguments or "
             "install autodiscover_in_module to your python environment."
         ),
     ):
