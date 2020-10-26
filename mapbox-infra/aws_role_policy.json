@@ -48,7 +48,11 @@
         "ec2:DeleteVpc",
         "ec2:ModifyVpcAttribute",
         "ec2:ModifySubnetAttribute",
-        "ec2:DisassociateRouteTable"
+        "ec2:DisassociateRouteTable",
+        "rds:CreateDBSubnetGroup",
+        "rds:DeleteDBSubnetGroup",
+        "rds:DescribeDBSubnetGroups",
+        "rds:ListTagsForResource"
       ],
       "Resource": "*"
     },

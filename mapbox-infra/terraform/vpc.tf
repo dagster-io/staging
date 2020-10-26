@@ -30,7 +30,7 @@ module "vpc" {
   }
 }
 
-# resource "aws_db_subnet_group" "default" {
-#   name       = "${local.deployment_name}-db-subnet"
-#   subnet_ids = module.vpc.private_subnets
-# }
+resource "aws_db_subnet_group" "default" {
+  name       = "${local.deployment_name}-db-subnet"
+  subnet_ids = module.vpc.private_subnets
+}
