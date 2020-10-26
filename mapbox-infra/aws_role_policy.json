@@ -4,7 +4,9 @@
     {
       "Sid": "PermitVpcCreationTagging",
       "Effect": "Allow",
-      "Action": ["ec2:CreateTags"],
+      "Action": [
+        "ec2:CreateTags"
+      ],
       "Resource": "*",
       "Condition": {
         "StringEquals": {
@@ -15,7 +17,10 @@
     {
       "Sid": "PermitElementlVpcCreation",
       "Effect": "Allow",
-      "Action": ["ec2:CreateVpc", "ec2:CreateInternetGateway"],
+      "Action": [
+        "ec2:CreateVpc",
+        "ec2:CreateInternetGateway"
+      ],
       "Resource": "*",
       "Condition": {
         "StringEquals": {
@@ -27,8 +32,10 @@
       "Sid": "RequiredForElementlVpcCreationAndDeletion",
       "Effect": "Allow",
       "Action": [
+        "ec2:AllocateAddress",
         "ec2:AssociateRouteTable",
         "ec2:AttachInternetGateway",
+        "ec2:CreateNatGateway",
         "ec2:CreateRoute",
         "ec2:CreateRouteTable",
         "ec2:CreateSubnet",
@@ -90,7 +97,11 @@
     {
       "Sid": "TerraformStateStorage",
       "Effect": "Allow",
-      "Action": ["s3:PutObject", "s3:GetObject", "s3:ListBucket"],
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ],
       "Resource": [
         "arn:aws:s3:::elementl-tf-mapbox-dev-test",
         "arn:aws:s3:::elementl-tf-mapbox-dev-test/*"
