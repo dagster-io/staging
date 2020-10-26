@@ -425,6 +425,15 @@ class RepositoryData(object):
 
         return self._schedules.has_definition(schedule_name)
 
+    def get_all_sensor(self):
+        return self._sensors.get_all_definitions()
+
+    def get_sensor(self, name):
+        return self._sensors.get_definition(name)
+
+    def has_sensor(self, name):
+        return self._sensors.has_definition(name)
+
     def get_all_jobs(self):
         return self._jobs.get_all_definitions()
 
@@ -603,6 +612,16 @@ class RepositoryDefinition(object):
 
     def has_schedule_def(self, name):
         return self._repository_data.has_schedule(name)
+
+    @property
+    def sensor_defs(self):
+        return self._repository_data.get_all_sensors()
+
+    def get_sensor_def(self, name):
+        return self._repository_data.get_sensor(name)
+
+    def has_sensor_def(self, name):
+        return self._repository_data.has_sensor(name)
 
     @property
     def job_defs(self):
