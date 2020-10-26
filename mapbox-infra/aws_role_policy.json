@@ -29,11 +29,23 @@
       }
     },
     {
+      "Sid": "RequiredForElementlSecurityGroupCreationAndDeletion",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:CreateSecurityGroup",
+        "ec2:RevokeSecurityGroupEgress",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:AuthorizeSecurityGroupEgress"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "RequiredForElementlVpcCreationAndDeletion",
       "Effect": "Allow",
       "Action": [
         "ec2:AllocateAddress",
         "ec2:DisassociateAddress",
+        "ec2:ReleaseAddress",
         "ec2:AssociateRouteTable",
         "ec2:AttachInternetGateway",
         "ec2:CreateNatGateway",
