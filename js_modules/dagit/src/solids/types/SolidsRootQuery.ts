@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { RepositorySelector } from "./../../types/globalTypes";
@@ -14,7 +15,7 @@ export interface SolidsRootQuery_repositoryOrError_PythonError {
 }
 
 export interface SolidsRootQuery_repositoryOrError_Repository_usedSolids_definition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -27,7 +28,7 @@ export interface SolidsRootQuery_repositoryOrError_Repository_usedSolids_definit
 }
 
 export interface SolidsRootQuery_repositoryOrError_Repository_usedSolids_definition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -40,7 +41,7 @@ export interface SolidsRootQuery_repositoryOrError_Repository_usedSolids_definit
 }
 
 export interface SolidsRootQuery_repositoryOrError_Repository_usedSolids_definition {
-  __typename: "SolidDefinition" | "CompositeSolidDefinition";
+  __typename: "CompositeSolidDefinition" | "SolidDefinition";
   name: string;
   outputDefinitions: SolidsRootQuery_repositoryOrError_Repository_usedSolids_definition_outputDefinitions[];
   inputDefinitions: SolidsRootQuery_repositoryOrError_Repository_usedSolids_definition_inputDefinitions[];

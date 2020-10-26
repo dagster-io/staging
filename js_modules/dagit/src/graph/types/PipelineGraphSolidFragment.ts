@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 // ====================================================
@@ -13,7 +14,7 @@ export interface PipelineGraphSolidFragment_inputs_definition {
 }
 
 export interface PipelineGraphSolidFragment_inputs_dependsOn_definition_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -51,7 +52,7 @@ export interface PipelineGraphSolidFragment_outputs_dependedBy_solid {
 }
 
 export interface PipelineGraphSolidFragment_outputs_dependedBy_definition_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -80,7 +81,7 @@ export interface PipelineGraphSolidFragment_definition_SolidDefinition_metadata 
 }
 
 export interface PipelineGraphSolidFragment_definition_SolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -91,7 +92,7 @@ export interface PipelineGraphSolidFragment_definition_SolidDefinition_inputDefi
 }
 
 export interface PipelineGraphSolidFragment_definition_SolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -128,7 +129,7 @@ export interface PipelineGraphSolidFragment_definition_CompositeSolidDefinition_
 }
 
 export interface PipelineGraphSolidFragment_definition_CompositeSolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -139,7 +140,7 @@ export interface PipelineGraphSolidFragment_definition_CompositeSolidDefinition_
 }
 
 export interface PipelineGraphSolidFragment_definition_CompositeSolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 

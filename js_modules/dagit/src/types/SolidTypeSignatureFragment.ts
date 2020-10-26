@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 // ====================================================
@@ -8,7 +9,7 @@
 // ====================================================
 
 export interface SolidTypeSignatureFragment_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -21,7 +22,7 @@ export interface SolidTypeSignatureFragment_outputDefinitions {
 }
 
 export interface SolidTypeSignatureFragment_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -34,7 +35,7 @@ export interface SolidTypeSignatureFragment_inputDefinitions {
 }
 
 export interface SolidTypeSignatureFragment {
-  __typename: "SolidDefinition" | "CompositeSolidDefinition";
+  __typename: "CompositeSolidDefinition" | "SolidDefinition";
   outputDefinitions: SolidTypeSignatureFragment_outputDefinitions[];
   inputDefinitions: SolidTypeSignatureFragment_inputDefinitions[];
 }

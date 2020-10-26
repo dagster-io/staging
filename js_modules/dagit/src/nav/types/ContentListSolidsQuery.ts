@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { RepositorySelector } from "./../../types/globalTypes";
@@ -14,7 +15,7 @@ export interface ContentListSolidsQuery_repositoryOrError_PythonError {
 }
 
 export interface ContentListSolidsQuery_repositoryOrError_Repository_usedSolids_definition {
-  __typename: "SolidDefinition" | "CompositeSolidDefinition";
+  __typename: "CompositeSolidDefinition" | "SolidDefinition";
   name: string;
 }
 

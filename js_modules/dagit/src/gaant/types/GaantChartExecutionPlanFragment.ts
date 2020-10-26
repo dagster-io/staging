@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { StepKind } from "./../../types/globalTypes";
@@ -10,7 +11,7 @@ import { StepKind } from "./../../types/globalTypes";
 // ====================================================
 
 export interface GaantChartExecutionPlanFragment_steps_inputs_dependsOn_outputs_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
 }
 

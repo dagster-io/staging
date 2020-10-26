@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { PipelineRunStatus, StepKind } from "./../../types/globalTypes";
@@ -22,7 +23,7 @@ export interface RunFragment_tags {
 }
 
 export interface RunFragment_executionPlan_steps_inputs_dependsOn_outputs_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
 }
 

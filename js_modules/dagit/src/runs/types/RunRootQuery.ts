@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { PipelineRunStatus, StepKind } from "./../../types/globalTypes";
@@ -26,7 +27,7 @@ export interface RunRootQuery_pipelineRunOrError_PipelineRun_tags {
 }
 
 export interface RunRootQuery_pipelineRunOrError_PipelineRun_executionPlan_steps_inputs_dependsOn_outputs_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
 }
 

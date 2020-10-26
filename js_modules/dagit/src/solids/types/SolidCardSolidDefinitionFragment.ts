@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 // ====================================================
@@ -14,7 +15,7 @@ export interface SolidCardSolidDefinitionFragment_SolidDefinition_metadata {
 }
 
 export interface SolidCardSolidDefinitionFragment_SolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -25,7 +26,7 @@ export interface SolidCardSolidDefinitionFragment_SolidDefinition_inputDefinitio
 }
 
 export interface SolidCardSolidDefinitionFragment_SolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -63,7 +64,7 @@ export interface SolidCardSolidDefinitionFragment_CompositeSolidDefinition_metad
 }
 
 export interface SolidCardSolidDefinitionFragment_CompositeSolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -74,7 +75,7 @@ export interface SolidCardSolidDefinitionFragment_CompositeSolidDefinition_input
 }
 
 export interface SolidCardSolidDefinitionFragment_CompositeSolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 

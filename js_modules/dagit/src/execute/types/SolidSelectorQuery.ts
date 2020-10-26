@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { PipelineSelector } from "./../../types/globalTypes";
@@ -15,7 +16,7 @@ export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_inputs_defin
 }
 
 export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_inputs_dependsOn_definition_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -53,7 +54,7 @@ export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_outputs_depe
 }
 
 export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_outputs_dependedBy_definition_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -82,7 +83,7 @@ export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_S
 }
 
 export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_SolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -93,7 +94,7 @@ export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_S
 }
 
 export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_SolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -130,7 +131,7 @@ export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_C
 }
 
 export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_CompositeSolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 
@@ -141,7 +142,7 @@ export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_C
 }
 
 export interface SolidSelectorQuery_pipelineOrError_Pipeline_solids_definition_CompositeSolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   displayName: string;
 }
 

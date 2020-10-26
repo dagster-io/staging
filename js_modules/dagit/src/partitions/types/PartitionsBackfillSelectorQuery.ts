@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { RepositorySelector, PipelineSelector, PipelineRunStatus } from "./../../types/globalTypes";
@@ -65,7 +66,7 @@ export interface PartitionsBackfillSelectorQuery_pipelineSnapshotOrError_Pipelin
 }
 
 export interface PartitionsBackfillSelectorQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles_solid_definition {
-  __typename: "SolidDefinition" | "CompositeSolidDefinition";
+  __typename: "CompositeSolidDefinition" | "SolidDefinition";
   name: string;
 }
 

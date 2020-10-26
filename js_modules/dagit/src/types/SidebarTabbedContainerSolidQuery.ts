@@ -1,6 +1,7 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
+// @generated
 // This file was automatically generated and should not be edited.
 
 import { PipelineSelector } from "./globalTypes";
@@ -14,7 +15,7 @@ export interface SidebarTabbedContainerSolidQuery_pipelineOrError_PipelineNotFou
 }
 
 export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solidHandle_solid_inputs_definition_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -50,7 +51,7 @@ export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solid
 }
 
 export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solidHandle_solid_outputs_definition_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -86,7 +87,7 @@ export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solid
 }
 
 export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solidHandle_solid_definition_SolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -100,7 +101,7 @@ export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solid
 }
 
 export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solidHandle_solid_definition_SolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -476,7 +477,7 @@ export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solid
 }
 
 export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solidHandle_solid_definition_CompositeSolidDefinition_outputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
@@ -490,7 +491,7 @@ export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solid
 }
 
 export interface SidebarTabbedContainerSolidQuery_pipelineOrError_Pipeline_solidHandle_solid_definition_CompositeSolidDefinition_inputDefinitions_type {
-  __typename: "RegularDagsterType" | "ListDagsterType" | "NullableDagsterType";
+  __typename: "ListDagsterType" | "NullableDagsterType" | "RegularDagsterType";
   name: string | null;
   displayName: string;
   description: string | null;
