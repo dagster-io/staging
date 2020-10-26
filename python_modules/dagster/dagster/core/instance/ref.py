@@ -40,7 +40,7 @@ class InstanceRef(
     namedtuple(
         "_InstanceRef",
         "local_artifact_storage_data run_storage_data event_storage_data compute_logs_data "
-        "schedule_storage_data scheduler_data run_launcher_data settings",
+        "schedule_storage_data scheduler_data run_queuer_data run_launcher_data settings",
     )
 ):
     """Serializable representation of a :py:class:`DagsterInstance`.
@@ -56,6 +56,7 @@ class InstanceRef(
         compute_logs_data,
         schedule_storage_data,
         scheduler_data,
+        run_queuer_data,
         run_launcher_data,
         settings,
     ):
@@ -78,6 +79,9 @@ class InstanceRef(
             ),
             scheduler_data=check.opt_inst_param(
                 scheduler_data, "scheduler_data", ConfigurableClassData
+            ),
+            run_queuer_data=check.opt_inst_param(
+                run_queuer_data, "run_queuer_data", ConfigurableClassData
             ),
             run_launcher_data=check.opt_inst_param(
                 run_launcher_data, "run_launcher_data", ConfigurableClassData
@@ -144,6 +148,12 @@ class InstanceRef(
 
         scheduler_data = configurable_class_data_or_default(config_value, "scheduler", None,)
 
+        run_queuer_data = configurable_class_data_or_default(
+            config_value,
+            "run_queuer",
+            ConfigurableClassData("dagster.core.queuer", "InstantRunQueuer", yaml.dump({})),
+        )
+
         run_launcher_data = configurable_class_data_or_default(
             config_value,
             "run_launcher",
@@ -160,6 +170,7 @@ class InstanceRef(
             compute_logs_data=compute_logs_data,
             schedule_storage_data=schedule_storage_data,
             scheduler_data=scheduler_data,
+            run_queuer_data=run_queuer_data,
             run_launcher_data=run_launcher_data,
             settings=settings,
         )
@@ -198,6 +209,10 @@ class InstanceRef(
     @property
     def scheduler(self):
         return self.scheduler_data.rehydrate() if self.scheduler_data else None
+
+    @property
+    def run_queuer(self):
+        return self.run_queuer_data.rehydrate() if self.run_queuer_data else None
 
     @property
     def run_launcher(self):

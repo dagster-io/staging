@@ -97,6 +97,10 @@ def test_create_execution_plan_snapshot():
     assert run.execution_plan_snapshot_id == create_execution_plan_snapshot_id(ep_snapshot)
 
 
+def test_enqueue_run():
+    pass
+
+
 def test_dagster_home_not_set():
     with environ({"DAGSTER_HOME": ""}):
         with pytest.raises(
