@@ -4,13 +4,12 @@ import * as React from 'react';
 import {Line} from 'react-chartjs-2';
 
 import {RowContainer} from 'src/ListComponents';
+import {PIPELINE_LABEL} from 'src/RunGraphUtils';
 import {colorHash} from 'src/Util';
 import {RunGraphFragment} from 'src/types/RunGraphFragment';
 
 type PointValue = number | null | undefined;
 type Point = {x: PointValue; y: PointValue};
-
-export const PIPELINE_LABEL = 'Total pipeline';
 
 interface GraphProps {
   runs: RunGraphFragment[];

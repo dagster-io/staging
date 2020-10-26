@@ -18,6 +18,9 @@ interface RunTableProps {
   runs: RunTableRunFragment[];
   onSetFilter: (search: TokenizingFieldValue[]) => void;
   nonIdealState?: React.ReactNode;
+
+  additionalColumnHeaders?: React.ReactNode[];
+  additionalColumnsForRow?: (run: RunTableRunFragment) => React.ReactNode[];
 }
 
 interface RunTableState {
@@ -55,7 +58,13 @@ export class RunTable extends React.Component<RunTableProps, RunTableState> {
   };
 
   render() {
-    const {runs, onSetFilter, nonIdealState} = this.props;
+    const {
+      runs,
+      onSetFilter,
+      nonIdealState,
+      additionalColumnHeaders,
+      additionalColumnsForRow,
+    } = this.props;
     const {checked} = this.state;
 
     // This is slightly complicated because we want to be able to select runs on a
@@ -108,6 +117,7 @@ export class RunTable extends React.Component<RunTableProps, RunTableState> {
           <LegendColumn style={{maxWidth: '90px'}}>Pipeline Definition</LegendColumn>
           <LegendColumn style={{flex: 1}}>Execution Params</LegendColumn>
           <LegendColumn style={{maxWidth: 150}}>Timing</LegendColumn>
+          {additionalColumnHeaders}
           <LegendColumn style={{maxWidth: 50}}></LegendColumn>
         </Legend>
         {runs.map((run) => (
@@ -115,6 +125,7 @@ export class RunTable extends React.Component<RunTableProps, RunTableState> {
             run={run}
             key={run.runId}
             onSetFilter={onSetFilter}
+            additionalColumns={additionalColumnsForRow?.(run)}
             checked={checkedRuns.includes(run)}
             onToggleChecked={() =>
               this.setState({
@@ -135,7 +146,8 @@ const RunRow: React.FunctionComponent<{
   onSetFilter: (search: TokenizingFieldValue[]) => void;
   checked?: boolean;
   onToggleChecked?: () => void;
-}> = ({run, onSetFilter, checked, onToggleChecked}) => {
+  additionalColumns?: React.ReactNode[];
+}> = ({run, onSetFilter, checked, onToggleChecked, additionalColumns}) => {
   const pipelineLink = `/pipeline/${explorerPathToString({
     pipelineName: run.pipelineName,
     snapshotId: run.pipelineSnapshotId || '',
@@ -181,6 +193,7 @@ const RunRow: React.FunctionComponent<{
         <RunTime run={run} />
         <RunElapsed run={run} />
       </RowColumn>
+      {additionalColumns}
       <RowColumn style={{maxWidth: 50}}>
         <RunActionsMenu run={run} />
       </RowColumn>
