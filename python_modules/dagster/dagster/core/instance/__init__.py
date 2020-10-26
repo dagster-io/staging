@@ -184,6 +184,8 @@ class DagsterInstance:
             :py:class:`dagster.core.storage.local_compute_log_manager.LocalComputeLogManager`.
             Configurable in ``dagster.yaml`` using the
             :py:class:`~dagster.serdes.ConfigurableClass` machinery.
+        run_queuer (Optional[RunQueuer]): Optionally, a run queuer may be used to enqueue pipeline
+            runs without always starting them immediately
         run_launcher (Optional[RunLauncher]): Optionally, a run launcher may be used to enable
             a Dagster instance to launch pipeline runs, e.g. on a remote Kubernetes cluster, in
             addition to running them locally.
@@ -205,6 +207,7 @@ class DagsterInstance:
         compute_log_manager,
         schedule_storage=None,
         scheduler=None,
+        run_queuer=None,
         run_launcher=None,
         settings=None,
         ref=None,
@@ -215,6 +218,7 @@ class DagsterInstance:
         from dagster.core.storage.runs import RunStorage
         from dagster.core.storage.schedules import ScheduleStorage
         from dagster.core.scheduler import Scheduler
+        from dagster.core.queuer import RunQueuer
         from dagster.core.launcher import RunLauncher
 
         self._instance_type = check.inst_param(instance_type, "instance_type", InstanceType)
@@ -230,6 +234,8 @@ class DagsterInstance:
             schedule_storage, "schedule_storage", ScheduleStorage
         )
         self._scheduler = check.opt_inst_param(scheduler, "scheduler", Scheduler)
+        self._run_queuer = check.inst_param(run_queuer, "run_queuer", RunQueuer)
+        self._run_queuer.initialize(self)
         self._run_launcher = check.inst_param(run_launcher, "run_launcher", RunLauncher)
         self._run_launcher.initialize(self)
 
@@ -243,6 +249,7 @@ class DagsterInstance:
 
     @staticmethod
     def ephemeral(tempdir=None, preload=None):
+        from dagster.core.queuer import InstantRunQueuer
         from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
         from dagster.core.storage.event_log import InMemoryEventLogStorage
         from dagster.core.storage.root import LocalArtifactStorage
@@ -258,6 +265,7 @@ class DagsterInstance:
             run_storage=InMemoryRunStorage(preload=preload),
             event_storage=InMemoryEventLogStorage(preload=preload),
             compute_log_manager=NoOpComputeLogManager(),
+            run_queuer=InstantRunQueuer(),
             run_launcher=SyncInMemoryRunLauncher(),
         )
 
@@ -300,6 +308,7 @@ class DagsterInstance:
             compute_log_manager=instance_ref.compute_log_manager,
             schedule_storage=instance_ref.schedule_storage,
             scheduler=instance_ref.scheduler,
+            run_queuer=instance_ref.run_queuer,
             run_launcher=instance_ref.run_launcher,
             settings=instance_ref.settings,
             ref=instance_ref,
@@ -359,6 +368,7 @@ class DagsterInstance:
             "compute_logs:\n{compute}\n"
             "schedule_storage:\n{schedule_storage}\n"
             "scheduler:\n{scheduler}\n"
+            "run_queuer:\n{run_queuer}\n"
             "run_launcher:\n{run_launcher}\n"
             "".format(
                 artifact=self._info(self._local_artifact_storage),
@@ -367,6 +377,7 @@ class DagsterInstance:
                 compute=self._info(self._compute_log_manager),
                 schedule_storage=self._info(self._schedule_storage),
                 scheduler=self._info(self._scheduler),
+                run_queuer=self._info(self._run_queuer),
                 run_launcher=self._info(self._run_launcher),
             )
             + "\n".join(
@@ -390,6 +401,12 @@ class DagsterInstance:
     @property
     def scheduler(self):
         return self._scheduler
+
+    # run queuer
+
+    @property
+    def run_queuer(self):
+        return self._run_queuer
 
     # run launcher
 
@@ -451,6 +468,7 @@ class DagsterInstance:
 
     def dispose(self):
         self._run_storage.dispose()
+        self.run_queuer.dispose()
         self._run_launcher.dispose()
         self._event_storage.dispose()
         self._compute_log_manager.dispose()
@@ -1055,6 +1073,45 @@ class DagsterInstance:
 
     def schedules_directory(self):
         return self._local_artifact_storage.schedules_dir
+
+    # Run queuer
+
+    def enqueue_run(
+        self,
+        pipeline_name,
+        run_id,
+        run_config,
+        mode,
+        solids_to_execute,
+        step_keys_to_execute,
+        status,
+        tags,
+        root_run_id,
+        parent_run_id,
+        pipeline_snapshot,
+        execution_plan_snapshot,
+        parent_pipeline_snapshot,
+        solid_selection=None,
+        pipeline_origin=None,
+    ):
+        return self._run_queuer.enqueue_run(
+            self,
+            pipeline_name,
+            run_id,
+            run_config,
+            mode,
+            solids_to_execute,
+            step_keys_to_execute,
+            status,
+            tags,
+            root_run_id,
+            parent_run_id,
+            pipeline_snapshot,
+            execution_plan_snapshot,
+            parent_pipeline_snapshot,
+            pipeline_origin,
+            solid_selection=solid_selection,
+        )
 
     # Run launcher
 
