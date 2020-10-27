@@ -1,0 +1,174 @@
+from collections import namedtuple
+from enum import Enum
+
+
+from dagster import check
+
+from dagster.core.origin import JobOrigin
+from dagster.core.definitions.job import JobType
+from dagster.serdes import whitelist_for_serdes
+from dagster.utils.error import SerializableErrorInfo
+
+
+@whitelist_for_serdes
+class JobStatus(Enum):
+    RUNNING = "RUNNING"
+    STOPPED = "STOPPED"
+
+
+@whitelist_for_serdes
+class JobState(namedtuple("_JobState", "origin job_type status")):
+    def __new__(cls, origin, job_type, status):
+        return super(JobState, cls).__new__(
+            cls,
+            check.inst_param(origin, "origin", JobOrigin),
+            check.inst_param(job_type, "job_type", JobType),
+            check.inst_param(status, "status", JobStatus),
+        )
+
+    @property
+    def job_name(self):
+        return self.origin.job_name
+
+    @property
+    def repository_origin_id(self):
+        return self.origin.repository_origin.get_id()
+
+    @property
+    def pipeline_origin(self):
+        return self.origin
+
+    @property
+    def job_origin_id(self):
+        return self.origin.get_id()
+
+    def with_status(self, status):
+        check.inst_param(status, "status", JobStatus)
+        return JobState(self.origin, job_type=self.job_type, status=status)
+
+
+class JobTick(namedtuple("_JobTick", "tick_id job_tick_data")):
+    def __new__(cls, tick_id, job_tick_data):
+        return super(JobTick, cls).__new__(
+            cls,
+            check.int_param(tick_id, "tick_id"),
+            check.inst_param(job_tick_data, "job_tick_data", JobTickData),
+        )
+
+    def with_status(self, status, run_id=None, error=None, timestamp=None):
+        check.inst_param(status, "status", JobTickStatus)
+        return self._replace(
+            job_tick_data=self.job_tick_data.with_status(
+                status, run_id=run_id, error=error, timestamp=timestamp
+            )
+        )
+
+    @property
+    def job_origin_id(self):
+        return self.job_tick_data.job_origin_id
+
+    @property
+    def job_name(self):
+        return self.job_tick_data.job_name
+
+    @property
+    def job_type(self):
+        return self.job_tick_data.job_type
+
+    @property
+    def timestamp(self):
+        return self.job_tick_data.timestamp
+
+    @property
+    def status(self):
+        return self.job_tick_data.status
+
+    @property
+    def error(self):
+        return self.job_tick_data.error
+
+
+@whitelist_for_serdes
+class JobTickData(
+    namedtuple(
+        "_JobTickData",
+        "job_origin_id job_name job_type status timestamp run_id error job_specific_data",
+    )
+):
+    def __new__(
+        cls,
+        job_origin_id,
+        job_name,
+        job_type,
+        status,
+        timestamp,
+        run_id=None,
+        error=None,
+        job_specific_data=None,
+    ):
+        """
+        This class defines the data that is serialized and stored in ``JobStorage``. We depend
+        on the job storage implementation to provide job tick ids, and therefore
+        separate all other data into this serializable class that can be stored independently of the
+        id
+
+        Arguments:
+            job_origin_id (str): The id of the job target for this tick
+            job_name (str): The name of the job for this tick
+            job_type (JobType): The type of this job for this tick
+            status (JobTickStatus): The status of the tick, which can be updated
+            timestamp (float): The timestamp at which this job execution started
+
+        Keyword Arguments:
+            run_id (str): The run created by the tick.
+            error (SerializableErrorInfo): The error caught during job execution. This is set
+                only when the status is ``JobTickStatus.Failure``
+        """
+
+        _validate_job_tick_args(job_type, status, run_id, error)
+        return super(JobTickData, cls).__new__(
+            cls,
+            check.str_param(job_origin_id, "job_origin_id"),
+            check.str_param(job_name, "job_name"),
+            check.inst_param(job_type, "job_type", JobType),
+            check.inst_param(status, 'status', JobTickStatus),
+            check.float_param(timestamp, "timestamp"),
+            run_id,
+            error,
+            job_specific_data,
+        )
+
+    def with_status(self, status, run_id=None, error=None, timestamp=None):
+        check.inst_param(status, "status", JobTickStatus)
+        return JobTickData(
+            job_origin_id=self.job_origin_id,
+            job_name=self.job_name,
+            job_type=self.job_type,
+            status=status,
+            timestamp=timestamp if timestamp is not None else self.timestamp,
+            run_id=run_id if run_id is not None else self.run_id,
+            error=error if error is not None else self.error,
+        )
+
+
+@whitelist_for_serdes
+class JobTickStatus(Enum):
+    STARTED = "STARTED"
+    SKIPPED = "SKIPPED"
+    SUCCESS = "SUCCESS"
+    FAILURE = "FAILURE"
+
+
+def _validate_job_tick_args(job_type, status, run_id=None, error=None):
+    check.inst_param(job_type, "job_type", JobType)
+    check.inst_param(status, "status", JobTickStatus)
+
+    # check job specific data for type
+
+    if status == JobTickStatus.SUCCESS:
+        check.str_param(run_id, "run_id")
+        check.invariant(error is None, desc="Job tick status is SUCCESS, but error was provided")
+    elif status == JobTickStatus.FAILURE:
+        check.inst_param(error, "error", SerializableErrorInfo)
+    else:
+        check.invariant(error is None, "Job tick status was not FAILURE but error was provided")
