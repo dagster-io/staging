@@ -2,7 +2,7 @@ import dask
 import dask.distributed
 
 # Dask resource requirements are specified under this key
-from dagster import Executor, Field, Permissive, Selector, check, seven
+from dagster import Executor, Field, Permissive, Selector, StringSource, check, seven
 from dagster.core.definitions.executor import check_cross_process_constraints, executor
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.api import create_execution_plan, execute_plan
@@ -21,6 +21,9 @@ DASK_RESOURCE_REQUIREMENTS_KEY = "dagster-dask/resource_requirements"
         "cluster": Field(
             Selector(
                 {
+                    "address": Field(
+                        StringSource, description="Connect to an existing scheduler.",
+                    ),
                     "local": Field(
                         Permissive(), is_required=False, description="Local cluster configuration."
                     ),
@@ -62,7 +65,7 @@ def dask_executor(init_context):
     """Dask-based executor.
 
     The 'cluster' can be one of the following:
-    ('local', 'yarn', 'ssh', 'pbs', 'moab', 'sge', 'lsf', 'slurm', 'oar', 'kube').
+    ('address', 'local', 'yarn', 'ssh', 'pbs', 'moab', 'sge', 'lsf', 'slurm', 'oar', 'kube').
 
     If the Dask executor is used without providing executor-specific config, a local Dask cluster
     will be created (as when calling :py:class:`dask.distributed.Client() <dask:distributed.Client>`
@@ -133,9 +136,14 @@ def get_dask_resource_requirements(tags):
 class DaskExecutor(Executor):
     def __init__(self, cluster_type, cluster_configuration):
         self.cluster_type = check.opt_str_param(cluster_type, "cluster_type", default="local")
-        self.cluster_configuration = check.opt_dict_param(
-            cluster_configuration, "cluster_configuration"
-        )
+        if self.cluster_type == "address":
+            self.cluster_configuration = check.str_param(
+                cluster_configuration, "cluster_configuration"
+            )
+        else:
+            self.cluster_configuration = check.opt_dict_param(
+                cluster_configuration, "cluster_configuration"
+            )
 
     @property
     def retries(self):
@@ -162,7 +170,10 @@ class DaskExecutor(Executor):
         instance = pipeline_context.instance
 
         cluster_type = self.cluster_type
-        if cluster_type == "local":
+        if cluster_type == "address":
+            # address passed directly to Client to connect to existing Scheduler
+            cluster = self.cluster_configuration
+        elif cluster_type == "local":
             from dask.distributed import LocalCluster
 
             cluster = LocalCluster(**self.build_dict(pipeline_name))
@@ -204,7 +215,7 @@ class DaskExecutor(Executor):
             cluster = KubeCluster(**self.build_dict(pipeline_name))
         else:
             raise ValueError(
-                f"Must be providing one of the following ('local', 'yarn', 'ssh', 'pbs', 'moab', 'sge', 'lsf', 'slurm', 'oar', 'kube') not {cluster_type}"
+                f"Must be providing one of the following ('address', 'local', 'yarn', 'ssh', 'pbs', 'moab', 'sge', 'lsf', 'slurm', 'oar', 'kube') not {cluster_type}"
             )
 
         with dask.distributed.Client(cluster) as client:
