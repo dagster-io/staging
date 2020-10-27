@@ -102,7 +102,7 @@ def test_enqueue_run():
     foo = get_foo_pipeline_handle()
     instance = DagsterInstance.local_temp(
         overrides={
-            "run_launcher": {"module": "dagster.core.test_utils", "class": "MockedRunLauncher",}
+            "run_queuer": {"module": "dagster.core.test_utils", "class": "MockedRunQueuer",}
         },
     )
 
@@ -122,8 +122,8 @@ def test_enqueue_run():
         pipeline_origin=foo.get_origin(),
     )
 
-    assert len(instance.run_launcher.queue()) == 1
-    assert instance.run_launcher.queue()[0].run_id == "foo-bar"
+    assert len(instance.run_queuer.queue()) == 1
+    assert instance.run_queuer.queue()[0].run_id == "foo-bar"
 
 
 def test_dagster_home_not_set():
