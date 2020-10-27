@@ -15,7 +15,6 @@ from dagster import (
     composite_solid,
     execute_pipeline,
     execute_solid,
-    lambda_solid,
     pipeline,
     solid,
     usable_as_dagster_type,
@@ -318,12 +317,12 @@ def test_types_descent(composition_decorator):
     [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
 )
 def test_deep_mapping(composition_decorator):
-    @lambda_solid(output_def=OutputDefinition(String))
-    def echo(blah):
+    @solid(output_defs=[OutputDefinition(String)])
+    def echo(_, blah):
         return blah
 
-    @lambda_solid(output_def=OutputDefinition(String))
-    def emit_foo():
+    @solid(output_defs=[OutputDefinition(String)])
+    def emit_foo(_):
         return "foo"
 
     @composition_decorator(output_defs=[OutputDefinition(String, "z")])
@@ -351,22 +350,22 @@ def test_deep_mapping(composition_decorator):
     [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
 )
 def test_mapping_parallel_composite(composition_decorator):
-    @lambda_solid(output_def=OutputDefinition(int))
-    def one():
+    @solid(output_defs=[OutputDefinition(int)])
+    def one(_):
         return 1
 
-    @lambda_solid(output_def=OutputDefinition(int))
-    def two():
+    @solid(output_defs=[OutputDefinition(int)])
+    def two(_):
         return 2
 
-    @lambda_solid(
+    @solid(
         input_defs=[
             InputDefinition(dagster_type=int, name="a"),
             InputDefinition(dagster_type=int, name="b"),
         ],
-        output_def=OutputDefinition(int),
+        output_defs=[OutputDefinition(int)],
     )
-    def adder(a, b):
+    def adder(_, a, b):
         return a + b
 
     @composition_decorator(
@@ -387,12 +386,12 @@ def test_mapping_parallel_composite(composition_decorator):
 
         return {"two": calc_result_two, "four": calc_result_four}
 
-    @lambda_solid
-    def assert_four(val):
+    @solid
+    def assert_four(_, val):
         assert val == 4
 
-    @lambda_solid
-    def assert_two(val):
+    @solid
+    def assert_two(_, val):
         assert val == 2
 
     @pipeline
@@ -410,8 +409,8 @@ def test_mapping_parallel_composite(composition_decorator):
     [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
 )
 def test_composite_config_driven_materialization(composition_decorator):
-    @lambda_solid
-    def one():
+    @solid
+    def one(_):
         return 1
 
     @composition_decorator(output_defs=[OutputDefinition()])
@@ -444,8 +443,8 @@ def test_composite_config_driven_materialization(composition_decorator):
     ],
 )
 def test_mapping_errors(composition_class):
-    @lambda_solid
-    def echo(foo):
+    @solid
+    def echo(_, foo):
         return foo
 
     with pytest.raises(
@@ -519,12 +518,12 @@ def test_mapping_errors(composition_class):
     [pytest.param(composite_solid, id="composite_solid"), pytest.param(pipeline, id="pipeline")],
 )
 def test_composite_skippable_output_result(composition_decorator):
-    @lambda_solid(output_def=OutputDefinition(int))
-    def emit_one():
+    @solid(output_defs=[OutputDefinition(int)])
+    def emit_one(_):
         return 1
 
-    @lambda_solid(output_def=OutputDefinition(Optional[float]))
-    def echo(x):
+    @solid(output_defs=[OutputDefinition(Optional[float])])
+    def echo(_, x):
         return x
 
     @solid(output_defs=[OutputDefinition(Optional[float], name="foo_output", is_required=False)])

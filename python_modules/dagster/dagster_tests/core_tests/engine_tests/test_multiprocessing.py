@@ -14,7 +14,6 @@ from dagster import (
     PresetDefinition,
     String,
     execute_pipeline,
-    lambda_solid,
     pipeline,
     reconstructable,
     solid,
@@ -55,20 +54,20 @@ def test_diamond_multi_execution():
 
 
 def define_diamond_pipeline():
-    @lambda_solid
-    def return_two():
+    @solid
+    def return_two(_):
         return 2
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def add_three(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def add_three(_, num):
         return num + 3
 
-    @lambda_solid(input_defs=[InputDefinition("num")])
-    def mult_three(num):
+    @solid(input_defs=[InputDefinition("num")])
+    def mult_three(_, num):
         return num * 3
 
-    @lambda_solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
-    def adder(left, right):
+    @solid(input_defs=[InputDefinition("left"), InputDefinition("right")])
+    def adder(_, left, right):
         return left + right
 
     @pipeline(
@@ -92,12 +91,12 @@ def define_diamond_pipeline():
 
 
 def define_error_pipeline():
-    @lambda_solid
-    def should_never_execute(_x):
+    @solid
+    def should_never_execute(_, _x):
         assert False  # this should never execute
 
-    @lambda_solid
-    def throw_error():
+    @solid
+    def throw_error(_):
         raise Exception("bad programmer")
 
     @pipeline
@@ -195,10 +194,10 @@ def define_subdag_pipeline():
             fd.write("1")
         return
 
-    @lambda_solid(
-        input_defs=[InputDefinition("after", Nothing)], output_def=OutputDefinition(Nothing),
+    @solid(
+        input_defs=[InputDefinition("after", Nothing)], output_defs=[OutputDefinition(Nothing)],
     )
-    def noop():
+    def noop(_):
         pass
 
     @pipeline
@@ -267,8 +266,8 @@ def either_or(_context):
     yield Output(1, "option_1")
 
 
-@lambda_solid
-def echo(x):
+@solid
+def echo(_, x):
     return x
 
 
@@ -295,8 +294,8 @@ def test_optional_outputs():
     assert len([event for event in multi_result.step_event_list if event.is_step_skipped]) == 2
 
 
-@lambda_solid
-def throw():
+@solid
+def throw(_):
     raise Failure(
         description="it Failure",
         metadata_entries=[

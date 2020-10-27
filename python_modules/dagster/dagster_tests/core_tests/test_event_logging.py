@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 
-from dagster import ModeDefinition, PipelineDefinition, execute_pipeline, lambda_solid, pipeline
+from dagster import ModeDefinition, PipelineDefinition, execute_pipeline, pipeline, solid
 from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventRecord, construct_event_logger
 from dagster.loggers import colored_console_logger
@@ -56,8 +56,8 @@ def test_empty_pipeline():
 def test_single_solid_pipeline_success():
     events = defaultdict(list)
 
-    @lambda_solid
-    def solid_one():
+    @solid
+    def solid_one(_):
         return 1
 
     def _event_callback(record):
@@ -92,8 +92,8 @@ def test_single_solid_pipeline_success():
 def test_single_solid_pipeline_failure():
     events = defaultdict(list)
 
-    @lambda_solid
-    def solid_one():
+    @solid
+    def solid_one(_):
         raise Exception("nope")
 
     def _event_callback(record):
@@ -121,8 +121,8 @@ def test_single_solid_pipeline_failure():
 
 
 def define_simple():
-    @lambda_solid
-    def yes():
+    @solid
+    def yes(_):
         return "yes"
 
     @pipeline

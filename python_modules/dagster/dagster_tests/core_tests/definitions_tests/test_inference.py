@@ -1,5 +1,6 @@
 import pytest
-from dagster import lambda_solid, solid
+from dagster import solid
+from dagster.core.definitions import lambda_solid
 from dagster.core.errors import DagsterInvalidDefinitionError
 
 

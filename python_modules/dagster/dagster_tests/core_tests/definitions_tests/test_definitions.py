@@ -12,7 +12,6 @@ from dagster import (
     PipelineDefinition,
     SolidInvocation,
     String,
-    lambda_solid,
     solid,
 )
 from dagster.core.definitions import AssetMaterialization, Solid, create_run_config_schema
@@ -29,8 +28,8 @@ def test_deps_equal():
 
 
 def test_solid_def():
-    @lambda_solid
-    def produce_string():
+    @solid
+    def produce_string(_):
         return "foo"
 
     @solid(
@@ -120,8 +119,8 @@ def test_solid_def_receives_version():
 
 
 def test_pipeline_types():
-    @lambda_solid
-    def produce_string():
+    @solid
+    def produce_string(_):
         return "foo"
 
     @solid(
@@ -145,8 +144,8 @@ def test_pipeline_types():
 
 
 def test_mapper_errors():
-    @lambda_solid
-    def solid_a():
+    @solid
+    def solid_a(_):
         return 1
 
     with pytest.raises(DagsterInvalidDefinitionError) as excinfo_1:
@@ -222,12 +221,12 @@ def test_rehydrate_solid_handle():
 
 
 def test_cycle_detect():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add(a, b):
+    @solid
+    def add(_, a, b):
         return a + b
 
     with pytest.raises(DagsterInvalidDefinitionError, match="Circular dependencies exist"):

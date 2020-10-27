@@ -1,15 +1,15 @@
 import pandas as pd
-from dagster import InputDefinition, execute_pipeline, file_relative_path, lambda_solid, pipeline
+from dagster import InputDefinition, execute_pipeline, file_relative_path, pipeline, solid
 from dagster_pandas import DataFrame
 
 
 def test_basic_pd_df_input_metadata():
-    @lambda_solid
-    def return_num_csv():
+    @solid
+    def return_num_csv(_):
         return pd.read_csv(file_relative_path(__file__, "num.csv"))
 
-    @lambda_solid(input_defs=[InputDefinition("df", DataFrame)])
-    def noop(df):
+    @solid(input_defs=[InputDefinition("df", DataFrame)])
+    def noop(_, df):
         return df
 
     @pipeline

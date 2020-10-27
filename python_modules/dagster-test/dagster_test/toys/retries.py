@@ -1,10 +1,10 @@
 import time
 
-from dagster import PresetDefinition, RetryRequested, lambda_solid, pipeline, solid
+from dagster import PresetDefinition, RetryRequested, pipeline, solid
 
 
-@lambda_solid
-def echo(x):
+@solid
+def echo(_, x):
     return x
 
 

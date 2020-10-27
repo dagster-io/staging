@@ -12,7 +12,6 @@ from dagster import (
     PipelineDefinition,
     composite_solid,
     execute_pipeline,
-    lambda_solid,
     pipeline,
     solid,
 )
@@ -25,16 +24,16 @@ def test_simple_values():
         assert set(numbers) == set([1, 2, 3])
         return sum(numbers)
 
-    @lambda_solid
-    def emit_1():
+    @solid
+    def emit_1(_):
         return 1
 
-    @lambda_solid
-    def emit_2():
+    @solid
+    def emit_2(_):
         return 2
 
-    @lambda_solid
-    def emit_3():
+    @solid
+    def emit_3(_):
         return 3
 
     result = execute_pipeline(
@@ -64,23 +63,23 @@ def collect(_context, stuff):
     return stuff
 
 
-@lambda_solid
-def emit_num():
+@solid
+def emit_num(_):
     return 1
 
 
-@lambda_solid
-def emit_none():
+@solid
+def emit_none(_):
     pass
 
 
-@lambda_solid
-def emit_str():
+@solid
+def emit_str(_):
     return "one"
 
 
-@lambda_solid(output_def=OutputDefinition(Nothing))
-def emit_nothing():
+@solid(output_defs=[OutputDefinition(Nothing)])
+def emit_nothing(_):
     pass
 
 
@@ -116,8 +115,8 @@ def test_dsl():
 
 
 def test_collect_one():
-    @lambda_solid
-    def collect_one(list_arg):
+    @solid
+    def collect_one(_, list_arg):
         assert list_arg == ["one"]
 
     @pipeline
@@ -128,7 +127,6 @@ def test_collect_one():
 
 
 def test_bad_dsl():
-
     with pytest.raises(DagsterInvalidDefinitionError, match="list containing invalid types"):
 
         @composite_solid
@@ -138,7 +136,6 @@ def test_bad_dsl():
 
 
 def test_nothing_deps():
-
     with pytest.raises(
         DagsterInvalidDefinitionError,
         match=r'Input "stuff" expects a value of type \[Any\] and output '

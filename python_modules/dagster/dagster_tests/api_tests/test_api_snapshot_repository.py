@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 import grpc
 import pytest
-from dagster import lambda_solid, pipeline, repository
+from dagster import pipeline, repository, solid
 from dagster.api.snapshot_repository import (
     sync_get_external_repositories,
     sync_get_external_repositories_grpc,
@@ -60,8 +60,8 @@ def test_streaming_external_repositories_api_grpc():
         assert external_repository.name == "bar_repo"
 
 
-@lambda_solid
-def do_something():
+@solid
+def do_something(_):
     return 1
 
 

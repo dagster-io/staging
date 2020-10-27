@@ -1020,7 +1020,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "input_dep_snaps": [
           {
             "__class__": "InputDependencySnap",
-            "input_name": "_",
+            "input_name": "_in",
             "upstream_output_snaps": [
               {
                 "__class__": "OutputHandleSnap",
@@ -1046,7 +1046,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "input_dep_snaps": [
           {
             "__class__": "InputDependencySnap",
-            "input_name": "_",
+            "input_name": "_in",
             "upstream_output_snaps": [
               {
                 "__class__": "OutputHandleSnap",
@@ -1103,7 +1103,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_in"
           }
         ],
         "name": "after_failure",
@@ -1146,7 +1146,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_in"
           }
         ],
         "name": "conditionally_fail",
@@ -1167,7 +1167,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 2'] = 'a3aee18ec9d362447259068ecc38aefc01fcd3eb'
+snapshots['test_all_snapshot_ids 2'] = '45f74760616b2e526451c3a779852535fbf156bf'
 
 snapshots['test_all_snapshot_ids 3'] = '''{
   "__class__": "PipelineSnapshot",
@@ -21360,7 +21360,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "input_dep_snaps": [
           {
             "__class__": "InputDependencySnap",
-            "input_name": "_",
+            "input_name": "_in",
             "upstream_output_snaps": [
               {
                 "__class__": "OutputHandleSnap",
@@ -21435,7 +21435,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_in"
           }
         ],
         "name": "return_hello_world",
@@ -21456,7 +21456,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 36'] = '3b002177cfe1861d91b984882fd09e4721050fd2'
+snapshots['test_all_snapshot_ids 36'] = 'cae33c22e868e1826cf9a76fc45bf20b9ad5c883'
 
 snapshots['test_all_snapshot_ids 37'] = '''{
   "__class__": "PipelineSnapshot",

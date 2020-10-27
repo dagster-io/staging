@@ -4,13 +4,13 @@ import sys
 import types
 
 import pytest
-from dagster import DagsterInvariantViolationError, PipelineDefinition, lambda_solid, pipeline
+from dagster import DagsterInvariantViolationError, PipelineDefinition, pipeline, solid
 from dagster.core.definitions.reconstructable import ReconstructableRepository, reconstructable
 from dagster.core.snap import PipelineSnapshot, create_pipeline_snapshot_id
 
 
-@lambda_solid
-def the_solid():
+@solid
+def the_solid(_):
     return 1
 
 

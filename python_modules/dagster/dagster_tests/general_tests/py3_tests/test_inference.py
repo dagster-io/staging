@@ -5,7 +5,6 @@ from dagster import (
     Int,
     composite_solid,
     execute_solid,
-    lambda_solid,
     solid,
     usable_as_dagster_type,
 )
@@ -53,8 +52,8 @@ def test_double_typed_input():
 
 
 def test_one_arg_typed_lambda_solid():
-    @lambda_solid
-    def one_arg(num: int):
+    @solid
+    def one_arg(_, num: int):
         return num
 
     assert one_arg
@@ -79,8 +78,8 @@ def test_single_typed_input_and_output():
 
 
 def test_single_typed_input_and_output_lambda():
-    @lambda_solid
-    def add_one(num: int) -> int:
+    @solid
+    def add_one(_, num: int) -> int:
         return num + 1
 
     assert add_one
@@ -93,8 +92,8 @@ def test_single_typed_input_and_output_lambda():
 
 
 def test_wrapped_input_and_output_lambda():
-    @lambda_solid
-    def add_one(nums: List[int]) -> Optional[List[int]]:
+    @solid
+    def add_one(_, nums: List[int]) -> Optional[List[int]]:
         return [num + 1 for num in nums]
 
     assert add_one
@@ -113,9 +112,9 @@ def test_kitchen_sink():
     class Custom(object):
         pass
 
-    @lambda_solid
+    @solid
     def sink(
-        n: int, f: float, b: bool, s: str, x: Any, o: Optional[str], l: List[str], c: Custom
+        _, n: int, f: float, b: bool, s: str, x: Any, o: Optional[str], l: List[str], c: Custom
     ):  # pylint: disable=unused-argument
         pass
 
@@ -145,12 +144,12 @@ def test_kitchen_sink():
 
 
 def test_composites():
-    @lambda_solid
-    def emit_one() -> int:
+    @solid
+    def emit_one(_) -> int:
         return 1
 
-    @lambda_solid
-    def subtract(n1: int, n2: int) -> int:
+    @solid
+    def subtract(_, n1: int, n2: int) -> int:
         return n1 - n2
 
     @composite_solid
@@ -161,8 +160,8 @@ def test_composites():
 
 
 def test_emit_dict():
-    @lambda_solid
-    def emit_dict() -> dict:
+    @solid
+    def emit_dict(_) -> dict:
         return {"foo": "bar"}
 
     solid_result = execute_solid(emit_dict)
@@ -171,8 +170,8 @@ def test_emit_dict():
 
 
 def test_dict_input():
-    @lambda_solid
-    def intake_dict(inp: dict) -> str:
+    @solid
+    def intake_dict(_, inp: dict) -> str:
         return inp["foo"]
 
     solid_result = execute_solid(intake_dict, input_values={"inp": {"foo": "bar"}})
@@ -180,8 +179,8 @@ def test_dict_input():
 
 
 def test_emit_dagster_dict():
-    @lambda_solid
-    def emit_dagster_dict() -> Dict:
+    @solid
+    def emit_dagster_dict(_) -> Dict:
         return {"foo": "bar"}
 
     solid_result = execute_solid(emit_dagster_dict)
@@ -190,8 +189,8 @@ def test_emit_dagster_dict():
 
 
 def test_dict_dagster_input():
-    @lambda_solid
-    def intake_dagster_dict(inp: Dict) -> str:
+    @solid
+    def intake_dagster_dict(_, inp: Dict) -> str:
         return inp["foo"]
 
     solid_result = execute_solid(intake_dagster_dict, input_values={"inp": {"foo": "bar"}})
@@ -199,24 +198,24 @@ def test_dict_dagster_input():
 
 
 def test_python_tuple_input():
-    @lambda_solid
-    def intake_tuple(inp: tuple) -> int:
+    @solid
+    def intake_tuple(_, inp: tuple) -> int:
         return inp[1]
 
     assert execute_solid(intake_tuple, input_values={"inp": (3, 4)}).output_value() == 4
 
 
 def test_python_tuple_output():
-    @lambda_solid
-    def emit_tuple() -> tuple:
+    @solid
+    def emit_tuple(_) -> tuple:
         return (4, 5)
 
     assert execute_solid(emit_tuple).output_value() == (4, 5)
 
 
 def test_nested_kitchen_sink():
-    @lambda_solid
-    def no_execute() -> Optional[List[Tuple[List[int], str, Dict[str, Optional[List[str]]]]]]:
+    @solid
+    def no_execute(_) -> Optional[List[Tuple[List[int], str, Dict[str, Optional[List[str]]]]]]:
         pass
 
     assert (
