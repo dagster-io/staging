@@ -17,7 +17,6 @@ from dagster import (
     dagster_type_loader,
     dagster_type_materializer,
     execute_pipeline,
-    lambda_solid,
     pipeline,
     reconstructable,
     seven,
@@ -55,30 +54,30 @@ PoorMansDataFrame = PythonObjectDagsterType(
 )
 
 
-@lambda_solid(
+@solid(
     input_defs=[InputDefinition("num", PoorMansDataFrame)],
-    output_def=OutputDefinition(PoorMansDataFrame),
+    output_defs=[OutputDefinition(PoorMansDataFrame)],
 )
-def sum_solid(num):
+def sum_solid(_, num):
     sum_df = deepcopy(num)
     for x in sum_df:
         x["sum"] = x["num1"] + x["num2"]
     return sum_df
 
 
-@lambda_solid(
+@solid(
     input_defs=[InputDefinition("sum_df", PoorMansDataFrame)],
-    output_def=OutputDefinition(PoorMansDataFrame),
+    output_defs=[OutputDefinition(PoorMansDataFrame)],
 )
-def error_solid(sum_df):  # pylint: disable=W0613
+def error_solid(_, sum_df):  # pylint: disable=W0613
     raise Exception("foo")
 
 
-@lambda_solid(
+@solid(
     input_defs=[InputDefinition("sum_df", PoorMansDataFrame)],
-    output_def=OutputDefinition(PoorMansDataFrame),
+    output_defs=[OutputDefinition(PoorMansDataFrame)],
 )
-def crashy_solid(sum_df):  # pylint: disable=W0613
+def crashy_solid(_, sum_df):  # pylint: disable=W0613
     os._exit(1)  # pylint: disable=W0212
 
 

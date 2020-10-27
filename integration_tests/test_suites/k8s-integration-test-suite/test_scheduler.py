@@ -5,7 +5,7 @@ import sys
 import kubernetes
 import pytest
 from dagster import DagsterInstance, ScheduleDefinition, seven
-from dagster.core.definitions import lambda_solid, pipeline, repository
+from dagster.core.definitions import pipeline, repository, solid
 from dagster.core.host_representation import RepositoryLocation, RepositoryLocationHandle
 from dagster.core.host_representation.handle import UserProcessApi
 from dagster.core.scheduler import ScheduleStatus
@@ -32,8 +32,8 @@ def unset_dagster_home():
 
 @pipeline
 def no_config_pipeline():
-    @lambda_solid
-    def return_hello():
+    @solid
+    def return_hello(_):
         return "Hello"
 
     return return_hello()

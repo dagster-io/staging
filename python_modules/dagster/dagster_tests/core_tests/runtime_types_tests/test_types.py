@@ -17,7 +17,6 @@ from dagster import (
     TypeCheck,
     check_dagster_type,
     execute_pipeline,
-    lambda_solid,
     make_python_type_usable_as_dagster_type,
     pipeline,
     resource,
@@ -132,12 +131,12 @@ def _type_check_data_for_input(solid_result, input_name):
 
 
 def test_input_types_succeed_in_pipeline():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("num", int)])
-    def take_num(num):
+    @solid(input_defs=[InputDefinition("num", int)])
+    def take_num(_, num):
         return num
 
     @pipeline
@@ -155,8 +154,8 @@ def test_input_types_succeed_in_pipeline():
 
 
 def test_output_types_succeed_in_pipeline():
-    @lambda_solid(output_def=OutputDefinition(int))
-    def return_one():
+    @solid(output_defs=[OutputDefinition(int)])
+    def return_one(_):
         return 1
 
     @pipeline
@@ -175,12 +174,12 @@ def test_output_types_succeed_in_pipeline():
 
 
 def test_input_types_fail_in_pipeline():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("string", str)])
-    def take_string(string):
+    @solid(input_defs=[InputDefinition("string", str)])
+    def take_string(_, string):
         return string
 
     @pipeline
@@ -207,8 +206,8 @@ def test_input_types_fail_in_pipeline():
 
 
 def test_output_types_fail_in_pipeline():
-    @lambda_solid(output_def=OutputDefinition(str))
-    def return_int_fails():
+    @solid(output_defs=[OutputDefinition(str)])
+    def return_int_fails(_):
         return 1
 
     @pipeline
@@ -258,12 +257,12 @@ BadType = DagsterType(name="BadType", type_check_fn=_return_bad_value)
 
 
 def test_input_type_returns_wrong_thing():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("value", BadType)])
-    def take_bad_thing(value):
+    @solid(input_defs=[InputDefinition("value", BadType)])
+    def take_bad_thing(_, value):
         return value
 
     @pipeline
@@ -289,8 +288,8 @@ def test_input_type_returns_wrong_thing():
 
 
 def test_output_type_returns_wrong_thing():
-    @lambda_solid(output_def=OutputDefinition(BadType))
-    def return_one_bad_thing():
+    @solid(output_defs=[OutputDefinition(BadType)])
+    def return_one_bad_thing(_):
         return 1
 
     @pipeline
@@ -308,12 +307,12 @@ def test_output_type_returns_wrong_thing():
 
 
 def test_input_type_throw_arbitrary_exception():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("value", ThrowsExceptionType)])
-    def take_throws(value):
+    @solid(input_defs=[InputDefinition("value", ThrowsExceptionType)])
+    def take_throws(_, value):
         return value
 
     @pipeline
@@ -330,8 +329,8 @@ def test_input_type_throw_arbitrary_exception():
 
 
 def test_output_type_throw_arbitrary_exception():
-    @lambda_solid(output_def=OutputDefinition(ThrowsExceptionType))
-    def return_one_throws():
+    @solid(output_defs=[OutputDefinition(ThrowsExceptionType)])
+    def return_one_throws(_):
         return 1
 
     @pipeline
@@ -587,8 +586,8 @@ def test_contextual_type_check():
 
         return _Foo()
 
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
     @solid(input_defs=[InputDefinition("inp", custom)])

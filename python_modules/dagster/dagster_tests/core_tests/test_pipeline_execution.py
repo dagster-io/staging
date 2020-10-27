@@ -19,7 +19,6 @@ from dagster import (
     check,
     execute_pipeline,
     execute_pipeline_iterator,
-    lambda_solid,
     pipeline,
     reexecute_pipeline,
     solid,
@@ -332,12 +331,12 @@ def test_pipeline_name_threaded_through_context():
 
 
 def test_pipeline_subset():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -361,12 +360,12 @@ def test_pipeline_subset():
 
 
 def test_pipeline_explicit_subset():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -390,12 +389,12 @@ def test_pipeline_explicit_subset():
 
 
 def test_pipeline_subset_of_subset():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     @pipeline
@@ -426,16 +425,16 @@ def test_pipeline_subset_of_subset():
 
 
 def test_pipeline_subset_with_multi_dependency():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def return_two():
+    @solid
+    def return_two(_):
         return 2
 
-    @lambda_solid(input_defs=[InputDefinition("dep", Nothing)])
-    def noop():
+    @solid(input_defs=[InputDefinition("dep", Nothing)])
+    def noop(_):
         return 3
 
     pipeline_def = PipelineDefinition(
@@ -469,16 +468,16 @@ def test_pipeline_subset_with_multi_dependency():
 
 
 def test_pipeline_explicit_subset_with_multi_dependency():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def return_two():
+    @solid
+    def return_two(_):
         return 2
 
-    @lambda_solid(input_defs=[InputDefinition("dep", Nothing)])
-    def noop():
+    @solid(input_defs=[InputDefinition("dep", Nothing)])
+    def noop(_):
         return 3
 
     pipeline_def = PipelineDefinition(
@@ -512,16 +511,16 @@ def test_pipeline_explicit_subset_with_multi_dependency():
 
 
 def define_three_part_pipeline():
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_one(_, num):
         return num + 1
 
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_two(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_two(_, num):
         return num + 2
 
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_three(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_three(_, num):
         return num + 3
 
     return PipelineDefinition(name="three_part_pipeline", solid_defs=[add_one, add_two, add_three])
@@ -560,11 +559,11 @@ def test_pipeline_execution_explicit_disjoint_subset():
 
 
 def test_pipeline_wrapping_types():
-    @lambda_solid(
+    @solid(
         input_defs=[InputDefinition("value", Optional[List[Optional[String]]])],
-        output_def=OutputDefinition(Optional[List[Optional[String]]]),
+        output_defs=[OutputDefinition(Optional[List[Optional[String]]])],
     )
-    def double_string_for_all(value):
+    def double_string_for_all(_, value):
         if not value:
             return value
 
@@ -602,13 +601,13 @@ def test_pipeline_wrapping_types():
 def test_pipeline_streaming_iterator():
     events = []
 
-    @lambda_solid
-    def push_one():
+    @solid
+    def push_one(_):
         events.append(1)
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         events.append(num + 1)
         return num + 1
 
@@ -689,12 +688,12 @@ def test_pipeline_init_failure():
 
 
 def test_reexecution_fs_storage():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -735,12 +734,12 @@ def test_reexecution_fs_storage():
 
 
 def test_reexecution_fs_storage_with_solid_selection():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -820,12 +819,12 @@ def test_reexecution_fs_storage_with_solid_selection():
 
 
 def test_single_step_reexecution():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     pipeline_def = PipelineDefinition(
@@ -853,12 +852,12 @@ def test_single_step_reexecution():
 
 
 def test_two_step_reexecution():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid
-    def add_one(num):
+    @solid
+    def add_one(_, num):
         return num + 1
 
     @pipeline
@@ -888,8 +887,8 @@ def test_optional():
     def return_optional(_context):
         yield Output(1, "x")
 
-    @lambda_solid
-    def echo(x):
+    @solid
+    def echo(_, x):
         return x
 
     @pipeline
@@ -989,12 +988,12 @@ def test_pipeline_tags():
 
 
 def test_multi_dep_optional():
-    @lambda_solid
-    def ret_one():
+    @solid
+    def ret_one(_):
         return 1
 
-    @lambda_solid
-    def echo(x):
+    @solid
+    def echo(_, x):
         return x
 
     @solid(output_defs=[OutputDefinition(name="skip", is_required=False)])

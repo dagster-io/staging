@@ -19,7 +19,6 @@ from dagster import (
     SolidInvocation,
     String,
     check,
-    lambda_solid,
     pipeline,
     repository,
     resource,
@@ -170,13 +169,13 @@ def mult_two_numbers_pm_solid():
     )
 
 
-@lambda_solid
-def return_one():
+@solid
+def return_one(_):
     return 1
 
 
-@lambda_solid
-def return_two():
+@solid
+def return_two(_):
     return 2
 
 

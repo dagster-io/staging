@@ -49,7 +49,6 @@ from dagster.core.definitions import (
     hourly_schedule,
     in_process_executor,
     intermediate_storage,
-    lambda_solid,
     logger,
     monthly_schedule,
     multiprocess_executor,
@@ -64,6 +63,7 @@ from dagster.core.definitions import (
     weekly_schedule,
 )
 from dagster.core.definitions.config_mappable import configured
+from dagster.core.definitions.deprecated import lambda_solid
 from dagster.core.errors import (
     DagsterConfigMappingFunctionError,
     DagsterError,

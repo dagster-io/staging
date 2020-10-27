@@ -15,8 +15,8 @@ from dagster import (
     Set,
     String,
     Tuple,
-    lambda_solid,
     pipeline,
+    solid,
 )
 from dagster.core.types.dagster_type import (
     ALL_RUNTIME_BUILTINS,
@@ -78,8 +78,8 @@ def test_python_mapping():
     runtime = resolve_dagster_type(float)
     assert runtime.name == "Float"
 
-    @lambda_solid(input_defs=[InputDefinition("num", int)])
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", int)])
+    def add_one(_, num):
         return num + 1
 
     assert add_one.input_defs[0].dagster_type.name == "Int"
@@ -100,15 +100,15 @@ def test_double_dagster_type():
     AlwaysSucceedsFoo = DagsterType(name="Foo", type_check_fn=lambda _, _val: True)
     AlwaysFailsFoo = DagsterType(name="Foo", type_check_fn=lambda _, _val: False)
 
-    @lambda_solid
-    def return_a_thing():
+    @solid
+    def return_a_thing(_):
         return 1
 
-    @lambda_solid(
+    @solid(
         input_defs=[InputDefinition("succeeds", AlwaysSucceedsFoo)],
-        output_def=OutputDefinition(AlwaysFailsFoo),
+        output_defs=[OutputDefinition(AlwaysFailsFoo)],
     )
-    def yup(succeeds):
+    def yup(_, succeeds):
         return succeeds
 
     with pytest.raises(DagsterInvalidDefinitionError) as exc_info:

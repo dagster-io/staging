@@ -6,7 +6,7 @@ import sys
 import pytest
 import yaml
 from dagster import ScheduleDefinition
-from dagster.core.definitions import lambda_solid, pipeline, repository
+from dagster.core.definitions import pipeline, repository, solid
 from dagster.core.host_representation import RepositoryLocation, RepositoryLocationHandle
 from dagster.core.host_representation.handle import UserProcessApi
 from dagster.core.instance import DagsterInstance, InstanceType
@@ -71,8 +71,8 @@ def unset_dagster_home():
 
 @pipeline
 def no_config_pipeline():
-    @lambda_solid
-    def return_hello():
+    @solid
+    def return_hello(_):
         return "Hello"
 
     return return_hello()

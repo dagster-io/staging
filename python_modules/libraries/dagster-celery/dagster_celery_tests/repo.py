@@ -9,7 +9,6 @@ from dagster import (
     OutputDefinition,
     RetryRequested,
     default_executors,
-    lambda_solid,
     pipeline,
     solid,
 )
@@ -48,8 +47,8 @@ def emit_values(_context):
     yield Output(2, "value_two")
 
 
-@lambda_solid(input_defs=[InputDefinition("num_one"), InputDefinition("num_two")])
-def subtract(num_one, num_two):
+@solid(input_defs=[InputDefinition("num_one"), InputDefinition("num_two")])
+def subtract(_, num_one, num_two):
     return num_one - num_two
 
 
@@ -105,13 +104,13 @@ def test_optional_outputs():
     bar.alias("third_consumer")(input_arg=foo_res.out_3)
 
 
-@lambda_solid
-def fails():
+@solid
+def fails(_):
     raise Exception("argjhgjh")
 
 
-@lambda_solid
-def should_never_execute(_):
+@solid
+def should_never_execute(_, _in):
     assert False  # should never execute
 
 
@@ -120,8 +119,8 @@ def test_fails():
     should_never_execute(fails())
 
 
-@lambda_solid
-def retry_request():
+@solid
+def retry_request(_):
     raise RetryRequested()
 
 

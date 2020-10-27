@@ -12,7 +12,7 @@ from dagster import (
     PipelineDefinition,
     String,
     execute_pipeline,
-    lambda_solid,
+    solid,
 )
 from dagster.utils.test import get_temp_file_name
 
@@ -24,52 +24,52 @@ def _execute_pipeline_with_subset(pipeline, run_config, solid_selection):
 
 
 def define_test_all_scalars_pipeline():
-    @lambda_solid(input_defs=[InputDefinition("num", Int)])
-    def take_int(num):
+    @solid(input_defs=[InputDefinition("num", Int)])
+    def take_int(_, num):
         return num
 
-    @lambda_solid(output_def=OutputDefinition(Int))
-    def produce_int():
+    @solid(output_defs=[OutputDefinition(Int)])
+    def produce_int(_):
         return 2
 
-    @lambda_solid(input_defs=[InputDefinition("string", String)])
-    def take_string(string):
+    @solid(input_defs=[InputDefinition("string", String)])
+    def take_string(_, string):
         return string
 
-    @lambda_solid(output_def=OutputDefinition(String))
-    def produce_string():
+    @solid(output_defs=[OutputDefinition(String)])
+    def produce_string(_):
         return "foo"
 
-    @lambda_solid(input_defs=[InputDefinition("float_number", Float)])
-    def take_float(float_number):
+    @solid(input_defs=[InputDefinition("float_number", Float)])
+    def take_float(_, float_number):
         return float_number
 
-    @lambda_solid(output_def=OutputDefinition(Float))
-    def produce_float():
+    @solid(output_defs=[OutputDefinition(Float)])
+    def produce_float(_):
         return 3.14
 
-    @lambda_solid(input_defs=[InputDefinition("bool_value", Bool)])
-    def take_bool(bool_value):
+    @solid(input_defs=[InputDefinition("bool_value", Bool)])
+    def take_bool(_, bool_value):
         return bool_value
 
-    @lambda_solid(output_def=OutputDefinition(Bool))
-    def produce_bool():
+    @solid(output_defs=[OutputDefinition(Bool)])
+    def produce_bool(_):
         return True
 
-    @lambda_solid(input_defs=[InputDefinition("any_value", Any)])
-    def take_any(any_value):
+    @solid(input_defs=[InputDefinition("any_value", Any)])
+    def take_any(_, any_value):
         return any_value
 
-    @lambda_solid(output_def=OutputDefinition(Any))
-    def produce_any():
+    @solid(output_defs=[OutputDefinition(Any)])
+    def produce_any(_):
         return True
 
-    @lambda_solid(input_defs=[InputDefinition("string_list", List[String])])
-    def take_string_list(string_list):
+    @solid(input_defs=[InputDefinition("string_list", List[String])])
+    def take_string_list(_, string_list):
         return string_list
 
-    @lambda_solid(input_defs=[InputDefinition("nullable_string", Optional[String])])
-    def take_nullable_string(nullable_string):
+    @solid(input_defs=[InputDefinition("nullable_string", Optional[String])])
+    def take_nullable_string(_, nullable_string):
         return nullable_string
 
     return PipelineDefinition(
