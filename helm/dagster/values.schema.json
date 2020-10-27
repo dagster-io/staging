@@ -5,10 +5,14 @@
     "properties": {
         "dagit": {
             "$ref": "#/definitions/Dagit"
+        },
+        "scheduler": {
+            "$ref": "#/definitions/Scheduler"
         }
     },
     "required": [
-        "dagit"
+        "dagit",
+        "scheduler"
     ],
     "definitions": {
         "PullPolicy": {
@@ -154,6 +158,101 @@
                 "replicaCount",
                 "image",
                 "service"
+            ]
+        },
+        "SchedulerType": {
+            "title": "SchedulerType",
+            "description": "An enumeration.",
+            "enum": [
+                "CronScheduler",
+                "K8sScheduler"
+            ],
+            "type": "string"
+        },
+        "SecretEnvSource": {
+            "title": "SecretEnvSource",
+            "type": "object",
+            "properties": {},
+            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.SecretEnvSource"
+        },
+        "K8sSchedulerConfig": {
+            "title": "K8sSchedulerConfig",
+            "type": "object",
+            "properties": {
+                "image": {
+                    "$ref": "#/definitions/Image"
+                },
+                "schedulerNamespace": {
+                    "title": "Schedulernamespace",
+                    "type": "string"
+                },
+                "loadInclusterConfig": {
+                    "title": "Loadinclusterconfig",
+                    "type": "boolean"
+                },
+                "kubeconfigFile": {
+                    "title": "Kubeconfigfile",
+                    "type": "string"
+                },
+                "envSecrets": {
+                    "title": "Envsecrets",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SecretEnvSource"
+                    }
+                }
+            },
+            "required": [
+                "image",
+                "schedulerNamespace"
+            ],
+            "additionalProperties": false
+        },
+        "SchedulerConfig": {
+            "title": "SchedulerConfig",
+            "type": "object",
+            "properties": {
+                "K8sScheduler": {
+                    "$ref": "#/definitions/K8sSchedulerConfig"
+                }
+            },
+            "additionalProperties": false
+        },
+        "Scheduler": {
+            "title": "Scheduler",
+            "type": "object",
+            "properties": {
+                "type": {
+                    "$ref": "#/definitions/SchedulerType"
+                },
+                "config": {
+                    "$ref": "#/definitions/SchedulerConfig"
+                }
+            },
+            "required": [
+                "type",
+                "config"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "K8sScheduler"
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "config": {
+                                "required": [
+                                    "K8sScheduler"
+                                ]
+                            }
+                        }
+                    }
+                }
             ]
         }
     }
