@@ -10,37 +10,31 @@ metadata:
 data:
   dagster.yaml: |
     scheduler:
-      {{- if .Values.scheduler.k8sEnabled }}
+      {{- if eq .Values.scheduler.type "K8sScheduler" }}
+      {{- $k8sSchedulerConfig := .Values.scheduler.config.K8sScheduler }}
       module: dagster_k8s.scheduler
       class: K8sScheduler
       config:
-        load_incluster_config: {{ .Values.scheduler.loadInclusterConfig }}
-        scheduler_namespace: {{ .Values.scheduler.schedulerNamespace }}
-        kubeconfig_file: {{ .Values.scheduler.kubeconfigFile }}
+        load_incluster_config: {{ $k8sSchedulerConfig.loadInclusterConfig }}
+        scheduler_namespace: {{ $k8sSchedulerConfig.schedulerNamespace }}
+        kubeconfig_file: {{ $k8sSchedulerConfig.kubeconfigFile }}
         {{- with $.Values.imagePullSecrets }}
         image_pull_secrets:
           {{- toYaml . | nindent 10 }}
         {{- end }}
         service_account_name: {{ include "dagster.serviceAccountName" . }}
-        job_image: "{{- .Values.scheduler.image.repository -}}:{{- .Values.scheduler.image.tag -}}"
+        job_image: {{ template "image.job_image" $k8sSchedulerConfig.image }}
+        image_pull_policy: {{ $k8sSchedulerConfig.image.pullPolicy }}
         dagster_home:
           env: DAGSTER_HOME
         postgres_password_secret:
           env: DAGSTER_K8S_PG_PASSWORD_SECRET
-        image_pull_policy: {{ .Values.scheduler.image.pullPolicy }}
         instance_config_map:
           env: DAGSTER_K8S_INSTANCE_CONFIG_MAP
         env_config_maps:
           - env: DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP
-        env_secrets:
-          {{- if $.Values.scheduler.env_secrets -}}
-          {{- range $name := $.Values.scheduler.env_secrets }}
-          {{- if $name }}
-          - {{ $name }}
-          {{- end }}
-          {{- end }}
-          {{- end }}
-    {{- else }}
+        env_secrets: {{- toYaml $k8sSchedulerConfig.envSecrets | nindent 10 }}
+    {{- else if eq .Values.scheduler.type "CronScheduler" }}
       module: dagster_cron.cron_scheduler
       class: SystemCronScheduler
     {{- end }}

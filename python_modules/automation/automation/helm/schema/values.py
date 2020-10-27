@@ -1,6 +1,7 @@
 from pydantic import BaseModel  # pylint: disable=E0611
 
 from .dagit import Dagit
+from .scheduler import Scheduler
 
 
 class HelmValues(BaseModel):
@@ -9,3 +10,4 @@ class HelmValues(BaseModel):
     """
 
     dagit: Dagit
+    scheduler: Scheduler
