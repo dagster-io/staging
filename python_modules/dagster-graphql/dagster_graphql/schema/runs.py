@@ -740,6 +740,8 @@ class DauphinPipelineRunEvent(dauphin.Union):
             DauphinPipelineFailureEvent,
             DauphinPipelineInitFailureEvent,
             DauphinPipelineStartEvent,
+            DauphinPipelineEnqueuedEvent,
+            DauphinPipelineDequeuedEvent,
             DauphinPipelineSuccessEvent,
             DauphinObjectStoreOperationEvent,
             DauphinStepExpectationResultEvent,
