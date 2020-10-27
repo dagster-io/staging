@@ -5,17 +5,22 @@ from contextlib import contextmanager
 
 import click
 import six
+from dagit.watch import watchdog_thread
 from gevent import pywsgi
 from geventwebsocket.handler import WebSocketHandler
 
 from dagster import check, seven
 from dagster.cli.workspace import Workspace, get_workspace_from_kwargs, workspace_target_argument
 from dagster.cli.workspace.cli_target import WORKSPACE_TARGET_WARNING
+from dagster.core.host_representation.handle import (
+    ManagedGrpcPythonEnvRepositoryLocationHandle,
+    PythonEnvRepositoryLocationHandle,
+)
 from dagster.core.instance import DagsterInstance
 from dagster.core.telemetry import START_DAGIT_WEBSERVER, log_action, log_repo_stats, upload_logs
 from dagster.utils import DEFAULT_WORKSPACE_YAML_FILENAME
 
-from .app import create_app_from_workspace
+from .app import create_app_from_context, create_context
 from .version import __version__
 
 
@@ -149,9 +154,29 @@ def host_dagit_ui_with_workspace(instance, workspace, host, port, path_prefix, p
 
             log_repo_stats(instance=instance, repo=recon_repo, source="dagit")
 
-    app = create_app_from_workspace(workspace, instance, path_prefix)
+    # TODO: Refactor.
+    # Can probably just pull this off the context, but for now want to grab this before the context
+    # tries to initialize the RepositoryLocation from the handle
+    handles_to_watch = []
+    for repository_location_handle in workspace.repository_location_handles:
+        if isinstance(
+            repository_location_handle, ManagedGrpcPythonEnvRepositoryLocationHandle
+        ) or isinstance(repository_location_handle, PythonEnvRepositoryLocationHandle):
+            handles_to_watch.append(repository_location_handle)
 
-    start_server(instance, host, port, path_prefix, app, port_lookup)
+    context = create_context(workspace, instance)
+    app = create_app_from_context(context, path_prefix)
+
+    start_server(
+        instance,
+        host,
+        port,
+        path_prefix,
+        app,
+        context,
+        port_lookup,
+        handles_to_watch=handles_to_watch,
+    )
 
 
 @contextmanager
@@ -166,7 +191,17 @@ def uploading_logging_thread():
         logging_thread.join()
 
 
-def start_server(instance, host, port, path_prefix, app, port_lookup, port_lookup_attempts=0):
+def start_server(
+    instance,
+    host,
+    port,
+    path_prefix,
+    app,
+    context,
+    port_lookup,
+    port_lookup_attempts=0,
+    handles_to_watch=None,
+):
     server = pywsgi.WSGIServer((host, port), app, handler_class=WebSocketHandler)
 
     print(  # pylint: disable=print-call
@@ -176,7 +211,7 @@ def start_server(instance, host, port, path_prefix, app, port_lookup, port_looku
     )
 
     log_action(instance, START_DAGIT_WEBSERVER)
-    with uploading_logging_thread():
+    with uploading_logging_thread(), watchdog_thread(context, handles_to_watch):
         try:
             server.serve_forever()
         except OSError as os_error:
@@ -197,6 +232,7 @@ def start_server(instance, host, port, path_prefix, app, port_lookup, port_looku
                         port + port_lookup_attempts,
                         path_prefix,
                         app,
+                        context,
                         True,
                         port_lookup_attempts,
                     )
