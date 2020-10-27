@@ -1,4 +1,4 @@
-import {shallowCompareKeys} from '@blueprintjs/core/lib/esm/common/utils';
+import {shallowCompareKeys} from '@blueprintjs/core/lib/cjs/common/utils';
 import React from 'react';
 
 import {filterByQuery} from 'src/GraphQueryImpl';
