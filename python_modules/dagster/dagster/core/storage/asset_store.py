@@ -24,6 +24,19 @@ class AssetStoreHandle(namedtuple("_AssetStoreHandle", "asset_store_key asset_me
         )
 
 
+@whitelist_for_serdes
+class AssetAddress(namedtuple("_AssetAddress", "run_id step_output_handle asset_metadata")):
+    def __new__(cls, run_id, step_output_handle, asset_metadata=None):
+        return super(AssetAddress, cls).__new__(
+            cls,
+            run_id=check.str_param(run_id, "run_id"),
+            step_output_handle=check.inst_param(
+                step_output_handle, "step_output_handle", StepOutputHandle
+            ),
+            asset_metadata=asset_metadata,
+        )
+
+
 class AssetStore(six.with_metaclass(ABCMeta)):
     """
     Base class for user-provided asset store.
@@ -70,22 +83,28 @@ class PickledObjectFileystemAssetStore(AssetStore):
         self.write_mode = "wb"
         self.read_mode = "rb"
 
-    def _get_path(self, context, step_output_handle):
+    def _get_path(self, run_id, step_output_handle):
         # automatically construct filepath
+        check.str_param(run_id, "run_id")
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
         return os.path.join(
-            self.base_dir,
-            context.run_id,
-            step_output_handle.step_key,
-            step_output_handle.output_name,
+            self.base_dir, run_id, step_output_handle.step_key, step_output_handle.output_name,
         )
+
+    def get_asset_from_address(self, address):
+        check.inst_param(address, "address", AssetAddress)
+
+        filepath = self._get_path(address.run_id, address.step_output_handle)
+
+        with open(filepath, self.read_mode) as read_obj:
+            return pickle.load(read_obj)
 
     def set_asset(self, context, step_output_handle, obj, _asset_metadata):
         """Pickle the data and store the object to a file."""
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
-        filepath = self._get_path(context, step_output_handle)
+        filepath = self._get_path(context.run_id, step_output_handle)
 
         # Ensure path exists
         mkdir_p(os.path.dirname(filepath))
@@ -93,11 +112,13 @@ class PickledObjectFileystemAssetStore(AssetStore):
         with open(filepath, self.write_mode) as write_obj:
             pickle.dump(obj, write_obj, PICKLE_PROTOCOL)
 
+        return AssetAddress(context.run_id, step_output_handle)
+
     def get_asset(self, context, step_output_handle, _asset_metadata):
         """Unpickle the file and Load it to a data object."""
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
-        filepath = self._get_path(context, step_output_handle)
+        filepath = self._get_path(context.run_id, step_output_handle)
 
         with open(filepath, self.read_mode) as read_obj:
             return pickle.load(read_obj)
@@ -123,7 +144,11 @@ class CustomPathPickledObjectFileystemAssetStore(AssetStore):
     def _get_path(self, path):
         return os.path.join(self.base_dir, path)
 
-    def set_asset(self, _context, step_output_handle, obj, asset_metadata):
+    def get_asset_from_address(self, address):
+        check.inst_param(address, "address", AssetAddress)
+        return self.get_asset(None, address.step_output_handle, address.asset_metadata)
+
+    def set_asset(self, context, step_output_handle, obj, asset_metadata):
         """Pickle the data and store the object to a custom file path."""
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         path = check.str_param(asset_metadata.get("path"), "asset_metadata.path")
@@ -135,6 +160,7 @@ class CustomPathPickledObjectFileystemAssetStore(AssetStore):
 
         with open(filepath, self.write_mode) as write_obj:
             pickle.dump(obj, write_obj, PICKLE_PROTOCOL)
+        return AssetAddress(context.run_id, step_output_handle, asset_metadata)
 
     def get_asset(self, _context, step_output_handle, asset_metadata):
         """Unpickle the file from a given file path and Load it to a data object."""

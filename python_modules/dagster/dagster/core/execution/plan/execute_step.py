@@ -8,11 +8,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import (
-    AssetStoreOperation,
-    AssetStoreOperationType,
-    ObjectStoreOperation,
-)
+from dagster.core.definitions.events import AssetStoreOperation, ObjectStoreOperation
 from dagster.core.errors import (
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
@@ -33,7 +29,6 @@ from dagster.core.execution.plan.objects import (
     TypeCheckData,
 )
 from dagster.core.execution.resolve_versions import resolve_step_output_versions
-from dagster.core.storage.asset_store import AssetStoreHandle
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.utils import iterate_with_context, raise_interrupts_immediately
 from dagster.utils.timing import time_execution_scope
@@ -329,33 +324,14 @@ def _create_step_events_for_output(step_context, output):
         yield evt
 
 
-def _get_addressable_asset(context, step_output_handle, asset_store_handle):
-    check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
-
-    asset_store = context.get_asset_store(asset_store_handle.asset_store_key)
-    obj = asset_store.get_asset(context, step_output_handle, asset_store_handle.asset_metadata)
-
-    return AssetStoreOperation(
-        AssetStoreOperationType.GET_ASSET, step_output_handle, asset_store_handle, obj=obj,
-    )
-
-
-def _set_addressable_asset(context, step_output_handle, asset_store_handle, value):
-    check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
-
-    asset_store = context.get_asset_store(asset_store_handle.asset_store_key)
-    asset_store.set_asset(context, step_output_handle, value, asset_store_handle.asset_metadata)
-
-    return AssetStoreOperation(
-        AssetStoreOperationType.SET_ASSET, step_output_handle, asset_store_handle
-    )
-
-
 def _set_intermediates(step_context, step_output, step_output_handle, output, version):
     if step_output.asset_store_handle:
-        # use asset_store if it's configured on provided by the user
-        res = _set_addressable_asset(
-            step_context, step_output_handle, step_output.asset_store_handle, output.value
+        # use address_storage if it's configured on the instance and asset_store is provided by the user
+        res = step_context.address_storage.set_addressable_asset(
+            context=step_context,
+            asset_store_handle=step_output.asset_store_handle,
+            step_output_handle=step_output_handle,
+            value=output.value,
         )
 
         if isinstance(res, AssetStoreOperation):
@@ -488,12 +464,14 @@ def _input_values_from_intermediate_storage(step_context):
 
             input_value = []
             for source_handle in step_input.source_handles:
-                source_asset_store_handle = step_context.execution_plan.get_asset_store_handle(
-                    source_handle
-                )
-                if source_asset_store_handle:
-                    input_value = _get_addressable_asset(
-                        step_context, source_handle, source_asset_store_handle
+                if (
+                    step_context.address_storage
+                    and step_context.address_storage.has_addressable_asset(
+                        step_context, source_handle
+                    )
+                ):
+                    input_value = step_context.address_storage.get_addressable_asset(
+                        context=step_context, step_output_handle=source_handle,
                     )
                 elif (
                     source_handle in step_input.addresses
@@ -528,12 +506,11 @@ def _input_values_from_intermediate_storage(step_context):
 
         elif step_input.is_from_single_output:
             source_handle = step_input.source_handles[0]
-            source_asset_store_handle = step_context.execution_plan.get_asset_store_handle(
-                source_handle
-            )
-            if source_asset_store_handle:
-                input_value = _get_addressable_asset(
-                    step_context, source_handle, source_asset_store_handle
+            if step_context.address_storage and step_context.address_storage.has_addressable_asset(
+                step_context, source_handle
+            ):
+                input_value = step_context.address_storage.get_addressable_asset(
+                    context=step_context, step_output_handle=step_input.source_handles[0],
                 )
             elif source_handle in step_input.addresses:
                 input_value = step_context.intermediate_storage.get_intermediate_from_address(
