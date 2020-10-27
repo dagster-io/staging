@@ -18,6 +18,9 @@
 - Eliminated `pipeline_def` property from `InitResourceContext`.
 - Removed the argument `step_keys_to_execute` to the `reexecute_pipeline` and `reexecute_pipeline_iterator`.
 
+- [Helm/K8s]
+  - The schema for the `scheduler` values in the helm chart has been rewritten.
+
 ## 0.9.22.post0
 
 **Bugfixes**
@@ -386,7 +389,7 @@
 
 **Bugfixes**
 
-- Fixed helper for importing data from GCS paths into Bigquery (Thanks @grabangomb (https://github.com/grabangomb)!)
+- Fixed helper for importing data from GCS paths into Bigquery (Thanks @grabangomb (<https://github.com/grabangomb>)!)
 - Postgres event storage now waits to open a thread to watch runs until it is needed
 
 **Experimental**
@@ -464,6 +467,7 @@ opt_in:
 - New `dagster-k8s/config` tag that lets users pass in custom configuration to the Kubernetes `Job`, `Job` metadata, `JobSpec`, `PodSpec`, and `PodTemplateSpec` metadata.
   - This allows users to specify settings like eviction policy annotations and node affinities.
   - Example:
+
   ```python
     @solid(
       tags = {
@@ -545,7 +549,7 @@ opt_in:
 - Removed the deprecation of `create_dagster_pandas_dataframe_type`. This is the currently
   supported API for custom pandas data frame type creation.
 - Removed gevent dependency from dagster
-- New `configured` API for predefining configuration for various definitions: https://docs.dagster.io/overview/configuration/#configured
+- New `configured` API for predefining configuration for various definitions: <https://docs.dagster.io/overview/configuration/#configured>
 - Added hooks to enable success and failure handling policies on pipelines. This enables users to set up policies on all solids within a pipeline or on a per solid basis. Example usage can be found [here](https://docs.dagster.io/examples/hooks)
 - New instance level view of Scheduler and running schedules
 - dagster-graphql is now only required in dagit images.
@@ -623,7 +627,7 @@ opt_in:
   - We have added `s3_file_manager` and `local_file_manager` resources to replace the file managers
     that previously lived inside system storages. The airline demo has been updated to include
     an example of how to do this:
-    https://github.com/dagster-io/dagster/blob/0.8.8/examples/airline_demo/airline_demo/solids.py#L171.
+    <https://github.com/dagster-io/dagster/blob/0.8.8/examples/airline_demo/airline_demo/solids.py#L171>.
 - The help panel in the dagit config editor can now be resized and toggled open or closed, to
   enable easier editing on smaller screens.
 
@@ -1255,7 +1259,7 @@ compatible with 0.8.0
 
 **Documentation**
 
-- Brand new documentation site, available at https://docs.dagster.io
+- Brand new documentation site, available at <https://docs.dagster.io>
 - The tutorial has been restructured to multiple sections, and the examples in intro_tutorial have
   been rearranged to separate folders to reflect this.
 
@@ -2083,13 +2087,13 @@ Thank you to all of the community contributors to this release!! In alphabetical
 - Adds a `type_check` parameter to `PythonObjectType`, `as_dagster_type`, and `@as_dagster_type` to
   enable custom type checks in place of default `isinstance` checks.
   See documentation here:
-  https://dagster.readthedocs.io/en/latest/sections/learn/tutorial/types.html#custom-type-checks
+  <https://dagster.readthedocs.io/en/latest/sections/learn/tutorial/types.html#custom-type-checks>
 - Improved the type inference experience by automatically wrapping bare python types as dagster
   types.
 - Reworked our tutorial (now with more compelling/scary breakfast cereal examples) and public API
   documentation.
   See the new tutorial here:
-  https://dagster.readthedocs.io/en/latest/sections/learn/tutorial/index.html
+  <https://dagster.readthedocs.io/en/latest/sections/learn/tutorial/index.html>
 - New solids explorer in Dagit allows you to browse and search for solids used across the
   repository.
 
@@ -2122,7 +2126,7 @@ Thank you to all of the community contributors to this release!! In alphabetical
   to manually alias solid definitions that are used multiple times.
 - Add `dagster schedule wipe` command to delete all schedules and remove all schedule cron jobs
 - `execute_solid` test util now works on composite solids.
-- Docs and example improvements: https://dagster.readthedocs.io/
+- Docs and example improvements: <https://dagster.readthedocs.io/>
 - Added `--remote` flag to `dagster-graphql` for querying remote Dagit servers.
 - Fixed issue with duplicate run tag autocomplete suggestions in Dagit (#1839)
 - Fixed Windows 10 / py3.6+ bug causing pipeline execution failures
