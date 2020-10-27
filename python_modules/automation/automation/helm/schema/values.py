@@ -14,3 +14,4 @@ class HelmValues(BaseModel):
     redis: subschema.Redis
     flower: subschema.Flower
     ingress: subschema.Ingress
+    scheduler: subschema.Scheduler
