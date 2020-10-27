@@ -120,6 +120,11 @@ export const PARTITION_GRAPH_SET_PARTITION_FRAGMENT = gql`
   fragment PartitionGraphSetPartitionFragment on Partition {
     name
     runs {
+      status
+      tags {
+        key
+        value
+      }
       ...RunGraphFragment
     }
   }
