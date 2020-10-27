@@ -10,10 +10,11 @@ from dagster.grpc.types import ScheduleExecutionDataMode
 
 
 class DagsterGraphQLContext:
-    def __init__(self, instance, workspace, version=None):
+    def __init__(self, instance, workspace, version=None, reloader=None):
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._workspace = workspace
         self._repository_locations = {}
+        self._reloader = reloader
         for handle in self._workspace.repository_location_handles:
             check.invariant(
                 self._repository_locations.get(handle.location_name) is None,
