@@ -3,9 +3,11 @@ import gql from 'graphql-tag';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
+import {TokenizingFieldValue} from 'src/TokenizingField';
+import {PartitionGraph} from 'src/partitions/PartitionGraph';
 import {
   PIPELINE_LABEL,
-  RUN_GRAPH_FRAGMENT,
+  PARTITION_GRAPH_FRAGMENT,
   NavSectionHeader,
   NavSection,
   StepSelector,
@@ -19,9 +21,7 @@ import {
   getStepExpectationRateForRun,
   getStepExpectationSuccessForRun,
   getStepMaterializationCountForRun,
-} from 'src/RunGraphUtils';
-import {TokenizingFieldValue} from 'src/TokenizingField';
-import {PartitionGraph} from 'src/partitions/PartitionGraph';
+} from 'src/partitions/PartitionGraphUtils';
 import {PartitionGraphSetPartitionFragment} from 'src/partitions/types/PartitionGraphSetPartitionFragment';
 import {RunsFilter} from 'src/runs/RunsFilter';
 
@@ -120,10 +120,15 @@ export const PARTITION_GRAPH_SET_PARTITION_FRAGMENT = gql`
   fragment PartitionGraphSetPartitionFragment on Partition {
     name
     runs {
-      ...RunGraphFragment
+      status
+      tags {
+        key
+        value
+      }
+      ...PartitionGraphFragment
     }
   }
-  ${RUN_GRAPH_FRAGMENT}
+  ${PARTITION_GRAPH_FRAGMENT}
 `;
 
 const NavContainer = styled.div`
