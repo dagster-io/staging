@@ -5,7 +5,8 @@ import warnings
 import six
 
 from dagster import check
-from dagster.core.code_pointer import CodePointer, rebase_file
+from dagster.core.code_pointer import rebase_file
+from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import (
     GrpcServerRepositoryLocationOrigin,
     InProcessRepositoryLocationOrigin,
@@ -64,7 +65,9 @@ def _repo_location_origins_from_config(workspace_config, yaml_path, python_user_
             "to abide by the new workspace file format."
         )
         return [
-            InProcessRepositoryLocationOrigin(CodePointer.from_legacy_repository_yaml(yaml_path))
+            InProcessRepositoryLocationOrigin(
+                ReconstructableRepository.from_legacy_repository_yaml(yaml_path)
+            )
         ]
 
     location_origins = []
