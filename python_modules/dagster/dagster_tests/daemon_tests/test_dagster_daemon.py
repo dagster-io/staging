@@ -1,21 +1,11 @@
 import datetime
 import logging
-import re
 
 import pendulum
-import pytest
 from dagster.core.test_utils import instance_for_test
 from dagster.daemon.controller import DagsterDaemonController
 from dagster.daemon.daemon import SchedulerDaemon
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
-
-
-def test_empty_instance():
-    with instance_for_test() as instance:
-        with pytest.raises(
-            Exception, match=re.escape("No daemons configured on the DagsterInstance")
-        ):
-            DagsterDaemonController(instance)
 
 
 def test_scheduler_instance():
@@ -28,8 +18,8 @@ def test_scheduler_instance():
 
         daemons = controller.daemons
 
-        assert len(daemons) == 1
-        assert isinstance(daemons[0], SchedulerDaemon)
+        assert len(daemons) == 2
+        assert any(isinstance(daemon, SchedulerDaemon) for daemon in daemons)
 
 
 def test_run_coordinator_instance():
@@ -45,8 +35,8 @@ def test_run_coordinator_instance():
 
         daemons = controller.daemons
 
-        assert len(daemons) == 1
-        assert isinstance(daemons[0], QueuedRunCoordinatorDaemon)
+        assert len(daemons) == 2
+        assert any(isinstance(daemon, QueuedRunCoordinatorDaemon) for daemon in daemons)
 
 
 def _scheduler_ran(caplog):
@@ -90,7 +80,7 @@ def test_different_intervals(caplog):
             (
                 "dagster-daemon",
                 logging.INFO,
-                "instance is configured with the following daemons: ['QueuedRunCoordinatorDaemon', 'SchedulerDaemon']",
+                "instance is configured with the following daemons: ['QueuedRunCoordinatorDaemon', 'SchedulerDaemon', 'SensorDaemon']",
             )
         ]
 
