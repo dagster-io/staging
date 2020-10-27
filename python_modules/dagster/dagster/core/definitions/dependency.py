@@ -13,18 +13,20 @@ from .input import InputDefinition
 from .output import OutputDefinition
 from .utils import DEFAULT_OUTPUT, struct_to_string, validate_tags
 
+InvocationData = namedtuple("InvocationData", "name alias tags hook_defs")
 
-class SolidInvocation(namedtuple("Solid", "name alias tags hook_defs")):
-    """Identifies an instance of a solid in a pipeline dependency structure.
+
+class NodeInvocation(object):
+    """Identifies an instance of a node definition in a pipeline dependency structure.
 
     Args:
-        name (str): Name of the solid of which this is an instance.
+        name (str): Name of the node definition of which this is an instance.
         alias (Optional[str]): Name specific to this instance of the solid. Necessary when there are
-            multiple instances of the same solid.
+            multiple instances of the same node definition.
         tags (Optional[Dict[str, Any]]): Optional tags values to extend or override those
-            set on the solid definition.
+            set on the node definition.
         hook_defs (Optional[Set[HookDefinition]]): A set of hook definitions applied to the
-            solid instance.
+            node instance.
 
     Examples:
 
@@ -55,12 +57,49 @@ class SolidInvocation(namedtuple("Solid", "name alias tags hook_defs")):
 
     """
 
-    def __new__(cls, name, alias=None, tags=None, hook_defs=None):
-        name = check.str_param(name, "name")
-        alias = check.opt_str_param(alias, "alias")
-        tags = frozentags(check.opt_dict_param(tags, "tags", value_type=str, key_type=str))
-        hook_defs = frozenset(check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition))
-        return super(cls, SolidInvocation).__new__(cls, name, alias, tags, hook_defs)
+    __slots__ = ["data"]
+
+    def __init__(self, name, alias=None, tags=None, hook_defs=None):
+        self.data = InvocationData(
+            name=check.str_param(name, "name"),
+            alias=check.opt_str_param(alias, "alias"),
+            tags=frozentags(check.opt_dict_param(tags, "tags", value_type=str, key_type=str)),
+            hook_defs=frozenset(
+                check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
+            ),
+        )
+
+    @property
+    def name(self):
+        return self.data.name
+
+    @property
+    def alias(self):
+        return self.data.alias
+
+    @property
+    def tags(self):
+        return self.data.tags
+
+    @property
+    def hook_defs(self):
+        return self.data.hook_defs
+
+    def __hash__(self):
+        return hash(self.data)
+
+    def __eq__(self, other):
+        return self.data == other.data
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class SolidInvocation(NodeInvocation):
+    def __init__(self, name, alias=None, tags=None, hook_defs=None):
+        # TODO add warning after 0.10.0?
+        # TODO delete at some point
+        super(SolidInvocation, self).__init__(name, alias, tags, hook_defs)
 
 
 class Solid(object):
