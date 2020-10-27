@@ -18,3 +18,4 @@ class HelmValues(BaseModel):
     ingress: subschema.Ingress
     imagePullSecrets: List[subschema.kubernetes.SecretRef]
     computeLogManager: subschema.ComputeLogManager
+    scheduler: subschema.Scheduler
