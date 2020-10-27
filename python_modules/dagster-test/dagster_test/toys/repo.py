@@ -12,20 +12,25 @@ from dagster_test.toys.sleepy import sleepy_pipeline
 from dagster_test.toys.unreliable import unreliable_pipeline
 
 from .schedules import get_toys_schedules
+from .sensors import get_toys_sensors
 
 
 @repository
 def toys_repository():
-    return [
-        composition,
-        error_monster,
-        hammer_pipeline,
-        fan_in_fan_out_pipeline,
-        log_spew,
-        longitudinal_pipeline,
-        many_events,
-        sleepy_pipeline,
-        retry_pipeline,
-        branch_pipeline,
-        unreliable_pipeline,
-    ] + get_toys_schedules()
+    return (
+        [
+            composition,
+            error_monster,
+            hammer_pipeline,
+            fan_in_fan_out_pipeline,
+            log_spew,
+            longitudinal_pipeline,
+            many_events,
+            sleepy_pipeline,
+            retry_pipeline,
+            branch_pipeline,
+            unreliable_pipeline,
+        ]
+        + get_toys_schedules()
+        + get_toys_sensors()
+    )
