@@ -446,6 +446,9 @@ SLACK_PROMPT = """
 
 def upload_logs(stop_event):
     """Upload logs to telemetry server every hour, or when log directory size is > 10MB"""
+    if os.getenv("BUILDKITE") is not None:
+        return
+
     try:
         last_run = datetime.datetime.now() - datetime.timedelta(minutes=120)
         dagster_log_dir = get_dir_from_dagster_home("logs")
