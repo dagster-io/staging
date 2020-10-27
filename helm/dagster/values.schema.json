@@ -115,9 +115,79 @@
                 "service"
             ],
             "additionalProperties": false
+        },
+        "scheduler": {
+            "type": "object",
+            "description": "Configuration for the scheduler, which triggers pipelines at user defined intervals.",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "K8sScheduler",
+                        "CronScheduler"
+                    ]
+                }
+            },
+            "required": [
+                "type"
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {
+                            "type": {
+                                "const": "K8sScheduler"
+                            }
+                        }
+                    },
+                    "then": {
+                        "properties": {
+                            "config": {
+                                "type": "object",
+                                "properties": {
+                                    "K8sScheduler": {
+                                        "type": "object",
+                                        "properties": {
+                                            "image": {
+                                                "$ref": "#/definitions/k8s/image"
+                                            },
+                                            "schedulerNamespace": {
+                                                "type": "string"
+                                            },
+                                            "loadInclusterConfig": {
+                                                "type": "boolean"
+                                            },
+                                            "kubeconfigFile": {
+                                                "type": "string"
+                                            },
+                                            "envSecrets": {
+                                                "type": "array",
+                                                "items": {
+                                                    "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.SecretEnvSource"
+                                                }
+                                            }
+                                        },
+                                        "required": [
+                                            "image"
+                                        ],
+                                        "additionalProperties": false
+                                    }
+                                },
+                                "required": [
+                                    "K8sScheduler"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "config"
+                        ]
+                    }
+                }
+            ]
         }
     },
     "required": [
-        "dagit"
+        "dagit",
+        "scheduler"
     ]
 }
