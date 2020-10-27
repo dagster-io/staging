@@ -1,8 +1,8 @@
 from enum import Enum
 
-from pydantic import BaseModel, Extra  # pylint: disable=E0611
+from pydantic import BaseModel  # pylint: disable=E0611
 
-from .utils import SupportedKubernetes, create_definition_ref
+from .utils import create_definition_ref
 
 
 class PullPolicy(str, Enum):
@@ -16,16 +16,14 @@ class Image(BaseModel):
     tag: str
     pullPolicy: PullPolicy
 
-    class Config:
-        extra = Extra.forbid
+
+class Kubernetes(BaseModel):
+    image: Image
 
 
 class Service(BaseModel):
     type: str
     port: int
-
-    class Config:
-        extra = Extra.forbid
 
 
 class NodeSelector(BaseModel):
@@ -73,12 +71,6 @@ class StartupProbe(BaseModel):
     class Config:
         schema_extra = {
             "$ref": create_definition_ref(
-                "io.k8s.api.core.v1.Container/properties/startupProbe",
-                version=SupportedKubernetes.V1_16,
+                "io.k8s.api.core.v1.Container/properties/startupProbe", version="1.16.0"
             )
         }
-
-
-class SecretEnvSource(BaseModel):
-    class Config:
-        schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.SecretEnvSource")}
