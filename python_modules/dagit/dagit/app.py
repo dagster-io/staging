@@ -223,9 +223,22 @@ def instantiate_app_with_views(context, app_path_prefix):
     return app
 
 
+def create_context(workspace, instance):
+    print("Loading repository...")  # pylint: disable=print-call
+    return DagsterGraphQLContext(instance=instance, workspace=workspace, version=__version__,)
+
+
 def create_app_from_workspace(workspace, instance, path_prefix=""):
     check.inst_param(workspace, "workspace", Workspace)
     check.inst_param(instance, "instance", DagsterInstance)
+    check.str_param(path_prefix, "path_prefix")
+
+    context = create_context(workspace, instance)
+    return create_app_from_context(context, path_prefix)
+
+
+def create_app_from_context(context, path_prefix=""):
+    check.inst_param(context, "context", DagsterGraphQLContext)
     check.str_param(path_prefix, "path_prefix")
 
     if path_prefix:
@@ -235,9 +248,5 @@ def create_app_from_workspace(workspace, instance, path_prefix=""):
             raise Exception('The path prefix should not include a trailing "/".')
 
     warn_if_compute_logs_disabled()
-
-    print("Loading repository...")  # pylint: disable=print-call
-
-    context = DagsterGraphQLContext(instance=instance, workspace=workspace, version=__version__)
 
     return instantiate_app_with_views(context, path_prefix)

@@ -1,2 +1,7 @@
 load_from:
-  - python_file: repo.py
+  - python_file:
+      relative_path: repo.py
+      location_name: a
+  - python_file:
+      relative_path: repo_two.py
+      location_name: b
