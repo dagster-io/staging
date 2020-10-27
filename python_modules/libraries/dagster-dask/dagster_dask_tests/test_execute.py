@@ -1,9 +1,11 @@
+import asyncio
 import time
 from threading import Thread
 
 import dagster_pandas as dagster_pd
 import pytest
 from dagster_dask import DataFrame, dask_executor
+from dask.distributed import Scheduler, Worker
 
 from dagster import (
     DagsterUnmetExecutorRequirementsError,
@@ -21,7 +23,7 @@ from dagster.core.definitions.executor import default_executors
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.events import DagsterEventType
 from dagster.core.instance import DagsterInstance
-from dagster.core.test_utils import nesting_composite_pipeline
+from dagster.core.test_utils import instance_for_test, nesting_composite_pipeline
 from dagster.utils import send_interrupt
 
 
@@ -32,7 +34,7 @@ def simple(_):
 
 @pipeline(mode_defs=[ModeDefinition(executor_defs=default_executors + [dask_executor])])
 def dask_engine_pipeline():
-    return simple()
+    simple()
 
 
 def test_execute_on_dask_local():
@@ -205,3 +207,27 @@ def test_dask_terminate():
 
     assert DagsterEventType.STEP_FAILURE in result_types
     assert DagsterEventType.PIPELINE_FAILURE in result_types
+
+
+def test_existing_scheduler():
+    def _execute(scheduler_address):
+        return execute_pipeline(
+            reconstructable(dask_engine_pipeline),
+            run_config={
+                "intermediate_storage": {"filesystem": {}},
+                "execution": {"dask": {"config": {"cluster": {"address": scheduler_address}}},},
+            },
+            instance=DagsterInstance.get(),
+        )
+
+    async def _run_test():
+        with instance_for_test() as instance:
+            async with Scheduler() as scheduler:
+                async with Worker(scheduler.address) as _:
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        None, _execute, scheduler.address
+                    )
+                    assert result.success
+                    assert result.result_for_solid("simple").output_value() == 1
+
+    asyncio.get_event_loop().run_until_complete(_run_test())
