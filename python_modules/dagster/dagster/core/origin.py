@@ -21,6 +21,10 @@ class RepositoryOrigin(six.with_metaclass(ABCMeta)):
         pass
 
     @abstractmethod
+    def get_job_origin(self, job_name):
+        pass
+
+    @abstractmethod
     def get_cli_args(self):
         pass
 
@@ -49,6 +53,10 @@ class RepositoryGrpcServerOrigin(
     def get_schedule_origin(self, schedule_name):
         check.str_param(schedule_name, "schedule_name")
         return ScheduleGrpcServerOrigin(schedule_name, self)
+
+    def get_job_origin(self, job_name):
+        check.str_param(job_name, "job_name")
+        return JobGrpcServerOrigin(job_name, self)
 
     def get_cli_args(self):
         if self.port:
@@ -87,6 +95,10 @@ class RepositoryPythonOrigin(
     def get_schedule_origin(self, schedule_name):
         check.str_param(schedule_name, "schedule_name")
         return SchedulePythonOrigin(schedule_name, self)
+
+    def get_job_origin(self, job_name):
+        check.str_param(job_name, "job_name")
+        return JobPythonOrigin(job_name, self)
 
     @property
     def loadable_target_origin(self):
@@ -197,6 +209,68 @@ class ScheduleGrpcServerOrigin(
         return super(ScheduleGrpcServerOrigin, cls).__new__(
             cls,
             check.str_param(schedule_name, "schedule_name"),
+            check.inst_param(repository_origin, "repository_origin", RepositoryGrpcServerOrigin),
+        )
+
+    def get_repo_origin(self):
+        return self.repository_origin
+
+    def get_repo_cli_args(self):
+        return self.repository_origin.get_cli_args()
+
+    @property
+    def executable_path(self):
+        return sys.executable
+
+
+class JobOrigin(six.with_metaclass(ABCMeta)):
+    def get_id(self):
+        return create_snapshot_id(self)
+
+    @abstractmethod
+    def get_repo_origin(self):
+        pass
+
+    @abstractmethod
+    def get_repo_cli_args(self):
+        pass
+
+    @abstractproperty
+    def executable_path(self):
+        pass
+
+
+@whitelist_for_serdes
+class JobPythonOrigin(namedtuple("_JobPythonOrigin", "job_name repository_origin"), JobOrigin):
+    def __new__(cls, job_name, repository_origin):
+        return super(JobPythonOrigin, cls).__new__(
+            cls,
+            check.str_param(job_name, "job_name"),
+            check.inst_param(repository_origin, "repository_origin", RepositoryPythonOrigin),
+        )
+
+    @property
+    def executable_path(self):
+        return self.repository_origin.executable_path
+
+    def get_repo_origin(self):
+        return self.repository_origin
+
+    def get_repo_cli_args(self):
+        return self.repository_origin.get_cli_args()
+
+    def get_repo_pointer(self):
+        return self.repository_origin.code_pointer
+
+
+@whitelist_for_serdes
+class JobGrpcServerOrigin(
+    namedtuple("_JobGrpcServerOrigin", "job_name repository_origin"), JobOrigin
+):
+    def __new__(cls, job_name, repository_origin):
+        return super(JobGrpcServerOrigin, cls).__new__(
+            cls,
+            check.str_param(job_name, "job_name"),
             check.inst_param(repository_origin, "repository_origin", RepositoryGrpcServerOrigin),
         )
 
