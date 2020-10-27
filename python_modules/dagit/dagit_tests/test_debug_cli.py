@@ -4,13 +4,13 @@ from click.testing import CliRunner
 from dagit.debug import dagit_debug_command
 from gevent import pywsgi
 
-from dagster import execute_pipeline, lambda_solid, pipeline
+from dagster import execute_pipeline, pipeline, solid
 from dagster.cli.debug import export_command
 from dagster.core.test_utils import instance_for_test
 
 
-@lambda_solid
-def emit_one():
+@solid
+def emit_one(_):
     return 1
 
 

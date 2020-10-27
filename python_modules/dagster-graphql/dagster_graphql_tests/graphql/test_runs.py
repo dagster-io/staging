@@ -9,7 +9,7 @@ from dagster_graphql_tests.graphql.graphql_context_test_suite import (
     ExecutingGraphQLContextTestMatrix,
 )
 
-from dagster import execute_pipeline, lambda_solid, pipeline, repository, seven
+from dagster import execute_pipeline, pipeline, repository, seven, solid
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.api import execute_run
 from dagster.core.instance import DagsterInstance
@@ -257,12 +257,12 @@ class TestGetRuns(ExecutingGraphQLContextTestMatrix):
 
 
 def get_repo_at_time_1():
-    @lambda_solid
-    def solid_A():
+    @solid
+    def solid_A(_):
         pass
 
-    @lambda_solid
-    def solid_B():
+    @solid
+    def solid_B(_):
         pass
 
     @pipeline
@@ -282,12 +282,12 @@ def get_repo_at_time_1():
 
 
 def get_repo_at_time_2():
-    @lambda_solid
-    def solid_A():
+    @solid
+    def solid_A(_):
         pass
 
-    @lambda_solid
-    def solid_B_prime():
+    @solid
+    def solid_B_prime(_):
         pass
 
     @pipeline

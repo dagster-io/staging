@@ -8,8 +8,8 @@ from dagster import (
     PipelineDefinition,
     SolidDefinition,
     daily_schedule,
-    lambda_solid,
     repository,
+    solid,
 )
 from dagster.core.definitions.decorators import job
 
@@ -74,12 +74,12 @@ def test_repo_lazy_definition():
 
 
 def test_dupe_solid_repo_definition():
-    @lambda_solid(name="same")
-    def noop():
+    @solid(name="same")
+    def noop(_):
         pass
 
-    @lambda_solid(name="same")
-    def noop2():
+    @solid(name="same")
+    def noop2(_):
         pass
 
     @repository

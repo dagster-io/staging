@@ -9,8 +9,8 @@ from dagster import (
     Int,
     OutputDefinition,
     PipelineDefinition,
-    lambda_solid,
     reconstructable,
+    solid,
 )
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.plan.objects import StepOutputHandle
@@ -19,16 +19,16 @@ from dagster.core.storage.intermediate_storage import build_fs_intermediate_stor
 
 
 def define_inty_pipeline():
-    @lambda_solid
-    def return_one():
+    @solid
+    def return_one(_):
         return 1
 
-    @lambda_solid(input_defs=[InputDefinition("num", Int)], output_def=OutputDefinition(Int))
-    def add_one(num):
+    @solid(input_defs=[InputDefinition("num", Int)], output_defs=[OutputDefinition(Int)])
+    def add_one(_, num):
         return num + 1
 
-    @lambda_solid
-    def user_throw_exception():
+    @solid
+    def user_throw_exception(_):
         raise Exception("whoops")
 
     pipeline = PipelineDefinition(
