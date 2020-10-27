@@ -6,7 +6,7 @@ from dagster import check
 
 from ..external import get_external_pipeline_or_raise
 from ..utils import ExecutionMetadata, ExecutionParams, capture_dauphin_error
-from .run_lifecycle import create_valid_pipeline_run
+from .run_lifecycle import enqueue_pipeline_run
 
 
 @capture_dauphin_error
@@ -34,11 +34,7 @@ def do_launch(graphene_info, execution_params, is_reexecuted=False):
 
     external_pipeline = get_external_pipeline_or_raise(graphene_info, execution_params.selector)
 
-    pipeline_run = create_valid_pipeline_run(graphene_info, external_pipeline, execution_params)
-
-    return graphene_info.context.instance.launch_run(
-        pipeline_run.run_id, external_pipeline=external_pipeline
-    )
+    return enqueue_pipeline_run(graphene_info, external_pipeline, execution_params)
 
 
 def _launch_pipeline_execution(graphene_info, execution_params, is_reexecuted=False):
