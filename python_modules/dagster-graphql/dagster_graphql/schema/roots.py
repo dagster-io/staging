@@ -468,7 +468,12 @@ class DauphinTerminatePipelineExecutionMutation(dauphin.Mutation):
 class DauphinReloadRepositoryLocationMutationResult(dauphin.Union):
     class Meta(object):
         name = "ReloadRepositoryLocationMutationResult"
-        types = ("RepositoryLocation", "ReloadNotSupported", "RepositoryLocationNotFound")
+        types = (
+            "RepositoryLocation",
+            "ReloadNotSupported",
+            "RepositoryLocationNotFound",
+            "PythonError",
+        )
 
 
 class DauphinReloadRepositoryLocationMutation(dauphin.Mutation):
@@ -489,9 +494,16 @@ class DauphinReloadRepositoryLocationMutation(dauphin.Mutation):
         if not graphene_info.context.get_repository_location(location_name).is_reload_supported:
             return graphene_info.schema.type_named("ReloadNotSupported")(location_name)
 
-        return graphene_info.schema.type_named("RepositoryLocation")(
-            graphene_info.context.reload_repository_location(location_name)
-        )
+        graphene_info.context.reload_repository_location(location_name)
+
+        if graphene_info.context.has_repository_location(location_name):
+            return graphene_info.schema.type_named("RepositoryLocation")(
+                graphene_info.context.get_repository_location(location_name)
+            )
+        else:
+            return graphene_info.schema.type_named("PythonError")(
+                graphene_info.context.get_repository_location_error(location_name)
+            )
 
 
 class DauphinExecutionTag(dauphin.InputObjectType):
