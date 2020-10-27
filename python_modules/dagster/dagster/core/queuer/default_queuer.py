@@ -6,13 +6,13 @@ from dagster.utils.backcompat import experimental
 from .base import RunQueuer
 
 
-@experimental
 class DefaultRunQueuer(RunQueuer, ConfigurableClass):
     """
     Sends runs to the dequeuer process via the run storage. Requires the external process to be
     alive for runs to be launched.
     """
 
+    @experimental
     def __init__(self, inst_data=None):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
