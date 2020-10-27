@@ -2,7 +2,7 @@ from typing import Optional
 
 from pydantic import BaseModel  # pylint: disable=E0611
 
-from .definitions import (
+from .kubernetes import (
     Affinity,
     Image,
     LivenessProbe,
@@ -14,6 +14,7 @@ from .definitions import (
     StartupProbe,
     Tolerations,
 )
+from .scheduler import Scheduler
 
 
 class Dagit(BaseModel):
@@ -36,3 +37,4 @@ class HelmValues(BaseModel):
     """
 
     dagit: Dagit
+    scheduler: Scheduler

@@ -74,3 +74,8 @@ class StartupProbe(BaseModel):
                 "io.k8s.api.core.v1.Container/properties/startupProbe", version="1.16.0"
             )
         }
+
+
+class SecretEnvSource(BaseModel):
+    class Config:
+        schema_extra = {"$ref": create_definition_ref("io.k8s.api.core.v1.SecretEnvSource")}
