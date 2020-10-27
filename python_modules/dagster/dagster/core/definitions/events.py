@@ -636,19 +636,20 @@ class AssetStoreOperationType(Enum):
 
 @whitelist_for_serdes
 class AssetStoreOperation(
-    namedtuple("_AssetStoreOperation", "op step_output_handle asset_store_handle obj",)
+    namedtuple("_AssetStoreOperation", "op address step_output_handle asset_store_handle obj",)
 ):
     """
-    Event related AssetStore
+    Event related addressableAssets
     """
 
-    def __new__(cls, op, step_output_handle, asset_store_handle, obj=None):
+    def __new__(cls, op, address, step_output_handle, asset_store_handle, obj=None):
         from dagster.core.execution.plan.objects import StepOutputHandle
-        from dagster.core.storage.asset_store import AssetStoreHandle
+        from dagster.core.storage.asset_store import AssetAddress, AssetStoreHandle
 
         return super(AssetStoreOperation, cls).__new__(
             cls,
             op=op,
+            address=check.opt_inst_param(address, "address", AssetAddress),
             step_output_handle=check.inst_param(
                 step_output_handle, "step_output_handle", StepOutputHandle
             ),
