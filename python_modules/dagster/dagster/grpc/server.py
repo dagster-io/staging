@@ -18,6 +18,7 @@ from dagster.core.definitions.reconstructable import (
     repository_def_from_target_def,
 )
 from dagster.core.errors import PartitionExecutionError, user_code_error_boundary
+from dagster.core.host_representation import ExternalPipelineOrigin, ExternalRepositoryOrigin
 from dagster.core.host_representation.external_data import (
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
@@ -28,7 +29,6 @@ from dagster.core.host_representation.external_data import (
     external_repository_data_from_def,
 )
 from dagster.core.instance import DagsterInstance
-from dagster.core.origin import PipelineOrigin, RepositoryGrpcServerOrigin, RepositoryOrigin
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.serdes import (
     deserialize_json_to_dagster_namedtuple,
@@ -44,7 +44,6 @@ from dagster.serdes.ipc import (
 from dagster.seven import get_system_temp_directory, multiprocessing
 from dagster.utils import find_free_port, safe_tempfile_path_unmanaged
 from dagster.utils.error import serializable_error_info_from_exc_info
-from dagster.utils.hosted_user_process import recon_repository_from_origin
 
 from .__generated__ import api_pb2
 from .__generated__.api_pb2_grpc import DagsterApiServicer, add_DagsterApiServicer_to_server
@@ -281,23 +280,25 @@ class DagsterApiServer(DagsterApiServicer):
                 if len(self._executions) == 0:
                     self._server_termination_event.set()
 
-    def _recon_repository_from_origin(self, repository_origin):
+    def _recon_repository_from_origin(self, external_repository_origin):
         check.inst_param(
-            repository_origin, "repository_origin", RepositoryOrigin,
+            external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
         )
 
-        if isinstance(repository_origin, RepositoryGrpcServerOrigin):
-            return ReconstructableRepository(
-                self._repository_symbols_and_code_pointers.code_pointers_by_repo_name[
-                    repository_origin.repository_name
-                ]
-            )
-        return recon_repository_from_origin(repository_origin)
+        return ReconstructableRepository(
+            self._repository_symbols_and_code_pointers.code_pointers_by_repo_name[
+                external_repository_origin.repository_name
+            ]
+        )
 
-    def _recon_pipeline_from_origin(self, pipeline_origin):
-        check.inst_param(pipeline_origin, "pipeline_origin", PipelineOrigin)
-        recon_repo = self._recon_repository_from_origin(pipeline_origin.repository_origin)
-        return recon_repo.get_reconstructable_pipeline(pipeline_origin.pipeline_name)
+    def _recon_pipeline_from_origin(self, external_pipeline_origin):
+        check.inst_param(
+            external_pipeline_origin, "external_pipeline_origin", ExternalPipelineOrigin
+        )
+        recon_repo = self._recon_repository_from_origin(
+            external_pipeline_origin.external_repository_origin
+        )
+        return recon_repo.get_reconstructable_pipeline(external_pipeline_origin.pipeline_name)
 
     def Ping(self, request, _context):
         echo = request.echo
@@ -542,7 +543,7 @@ class DagsterApiServer(DagsterApiServicer):
             request.serialized_repository_python_origin
         )
 
-        check.inst_param(repository_origin, "repository_origin", RepositoryOrigin)
+        check.inst_param(repository_origin, "repository_origin", ExternalRepositoryOrigin)
         recon_repo = self._recon_repository_from_origin(repository_origin)
         return serialize_dagster_namedtuple(
             external_repository_data_from_def(recon_repo.get_definition())
@@ -1098,33 +1099,7 @@ def open_server_process(
     )
 
     if loadable_target_origin:
-        subprocess_args += (
-            (
-                (
-                    ["-f", loadable_target_origin.python_file,]
-                    + (
-                        ["-d", loadable_target_origin.working_directory]
-                        if loadable_target_origin.working_directory
-                        else ["--empty-working-directory"]
-                    )
-                )
-                if loadable_target_origin.python_file
-                else []
-            )
-            + (
-                ["-m", loadable_target_origin.module_name]
-                if loadable_target_origin.module_name
-                else []
-            )
-            + (["-a", loadable_target_origin.attribute] if loadable_target_origin.attribute else [])
-            + (
-                [
-                    "--use-python-package"
-                    if loadable_target_origin.use_python_package
-                    else "--no-use-python-package"
-                ]
-            )
-        )
+        subprocess_args += loadable_target_origin.get_cli_args()
 
     server_process = open_ipc_subprocess(subprocess_args)
 

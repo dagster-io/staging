@@ -12,10 +12,11 @@ from dagster.core.code_pointer import (
 )
 from dagster.core.host_representation import (
     ExternalRepository,
+    GrpcServerRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
+    ManagedGrpcPythonEnvRepositoryLocationOrigin,
     RepositoryLocation,
 )
-from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryPythonOrigin
 
 
 class DauphinRepository(dauphin.ObjectType):
@@ -43,7 +44,7 @@ class DauphinRepository(dauphin.ObjectType):
 
     def resolve_origin(self, graphene_info):
         origin = self._repository.get_origin()
-        if isinstance(origin, RepositoryGrpcServerOrigin):
+        if isinstance(origin.repository_location_origin, GrpcServerRepositoryLocationOrigin):
             return graphene_info.schema.type_named("GrpcRepositoryOrigin")(origin)
         else:
             return graphene_info.schema.type_named("PythonRepositoryOrigin")(origin)
@@ -81,13 +82,19 @@ class DauphinPythonRepositoryOrigin(dauphin.ObjectType):
     code_pointer = dauphin.NonNull("CodePointer")
 
     def __init__(self, origin):
-        self._origin = check.inst_param(origin, "origin", RepositoryPythonOrigin)
+        self._origin = check.inst_param(
+            origin.repository_location_origin,
+            "origin",
+            ManagedGrpcPythonEnvRepositoryLocationOrigin,
+        )
 
     def resolve_executable_path(self, _graphene_info):
-        return self._origin.executable_path
+        return self._origin.loadable_target_origin.executable_path
 
-    def resolve_code_pointer(self, graphene_info):
-        return graphene_info.schema.type_named("CodePointer")(self._origin.code_pointer)
+    def resolve_code_pointer(self, _graphene_info):
+        # This needs to describe the LoadableTargetOrigin instead
+        #        return graphene_info.schema.type_named("CodePointer")(self._origin.code_pointer)
+        return None
 
 
 class DauphinGrpcRepositoryOrigin(dauphin.ObjectType):
@@ -97,7 +104,9 @@ class DauphinGrpcRepositoryOrigin(dauphin.ObjectType):
     grpc_url = dauphin.NonNull(dauphin.String)
 
     def __init__(self, origin):
-        self._origin = check.inst_param(origin, "origin", RepositoryGrpcServerOrigin)
+        self._origin = check.inst_param(
+            origin.repository_location_origin, "origin", GrpcServerRepositoryLocationOrigin
+        )
 
     def resolve_grpc_url(self, _graphene_info):
         return "grpc:{host}:{socket_or_port}".format(
