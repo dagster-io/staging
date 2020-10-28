@@ -63,11 +63,11 @@ class ReconstructableRepository(namedtuple("_ReconstructableRepository", "pointe
         absolute_file_path = os.path.abspath(os.path.expanduser(file_path))
         return cls(pointer=CodePointer.from_legacy_repository_yaml(absolute_file_path))
 
-    def get_origin(self):
+    def get_python_origin(self):
         return RepositoryPythonOrigin(executable_path=sys.executable, code_pointer=self.pointer)
 
-    def get_origin_id(self):
-        return self.get_origin().get_id()
+    def get_python_origin_id(self):
+        return self.get_python_origin().get_id()
 
 
 @whitelist_for_serdes
@@ -181,11 +181,11 @@ class ReconstructablePipeline(
         )
         return inst
 
-    def get_origin(self):
-        return PipelinePythonOrigin(self.pipeline_name, self.repository.get_origin())
+    def get_python_origin(self):
+        return PipelinePythonOrigin(self.pipeline_name, self.repository.get_python_origin())
 
-    def get_origin_id(self):
-        return self.get_origin().get_id()
+    def get_python_origin_id(self):
+        return self.get_python_origin().get_id()
 
 
 @whitelist_for_serdes
@@ -199,11 +199,11 @@ class ReconstructableSchedule(namedtuple("_ReconstructableSchedule", "repository
             schedule_name=check.str_param(schedule_name, "schedule_name"),
         )
 
-    def get_origin(self):
-        return SchedulePythonOrigin(self.schedule_name, self.repository.get_origin())
+    def get_python_origin(self):
+        return SchedulePythonOrigin(self.schedule_name, self.repository.get_python_origin())
 
-    def get_origin_id(self):
-        return self.get_origin().get_id()
+    def get_python_origin_id(self):
+        return self.get_python_origin().get_id()
 
     @lru_cache(maxsize=1)
     def get_definition(self):

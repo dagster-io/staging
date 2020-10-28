@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from dagster import check
+from dagster.core.origin import PipelinePythonOrigin
 from dagster.core.snap import ExecutionPlanSnapshot
 from dagster.core.utils import toposort
 
@@ -99,15 +100,18 @@ class ExternalRepository:
     def handle(self):
         return self._handle
 
-    def get_origin(self):
-        return self._handle.get_origin()
+    def get_external_origin(self):
+        return self.handle.get_external_origin()
 
-    def get_origin_id(self):
+    def get_python_origin(self):
+        return self.handle.repository_location_handle.get_repository_python_origin(self.name,)
+
+    def get_external_origin_id(self):
         """
         A means of identifying the repository this ExternalRepository represents based on
         where it came from.
         """
-        return self.get_origin().get_id()
+        return self.get_external_origin().get_id()
 
 
 class ExternalPipeline(RepresentedPipeline):
@@ -224,10 +228,21 @@ class ExternalPipeline(RepresentedPipeline):
         return self._handle
 
     def get_origin(self):
-        return self._handle.get_origin()
+        # Returns a PipelinePythonOrigin - maintained for backwards compatibility since this
+        # is called in several run launchers to start execution
+        return self.get_python_origin()
 
-    def get_origin_id(self):
-        return self.get_origin().get_id()
+    def get_python_origin(self):
+        repository_python_origin = self.repository_handle.repository_location_handle.get_repository_python_origin(
+            self.repository_handle.repository_name,
+        )
+        return PipelinePythonOrigin(self.name, repository_python_origin)
+
+    def get_external_origin(self):
+        return self.handle.get_external_origin()
+
+    def get_external_origin_id(self):
+        return self.get_external_origin().get_id()
 
     @property
     def pipeline_snapshot(self):
@@ -370,11 +385,11 @@ class ExternalSchedule:
     def handle(self):
         return self._handle
 
-    def get_origin(self):
-        return self._handle.get_origin()
+    def get_external_origin(self):
+        return self.handle.get_external_origin()
 
-    def get_origin_id(self):
-        return self.get_origin().get_id()
+    def get_external_origin_id(self):
+        return self.get_external_origin().get_id()
 
 
 class ExternalPartitionSet:
