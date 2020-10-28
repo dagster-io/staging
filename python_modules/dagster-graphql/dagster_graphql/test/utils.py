@@ -9,7 +9,7 @@ from dagster.cli.workspace import Workspace
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import (
     InProcessRepositoryLocationOrigin,
-    PythonEnvRepositoryLocationOrigin,
+    ManagedGrpcPythonEnvRepositoryLocationOrigin,
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -71,7 +71,7 @@ def define_out_of_process_context(python_file, fn_name, instance):
     return DagsterGraphQLContext(
         workspace=Workspace(
             [
-                PythonEnvRepositoryLocationOrigin(
+                ManagedGrpcPythonEnvRepositoryLocationOrigin(
                     loadable_target_origin=LoadableTargetOrigin(
                         executable_path=sys.executable, python_file=python_file, attribute=fn_name,
                     ),
