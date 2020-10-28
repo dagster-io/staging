@@ -45,7 +45,7 @@ def test_execute_run_with_structured_logs():
 
             input_json = serialize_dagster_namedtuple(
                 ExecuteRunArgs(
-                    pipeline_origin=pipeline_handle.get_origin(),
+                    pipeline_origin=pipeline_handle.get_python_origin(),
                     pipeline_run_id=run.run_id,
                     instance_ref=instance.get_ref(),
                 )
@@ -93,7 +93,7 @@ def test_execute_step_with_structured_logs():
 
             input_json = serialize_dagster_namedtuple(
                 ExecuteStepArgs(
-                    pipeline_origin=pipeline_handle.get_origin(),
+                    pipeline_origin=pipeline_handle.get_python_origin(),
                     pipeline_run_id=run.run_id,
                     instance_ref=instance.get_ref(),
                 )
