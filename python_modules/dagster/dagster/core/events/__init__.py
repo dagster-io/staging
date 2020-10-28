@@ -19,7 +19,7 @@ from dagster.core.execution.context.system import (
     SystemExecutionContext,
     SystemStepExecutionContext,
 )
-from dagster.core.execution.plan.objects import StepOutputData
+from dagster.core.execution.plan.objects import StepOutputData, StepOutputHandle
 from dagster.core.log_manager import DagsterLogManager
 from dagster.serdes import register_serdes_tuple_fallbacks, whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
@@ -172,7 +172,7 @@ class DagsterEvent(
     namedtuple(
         "_DagsterEvent",
         "event_type_value pipeline_name step_key solid_handle step_kind_value "
-        "logging_tags event_specific_data message pid",
+        "logging_tags event_specific_data message pid mappable_key",
     )
 ):
     """Events yielded by solid and pipeline execution.
@@ -189,12 +189,19 @@ class DagsterEvent(
         event_specific_data (Any): Type must correspond to event_type_value.
         message (str)
         pid (int)
+        mappable_key (str)
     """
 
     @staticmethod
-    def from_step(event_type, step_context, event_specific_data=None, message=None):
+    def from_step(
+        event_type, step_context, event_specific_data=None, message=None, step_output_handle=None
+    ):
 
         check.inst_param(step_context, "step_context", SystemStepExecutionContext)
+        check.opt_inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+
+        # OBJECT_STORE_OPERATION needs the mappable key for re-execution event log parsing
+        mappable_key = step_output_handle.mappable_key if step_output_handle else None
 
         event = DagsterEvent(
             check.inst_param(event_type, "event_type", DagsterEventType).value,
@@ -206,6 +213,7 @@ class DagsterEvent(
             _validate_event_specific_data(event_type, event_specific_data),
             check.opt_str_param(message, "message"),
             pid=os.getpid(),
+            mappable_key=mappable_key,
         )
 
         log_step_event(step_context, event)
@@ -263,6 +271,7 @@ class DagsterEvent(
         event_specific_data=None,
         message=None,
         pid=None,
+        mappable_key=None,
     ):
         event_type_value, event_specific_data = _handle_back_compat(
             event_type_value, event_specific_data
@@ -279,6 +288,7 @@ class DagsterEvent(
             _validate_event_specific_data(DagsterEventType(event_type_value), event_specific_data),
             check.opt_str_param(message, "message"),
             check.opt_int_param(pid, "pid"),
+            check.opt_str_param(mappable_key, "mappable_key"),
         )
 
     @property
@@ -721,12 +731,15 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def object_store_operation(step_context, object_store_operation_result):
+    def object_store_operation(
+        step_context, object_store_operation_result, step_output_handle=None
+    ):
         from dagster.core.definitions.events import ObjectStoreOperation
 
         check.inst_param(
             object_store_operation_result, "object_store_operation_result", ObjectStoreOperation
         )
+        check.opt_inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
 
         object_store_name = (
             "{object_store_name} ".format(
@@ -785,8 +798,9 @@ class DagsterEvent(
             message = ""
 
         return DagsterEvent.from_step(
-            DagsterEventType.OBJECT_STORE_OPERATION,
-            step_context,
+            event_type=DagsterEventType.OBJECT_STORE_OPERATION,
+            step_context=step_context,
+            step_output_handle=step_output_handle,
             event_specific_data=ObjectStoreOperationResultData(
                 op=object_store_operation_result.op,
                 value_name=value_name,
