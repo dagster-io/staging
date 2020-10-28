@@ -9,8 +9,11 @@ import pytest
 from dagster import daily_schedule, pipeline, repository, solid
 from dagster.api.launch_scheduled_execution import sync_launch_scheduled_execution
 from dagster.core.definitions.reconstructable import ReconstructableRepository
+from dagster.core.host_representation import (
+    ExternalRepositoryOrigin,
+    GrpcServerRepositoryLocationOrigin,
+)
 from dagster.core.instance import DagsterInstance
-from dagster.core.origin import RepositoryGrpcServerOrigin
 from dagster.core.scheduler import (
     ScheduleTickStatus,
     ScheduledExecutionFailed,
@@ -110,12 +113,13 @@ def grpc_schedule_origin(schedule_name):
     )
     server_process = GrpcServerProcess(loadable_target_origin=loadable_target_origin)
     with server_process.create_ephemeral_client() as api_client:
-        repo_origin = RepositoryGrpcServerOrigin(
-            host=api_client.host,
-            port=api_client.port,
-            socket=api_client.socket,
+        repo_origin = ExternalRepositoryOrigin(
+            GrpcServerRepositoryLocationOrigin(
+                host=api_client.host, port=api_client.port, socket=api_client.socket,
+            ),
             repository_name="the_repo",
         )
+
         yield repo_origin.get_schedule_origin(schedule_name)
     server_process.wait()
 
@@ -260,9 +264,13 @@ def test_bad_load_grpc():
 
 def test_grpc_server_down():
     with _default_instance() as instance:
-        down_grpc_repo_origin = RepositoryGrpcServerOrigin(
-            host="localhost", port=find_free_port(), socket=None, repository_name="down_repo"
+        down_grpc_repo_origin = ExternalRepositoryOrigin(
+            GrpcServerRepositoryLocationOrigin(
+                host="localhost", port=find_free_port(), socket=None,
+            ),
+            repository_name="down_repo",
         )
+
         down_grpc_schedule_origin = down_grpc_repo_origin.get_schedule_origin("down_schedule")
 
         instance = DagsterInstance.get()

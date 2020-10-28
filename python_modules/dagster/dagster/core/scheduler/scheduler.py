@@ -8,9 +8,8 @@ import six
 
 from dagster import check
 from dagster.core.errors import DagsterError
-from dagster.core.host_representation import ExternalSchedule
+from dagster.core.host_representation import ExternalSchedule, ExternalScheduleOrigin
 from dagster.core.instance import DagsterInstance
-from dagster.core.origin import ScheduleOrigin
 from dagster.serdes import ConfigurableClass, whitelist_for_serdes
 from dagster.seven import get_current_datetime_in_utc, get_timestamp_from_utc_datetime
 from dagster.utils import mkdir_p
@@ -126,7 +125,7 @@ class ScheduleState(
         return super(ScheduleState, cls).__new__(
             cls,
             # Using the term "origin" to leave flexibility in handling future types
-            check.inst_param(origin, "origin", ScheduleOrigin),
+            check.inst_param(origin, "origin", ExternalScheduleOrigin),
             check.inst_param(status, "status", ScheduleStatus),
             check.str_param(cron_schedule, "cron_schedule"),
             # Time in UTC at which the user started running the schedule (distinct from
@@ -140,9 +139,9 @@ class ScheduleState(
         return self.origin.schedule_name
 
     @property
-    def pipeline_origin(self):
+    def schedule_origin(self):
         # Set up for future proofing
-        check.invariant(isinstance(self.origin, ScheduleOrigin))
+        check.invariant(isinstance(self.origin, ExternalScheduleOrigin))
         return self.origin
 
     @property
@@ -151,7 +150,7 @@ class ScheduleState(
 
     @property
     def repository_origin_id(self):
-        return self.origin.repository_origin.get_id()
+        return self.origin.external_repository_origin.get_id()
 
     def with_status(self, status, start_time_utc=None):
         check.inst_param(status, "status", ScheduleStatus)
