@@ -106,7 +106,7 @@ class K8sScheduler(Scheduler, ConfigurableClass):
     def _job_template(self, external_schedule):
         check.inst_param(external_schedule, "external_schedule", ExternalSchedule)
 
-        local_target = external_schedule.get_origin()
+        local_target = external_schedule.get_external_origin()
 
         job_config = self.job_config
 

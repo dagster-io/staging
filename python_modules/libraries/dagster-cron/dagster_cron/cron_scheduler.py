@@ -2,6 +2,7 @@ import io
 import os
 import shutil
 import stat
+import sys
 
 import six
 from crontab import CronTab
@@ -197,7 +198,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
         schedule_log_file_name = "{}_{}.result".format("${RUN_DATE}", schedule_origin_id)
         schedule_log_file_path = os.path.join(logs_directory, schedule_log_file_name)
 
-        local_target = external_schedule.get_origin()
+        local_target = external_schedule.get_external_origin()
 
         # Environment information needed for execution
         dagster_home = os.getenv("DAGSTER_HOME")
@@ -212,7 +213,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
 
             {python_exe} -m dagster api launch_scheduled_execution --schedule_name {schedule_name} {repo_cli_args} "{result_file}"
         """.format(
-            python_exe=local_target.executable_path,
+            python_exe=sys.executable,
             schedule_name=external_schedule.name,
             repo_cli_args=local_target.get_repo_cli_args(),
             result_file=schedule_log_file_path,

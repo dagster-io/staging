@@ -89,7 +89,7 @@ def get_schedule_states_or_error(
 
     location = graphene_info.context.get_repository_location(repository_selector.location_name)
     repository = location.get_repository(repository_selector.repository_name)
-    repository_origin_id = repository.get_origin().get_id()
+    repository_origin_id = repository.get_external_origin().get_id()
     instance = graphene_info.context.instance
 
     results = [
