@@ -100,7 +100,7 @@ def parse_clause(clause):
             return len(part)
         return None
 
-    token_matching = re.compile(r"^(\*?\+*)?([.\w\d_-]+)(\+*\*?)?$").search(clause.strip())
+    token_matching = re.compile(r"^(\*?\+*)?([.\w\d_\[?\]-]+)(\+*\*?)?$").search(clause.strip())
     # return None if query is invalid
     parts = token_matching.groups() if token_matching is not None else []
     if len(parts) != 3:
@@ -125,6 +125,8 @@ def clause_to_subset(traverser, graph, clause):
         subset_list (List[str]): a list of selected and qualified solid names, empty if input is
             invalid.
     """
+    from dagster.core.execution.plan.objects import deconstruct_step_key
+
     # parse cluase
     if not is_str(clause):
         return []
@@ -133,7 +135,9 @@ def clause_to_subset(traverser, graph, clause):
         return []
     up_depth, item_name, down_depth = parts
     # item_name invalid
-    if item_name not in graph["upstream"]:
+    # need to do step_key resolution to find the "unresolved" key for mappable steps
+    _, _, unresolved_key = deconstruct_step_key(item_name, None)
+    if unresolved_key not in graph["upstream"]:
         return []
 
     subset_list = []
