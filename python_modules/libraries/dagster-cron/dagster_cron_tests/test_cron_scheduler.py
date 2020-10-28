@@ -11,7 +11,7 @@ from freezegun import freeze_time
 from dagster import ScheduleDefinition
 from dagster.core.definitions import lambda_solid, pipeline, repository
 from dagster.core.host_representation import (
-    PythonEnvRepositoryLocationOrigin,
+    ManagedGrpcPythonEnvRepositoryLocationOrigin,
     RepositoryLocation,
     RepositoryLocationHandle,
 )
@@ -123,7 +123,7 @@ def test_repository():
 def get_test_external_repo():
     return RepositoryLocation.from_handle(
         RepositoryLocationHandle.create_from_repository_location_origin(
-            PythonEnvRepositoryLocationOrigin(
+            ManagedGrpcPythonEnvRepositoryLocationOrigin(
                 loadable_target_origin=LoadableTargetOrigin(
                     executable_path=sys.executable,
                     python_file=__file__,
