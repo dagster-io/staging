@@ -6,15 +6,11 @@ import {RepositoryOriginFragment} from 'src/types/RepositoryOriginFragment';
 
 export const RepositoryInformationFragment = gql`
   fragment RepositoryOriginFragment on RepositoryOrigin {
-    ... on PythonRepositoryOrigin {
-      executablePath
-      repositoryMetadata {
-        key
-        value
-      }
-    }
-    ... on GrpcRepositoryOrigin {
-      grpcUrl
+    repositoryLocationName
+    repositoryName
+    repositoryLocationMetadata {
+      key
+      value
     }
   }
   fragment RepositoryInfoFragment on Repository {
@@ -32,34 +28,22 @@ export const RepositoryInformationFragment = gql`
 
 export const RepositoryOriginInformation: React.FunctionComponent<{
   origin: RepositoryOriginFragment;
-  dagitExecutablePath?: string;
-}> = ({origin, dagitExecutablePath}) => {
-  if (origin.__typename === 'PythonRepositoryOrigin') {
-    return (
-      <>
-        {origin.repositoryMetadata.map((metadata, idx) => (
-          <div key={idx}>
-            <span style={{marginRight: 5}}>{metadata.key}:</span>
-            <span style={{opacity: 0.5}}>{metadata.value}</span>
-          </div>
-        ))}
-        {dagitExecutablePath && dagitExecutablePath === origin.executablePath ? null : (
-          <div>
-            <span style={{marginRight: 5}}>executable:</span>
-            <span style={{opacity: 0.5}}>{origin.executablePath}</span>
-          </div>
-        )}
-      </>
-    );
-  } else {
-    return <div>{origin.grpcUrl}</div>;
-  }
+}> = ({origin}) => {
+  return (
+    <>
+      {origin.repositoryLocationMetadata.map((metadata, idx) => (
+        <div key={idx}>
+          <span style={{marginRight: 5}}>{metadata.key}:</span>
+          <span style={{opacity: 0.5}}>{metadata.value}</span>
+        </div>
+      ))}
+    </>
+  );
 };
 
 export const RepositoryInformation: React.FunctionComponent<{
   repository: RepositoryInfoFragment;
-  dagitExecutablePath?: string;
-}> = ({repository, dagitExecutablePath}) => {
+}> = ({repository}) => {
   return (
     <div>
       <div>
@@ -68,10 +52,7 @@ export const RepositoryInformation: React.FunctionComponent<{
         <span style={{opacity: 0.5}}>{repository.location.name}</span>
       </div>
       <div style={{fontSize: 11, marginTop: 5}}>
-        <RepositoryOriginInformation
-          origin={repository.origin}
-          dagitExecutablePath={dagitExecutablePath}
-        />
+        <RepositoryOriginInformation origin={repository.origin} />
       </div>
     </div>
   );
