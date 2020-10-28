@@ -4,6 +4,7 @@ import errno
 import functools
 import inspect
 import os
+import pickle
 import re
 import signal
 import socket
@@ -34,8 +35,7 @@ else:
 
 EPOCH = datetime.datetime.utcfromtimestamp(0)
 
-# 2/3 compatibility
-PICKLE_PROTOCOL = 2
+PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL
 
 
 DEFAULT_REPOSITORY_YAML_FILENAME = "repository.yaml"
