@@ -101,7 +101,7 @@ class TestLaunchBackfillFromFailure(
     make_graphql_context_test_suite(
         context_variants=[
             GraphQLContextVariant.sqlite_with_default_run_launcher_in_process_env(),
-            GraphQLContextVariant.sqlite_with_default_run_launcher_out_of_process_env(),
+            GraphQLContextVariant.sqlite_with_default_run_launcher_managed_grpc_env(),
         ]
     )
 ):
