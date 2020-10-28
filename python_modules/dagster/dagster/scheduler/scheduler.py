@@ -150,8 +150,8 @@ scheduler:
 
     for schedule_state in schedules:
         try:
-            with RepositoryLocationHandle.create_from_repository_origin(
-                schedule_state.origin.repository_origin, instance
+            with RepositoryLocationHandle.create_from_repository_location_origin(
+                schedule_state.origin.external_repository_origin.repository_location_origin,
             ) as repo_location_handle:
                 repo_location = RepositoryLocation.from_handle(repo_location_handle)
 
