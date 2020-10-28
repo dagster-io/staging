@@ -55,6 +55,8 @@ from dagster import (
 )
 from dagster.cli.workspace.load import location_handle_from_python_file
 from dagster.core.definitions.decorators import job
+from dagster.core.definitions.events import MappableOutput
+from dagster.core.definitions.output import MappableOutputDefinition
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import RepositoryLocation
@@ -1036,6 +1038,38 @@ def chained_failure_pipeline():
     after_failure(conditionally_fail(always_succeed()))
 
 
+@solid
+def multiply_by_two(context, y):
+    context.log.info("multiply_by_two is returning " + str(y * 2))
+    return y * 2
+
+
+@solid
+def multiply_inputs(context, y, ten, should_fail):
+    current_run = context.instance.get_run_by_id(context.run_id)
+    if should_fail:
+        if y == 2 and current_run.parent_run_id is None:
+            raise Exception()
+    context.log.info("multiply_inputs is returning " + str(y * ten))
+    return y * ten
+
+
+@solid
+def emit_ten(_):
+    return 10
+
+
+@solid(output_defs=[MappableOutputDefinition()])
+def emit(_):
+    for i in range(3):
+        yield MappableOutput(value=i, mappable_key=str(i))
+
+
+@pipeline
+def mappable_pipeline():
+    multiply_by_two(multiply_inputs(emit(), emit_ten()))
+
+
 @repository
 def empty_repo():
     return []
@@ -1078,6 +1112,7 @@ def test_repo():
             spew_pipeline,
             tagged_pipeline,
             chained_failure_pipeline,
+            mappable_pipeline,
         ]
         + define_schedules()
         + define_partitions()

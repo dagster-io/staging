@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from dagster import check
+from dagster.core.execution.plan.objects import deconstruct_step_key
 from dagster.core.snap import ExecutionPlanSnapshot
 from dagster.core.utils import toposort
 
@@ -278,7 +279,11 @@ class ExternalExecutionPlan:
         return self._step_index[key]
 
     def get_steps_in_plan(self):
-        return [self._step_index[sk] for sk in self._step_keys_in_plan]
+        steps = []
+        for sk in self._step_keys_in_plan:
+            _, _, unresolved_step_key = deconstruct_step_key(sk)
+            steps.append(self._step_index[unresolved_step_key])
+        return steps
 
     def key_in_plan(self, key):
         return key in self._step_keys_in_plan
