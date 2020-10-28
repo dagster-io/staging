@@ -78,7 +78,7 @@ def test_execute_run_api_grpc_python_handle():
             )
 
             loadable_target_origin = (
-                pipeline_handle.get_origin().repository_origin.loadable_target_origin
+                pipeline_handle.get_origin().external_repository_origin.repository_location_origin.loadable_target_origin
             )
 
             with GrpcServerProcess(
