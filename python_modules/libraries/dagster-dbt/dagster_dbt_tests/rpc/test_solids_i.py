@@ -40,10 +40,10 @@ def output_for_solid_executed_with_rpc_resource(
 class TestDBTRunAndWaitSolid:
 
     ALL_MODELS_KEY_SET = {
-        "model.dagster_dbt_test_project.sort_by_calories",
-        "model.dagster_dbt_test_project.least_caloric",
-        "model.dagster_dbt_test_project.sort_cold_cereals_by_calories",
-        "model.dagster_dbt_test_project.sort_hot_cereals_by_calories",
+        'model.dagster_dbt_test_project.sort_by_calories',
+        'model.dagster_dbt_test_project.least_caloric',
+        'model.dagster_dbt_test_project.sort_cold_cereals_by_calories',
+        'model.dagster_dbt_test_project.sort_hot_cereals_by_calories',
     }
 
     def test_run_all(self, dbt_rpc_server):  # pylint: disable=unused-argument
@@ -61,7 +61,7 @@ class TestDBTRunAndWaitSolid:
         )
         assert materialization_asset_keys == TestDBTRunAndWaitSolid.ALL_MODELS_KEY_SET
 
-    SINGLE_MODEL_KEY_SET = {"model.dagster_dbt_test_project.least_caloric"}
+    SINGLE_MODEL_KEY_SET = {'model.dagster_dbt_test_project.least_caloric'}
 
     def test_run_single(self, dbt_rpc_server):  # pylint: disable=unused-argument
         run_single_fast_poll = configured(dbt_rpc_run_and_wait, name="run_least_caloric")(
