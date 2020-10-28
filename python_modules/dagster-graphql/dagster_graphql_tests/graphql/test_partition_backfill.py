@@ -99,10 +99,7 @@ class TestPartitionBackfill(ExecutingGraphQLContextTestMatrix):
 
 class TestLaunchBackfillFromFailure(
     make_graphql_context_test_suite(
-        context_variants=[
-            GraphQLContextVariant.sqlite_with_default_run_launcher_in_process_env(),
-            GraphQLContextVariant.sqlite_with_default_run_launcher_out_of_process_env(),
-        ]
+        context_variants=[GraphQLContextVariant.sqlite_with_default_run_launcher_in_process_env(),]
     )
 ):
     def test_launch_from_failure(self, graphql_context):
