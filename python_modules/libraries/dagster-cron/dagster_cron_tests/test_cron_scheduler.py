@@ -776,7 +776,7 @@ def test_reconcile_schedule_without_start_time():
         external_schedule = external_repo.get_external_schedule("no_config_pipeline_daily_schedule")
 
         legacy_schedule_state = ScheduleState(
-            external_schedule.get_origin(),
+            external_schedule.get_external_origin(),
             ScheduleStatus.RUNNING,
             external_schedule.cron_schedule,
             None,

@@ -48,7 +48,7 @@ from dagster.grpc.types import (
     PartitionSetExecutionParamArgs,
     ScheduleExecutionDataMode,
 )
-from dagster.utils.hosted_user_process import external_repo_from_def, recon_repository_from_origin
+from dagster.utils.hosted_user_process import external_repo_from_def
 
 from .selector import PipelineSelector
 
@@ -165,9 +165,9 @@ class InProcessRepositoryLocation(RepositoryLocation):
     def __init__(self, handle):
         self._handle = check.inst_param(handle, "handle", InProcessRepositoryLocationHandle,)
 
-        recon_repo = self._handle.origin.recon_repo
+        self._recon_repo = self._handle.origin.recon_repo
 
-        repo_def = recon_repo.get_definition()
+        repo_def = self._recon_repo.get_definition()
         def_name = repo_def.name
         self._external_repo = external_repo_from_def(
             repo_def,
@@ -307,8 +307,7 @@ class InProcessRepositoryLocation(RepositoryLocation):
             else None,
         )
 
-        recon_repo = recon_repository_from_origin(repo_origin)
-        return get_external_schedule_execution(recon_repo, args)
+        return get_external_schedule_execution(self._recon_repo, args)
 
     def get_external_job_params(self, instance, repository_handle, name):
         check.inst_param(instance, "instance", DagsterInstance)
@@ -316,11 +315,10 @@ class InProcessRepositoryLocation(RepositoryLocation):
         check.str_param(name, "name")
 
         repo_origin = repository_handle.get_origin()
-        recon_repo = recon_repository_from_origin(repo_origin)
         args = ExternalJobArgs(
             instance_ref=instance.get_ref(), repository_origin=repo_origin, name=name,
         )
-        return get_external_job_params(recon_repo, args)
+        return get_external_job_params(self._recon_repo, args)
 
     def get_external_partition_set_execution_param_data(
         self, repository_handle, partition_set_name, partition_names
@@ -385,7 +383,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
 
         execution_plan_snapshot_or_error = sync_get_external_execution_plan_grpc(
             api_client=self._handle.client,
-            pipeline_origin=external_pipeline.get_origin(),
+            pipeline_origin=external_pipeline.get_external_origin(),
             run_config=run_config,
             mode=mode,
             pipeline_snapshot_id=external_pipeline.identifying_pipeline_snapshot_id,
