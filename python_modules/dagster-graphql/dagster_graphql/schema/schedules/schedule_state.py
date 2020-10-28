@@ -121,7 +121,4 @@ class DauphinScheduleState(dauphin.ObjectType):
 
     def resolve_repository_origin(self, graphene_info):
         origin = self._schedule_state.origin.external_repository_origin
-        if isinstance(origin.repository_location_origin, GrpcServerRepositoryLocationOrigin):
-            return graphene_info.schema.type_named("GrpcRepositoryOrigin")(origin)
-        else:
-            return graphene_info.schema.type_named("PythonRepositoryOrigin")(origin)
+        return graphene_info.schema.type_named("RepositoryOrigin")(origin)
