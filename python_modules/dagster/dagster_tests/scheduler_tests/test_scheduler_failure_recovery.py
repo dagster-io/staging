@@ -71,7 +71,7 @@ def test_failure_recovery_before_run_created(
 """
             )
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_schedule_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
             assert ticks[0].status == ScheduleTickStatus.STARTED
 
@@ -95,7 +95,7 @@ def test_failure_recovery_before_run_created(
                 partition_time=pendulum.datetime(2019, 2, 26),
             )
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_schedule_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
             validate_tick(
                 ticks[0],
@@ -147,7 +147,7 @@ def test_failure_recovery_after_run_created(
 
             capfd.readouterr()
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_schedule_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
             assert ticks[0].status == ScheduleTickStatus.STARTED
 
@@ -197,7 +197,7 @@ def test_failure_recovery_after_run_created(
                 instance.get_runs()[0], initial_datetime, pendulum.datetime(2019, 2, 26)
             )
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_schedule_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
             validate_tick(
                 ticks[0],
@@ -258,7 +258,7 @@ def test_failure_recovery_after_tick_success(external_repo_context, crash_locati
                 instance.get_runs()[0], initial_datetime, pendulum.datetime(2019, 2, 26)
             )
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_schedule_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
 
             if crash_signal == signal.SIGKILL:
@@ -290,7 +290,7 @@ def test_failure_recovery_after_tick_success(external_repo_context, crash_locati
                 instance.get_runs()[0], initial_datetime, pendulum.datetime(2019, 2, 26)
             )
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_schedule_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
             validate_tick(
                 ticks[0],
