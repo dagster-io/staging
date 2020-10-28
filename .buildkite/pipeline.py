@@ -522,6 +522,7 @@ def examples_tests():
         "docs_snippets",
         "legacy_examples",
         "airline_demo",
+        "dbt_example",
     ]
 
     examples_root = os.path.join(SCRIPT_PATH, "..", "examples")
