@@ -1,3 +1,4 @@
+import inspect
 import os
 import sys
 from collections import namedtuple
@@ -271,6 +272,16 @@ def reconstructable(target):
                 target=target
             )
         )
+
+    try:
+        if (
+            hasattr(target, "__module__")
+            and hasattr(target, "__name__")
+            and inspect.getmodule(target).__name__ != "__main__"
+        ):
+            return ReconstructablePipeline.for_module(target.__module__, target.__name__)
+    except:  # pylint: disable=bare-except
+        pass
 
     python_file = get_python_file_from_target(target)
     if not python_file:
