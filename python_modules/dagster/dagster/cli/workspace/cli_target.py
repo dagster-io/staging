@@ -12,20 +12,18 @@ from dagster.core.code_pointer import CodePointer
 from dagster.core.definitions.reconstructable import repository_def_from_target_def
 from dagster.core.host_representation import (
     ExternalRepository,
+    ExternalRepositoryOrigin,
     GrpcServerRepositoryLocationOrigin,
     RepositoryLocation,
     RepositoryLocationHandle,
 )
-from dagster.core.origin import (
-    PipelinePythonOrigin,
-    RepositoryGrpcServerOrigin,
-    RepositoryPythonOrigin,
-)
+from dagster.core.origin import PipelinePythonOrigin, RepositoryPythonOrigin
 from dagster.grpc.utils import get_loadable_targets
 from dagster.utils.hosted_user_process import recon_repository_from_origin
 
 from .load import (
     location_origin_from_module_name,
+    location_origin_from_package_name,
     location_origin_from_python_file,
     location_origins_from_yaml_paths,
 )
@@ -70,7 +68,7 @@ WORKSPACE_CLI_ARGS = (
 
 WorkspaceFileTarget = namedtuple("WorkspaceFileTarget", "paths")
 PythonFileTarget = namedtuple("PythonFileTarget", "python_file attribute working_directory")
-ModuleTarget = namedtuple("ModuleTarget", "module_name attribute")
+ModuleTarget = namedtuple("ModuleTarget", "module_name attribute use_python_package")
 GrpcServerTarget = namedtuple("GrpcServerTarget", "host port socket")
 
 #  Utility target for graphql commands that do not require a workspace, e.g. downloading schema
@@ -149,7 +147,9 @@ def created_workspace_load_target(kwargs):
             "grpc_socket",
         )
         return ModuleTarget(
-            module_name=kwargs.get("module_name"), attribute=kwargs.get("attribute"),
+            module_name=kwargs.get("module_name"),
+            attribute=kwargs.get("attribute"),
+            use_python_package=kwargs.get("use_python_package"),
         )
     if kwargs.get("grpc_port"):
         _check_cli_arguments_none(kwargs, "grpc_socket")
@@ -180,7 +180,11 @@ def location_origins_from_load_target(load_target):
             )
         ]
     elif isinstance(load_target, ModuleTarget):
-        return [location_origin_from_module_name(load_target.module_name, load_target.attribute,)]
+        return [
+            location_origin_from_package_name(load_target.module_name, load_target.attribute)
+            if load_target.use_python_package
+            else location_origin_from_module_name(load_target.module_name, load_target.attribute)
+        ]
     elif isinstance(load_target, GrpcServerTarget):
         return [
             GrpcServerRepositoryLocationOrigin(
@@ -206,6 +210,14 @@ def get_workspace_from_kwargs(kwargs):
 def python_target_click_options():
     return [
         click.option(
+            "--empty-working-directory",
+            is_flag=True,
+            required=False,
+            default=False,
+            help="Indicates that the working directory should be empty and should not set to the current "
+            "directory as a default",
+        ),
+        click.option(
             "--working-directory",
             "-d",
             help="Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/--python-file",
@@ -217,6 +229,14 @@ def python_target_click_options():
             # are better equipped to surface errors
             type=click.Path(exists=False),
             help="Specify python file where repository or pipeline function lives",
+        ),
+        click.option(
+            "--use-python-package/--no-use-python-package",
+            is_flag=True,
+            required=False,
+            default=True,
+            help="If --python-module is specified, whether to require that it be "
+            "an installed Python package.",
         ),
         click.option(
             "--module-name", "-m", help="Specify module where repository or pipeline function lives"
@@ -385,17 +405,14 @@ def pipeline_target_argument(f):
 
 
 def get_repository_origin_from_kwargs(kwargs):
-    load_target = created_workspace_load_target(kwargs)
+    provided_repo_name = kwargs.get("repository")
 
-    if isinstance(load_target, GrpcServerTarget):
-        return RepositoryGrpcServerOrigin(
-            host=load_target.host,
-            port=load_target.port,
-            socket=load_target.socket,
-            repository_name=kwargs["repository"],
-        )
+    if not provided_repo_name:
+        raise click.UsageError("Must provide --repository to load a repository")
 
-    return get_repository_python_origin_from_kwargs(kwargs)
+    repository_location_origin = get_repository_location_origin_from_kwargs(kwargs)
+
+    return ExternalRepositoryOrigin(repository_location_origin, provided_repo_name,)
 
 
 def get_pipeline_python_origin_from_kwargs(kwargs):

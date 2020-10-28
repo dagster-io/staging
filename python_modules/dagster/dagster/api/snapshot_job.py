@@ -4,7 +4,6 @@ from dagster.core.host_representation.external_data import (
     ExternalExecutionParamsErrorData,
 )
 from dagster.core.host_representation.handle import RepositoryHandle
-from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.types import ExternalJobArgs
 
 
@@ -13,7 +12,7 @@ def sync_get_external_job_params_ephemeral_grpc(instance, repository_handle, nam
 
     origin = repository_handle.get_origin()
     with ephemeral_grpc_api_client(
-        LoadableTargetOrigin(executable_path=origin.executable_path)
+        origin.repository_location_origin.loadable_target_origin
     ) as api_client:
         return sync_get_external_job_params_grpc(api_client, instance, repository_handle, name)
 
