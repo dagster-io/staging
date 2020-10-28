@@ -272,6 +272,16 @@ def reconstructable(target):
             )
         )
 
+    try:
+        if (
+            hasattr(target, "__module__")
+            and hasattr(target, "__name__")
+            and target.__module__ != "__main__"
+        ):
+            return ReconstructablePipeline.for_module(target.__module__, target.__name__)
+    except:  # pylint: disable=bare-except
+        pass
+
     python_file = get_python_file_from_target(target)
     if not python_file:
         raise DagsterInvariantViolationError(
