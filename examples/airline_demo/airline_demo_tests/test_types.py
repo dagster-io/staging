@@ -152,7 +152,7 @@ def test_spark_dataframe_output_csv():
     def passthrough_df(_context, df):
         return df
 
-    @pipeline
+    @pipeline(mode_defs=[spark_s3_mode])
     def passthrough():
         passthrough_df(emit())
 
