@@ -63,7 +63,7 @@ class AssetStore(six.with_metaclass(ABCMeta)):
         """
 
 
-class PickledObjectFilesystemAssetStore(AssetStore):
+class PickledObjectFileystemAssetStore(AssetStore):
     def __init__(self, base_dir=None):
         self.base_dir = check.opt_str_param(base_dir, "base_dir")
         self.write_mode = "wb"
@@ -110,10 +110,10 @@ def default_filesystem_asset_store(init_context):
     serializes and deserializes output values (assets) using pickling and automatically constructs
     the filepaths for the assets.
     """
-    return PickledObjectFilesystemAssetStore(init_context.resource_config["base_dir"])
+    return PickledObjectFileystemAssetStore(init_context.resource_config["base_dir"])
 
 
-class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
+class CustomPathPickledObjectFileystemAssetStore(AssetStore):
     def __init__(self, base_dir=None):
         self.base_dir = check.opt_str_param(base_dir, "base_dir")
         self.write_mode = "wb"
@@ -153,4 +153,4 @@ def custom_path_filesystem_asset_store(init_context):
     serializes and deserializes output values (assets) using pickling and stores the pickled object
     in the user-provided file paths.
     """
-    return CustomPathPickledObjectFilesystemAssetStore(init_context.resource_config["base_dir"])
+    return CustomPathPickledObjectFileystemAssetStore(init_context.resource_config["base_dir"])

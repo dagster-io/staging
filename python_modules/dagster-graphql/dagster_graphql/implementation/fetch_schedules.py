@@ -89,7 +89,7 @@ def get_schedule_states_or_error(
 
     location = graphene_info.context.get_repository_location(repository_selector.location_name)
     repository = location.get_repository(repository_selector.repository_name)
-    repository_origin_id = repository.get_origin().get_id()
+    repository_origin_id = repository.get_external_origin().get_id()
     instance = graphene_info.context.instance
 
     results = [
@@ -104,7 +104,7 @@ def get_schedule_states_or_error(
     if with_no_schedule_definition_filter:
         external_schedules = repository.get_external_schedules()
         external_schedule_origin_ids = set(
-            external_schedule.get_origin_id() for external_schedule in external_schedules
+            external_schedule.get_external_origin_id() for external_schedule in external_schedules
         )
 
         # Filter for all schedule states for which there are no matching external schedules with the

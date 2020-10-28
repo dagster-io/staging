@@ -213,7 +213,7 @@ def test_start_and_stop_schedule(
             instance.reconcile_scheduler_state(external_repo)
 
             schedule = external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
-            schedule_origin_id = schedule.get_origin_id()
+            schedule_origin_id = schedule.get_external_origin_id()
 
             instance.start_schedule_and_update_storage_state(schedule)
 
@@ -267,7 +267,7 @@ def test_start_schedule_cron_job(
             assert len(cron_jobs) == 3
 
             external_schedules_dict = {
-                external_repo.get_external_schedule(name).get_origin_id(): schedule_def
+                external_repo.get_external_schedule(name).get_external_origin_id(): schedule_def
                 for name, schedule_def in schedules_dict.items()
             }
 
@@ -380,7 +380,7 @@ def test_start_and_stop_schedule_cron_tab(
             instance.stop_schedule_and_update_storage_state(
                 external_repo.get_external_schedule(
                     "no_config_pipeline_daily_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
             cron_jobs = get_cron_jobs()
             assert len(cron_jobs) == 1
@@ -389,7 +389,7 @@ def test_start_and_stop_schedule_cron_tab(
             instance.stop_schedule_and_update_storage_state(
                 external_repo.get_external_schedule(
                     "no_config_pipeline_daily_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
             cron_jobs = get_cron_jobs()
             assert len(cron_jobs) == 1
@@ -421,17 +421,17 @@ def test_start_and_stop_schedule_cron_tab(
             instance.stop_schedule_and_update_storage_state(
                 external_repo.get_external_schedule(
                     "no_config_pipeline_every_min_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
             instance.stop_schedule_and_update_storage_state(
                 external_repo.get_external_schedule(
                     "no_config_pipeline_daily_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
             instance.stop_schedule_and_update_storage_state(
                 external_repo.get_external_schedule(
                     "default_config_pipeline_every_min_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
 
             cron_jobs = get_cron_jobs()
@@ -472,7 +472,7 @@ def test_script_execution(
 
             schedule_origin_id = external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
-            ).get_origin_id()
+            ).get_external_origin_id()
             script = instance.scheduler._get_bash_script_file_path(  # pylint: disable=protected-access
                 instance, schedule_origin_id
             )
@@ -506,7 +506,7 @@ def test_start_schedule_fails(
             schedule = instance.get_schedule_state(
                 external_repo.get_external_schedule(
                     "no_config_pipeline_every_min_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
 
             assert schedule.status == ScheduleStatus.STOPPED
@@ -557,7 +557,7 @@ def test_start_schedule_manual_delete_debug(
                 instance,
                 external_repo.get_external_schedule(
                     "no_config_pipeline_every_min_schedule"
-                ).get_origin_id(),
+                ).get_external_origin_id(),
             )
 
             # Check debug command
@@ -642,7 +642,7 @@ def test_stop_schedule_fails(
             external_schedule = external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
             )
-            schedule_origin_id = external_schedule.get_origin_id()
+            schedule_origin_id = external_schedule.get_external_origin_id()
 
             def raises(*args, **kwargs):
                 raise Exception("Patch")
@@ -695,7 +695,7 @@ def test_stop_schedule_unsuccessful(
                 instance.stop_schedule_and_update_storage_state(
                     external_repo.get_external_schedule(
                         "no_config_pipeline_every_min_schedule"
-                    ).get_origin_id()
+                    ).get_external_origin_id()
                 )
 
 
@@ -727,11 +727,13 @@ def test_log_directory(restore_cron_tab):  # pylint:disable=unused-argument,rede
             external_schedule = external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
             )
-            schedule_log_path = instance.logs_path_for_schedule(external_schedule.get_origin_id())
+            schedule_log_path = instance.logs_path_for_schedule(
+                external_schedule.get_external_origin_id()
+            )
 
             assert schedule_log_path.endswith(
                 "/schedules/logs/{schedule_origin_id}/scheduler.log".format(
-                    schedule_origin_id=external_schedule.get_origin_id()
+                    schedule_origin_id=external_schedule.get_external_origin_id()
                 )
             )
 
@@ -785,9 +787,8 @@ def test_reconcile_schedule_without_start_time():
             external_schedule = external_repo.get_external_schedule(
                 "no_config_pipeline_daily_schedule"
             )
-
             legacy_schedule_state = ScheduleState(
-                external_schedule.get_origin(),
+                external_schedule.get_external_origin(),
                 ScheduleStatus.RUNNING,
                 external_schedule.cron_schedule,
                 None,
@@ -798,7 +799,7 @@ def test_reconcile_schedule_without_start_time():
             instance.reconcile_scheduler_state(external_repository=external_repo)
 
             reconciled_schedule_state = instance.get_schedule_state(
-                external_schedule.get_origin_id()
+                external_schedule.get_external_origin_id()
             )
 
             assert reconciled_schedule_state.status == ScheduleStatus.RUNNING
