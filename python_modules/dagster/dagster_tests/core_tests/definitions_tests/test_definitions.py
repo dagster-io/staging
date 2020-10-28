@@ -69,11 +69,11 @@ def test_solid_def():
     )
 
     assert str(solid_one_solid.output_handle("result")) == (
-        "SolidOutputHandle(output_name=\"'result'\", solid_name=\"'solid_one'\")"
+        'SolidOutputHandle(is_mappable="False", output_name="\'result\'", solid_name="\'solid_one\'")'
     )
 
     assert repr(solid_one_solid.output_handle("result")) == (
-        "SolidOutputHandle(output_name=\"'result'\", solid_name=\"'solid_one'\")"
+        'SolidOutputHandle(is_mappable="False", output_name="\'result\'", solid_name="\'solid_one\'")'
     )
 
     assert solid_one_solid.output_handle("result") == SolidOutputHandle(
