@@ -13,6 +13,7 @@ from dagster_dbt import (
 from mock import MagicMock
 
 from dagster import (
+    AssetKey,
     DagsterInstance,
     ModeDefinition,
     PipelineDefinition,
@@ -59,7 +60,10 @@ class TestDBTRunAndWaitSolid:
         materialization_asset_keys = set(
             mat.asset_key.to_string() for mat in dagster_result.materializations_during_compute
         )
-        assert materialization_asset_keys == TestDBTRunAndWaitSolid.ALL_MODELS_KEY_SET
+        assert materialization_asset_keys == {
+            AssetKey(key.split(".")).to_string()
+            for key in TestDBTRunAndWaitSolid.ALL_MODELS_KEY_SET
+        }
 
     SINGLE_MODEL_KEY_SET = {"model.dagster_dbt_test_project.least_caloric"}
 
@@ -78,7 +82,11 @@ class TestDBTRunAndWaitSolid:
         materialization_asset_keys = set(
             mat.asset_key.to_string() for mat in dagster_result.materializations_during_compute
         )
-        assert materialization_asset_keys == TestDBTRunAndWaitSolid.SINGLE_MODEL_KEY_SET
+
+        assert materialization_asset_keys == {
+            AssetKey(key.split(".")).to_string()
+            for key in TestDBTRunAndWaitSolid.SINGLE_MODEL_KEY_SET
+        }
 
 
 SINGLE_OP_CONFIGS: Dict[str, Tuple[SolidDefinition, Dict[str, Any]]] = {
