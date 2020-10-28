@@ -100,6 +100,18 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def _get_paths(self, step_output_handle):
+        # might be needed for stuff like:
+        # StepOutputHandle(step_key='emit.compute', output_name='result', mappable_key='0')
+        # but we could re-write that to
+        # StepOutputHandle(step_key='emit[0].compute', output_name='result', mappable_key='0')?
+        # if so, would be better to store base_key + mappable_key and step_key would be a @property
+        if step_output_handle.mappable_key is not None:
+            return [
+                "intermediates",
+                step_output_handle.step_key,
+                step_output_handle.output_name,
+                step_output_handle.mappable_key,
+            ]
         return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
 
     def get_intermediate_object(self, dagster_type, step_output_handle):

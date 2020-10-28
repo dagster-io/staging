@@ -347,7 +347,7 @@ EntryDataUnion = (
 )
 
 
-class Output(namedtuple("_Output", "value output_name address")):
+class Output(namedtuple("_Output", "value output_name address mappable_key")):
     """Event corresponding to one of a solid's outputs.
 
     Solid compute functions must explicitly yield events of this type when they have more than
@@ -366,15 +366,42 @@ class Output(namedtuple("_Output", "value output_name address")):
             store/retrieve the outputted value.
     """
 
-    def __new__(cls, value, output_name=DEFAULT_OUTPUT, address=None):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, address=None, mappable_key=None):
         if address:
             experimental_arg_warning("address", "Output.__new__")
 
+        if mappable_key:
+            experimental_arg_warning("mappable_key", "Output.__new__")
+
         return super(Output, cls).__new__(
             cls,
-            value,
-            check.str_param(output_name, "output_name"),
-            check.opt_str_param(address, "address"),
+            value=value,
+            output_name=check.str_param(output_name, "output_name"),
+            address=check.opt_str_param(address, "address"),
+            mappable_key=check.opt_str_param(mappable_key, "mappable_key"),
+        )
+
+    @property
+    def is_mappable(self):
+        return self.mappable_key is not None
+
+    # We need this to check for duplicate outputs
+    @property
+    def resolved_output_name(self):
+        if self.is_mappable:
+            return self.output_name + self.mappable_key
+        return self.output_name
+
+
+# User ergonomics thing that just wraps Output
+class MappableOutput(Output):
+    def __new__(cls, value, output_name=DEFAULT_OUTPUT, address=None, mappable_key=None):
+        return super(MappableOutput, cls).__new__(
+            cls,
+            value=value,
+            mappable_key=check.str_param(mappable_key, "mappable_key"),
+            output_name=check.str_param(output_name, "output_name"),
+            address=check.opt_str_param(address, "address"),
         )
 
 
