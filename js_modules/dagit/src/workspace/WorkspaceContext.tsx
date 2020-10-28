@@ -8,7 +8,6 @@ import {RepositorySelector} from 'src/types/globalTypes';
 import {repoAddressAsString} from 'src/workspace/repoAddressAsString';
 import {repoAddressFromPath} from 'src/workspace/repoAddressFromPath';
 import {RepoAddress} from 'src/workspace/types';
-import {InstanceExecutableQuery} from 'src/workspace/types/InstanceExecutableQuery';
 import {
   RootRepositoriesQuery,
   RootRepositoriesQuery_repositoryLocationsOrError_PythonError,
@@ -273,22 +272,6 @@ export const optionToRepoAddress = (option: DagsterRepoOption) => {
     name: option.repository.name,
     location: option.repository.location.name,
   };
-};
-
-export const INSTANCE_EXECUTABLE_QUERY = gql`
-  query InstanceExecutableQuery {
-    instance {
-      executablePath
-    }
-  }
-`;
-
-export const useDagitExecutablePath = () => {
-  const {data} = useQuery<InstanceExecutableQuery>(INSTANCE_EXECUTABLE_QUERY, {
-    fetchPolicy: 'cache-and-network',
-  });
-
-  return data?.instance.executablePath;
 };
 
 export const scheduleSelectorWithRepository = (
