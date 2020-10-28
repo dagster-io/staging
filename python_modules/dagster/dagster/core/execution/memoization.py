@@ -57,7 +57,15 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
     output_handles_to_copy = output_handles_for_current_run.intersection(
         output_handles_from_previous_run
     )
+
+    # Handle mappable output handles
     output_handles_to_copy_by_step = defaultdict(list)
+    for handle in output_handles_to_copy:
+        if handle.mappable_key:
+            output_handles_to_copy_by_step[handle.unresolved_step_key].append(handle)
+        else:
+            output_handles_to_copy_by_step[handle.step_key].append(handle)
+
     for handle in output_handles_to_copy:
         output_handles_to_copy_by_step[handle.step_key].append(handle)
 
@@ -67,7 +75,6 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
         for handle in output_handles_to_copy_by_step.get(step.key, []):
             if intermediate_storage.has_intermediate(pipeline_context, handle):
                 continue
-
             operation = intermediate_storage.copy_intermediate_from_run(
                 pipeline_context, parent_run_id, handle
             )
@@ -110,7 +117,9 @@ def output_handles_from_event_logs(event_logs):
 
         output_handles_from_previous_run.add(
             StepOutputHandle(
-                record.dagster_event.step_key, record.dagster_event.event_specific_data.value_name
+                step_key=record.dagster_event.step_key,
+                output_name=record.dagster_event.event_specific_data.value_name,
+                mappable_key=record.dagster_event.mappable_key,
             )
         )
 

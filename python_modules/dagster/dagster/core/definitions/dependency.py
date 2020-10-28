@@ -335,7 +335,10 @@ class SolidOutputHandle(namedtuple("_SolidOutputHandle", "solid output_def")):
 
     def _inner_str(self):
         return struct_to_string(
-            "SolidOutputHandle", solid_name=self.solid.name, output_name=self.output_def.name,
+            "SolidOutputHandle",
+            solid_name=self.solid.name,
+            output_name=self.output_def.name,
+            is_mappable=self.is_mappable,
         )
 
     def __str__(self):
@@ -353,6 +356,10 @@ class SolidOutputHandle(namedtuple("_SolidOutputHandle", "solid output_def")):
     @property
     def solid_name(self):
         return self.solid.name
+
+    @property
+    def is_mappable(self):
+        return self.output_def.is_mappable
 
 
 class InputToOutputHandleDict(defaultdict):
@@ -438,6 +445,17 @@ class DependencyStructure(object):
             for output_handle in output_handle_list
         ]
 
+    def all_ancestor_outputs_from_solid(self, solid_name):
+        check.str_param(solid_name, "solid_name")
+
+        # flatten out all outputs that feed into the inputs of this solid
+        upstream = self.all_upstream_outputs_from_solid(solid_name)
+        return sum(
+            [upstream]
+            + [self.all_ancestor_outputs_from_solid(handle.solid_name) for handle in upstream],
+            [],
+        )
+
     def input_to_upstream_outputs_for_solid(self, solid_name):
         """
         Returns a Dict[SolidInputHandle, List[SolidOutputHandle]] that encodes
@@ -456,6 +474,22 @@ class DependencyStructure(object):
         """
         check.str_param(solid_name, "solid_name")
         return self._solid_output_index[solid_name]
+
+    def has_mappable_dep(self, solid_input_handle):
+        check.inst_param(solid_input_handle, "solid_input_handle", SolidInputHandle)
+        solid_output_handle = self._handle_dict.get(solid_input_handle)
+        return solid_output_handle.is_mappable
+
+    def get_mappable_dep(self, solid_input_handle):
+        check.inst_param(solid_input_handle, "solid_input_handle", SolidInputHandle)
+        dep = self._handle_dict[solid_input_handle]
+        check.invariant(
+            dep.is_mappable,
+            "Can not call get_mappable_dep when dep is not mappable, got {dep}".format(
+                dep=type(dep)
+            ),
+        )
+        return dep
 
     def has_singular_dep(self, solid_input_handle):
         check.inst_param(solid_input_handle, "solid_input_handle", SolidInputHandle)
