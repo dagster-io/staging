@@ -7,9 +7,8 @@ from enum import Enum
 import six
 from dagster import check
 from dagster.core.errors import DagsterError
-from dagster.core.host_representation import ExternalSchedule
+from dagster.core.host_representation import ExternalSchedule, ExternalScheduleOrigin
 from dagster.core.instance import DagsterInstance
-from dagster.core.origin import ScheduleOrigin
 from dagster.serdes import ConfigurableClass, whitelist_for_serdes
 from dagster.seven import get_current_datetime_in_utc, get_timestamp_from_utc_datetime
 from dagster.utils import mkdir_p
@@ -125,7 +124,7 @@ class ScheduleState(
         return super(ScheduleState, cls).__new__(
             cls,
             # Using the term "origin" to leave flexibility in handling future types
-            check.inst_param(origin, "origin", ScheduleOrigin),
+            check.inst_param(origin, "origin", ExternalScheduleOrigin),
             check.inst_param(status, "status", ScheduleStatus),
             check.str_param(cron_schedule, "cron_schedule"),
             # Time in UTC at which the user started running the schedule (distinct from
@@ -139,9 +138,9 @@ class ScheduleState(
         return self.origin.schedule_name
 
     @property
-    def pipeline_origin(self):
+    def schedule_origin(self):
         # Set up for future proofing
-        check.invariant(isinstance(self.origin, ScheduleOrigin))
+        check.invariant(isinstance(self.origin, ExternalScheduleOrigin))
         return self.origin
 
     @property
@@ -150,7 +149,7 @@ class ScheduleState(
 
     @property
     def repository_origin_id(self):
-        return self.origin.repository_origin.get_id()
+        return self.origin.external_repository_origin.get_id()
 
     def with_status(self, status, start_time_utc=None):
         check.inst_param(status, "status", ScheduleStatus)
@@ -217,7 +216,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
 
                 # Keep the status, update target and cron schedule
                 schedule_state = ScheduleState(
-                    external_schedule.get_origin(),
+                    external_schedule.get_external_origin(),
                     existing_schedule_state.status,
                     external_schedule.cron_schedule,
                     new_timestamp,
@@ -227,7 +226,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
                 schedules_to_restart.append((existing_schedule_state, external_schedule))
             else:
                 schedule_state = ScheduleState(
-                    external_schedule.get_origin(),
+                    external_schedule.get_external_origin(),
                     ScheduleStatus.STOPPED,
                     external_schedule.cron_schedule,
                     start_timestamp=None,
