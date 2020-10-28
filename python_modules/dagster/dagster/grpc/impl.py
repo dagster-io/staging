@@ -56,7 +56,11 @@ from dagster.utils import delay_interrupts, start_termination_thread
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.hosted_user_process import recon_repository_from_origin
 
-from .types import ExecuteRunArgs, ExternalScheduleExecutionArgs, PartitionSetExecutionParamArgs
+from .types import (
+    ExecuteExternalPipelineArgs,
+    ExternalScheduleExecutionArgs,
+    PartitionSetExecutionParamArgs,
+)
 
 
 class RunInSubprocessComplete:
@@ -107,7 +111,7 @@ def _run_in_subprocess(
     start_termination_thread(termination_event)
     try:
         execute_run_args = deserialize_json_to_dagster_namedtuple(serialized_execute_run_args)
-        check.inst_param(execute_run_args, "execute_run_args", ExecuteRunArgs)
+        check.inst_param(execute_run_args, "execute_run_args", ExecuteExternalPipelineArgs)
 
         instance = DagsterInstance.from_ref(execute_run_args.instance_ref)
         pipeline_run = instance.get_run_by_id(execute_run_args.pipeline_run_id)

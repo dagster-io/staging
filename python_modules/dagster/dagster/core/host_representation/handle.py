@@ -1,4 +1,3 @@
-import sys
 import threading
 from abc import ABCMeta
 from collections import namedtuple
@@ -10,14 +9,24 @@ from dagster.api.list_repositories import sync_list_repositories_grpc
 from dagster.core.definitions.reconstructable import repository_def_from_pointer
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation.origin import (
+    ExternalRepositoryOrigin,
     GrpcServerRepositoryLocationOrigin,
     InProcessRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
     RepositoryLocationOrigin,
 )
 from dagster.core.host_representation.selector import PipelineSelector
-from dagster.core.instance import DagsterInstance
-from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryOrigin, RepositoryPythonOrigin
+from dagster.core.origin import RepositoryPythonOrigin
+
+
+def _get_repository_python_origin(executable_path, repository_code_pointer_dict, repository_name):
+    if repository_name not in repository_code_pointer_dict:
+        raise DagsterInvariantViolationError(
+            "Unable to find repository name {} on GRPC server.".format(repository_name)
+        )
+
+    code_pointer = repository_code_pointer_dict[repository_name]
+    return RepositoryPythonOrigin(executable_path=executable_path, code_pointer=code_pointer,)
 
 
 class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
@@ -42,32 +51,6 @@ class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
         else:
             check.failed("Unexpected repository location origin")
 
-    @staticmethod
-    def create_from_repository_origin(repository_origin, instance):
-        check.inst_param(repository_origin, "repository_origin", RepositoryOrigin)
-        check.inst_param(instance, "instance", DagsterInstance)
-
-        if isinstance(repository_origin, RepositoryGrpcServerOrigin):
-            return RepositoryLocationHandle.create_from_repository_location_origin(
-                GrpcServerRepositoryLocationOrigin(
-                    port=repository_origin.port,
-                    socket=repository_origin.socket,
-                    host=repository_origin.host,
-                )
-            )
-        elif isinstance(repository_origin, RepositoryPythonOrigin):
-            loadable_target_origin = repository_origin.loadable_target_origin
-
-            repo_location_origin = ManagedGrpcPythonEnvRepositoryLocationOrigin(
-                loadable_target_origin
-            )
-
-            return RepositoryLocationHandle.create_from_repository_location_origin(
-                repo_location_origin
-            )
-        else:
-            raise DagsterInvariantViolationError("Unexpected repository origin type")
-
 
 class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
     """
@@ -90,6 +73,9 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         self.repository_names = set(
             symbol.repository_name for symbol in list_repositories_response.repository_symbols
         )
+
+        self.executable_path = list_repositories_response.executable_path
+        self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
     @property
     def port(self):
@@ -118,20 +104,19 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         return job_image
 
     def get_repository_python_origin(self, repository_name):
+        return _get_repository_python_origin(
+            self.executable_path, self.repository_code_pointer_dict, repository_name
+        )
+
+    def reload_repository_python_origin(self, repository_name):
         check.str_param(repository_name, "repository_name")
 
-        list_repositories_reply = self.client.list_repositories()
-        repository_code_pointer_dict = list_repositories_reply.repository_code_pointer_dict
+        list_repositories_response = sync_list_repositories_grpc(self.client)
 
-        if repository_name not in repository_code_pointer_dict:
-            raise DagsterInvariantViolationError(
-                "Unable to find repository name {} on GRPC server.".format(repository_name)
-            )
-
-        code_pointer = repository_code_pointer_dict[repository_name]
-        return RepositoryPythonOrigin(
-            executable_path=list_repositories_reply.executable_path or sys.executable,
-            code_pointer=code_pointer,
+        return _get_repository_python_origin(
+            list_repositories_response.executable_path,
+            list_repositories_response.repository_code_pointer_dict,
+            repository_name,
         )
 
 
@@ -167,6 +152,11 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
         list_repositories_response = sync_list_repositories_grpc(self.client)
 
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
+
+    def get_repository_python_origin(self, repository_name):
+        return _get_repository_python_origin(
+            self.executable_path, self.repository_code_pointer_dict, repository_name
+        )
 
     @property
     def executable_path(self):
@@ -228,35 +218,9 @@ class RepositoryHandle(
         )
 
     def get_origin(self):
-        if isinstance(self.repository_location_handle, InProcessRepositoryLocationHandle):
-            return RepositoryPythonOrigin(
-                code_pointer=self.repository_location_handle.repository_code_pointer_dict[
-                    self.repository_name
-                ],
-                executable_path=sys.executable,
-            )
-        elif isinstance(
-            self.repository_location_handle, ManagedGrpcPythonEnvRepositoryLocationHandle
-        ):
-            return RepositoryPythonOrigin(
-                code_pointer=self.repository_location_handle.repository_code_pointer_dict[
-                    self.repository_name
-                ],
-                executable_path=self.repository_location_handle.executable_path,
-            )
-        elif isinstance(self.repository_location_handle, GrpcServerRepositoryLocationHandle):
-            return RepositoryGrpcServerOrigin(
-                host=self.repository_location_handle.host,
-                port=self.repository_location_handle.port,
-                socket=self.repository_location_handle.socket,
-                repository_name=self.repository_name,
-            )
-        else:
-            check.failed(
-                "Can not target represented RepositoryDefinition locally for repository from a {}.".format(
-                    self.repository_location_handle.__class__.__name__
-                )
-            )
+        return ExternalRepositoryOrigin(
+            self.repository_location_handle.origin, self.repository_name,
+        )
 
 
 class PipelineHandle(namedtuple("_PipelineHandle", "pipeline_name repository_handle")):
