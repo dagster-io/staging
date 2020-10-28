@@ -55,7 +55,9 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
 
     step = step_context.step
     output_names = list([output_def.name for output_def in step.step_outputs])
-    seen_outputs = set()
+    print('output_names: ', output_names)
+    seen_resolved_outputs = set()
+    seen_unresolved_outputs = set()
 
     for user_event in user_event_sequence:
         if not isinstance(user_event, Output):
@@ -64,6 +66,7 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
 
         # do additional processing on Outputs
         output = user_event
+        print('user_event output', output)
         if not step.has_step_output(output.output_name):
             raise DagsterInvariantViolationError(
                 'Core compute for solid "{handle}" returned an output '
@@ -73,7 +76,8 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
                 )
             )
 
-        if output.output_name in seen_outputs:
+        # Check that resolved output name is not seen to handle mappable outputs
+        if output.resolved_output_name in seen_resolved_outputs:
             raise DagsterInvariantViolationError(
                 'Core compute for solid "{handle}" returned an output '
                 '"{output.output_name}" multiple times'.format(
@@ -82,10 +86,15 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
             )
 
         yield output
-        seen_outputs.add(output.output_name)
+        seen_unresolved_outputs.add(output.output_name)
+        seen_resolved_outputs.add(output.resolved_output_name)
 
     for step_output_def in step.step_outputs:
-        if not step_output_def.name in seen_outputs and not step_output_def.optional:
+        if (
+            not step_output_def.name in seen_unresolved_outputs
+            and not step_output_def.optional
+            and not step_output_def.is_mappable
+        ):
             if step_output_def.dagster_type.kind == DagsterTypeKind.NOTHING:
                 step_context.log.info(
                     'Emitting implicit Nothing for output "{output}" on solid {solid}'.format(
@@ -178,7 +187,9 @@ def _create_step_output_event(step_context, output, type_check, success, version
         step_context=step_context,
         step_output_data=StepOutputData(
             step_output_handle=StepOutputHandle.from_step(
-                step=step_context.step, output_name=output.output_name
+                step=step_context.step,
+                output_name=output.output_name,
+                mappable_key=output.mappable_key,
             ),
             type_check_data=TypeCheckData(
                 success=success,
@@ -313,14 +324,17 @@ def _create_step_events_for_output(step_context, output):
     step = step_context.step
     step_output = step.step_output_named(output.output_name)
 
+    # Version for the unresolved step key is the same as that for the resolved step key
     version = resolve_step_output_versions(
         step_context.execution_plan, step_context.environment_config, step_context.mode_def,
-    )[StepOutputHandle(step_context.step.key, output.output_name)]
+    )[StepOutputHandle(step_context.step.unresolved_key, output.output_name)]
 
     for output_event in _type_checked_step_output_event_sequence(step_context, output, version):
         yield output_event
 
-    step_output_handle = StepOutputHandle.from_step(step=step, output_name=output.output_name)
+    step_output_handle = StepOutputHandle.from_step(
+        step=step, output_name=output.output_name, mappable_key=output.mappable_key
+    )
 
     for evt in _set_intermediates(step_context, step_output, step_output_handle, output, version):
         yield evt
