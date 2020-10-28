@@ -8,15 +8,13 @@ from dagster.core.host_representation import (
     InProcessRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
     PipelineHandle,
-    PythonEnvRepositoryLocationOrigin,
     RepositoryLocation,
     RepositoryLocationHandle,
-    UserProcessApi,
 )
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 
 
-def get_bar_repo_repository_location_handle(user_process_api=UserProcessApi.CLI):
+def get_bar_repo_repository_location_handle():
     loadable_target_origin = LoadableTargetOrigin(
         executable_path=sys.executable,
         python_file=file_relative_path(__file__, "api_tests_repo.py"),
@@ -24,11 +22,7 @@ def get_bar_repo_repository_location_handle(user_process_api=UserProcessApi.CLI)
     )
     location_name = "bar_repo_location"
 
-    origin = (
-        ManagedGrpcPythonEnvRepositoryLocationOrigin(loadable_target_origin, location_name)
-        if user_process_api == UserProcessApi.GRPC
-        else PythonEnvRepositoryLocationOrigin(loadable_target_origin, location_name)
-    )
+    origin = ManagedGrpcPythonEnvRepositoryLocationOrigin(loadable_target_origin, location_name)
 
     return RepositoryLocationHandle.create_from_repository_location_origin(origin)
 
@@ -38,7 +32,9 @@ def get_bar_repo_grpc_repository_location_handle():
     handle = RepositoryLocationHandle.create_from_repository_location_origin(
         ManagedGrpcPythonEnvRepositoryLocationOrigin(
             loadable_target_origin=LoadableTargetOrigin(
-                attribute="bar_repo", python_file=file_relative_path(__file__, "api_tests_repo.py"),
+                executable_path=sys.executable,
+                attribute="bar_repo",
+                python_file=file_relative_path(__file__, "api_tests_repo.py"),
             ),
             location_name="bar_repo",
         )
@@ -51,7 +47,7 @@ def get_bar_repo_grpc_repository_location_handle():
 
 def get_bar_repo_handle():
     return (
-        RepositoryLocation.from_handle(get_bar_repo_repository_location_handle(UserProcessApi.CLI))
+        RepositoryLocation.from_handle(get_bar_repo_repository_location_handle())
         .get_repository("bar_repo")
         .handle
     )

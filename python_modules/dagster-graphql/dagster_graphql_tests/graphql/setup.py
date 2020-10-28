@@ -58,7 +58,6 @@ from dagster.core.definitions.decorators import job
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import RepositoryLocation, RepositoryLocationHandle
-from dagster.core.host_representation.handle import python_user_process_api_from_instance
 from dagster.core.log_manager import coerce_valid_log_level
 from dagster.core.storage.tags import RESUME_RETRY_TAG
 from dagster.core.test_utils import today_at_midnight
@@ -103,14 +102,13 @@ def create_main_recon_repo():
     return ReconstructableRepository.for_file(__file__, main_repo_name())
 
 
-def get_main_external_repo(instance):
+def get_main_external_repo():
     return RepositoryLocation.from_handle(
         RepositoryLocationHandle.create_from_repository_location_origin(
             location_origin_from_python_file(
                 python_file=file_relative_path(__file__, "setup.py"),
                 attribute=main_repo_name(),
                 working_directory=None,
-                user_process_api=python_user_process_api_from_instance(instance),
                 location_name=main_repo_location_name(),
             )
         )
