@@ -16,7 +16,7 @@ from dagster.core.host_representation.external_data import (
     external_pipeline_data_from_def,
     external_repository_data_from_def,
 )
-from dagster.core.origin import PipelinePythonOrigin, RepositoryOrigin
+from dagster.core.origin import PipelinePythonOrigin, RepositoryPythonOrigin
 
 
 def recon_pipeline_from_origin(origin):
@@ -26,7 +26,7 @@ def recon_pipeline_from_origin(origin):
 
 
 def recon_repository_from_origin(origin):
-    check.inst_param(origin, "origin", RepositoryOrigin)
+    check.inst_param(origin, "origin", RepositoryPythonOrigin)
     return ReconstructableRepository(origin.code_pointer)
 
 
