@@ -1,8 +1,10 @@
 import time
+from collections import defaultdict
 
 from dagster import check
 from dagster.core.errors import DagsterIncompleteExecutionPlanError, DagsterUnknownStepStateError
 from dagster.core.events import DagsterEvent
+from dagster.core.execution.plan.objects import UnresolvedExecutionStep
 from dagster.core.execution.retries import Retries
 from dagster.utils import pop_delayed_interrupts
 
@@ -27,6 +29,15 @@ class ActiveExecution(object):
         # All steps to be executed start out here in _pending
         self._pending = self._plan.execution_deps()
 
+        # Keep track of mappable outputs that we've seen so we can resolve their downstream steps
+        self._mappable_outputs = defaultdict(list)
+
+        # Copy the step dict so we can modify
+        self._step_dict = dict(self._plan.step_dict)
+
+        # Track all the unresolved deps so that we can iterate through and resolve
+        self._unresolved = self._plan.resolution_deps()
+
         # steps move in to these buckets as a result of _update calls
         self._executable = []
         self._pending_skip = []
@@ -48,7 +59,6 @@ class ActiveExecution(object):
         self._interrupted = set()
 
         # Start the show by loading _executable with the set of _pending steps that have no deps
-        self._update()
 
     def __enter__(self):
         self._context_guard = True
@@ -105,6 +115,27 @@ class ActiveExecution(object):
 
         successful_or_skipped_steps = self._success | self._skipped
         failed_or_abandoned_steps = self._failed | self._abandoned
+
+        # need to do this here so we don't modify _pending during iteration
+        unresolved_to_clear = []
+        # echo again needs to know when to resolve....
+        for step_key, requirements in self._unresolved.items():
+            if requirements.issubset(
+                self._success.union(self._failed, self._skipped, self._abandoned)
+            ):
+                if isinstance(self.get_step_by_key(step_key), UnresolvedExecutionStep):
+                    resolved_execution_steps = self.get_step_by_key(step_key).resolve(
+                        self._mappable_outputs, self._unresolved
+                    )
+                    for step in resolved_execution_steps:
+                        self._step_dict[step.key] = step
+                        self._pending[step.key] = set()
+                        for step_input in step.step_inputs:
+                            self._pending[step.key].update(step_input.dependency_keys)
+                unresolved_to_clear.append(step_key)
+
+        for key in unresolved_to_clear:
+            del self._unresolved[key]
 
         for step_key, requirements in self._pending.items():
             # If any upstream deps failed - this is not executable
@@ -183,7 +214,8 @@ class ActiveExecution(object):
         return step
 
     def get_step_by_key(self, step_key):
-        return self._plan.get_step_by_key(step_key)
+        # return self._plan.get_step_by_key(step_key)
+        return self._step_dict[step_key]
 
     def get_steps_to_execute(self, limit=None):
         check.invariant(
@@ -333,7 +365,6 @@ class ActiveExecution(object):
 
     def handle_event(self, dagster_event):
         check.inst_param(dagster_event, "dagster_event", DagsterEvent)
-
         if dagster_event.is_step_failure:
             self.mark_failed(dagster_event.step_key)
         elif dagster_event.is_step_success:
@@ -347,6 +378,12 @@ class ActiveExecution(object):
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,
             )
+        elif (
+            dagster_event.is_successful_output
+            and dagster_event.step_output_data.step_output_handle.mappable_key
+        ):
+            handle = dagster_event.step_output_data.step_output_handle
+            self._mappable_outputs[handle.unresolved_step_key].append(handle)
 
     def verify_complete(self, pipeline_context, step_key):
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
@@ -382,4 +419,5 @@ class ActiveExecution(object):
             and len(self._pending_retry) == 0
             and len(self._pending_abandon) == 0
             and len(self._waiting_to_retry) == 0
+            # and len(self._unresolved) == 0 # if all the mapped steps fail, the active execution gets into a bad state
         )

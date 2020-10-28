@@ -2,6 +2,7 @@ from graphql.execution.base import ResolveInfo
 
 from dagster import check
 from dagster.config.validate import validate_config_from_snap
+from dagster.core.execution.plan.objects import deconstruct_step_key
 from dagster.core.host_representation import (
     ExternalExecutionPlan,
     ExternalPipeline,
@@ -82,7 +83,8 @@ def ensure_valid_step_keys(full_external_execution_plan, step_keys):
         return
 
     for step_key in step_keys:
-        if not full_external_execution_plan.has_step(step_key):
+        _, _, unresolved_step_key = deconstruct_step_key(step_key)
+        if not full_external_execution_plan.has_step(unresolved_step_key):
             from dagster_graphql.schema.errors import DauphinInvalidStepError
 
             raise UserFacingGraphQLError(DauphinInvalidStepError(invalid_step_key=step_key))
