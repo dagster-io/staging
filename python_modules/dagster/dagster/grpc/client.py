@@ -10,8 +10,8 @@ from grpc_health.v1.health_pb2_grpc import HealthStub
 
 from dagster import check, seven
 from dagster.core.events import EngineEventData
+from dagster.core.host_representation import ExternalRepositoryOrigin
 from dagster.core.instance import DagsterInstance
-from dagster.core.origin import RepositoryGrpcServerOrigin
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -21,7 +21,7 @@ from .server import GrpcServerProcess
 from .types import (
     CanCancelExecutionRequest,
     CancelExecutionRequest,
-    ExecuteRunArgs,
+    ExecuteExternalPipelineArgs,
     ExecutionPlanSnapshotArgs,
     ExternalJobArgs,
     ExternalScheduleExecutionArgs,
@@ -205,29 +205,29 @@ class DagsterGrpcClient(object):
             res.serialized_external_pipeline_subset_result
         )
 
-    def external_repository(self, repository_grpc_server_origin):
+    def external_repository(self, external_repository_origin):
         check.inst_param(
-            repository_grpc_server_origin,
-            "repository_grpc_server_origin",
-            RepositoryGrpcServerOrigin,
+            external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
         )
 
         res = self._query(
             "ExternalRepository",
             api_pb2.ExternalRepositoryRequest,
+            # rename this param name
             serialized_repository_python_origin=serialize_dagster_namedtuple(
-                repository_grpc_server_origin
+                external_repository_origin
             ),
         )
 
         return deserialize_json_to_dagster_namedtuple(res.serialized_external_repository_data)
 
-    def streaming_external_repository(self, repository_grpc_server_origin):
+    def streaming_external_repository(self, external_repository_origin):
         for res in self._streaming_query(
             "StreamingExternalRepository",
             api_pb2.ExternalRepositoryRequest,
+            # Rename parameter
             serialized_repository_python_origin=serialize_dagster_namedtuple(
-                repository_grpc_server_origin
+                external_repository_origin
             ),
         ):
             yield {
@@ -270,7 +270,7 @@ class DagsterGrpcClient(object):
         )
 
     def execute_run(self, execute_run_args):
-        check.inst_param(execute_run_args, "execute_run_args", ExecuteRunArgs)
+        check.inst_param(execute_run_args, "execute_run_args", ExecuteExternalPipelineArgs)
 
         with DagsterInstance.from_ref(execute_run_args.instance_ref) as instance:
             try:
@@ -373,7 +373,7 @@ class DagsterGrpcClient(object):
         return deserialize_json_to_dagster_namedtuple(res.serialized_can_cancel_execution_result)
 
     def start_run(self, execute_run_args):
-        check.inst_param(execute_run_args, "execute_run_args", ExecuteRunArgs)
+        check.inst_param(execute_run_args, "execute_run_args", ExecuteExternalPipelineArgs)
 
         with DagsterInstance.from_ref(execute_run_args.instance_ref) as instance:
             try:

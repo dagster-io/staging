@@ -226,14 +226,6 @@ def _schedule_tick_state(instance, stream, tick_data):
 
 @click.command(name="grpc", help="Serve the Dagster inter-process API over GRPC")
 @click.option(
-    "--empty-working-directory",
-    is_flag=True,
-    required=False,
-    default=False,
-    help="Indicates that the working directory should be empty and should not set to the current "
-    "directory as a default",
-)
-@click.option(
     "--port",
     "-p",
     type=click.INT,
@@ -286,14 +278,6 @@ def _schedule_tick_state(instance, stream, tick_data):
     help="Wait until the first LoadRepositories call to actually load the repositories, instead of "
     "waiting to load them when the server is launched. Useful for surfacing errors when the server "
     "is managed directly from Dagit",
-)
-@click.option(
-    "--use-python-package/--no-use-python-package",
-    is_flag=True,
-    required=False,
-    default=True,
-    help="If --python-module is specified, whether to require that it be "
-    "an installed Python package.",
 )
 @python_origin_target_argument
 @click.option(
