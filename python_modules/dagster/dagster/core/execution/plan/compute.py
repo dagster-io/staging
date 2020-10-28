@@ -10,11 +10,12 @@ from dagster.core.definitions import (
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.execution.plan.objects import UnresolvedExecutionStep
 
 from .objects import ExecutionStep, StepInput, StepKind, StepOutput
 
 
-def create_compute_step(pipeline_name, environment_config, solid, step_inputs, handle):
+def create_compute_step(pipeline_name, environment_config, solid, step_inputs, handle, is_resolved):
     check.str_param(pipeline_name, "pipeline_name")
     check.inst_param(solid, "solid", Solid)
     check.list_param(step_inputs, "step_inputs", of_type=StepInput)
@@ -29,7 +30,9 @@ def create_compute_step(pipeline_name, environment_config, solid, step_inputs, h
         for output_spec in solid_config.outputs:
             config_output_names = config_output_names.union(output_spec.keys())
 
-    return ExecutionStep(
+    step = ExecutionStep if is_resolved else UnresolvedExecutionStep
+
+    return step(
         pipeline_name=pipeline_name,
         key_suffix="compute",
         step_inputs=step_inputs,
@@ -40,6 +43,7 @@ def create_compute_step(pipeline_name, environment_config, solid, step_inputs, h
                 optional=output_def.optional,
                 should_materialize=name in config_output_names,
                 asset_store_handle=output_def.asset_store_handle,
+                is_mappable=output_def.is_mappable,
             )
             for name, output_def in solid.definition.output_dict.items()
         ],
@@ -100,10 +104,13 @@ def _execute_core_compute(compute_context, inputs, compute_fn):
     all_results = []
     for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
         yield step_output
-        if isinstance(step_output, Output):
+        if isinstance(step_output, Output) and not step_output.is_mappable:
             all_results.append(step_output)
 
-    if len(all_results) != len(step.step_outputs):
+    # Ignore mappable outputs since they can be 0 to n
+    print('step.step_outputs', step.step_outputs)
+    non_mappable_step_outputs = [output for output in step.step_outputs if not output.is_mappable]
+    if len(all_results) != len(non_mappable_step_outputs):
         emitted_result_names = {r.output_name for r in all_results}
         solid_output_names = {output.name for output in step.step_outputs}
         omitted_outputs = solid_output_names.difference(emitted_result_names)

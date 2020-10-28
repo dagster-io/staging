@@ -34,6 +34,7 @@ class OutputDefinition(object):
         name=None,
         description=None,
         is_required=None,
+        is_mappable=None,
         asset_store_key=None,
         asset_metadata=None,
     ):
@@ -43,6 +44,7 @@ class OutputDefinition(object):
         self._dagster_type = resolve_dagster_type(dagster_type)
         self._description = check.opt_str_param(description, "description")
         self._is_required = check.opt_bool_param(is_required, "is_required", default=True)
+        self._is_mappable = check.opt_bool_param(is_mappable, "is_mappable", default=False)
         self._asset_store_handle = (
             AssetStoreHandle(asset_store_key, asset_metadata) if asset_store_key else None
         )
@@ -68,6 +70,10 @@ class OutputDefinition(object):
         return self._is_required
 
     @property
+    def is_mappable(self):
+        return self._is_mappable
+
+    @property
     def asset_store_handle(self):
         return self._asset_store_handle
 
@@ -88,6 +94,13 @@ class OutputDefinition(object):
                 output_mapping = OutputDefinition(Int).mapping_from('child_solid')
         """
         return OutputMapping(self, solid_name, output_name)
+
+
+class MappableOutputDefinition(OutputDefinition):
+    """This lets the dependency graph know that there is a map"""
+
+    def __init__(self):
+        super(MappableOutputDefinition, self).__init__(is_mappable=True)
 
 
 class OutputMapping(namedtuple("_OutputMapping", "definition solid_name output_name")):

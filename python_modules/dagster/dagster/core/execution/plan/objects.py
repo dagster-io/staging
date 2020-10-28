@@ -1,3 +1,4 @@
+import re
 from collections import namedtuple
 from enum import Enum
 
@@ -8,22 +9,42 @@ from dagster.core.types.dagster_type import DagsterType
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import merge_dicts
 from dagster.utils.error import SerializableErrorInfo
+from dagster.utils.merger import deep_merge_dicts
 
 
 @whitelist_for_serdes
-class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name")):
+class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name mappable_key")):
     @staticmethod
-    def from_step(step, output_name="result"):
+    def from_step(step, output_name="result", mappable_key=None):
         check.inst_param(step, "step", ExecutionStep)
 
-        return StepOutputHandle(step.key, output_name)
+        return StepOutputHandle(step.key, output_name, mappable_key)
 
-    def __new__(cls, step_key, output_name="result"):
-        return super(StepOutputHandle, cls).__new__(
+    def __new__(cls, step_key, output_name="result", mappable_key=None):
+        # if step_key matches regex, then change into mappable_key
+        # the magic sauce
+        m = re.match(r"(.*)\[(.*)\]\.compute", step_key)
+        _unresolved_step_key = None
+        if m:
+            _unresolved_step_key = m.group(1) + '[?].compute'
+            mappable_key = m.group(2)
+
+        self = super(StepOutputHandle, cls).__new__(
             cls,
             step_key=check.str_param(step_key, "step_key"),
             output_name=check.str_param(output_name, "output_name"),
+            mappable_key=check.opt_str_param(mappable_key, "mappable_key"),
         )
+
+        self._unresolved_step_key = _unresolved_step_key
+        return self
+
+    @property
+    def unresolved_step_key(self):
+        if not self._unresolved_step_key:
+            return self.step_key
+        else:
+            return self._unresolved_step_key
 
 
 @whitelist_for_serdes
@@ -140,7 +161,10 @@ class StepInputSourceType(Enum):
 
 
 class StepInput(
-    namedtuple("_StepInput", "name dagster_type source_type source_handles config_data addresses")
+    namedtuple(
+        "_StepInput",
+        "name dagster_type source_type source_handles config_data addresses is_mappable",
+    )
 ):
     def __new__(
         cls,
@@ -150,6 +174,7 @@ class StepInput(
         source_handles=None,
         config_data=None,
         addresses=None,
+        is_mappable=False,
     ):
         return super(StepInput, cls).__new__(
             cls,
@@ -163,6 +188,7 @@ class StepInput(
             addresses=check.opt_dict_param(
                 addresses, "addresses", key_type=StepOutputHandle, value_type=str
             ),
+            is_mappable=check.bool_param(is_mappable, 'is_mappable'),
         )
 
     @property
@@ -196,9 +222,20 @@ class StepInput(
     def dependency_keys(self):
         return {handle.step_key for handle in self.source_handles}
 
+    def resolve(self, output_handle):
+        return StepInput(
+            name=self.name,
+            dagster_type=self.dagster_type,
+            source_type=StepInputSourceType.SINGLE_OUTPUT,
+            source_handles=[output_handle],
+        )
+
 
 class StepOutput(
-    namedtuple("_StepOutput", "name dagster_type optional should_materialize asset_store_handle")
+    namedtuple(
+        "_StepOutput",
+        "name dagster_type optional should_materialize asset_store_handle is_mappable",
+    )
 ):
     def __new__(
         cls,
@@ -207,6 +244,7 @@ class StepOutput(
         optional=None,
         should_materialize=None,
         asset_store_handle=None,
+        is_mappable=False,
     ):
         from dagster.core.storage.asset_store import AssetStoreHandle
 
@@ -219,6 +257,7 @@ class StepOutput(
             asset_store_handle=check.opt_inst_param(
                 asset_store_handle, "asset_store_handle", AssetStoreHandle
             ),
+            is_mappable=check.bool_param(is_mappable, 'is_mappable'),
         )
 
 
@@ -226,7 +265,7 @@ class ExecutionStep(
     namedtuple(
         "_ExecutionStep",
         (
-            "pipeline_name key_suffix step_inputs step_input_dict step_outputs step_output_dict "
+            "pipeline_name key_suffix mappable_key step_inputs step_input_dict step_outputs step_output_dict "
             "compute_fn kind solid_handle solid logging_tags tags hook_defs"
         ),
     )
@@ -242,12 +281,14 @@ class ExecutionStep(
         solid_handle,
         solid,
         logging_tags=None,
+        mappable_key=None,
     ):
 
         return super(ExecutionStep, cls).__new__(
             cls,
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
             key_suffix=check.str_param(key_suffix, "key_suffix"),
+            mappable_key=check.opt_str_param(mappable_key, 'mappable_key'),
             step_inputs=check.list_param(step_inputs, "step_inputs", of_type=StepInput),
             step_input_dict={si.name: si for si in step_inputs},
             step_outputs=check.list_param(step_outputs, "step_outputs", of_type=StepOutput),
@@ -274,7 +315,22 @@ class ExecutionStep(
 
     @property
     def key(self):
-        return str(self.solid_handle) + "." + self.key_suffix
+        # return str(self.solid_handle) + "." + self.key_suffix
+        return self.resolved_key
+
+    @property
+    def unresolved_key(self):
+        if not self.mappable_key:
+            return str(self.solid_handle) + "." + self.key_suffix
+        else:
+            return str(self.solid_handle) + "[?]." + self.key_suffix
+
+    @property
+    def resolved_key(self):
+        if not self.mappable_key:
+            return str(self.solid_handle) + "." + self.key_suffix
+        else:
+            return str(self.solid_handle) + "[" + self.mappable_key + "]" + "." + self.key_suffix
 
     @property
     def solid_name(self):
@@ -295,3 +351,71 @@ class ExecutionStep(
     def step_input_named(self, name):
         check.str_param(name, "name")
         return self.step_input_dict[name]
+
+
+class UnresolvedExecutionStep(ExecutionStep):
+    def __new__(cls, **kwargs):
+        # Maybe UnresolvedExecutionStep should not have a compute_fn so it cant be mistakenly called
+        return super(UnresolvedExecutionStep, cls).__new__(cls, **kwargs)
+
+    # need a predictable format
+    @property
+    def key(self):
+        return "{}[?].compute".format(self.solid_handle.to_string())
+
+    # this will need to be updated to allow non_mappable inputs to "flow" through
+    def get_mappable_upstream(self):
+        handles = []
+        for s in self.step_inputs:
+            # if s.is_mappable:
+            handles += s.source_handles
+
+        return handles
+
+    def resolve(self, mappable_outputs, unresolved):
+        print('resolving ', self.solid.name)
+        resolved_requirements = set()
+        # source_step_key is the key of the source solid
+        source_step_key = self.step_inputs[0].source_handles[0].step_key
+
+        step_input = self.step_inputs[0]
+        print('step_input', step_input)
+        # this needs to go through all the step inputs
+        # for those that are mappable, "resolve" those step inputs
+        # for those that are not mappable, just pass in those step inputs
+        execution_steps = []
+        print('mappable_outputs', mappable_outputs)
+        print('self.key', self.key)
+        for output in mappable_outputs[source_step_key]:
+            # "resolve" by replacing [?} with the special string
+            # step_key=self.unresolved_key.replace('[?]', special_output_handle.special_tag),
+
+            resolved_step_input = step_input.resolve(output)
+
+            resolved_step = ExecutionStep(
+                pipeline_name=self.pipeline_name,
+                key_suffix=self.key_suffix,
+                mappable_key=output.mappable_key,
+                step_inputs=[resolved_step_input],  # do i need to resolve further?
+                step_outputs=self.step_outputs,
+                compute_fn=self.compute_fn,
+                kind=self.kind,
+                solid_handle=self.solid_handle,
+                solid=self.solid,
+            )
+            print('appending resolved step', resolved_step)
+            resolved_requirements.add(resolved_step.resolved_key)
+            execution_steps.append(resolved_step)
+
+        # resolve requirements for downstream steps so they can execute
+        for step, requirements in unresolved.items():
+            if self.key in requirements:
+                requirements.remove(self.key)
+                requirements.update(resolved_requirements)
+                print('updating requirements!!! {} for step {}'.format(requirements, step))
+
+        return execution_steps
+        # get the step_output_handles
+        # for each step output handle, create an execution step
+        # return all execution steps
+        # mappable outputs is a map from step input -> step output handle
