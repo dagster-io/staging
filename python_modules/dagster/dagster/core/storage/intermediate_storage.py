@@ -100,6 +100,13 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def _get_paths(self, step_output_handle):
+        if step_output_handle.mappable_key is not None:
+            return [
+                'intermediates',
+                step_output_handle.step_key,
+                step_output_handle.output_name,
+                step_output_handle.mappable_key,
+            ]
         return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
 
     def get_intermediate_object(self, dagster_type, step_output_handle):
@@ -145,6 +152,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
     def set_intermediate_object(self, dagster_type, step_output_handle, value, version=None):
         check.inst_param(dagster_type, "dagster_type", DagsterType)
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        print('set_intermediate_object for handle ', step_output_handle)
         paths = self._get_paths(step_output_handle)
         check.param_invariant(len(paths) > 0, "paths")
 

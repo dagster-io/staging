@@ -214,6 +214,7 @@ class MultiprocessExecutor(Executor):
         )
 
     def execute_step_out_of_process(self, step_context, step, errors, term_events):
+        print('execute_step_out_of_process for ', step.key)
         command = InProcessExecutorChildProcessCommand(
             run_config=step_context.run_config,
             pipeline_run=step_context.pipeline_run,
