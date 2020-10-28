@@ -40,21 +40,14 @@ export interface ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_
   name: string;
 }
 
-export interface ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState_repositoryOrigin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState_repositoryOrigin_GrpcRepositoryOrigin {

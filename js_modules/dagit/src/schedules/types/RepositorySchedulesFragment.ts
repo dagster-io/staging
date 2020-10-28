@@ -15,21 +15,14 @@ export interface RepositorySchedulesFragment_scheduleDefinitions_partitionSet {
   name: string;
 }
 
-export interface RepositorySchedulesFragment_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface RepositorySchedulesFragment_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: RepositorySchedulesFragment_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface RepositorySchedulesFragment_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: RepositorySchedulesFragment_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface RepositorySchedulesFragment_scheduleDefinitions_scheduleState_repositoryOrigin_GrpcRepositoryOrigin {
@@ -123,21 +116,14 @@ export interface RepositorySchedulesFragment_scheduleDefinitions {
   scheduleState: RepositorySchedulesFragment_scheduleDefinitions_scheduleState | null;
 }
 
-export interface RepositorySchedulesFragment_origin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface RepositorySchedulesFragment_origin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: RepositorySchedulesFragment_origin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface RepositorySchedulesFragment_origin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: RepositorySchedulesFragment_origin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface RepositorySchedulesFragment_origin_GrpcRepositoryOrigin {

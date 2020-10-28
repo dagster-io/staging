@@ -15,21 +15,14 @@ export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nod
   name: string;
 }
 
-export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_GrpcRepositoryOrigin {
@@ -123,21 +116,14 @@ export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nod
   scheduleState: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState | null;
 }
 
-export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_GrpcRepositoryOrigin {
@@ -211,21 +197,14 @@ export interface SchedulerRootQuery_unLoadableScheduleStates_RepositoryNotFoundE
   __typename: "RepositoryNotFoundError";
 }
 
-export interface SchedulerRootQuery_unLoadableScheduleStates_ScheduleStates_results_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface SchedulerRootQuery_unLoadableScheduleStates_ScheduleStates_results_repositoryOrigin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: SchedulerRootQuery_unLoadableScheduleStates_ScheduleStates_results_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface SchedulerRootQuery_unLoadableScheduleStates_ScheduleStates_results_repositoryOrigin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: SchedulerRootQuery_unLoadableScheduleStates_ScheduleStates_results_repositoryOrigin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface SchedulerRootQuery_unLoadableScheduleStates_ScheduleStates_results_repositoryOrigin_GrpcRepositoryOrigin {
