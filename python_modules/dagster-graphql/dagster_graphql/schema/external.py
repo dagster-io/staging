@@ -9,10 +9,11 @@ from dagster.core.code_pointer import (
 )
 from dagster.core.host_representation import (
     ExternalRepository,
+    GrpcServerRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
     RepositoryLocation,
 )
-from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryPythonOrigin
+from dagster.core.origin import RepositoryPythonOrigin
 from dagster_graphql import dauphin
 from dagster_graphql.implementation.fetch_solids import get_solid, get_solids
 
@@ -38,14 +39,16 @@ class DauphinRepository(dauphin.ObjectType):
     partitionSets = dauphin.non_null_list("PartitionSet")
 
     def resolve_id(self, _graphene_info):
-        return self._repository.get_origin_id()
+        return self._repository.get_external_origin_id()
 
     def resolve_origin(self, graphene_info):
-        origin = self._repository.get_origin()
-        if isinstance(origin, RepositoryGrpcServerOrigin):
+        origin = self._repository.get_external_origin()
+        if isinstance(origin.repository_location_origin, GrpcServerRepositoryLocationOrigin):
             return graphene_info.schema.type_named("GrpcRepositoryOrigin")(origin)
         else:
-            return graphene_info.schema.type_named("PythonRepositoryOrigin")(origin)
+            return graphene_info.schema.type_named("PythonRepositoryOrigin")(
+                self._repository.get_python_origin()
+            )
 
     def resolve_location(self, graphene_info):
         return graphene_info.schema.type_named("RepositoryLocation")(self._repository_location)
@@ -96,7 +99,9 @@ class DauphinGrpcRepositoryOrigin(dauphin.ObjectType):
     grpc_url = dauphin.NonNull(dauphin.String)
 
     def __init__(self, origin):
-        self._origin = check.inst_param(origin, "origin", RepositoryGrpcServerOrigin)
+        self._origin = check.inst_param(
+            origin.repository_location_origin, "origin", GrpcServerRepositoryLocationOrigin
+        )
 
     def resolve_grpc_url(self, _graphene_info):
         return "grpc:{host}:{socket_or_port}".format(
