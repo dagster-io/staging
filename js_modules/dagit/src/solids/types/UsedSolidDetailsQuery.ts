@@ -41,11 +41,18 @@ export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_de
   description: string | null;
 }
 
+export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_SolidDefinition_outputDefinitions_assetStore {
+  __typename: "AssetStore";
+  assetStoreKey: string;
+  assetMetadata: string;
+}
+
 export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_SolidDefinition_outputDefinitions {
   __typename: "OutputDefinition";
   name: string;
   type: UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_SolidDefinition_outputDefinitions_type;
   description: string | null;
+  assetStore: UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_SolidDefinition_outputDefinitions_assetStore | null;
 }
 
 export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_SolidDefinition_configField_configType_ArrayConfigType_recursiveConfigTypes_ArrayConfigType {
@@ -431,11 +438,18 @@ export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_de
   description: string | null;
 }
 
+export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_CompositeSolidDefinition_outputDefinitions_assetStore {
+  __typename: "AssetStore";
+  assetStoreKey: string;
+  assetMetadata: string;
+}
+
 export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_CompositeSolidDefinition_outputDefinitions {
   __typename: "OutputDefinition";
   name: string;
   type: UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_CompositeSolidDefinition_outputDefinitions_type;
   description: string | null;
+  assetStore: UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_CompositeSolidDefinition_outputDefinitions_assetStore | null;
 }
 
 export interface UsedSolidDetailsQuery_repositoryOrError_Repository_usedSolid_definition_CompositeSolidDefinition_inputMappings_definition {

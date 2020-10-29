@@ -13,6 +13,7 @@ import {
   SidebarTitle,
 } from 'src/SidebarComponents';
 import {
+  AssetStoreContainer,
   Invocation,
   ResourceContainer,
   ResourceHeader,
@@ -58,6 +59,10 @@ export class SidebarSolidDefinition extends React.Component<
         outputDefinitions {
           name
           description
+          assetStore {
+            assetStoreKey
+            assetMetadata
+          }
           type {
             ...DagsterTypeWithTooltipFragment
           }
@@ -201,6 +206,7 @@ export class SidebarSolidDefinition extends React.Component<
               </TypeWrapper>
               <SolidLinks title="Mapped from:" items={outputMappings[outputDef.name]} />
               <Description description={outputDef.description} />
+              {outputDef.assetStore && <AssetStoreContainer assetStore={outputDef.assetStore} />}
             </SectionItemContainer>
           ))}
         </SidebarSection>

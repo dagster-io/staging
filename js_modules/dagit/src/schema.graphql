@@ -112,7 +112,13 @@ type OutputDefinition {
   solidDefinition: SolidDefinition!
   name: String!
   description: String
+  assetStore: AssetStore
   type: DagsterType!
+}
+
+type AssetStore {
+  assetStoreKey: String!
+  assetMetadata: String!
 }
 
 interface DagsterType {
