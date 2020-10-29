@@ -285,6 +285,7 @@ def execute_pipeline(
     solid_selection=None,
     instance=None,
     raise_on_error=True,
+    step_selection=None,
 ):
     """Execute a pipeline synchronously.
 
@@ -306,13 +307,15 @@ def execute_pipeline(
         raise_on_error (Optional[bool]): Whether or not to raise exceptions when they occur.
             Defaults to ``True``, since this is the most useful behavior in test.
         solid_selection (Optional[List[str]]): A list of solid selection queries (including single
-            solid names) to execute. For example:
+            solid names). Before execution, we create a subsetted pipeline with only the selected
+            solids, then execute that. Example values:
             - ['some_solid']: select "some_solid" itself.
             - ['*some_solid']: select "some_solid" and all its ancestors (upstream dependencies).
             - ['*some_solid+++']: select "some_solid", all its ancestors, and its descendants
                 (downstream dependencies) within 3 levels down.
             - ['*some_solid', 'other_solid_a', 'other_solid_b+']: select "some_solid" and all its
                 ancestors, "other_solid_a" itself, and "other_solid_b" and its direct child solids.
+        step_selection (Optional[List[str]]): A list of steps to execute.
 
     Returns:
       :py:class:`PipelineExecutionResult`: The result of pipeline execution.
@@ -330,6 +333,7 @@ def execute_pipeline(
             tags=tags,
             solid_selection=solid_selection,
             raise_on_error=raise_on_error,
+            step_selection=step_selection,
         )
 
 
@@ -343,6 +347,7 @@ def _logged_execute_pipeline(
     tags=None,
     solid_selection=None,
     raise_on_error=True,
+    step_selection=None,
 ):
     check.inst_param(instance, "instance", DagsterInstance)
     (
@@ -352,6 +357,7 @@ def _logged_execute_pipeline(
         tags,
         solids_to_execute,
         solid_selection,
+        step_keys_to_execute,
     ) = _check_execute_pipeline_args(
         pipeline=pipeline,
         run_config=run_config,
@@ -359,6 +365,7 @@ def _logged_execute_pipeline(
         preset=preset,
         tags=tags,
         solid_selection=solid_selection,
+        step_selection=step_selection,
     )
 
     log_repo_stats(instance=instance, pipeline=pipeline, source="execute_pipeline")
@@ -369,6 +376,7 @@ def _logged_execute_pipeline(
         mode=mode,
         solid_selection=solid_selection,
         solids_to_execute=solids_to_execute,
+        step_keys_to_execute=step_keys_to_execute,
         tags=tags,
     )
 
@@ -739,7 +747,9 @@ class _ExecuteRunWithPlanIterable(object):
                         yield event
 
 
-def _check_execute_pipeline_args(pipeline, run_config, mode, preset, tags, solid_selection=None):
+def _check_execute_pipeline_args(
+    pipeline, run_config, mode, preset, tags, solid_selection=None, step_selection=None
+):
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
@@ -756,6 +766,7 @@ def _check_execute_pipeline_args(pipeline, run_config, mode, preset, tags, solid
 
     tags = check.opt_dict_param(tags, "tags", key_type=str)
     check.opt_list_param(solid_selection, "solid_selection", of_type=str)
+    check.opt_list_param(step_selection, "step_selection", of_type=str)
 
     if preset is not None:
         pipeline_preset = pipeline_def.get_preset(preset)
@@ -826,4 +837,5 @@ def _check_execute_pipeline_args(pipeline, run_config, mode, preset, tags, solid
         tags,
         pipeline.solids_to_execute,
         solid_selection,
+        step_selection,
     )
