@@ -18,10 +18,6 @@ snapshots['TestRetryExecution.test_pipeline_reexecution_info_query[in_memory_ins
     'sum_sq_solid.compute'
 ]
 
-snapshots['TestRetryExecution.test_pipeline_reexecution_info_query[sqlite_with_grpc_run_launcher_in_process_env] 1'] = [
-    'sum_sq_solid.compute'
-]
-
 snapshots['TestRetryExecution.test_pipeline_reexecution_info_query[sqlite_with_default_run_launcher_out_of_process_env] 1'] = [
     'sum_sq_solid.compute'
 ]

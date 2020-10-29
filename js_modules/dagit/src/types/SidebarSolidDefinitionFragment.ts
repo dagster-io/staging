@@ -14,11 +14,18 @@ export interface SidebarSolidDefinitionFragment_SolidDefinition_outputDefinition
   description: string | null;
 }
 
+export interface SidebarSolidDefinitionFragment_SolidDefinition_outputDefinitions_assetStore {
+  __typename: "AssetStore";
+  assetStoreKey: string;
+  assetMetadata: string;
+}
+
 export interface SidebarSolidDefinitionFragment_SolidDefinition_outputDefinitions {
   __typename: "OutputDefinition";
   name: string;
   type: SidebarSolidDefinitionFragment_SolidDefinition_outputDefinitions_type;
   description: string | null;
+  assetStore: SidebarSolidDefinitionFragment_SolidDefinition_outputDefinitions_assetStore | null;
 }
 
 export interface SidebarSolidDefinitionFragment_SolidDefinition_inputDefinitions_type {
@@ -404,11 +411,18 @@ export interface SidebarSolidDefinitionFragment_CompositeSolidDefinition_outputD
   description: string | null;
 }
 
+export interface SidebarSolidDefinitionFragment_CompositeSolidDefinition_outputDefinitions_assetStore {
+  __typename: "AssetStore";
+  assetStoreKey: string;
+  assetMetadata: string;
+}
+
 export interface SidebarSolidDefinitionFragment_CompositeSolidDefinition_outputDefinitions {
   __typename: "OutputDefinition";
   name: string;
   type: SidebarSolidDefinitionFragment_CompositeSolidDefinition_outputDefinitions_type;
   description: string | null;
+  assetStore: SidebarSolidDefinitionFragment_CompositeSolidDefinition_outputDefinitions_assetStore | null;
 }
 
 export interface SidebarSolidDefinitionFragment_CompositeSolidDefinition_inputDefinitions_type {

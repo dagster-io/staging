@@ -43,6 +43,11 @@ type AssetsNotSupportedError implements Error {
 
 union AssetsOrError = AssetConnection | AssetsNotSupportedError | PythonError
 
+type AssetStore {
+  assetStoreKey: String!
+  assetMetadata: String!
+}
+
 type AssetStoreOperationEvent implements MessageEvent & StepEvent {
   runId: String!
   message: String!
@@ -712,6 +717,7 @@ type OutputDefinition {
   solidDefinition: SolidDefinition!
   name: String!
   description: String
+  assetStore: AssetStore
   type: DagsterType!
 }
 

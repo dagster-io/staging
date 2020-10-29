@@ -1,4 +1,5 @@
-import {Code, Colors, Text} from '@blueprintjs/core';
+import {Code, Colors, Text, Icon} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
@@ -20,6 +21,13 @@ export interface SidebarSolidInvocationInfo {
 
 export type SolidMappingTable = {
   [key: string]: SolidLinkInfo[];
+};
+
+export type AssetStoreInfo = {
+  assetStore: {
+    assetStoreKey: string;
+    assetMetadata: string;
+  };
 };
 
 export const ShowAllButton = styled.button`
@@ -132,6 +140,16 @@ export const DependencyHeaderRow: React.FunctionComponent<DependencyHeaderRowPro
   <tr>
     <DependencyHeaderCell {...rest}>{label}</DependencyHeaderCell>
   </tr>
+);
+
+export const AssetStoreContainer = ({assetStore}: AssetStoreInfo) => (
+  <>
+    <ResourceContainer key={assetStore.assetStoreKey}>
+      <Icon iconSize={14} icon={IconNames.LAYERS} color={Colors.DARK_GRAY2} />
+      <ResourceHeader>{assetStore.assetStoreKey}</ResourceHeader>
+    </ResourceContainer>
+    <Code>{JSON.stringify(JSON.parse(assetStore.assetMetadata), null, 2)}</Code>
+  </>
 );
 
 export const ResourceHeader = styled(SectionHeader)`

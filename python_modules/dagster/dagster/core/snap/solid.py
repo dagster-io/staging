@@ -9,6 +9,7 @@ from dagster.core.definitions import (
     PipelineDefinition,
     SolidDefinition,
 )
+from dagster.core.storage.asset_store import AssetStoreHandle
 from dagster.serdes import whitelist_for_serdes
 
 from .dep_snapshot import (
@@ -71,6 +72,7 @@ def build_output_def_snap(output_def):
         dagster_type_key=output_def.dagster_type.key,
         description=output_def.description,
         is_required=output_def.is_required,
+        asset_store_handle=output_def.asset_store_handle,
     )
 
 
@@ -286,14 +288,19 @@ class InputDefSnap(namedtuple("_InputDefSnap", "name dagster_type_key descriptio
 
 
 @whitelist_for_serdes
-class OutputDefSnap(namedtuple("_OutputDefSnap", "name dagster_type_key description is_required")):
-    def __new__(cls, name, dagster_type_key, description, is_required):
+class OutputDefSnap(
+    namedtuple("_OutputDefSnap", "name dagster_type_key description is_required asset_store_handle")
+):
+    def __new__(cls, name, dagster_type_key, description, is_required, asset_store_handle=None):
         return super(OutputDefSnap, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             description=check.opt_str_param(description, "description"),
             is_required=check.bool_param(is_required, "is_required"),
+            asset_store_handle=check.opt_inst_param(
+                asset_store_handle, "asset_store_handle", AssetStoreHandle
+            ),
         )
 
 
