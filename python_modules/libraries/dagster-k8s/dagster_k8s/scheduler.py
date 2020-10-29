@@ -116,7 +116,6 @@ class K8sScheduler(Scheduler, ConfigurableClass):
 
         job_template = construct_dagster_k8s_job(
             job_config=job_config,
-            command=["dagster"],
             args=[
                 "api",
                 "launch_scheduled_execution",
