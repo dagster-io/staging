@@ -1,8 +1,8 @@
 import path from 'path';
 
-import {PIPELINE_EXPLORER_ROOT_QUERY} from 'src/PipelineExplorerRoot';
-import {CachedGraphQLRequest} from 'src/testing/MockedApolloLinks';
-import {PipelineExplorerRootQueryVariables} from 'src/types/PipelineExplorerRootQuery';
+import { PIPELINE_EXPLORER_ROOT_QUERY } from 'src/PipelineExplorerRoot';
+import { CachedGraphQLRequest } from 'src/testing/MockedApolloLinks';
+import { PipelineExplorerRootQueryVariables } from 'src/types/PipelineExplorerRootQuery';
 
 const dataDir = path.join(__dirname, '..', '__tests__', 'graph', '__data__');
 
@@ -42,7 +42,7 @@ MOCKS.push({
 });
 
 MOCKS.push(
-  ...['composition', 'log_spew', 'many_events', 'fan_in_fan_out_pipeline'].map((name) => ({
+  ...['composition', 'log_spew', 'many_events'].map((name) => ({
     name: name,
     query: PIPELINE_EXPLORER_ROOT_QUERY,
     variables: {
