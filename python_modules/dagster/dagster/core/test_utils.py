@@ -1,5 +1,7 @@
 import datetime
+import logging
 import os
+import sys
 import time
 from contextlib import contextmanager
 
@@ -13,6 +15,7 @@ from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.serdes import ConfigurableClass
 from dagster.utils import merge_dicts
+from dagster.utils.error import serializable_error_info_from_exc_info
 
 
 def step_output_event_filter(pipe_iterator):
@@ -91,6 +94,13 @@ def instance_for_test_tempdir(temp_dir, overrides=None, enable_telemetry=False):
         with DagsterInstance.get() as instance:
             try:
                 yield instance
+            except:
+                print(
+                    "Test raised an exception, attempting to clean up instance:"
+                    + serializable_error_info_from_exc_info(sys.exc_info()).to_string()
+                )
+                cleanup_test_instance(instance)
+                raise
             finally:
                 cleanup_test_instance(instance)
 
