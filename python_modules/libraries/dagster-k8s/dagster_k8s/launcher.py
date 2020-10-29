@@ -26,6 +26,7 @@ from dagster.utils import frozentags, merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
 from .job import (
+    DAGSTER_COMMAND_DEFAULT,
     DagsterK8sJobConfig,
     construct_dagster_k8s_job,
     get_job_name_from_run_id,
@@ -64,6 +65,11 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             This image will be run with the command
             ``dagster api execute_run_with_structured_logs``.
             When using user code deployments, the image should not be specified.
+        job_command (Optional[Noneable[String]]): The command to use for the Job's Dagster container.
+            By default, the command is "dagster", but can be overridden. If None is provided, then
+            the container's entrypoint commaand is used. See
+            https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes
+            for more details.
         instance_config_map (str): The ``name`` of an existing Volume to mount into the pod in
             order to provide a ConfigMap for the Dagster instance. This Volume should contain a
             ``dagster.yaml`` with appropriate values for run storage, event log storage, etc.
@@ -109,6 +115,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         postgres_password_secret,
         dagster_home,
         job_image=None,
+        job_command=DAGSTER_COMMAND_DEFAULT,
         image_pull_policy="Always",
         image_pull_secrets=None,
         load_incluster_config=True,
@@ -137,7 +144,8 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         self._core_api = k8s_client_core_api or kubernetes.client.CoreV1Api()
 
         self.job_config = None
-        self._job_image = check.opt_str_param(job_image, "job_image")
+        self._job_image = (check.opt_str_param(job_image, "job_image")
+        self._job_command = (check.str_param(job_command, "job_command")
         self._dagster_home = check.str_param(dagster_home, "dagster_home")
         self._image_pull_policy = check.str_param(image_pull_policy, "image_pull_policy")
         self._image_pull_secrets = check.opt_list_param(
@@ -186,6 +194,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         else:
             self.job_config = DagsterK8sJobConfig(
                 job_image=check.str_param(self._job_image, "job_image"),
+                job_command=check.str_param(self._job_command, "job_command"),
                 dagster_home=check.str_param(self._dagster_home, "dagster_home"),
                 image_pull_policy=check.str_param(self._image_pull_policy, "image_pull_policy"),
                 image_pull_secrets=check.opt_list_param(
@@ -210,6 +219,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
     def _get_grpc_job_config(self, job_image):
         return DagsterK8sJobConfig(
             job_image=check.str_param(job_image, "job_image"),
+            job_command=check.str_param(self._job_command, "job_command"),
             dagster_home=check.str_param(self._dagster_home, "dagster_home"),
             image_pull_policy=check.str_param(self._image_pull_policy, "image_pull_policy"),
             image_pull_secrets=check.opt_list_param(
@@ -291,7 +301,6 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
 
         job = construct_dagster_k8s_job(
             job_config=job_config,
-            command=["dagster"],
             args=["api", "execute_run_with_structured_logs", input_json],
             job_name=job_name,
             pod_name=pod_name,

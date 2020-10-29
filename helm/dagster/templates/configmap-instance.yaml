@@ -23,6 +23,9 @@ data:
         {{- end }}
         service_account_name: {{ include "dagster.serviceAccountName" . }}
         job_image: "{{- .Values.scheduler.image.repository -}}:{{- .Values.scheduler.image.tag -}}"
+        {{- if .Values.scheduler.jobCommand }}
+        job_command: "{{- .Values.k8sRunLauncher.jobCommand -}}"
+        {{- end }}
         dagster_home:
           env: DAGSTER_HOME
         postgres_password_secret:
@@ -84,6 +87,9 @@ data:
         service_account_name: {{ include "dagster.serviceAccountName" . }}
         {{- if .Values.k8sRunLauncher.image }}
         job_image: "{{- .Values.k8sRunLauncher.image.repository -}}:{{- .Values.k8sRunLauncher.image.tag -}}"
+        {{- if .Values.k8sRunLauncher.jobCommand }}
+        job_command: "{{- .Values.k8sRunLauncher.jobCommand -}}"
+        {{- end }}
         image_pull_policy: {{ .Values.k8sRunLauncher.image.pullPolicy }}
         {{- end }}
         dagster_home:
