@@ -344,11 +344,30 @@ def _set_addressable_asset(context, step_output_handle, asset_store_handle, valu
     check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
 
     asset_store = context.get_asset_store(asset_store_handle.asset_store_key)
-    asset_store.set_asset(context, step_output_handle, value, asset_store_handle.asset_metadata)
+    materialization = asset_store.set_asset(
+        context, step_output_handle, value, asset_store_handle.asset_metadata
+    )
 
-    return AssetStoreOperation(
+    yield AssetStoreOperation(
         AssetStoreOperationType.SET_ASSET, step_output_handle, asset_store_handle
     )
+
+    # require AssetStore.set_asset to return an AssetMaterialization for now
+    # may loosen the constraint later
+    if not isinstance(materialization, AssetMaterialization):
+        raise DagsterInvariantViolationError(
+            (
+                "asset_store on output {output_name} has returned "
+                "value {value} of type {python_type}. You must return an "
+                "AssetMaterialization."
+            ).format(
+                output_name=step_output_handle.output_name,
+                value=repr(materialization),
+                python_type=type(materialization).__name__,
+            )
+        )
+
+    yield materialization
 
 
 def _set_intermediates(step_context, step_output, step_output_handle, output, version):
@@ -357,9 +376,11 @@ def _set_intermediates(step_context, step_output, step_output_handle, output, ve
         res = _set_addressable_asset(
             step_context, step_output_handle, step_output.asset_store_handle, output.value
         )
-
-        if isinstance(res, AssetStoreOperation):
-            yield DagsterEvent.asset_store_operation(step_context, res)
+        for evt in res:
+            if isinstance(evt, AssetStoreOperation):
+                yield DagsterEvent.asset_store_operation(step_context, evt)
+            if isinstance(evt, AssetMaterialization):
+                yield DagsterEvent.step_materialization(step_context, evt)
     else:
         res = step_context.intermediate_storage.set_intermediate(
             context=step_context,

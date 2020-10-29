@@ -7,7 +7,9 @@ import six
 from dagster import check
 from dagster.config import Field
 from dagster.config.source import StringSource
+from dagster.core.definitions.events import AssetKey, EventMetadataEntry
 from dagster.core.definitions.resource import resource
+from dagster.core.events import AssetMaterialization
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
@@ -92,6 +94,17 @@ class PickledObjectFilesystemAssetStore(AssetStore):
         with open(filepath, self.write_mode) as write_obj:
             pickle.dump(obj, write_obj, PICKLE_PROTOCOL)
 
+        return AssetMaterialization(
+            asset_key=AssetKey(
+                [
+                    context.pipeline_def.name,
+                    step_output_handle.step_key,
+                    step_output_handle.output_name,
+                ]
+            ),
+            metadata_entries=[EventMetadataEntry.fspath(os.path.abspath(filepath))],
+        )
+
     def get_asset(self, context, step_output_handle, _asset_metadata):
         """Unpickle the file and Load it to a data object."""
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
@@ -122,7 +135,7 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
     def _get_path(self, path):
         return os.path.join(self.base_dir, path)
 
-    def set_asset(self, _context, step_output_handle, obj, asset_metadata):
+    def set_asset(self, context, step_output_handle, obj, asset_metadata):
         """Pickle the data and store the object to a custom file path."""
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         path = check.str_param(asset_metadata.get("path"), "asset_metadata.path")
@@ -134,6 +147,17 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
 
         with open(filepath, self.write_mode) as write_obj:
             pickle.dump(obj, write_obj, PICKLE_PROTOCOL)
+
+        return AssetMaterialization(
+            asset_key=AssetKey(
+                [
+                    context.pipeline_def.name,
+                    step_output_handle.step_key,
+                    step_output_handle.output_name,
+                ]
+            ),
+            metadata_entries=[EventMetadataEntry.fspath(os.path.abspath(filepath))],
+        )
 
     def get_asset(self, _context, step_output_handle, asset_metadata):
         """Unpickle the file from a given file path and Load it to a data object."""
