@@ -11,7 +11,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
 from dagster.core.launcher.default_run_launcher import DefaultRunLauncher
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
-from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.serdes import ConfigurableClass
 from dagster.utils import merge_dicts
 
@@ -268,6 +268,7 @@ class MockedRunLauncher(RunLauncher, ConfigurableClass):
         check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(run, "run", PipelineRun)
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
+        check.invariant(run.status == PipelineRunStatus.NOT_STARTED)
         self._queue.append(run)
         return run
 
