@@ -1,7 +1,7 @@
 # NOTE: pylint isn't smart enough to figure out what's going on with dauphin
 # pylint: disable=unexpected-keyword-arg, no-value-for-parameter
 
-from dagster import check
+from dagster import check, seven
 from dagster.core.definitions import SolidHandle
 from dagster.core.host_representation import RepresentedPipeline
 from dagster.core.snap import CompositeSolidDefSnap, DependencyStructureIndex, SolidDefSnap
@@ -264,6 +264,18 @@ class DauphinInputDefinition(dauphin.ObjectType):
         )
 
 
+class DauphinAssetStore(dauphin.ObjectType):
+    class Meta(object):
+        name = "AssetStore"
+
+    asset_store_key = dauphin.NonNull(dauphin.String)
+    asset_metadata = dauphin.NonNull(dauphin.String)
+
+    def __init__(self, asset_store_key, asset_metadata):
+        self.asset_store_key = check.opt_str_param(asset_store_key, "asset_store_key")
+        self.asset_metadata = check.opt_str_param(asset_metadata, "asset_metadata")
+
+
 class DauphinOutputDefinition(dauphin.ObjectType):
     class Meta(object):
         name = "OutputDefinition"
@@ -271,6 +283,7 @@ class DauphinOutputDefinition(dauphin.ObjectType):
     solid_definition = dauphin.NonNull("SolidDefinition")
     name = dauphin.NonNull(dauphin.String)
     description = dauphin.String()
+    asset_store = dauphin.Field("AssetStore")
     type = dauphin.NonNull("DagsterType")
 
     def __init__(self, represented_pipeline, solid_def_name, output_def_name):
@@ -282,9 +295,17 @@ class DauphinOutputDefinition(dauphin.ObjectType):
 
         self._solid_def_snap = represented_pipeline.get_solid_def_snap(solid_def_name)
         self._output_def_snap = self._solid_def_snap.get_output_snap(output_def_name)
+        asset_store_handle = self._output_def_snap.asset_store_handle
 
         super(DauphinOutputDefinition, self).__init__(
-            name=self._output_def_snap.name, description=self._output_def_snap.description,
+            name=self._output_def_snap.name,
+            description=self._output_def_snap.description,
+            asset_store=DauphinAssetStore(
+                asset_store_key=asset_store_handle.asset_store_key,
+                asset_metadata=seven.json.dumps(asset_store_handle.asset_metadata),
+            )
+            if asset_store_handle
+            else None,
         )
 
     def resolve_type(self, _):
