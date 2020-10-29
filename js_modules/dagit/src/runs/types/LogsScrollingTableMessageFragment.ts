@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { LogLevel, ObjectStoreOperationType } from "./../../types/globalTypes";
+import { LogLevel, ObjectStoreOperationType, AssetStoreOperationType } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: LogsScrollingTableMessageFragment
@@ -533,6 +533,80 @@ export interface LogsScrollingTableMessageFragment_ObjectStoreOperationEvent {
   operationResult: LogsScrollingTableMessageFragment_ObjectStoreOperationEvent_operationResult;
 }
 
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPathMetadataEntry {
+  __typename: "EventPathMetadataEntry";
+  label: string;
+  description: string | null;
+  path: string;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventJsonMetadataEntry {
+  __typename: "EventJsonMetadataEntry";
+  label: string;
+  description: string | null;
+  jsonString: string;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventUrlMetadataEntry {
+  __typename: "EventUrlMetadataEntry";
+  label: string;
+  description: string | null;
+  url: string;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventTextMetadataEntry {
+  __typename: "EventTextMetadataEntry";
+  label: string;
+  description: string | null;
+  text: string;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventMarkdownMetadataEntry {
+  __typename: "EventMarkdownMetadataEntry";
+  label: string;
+  description: string | null;
+  mdStr: string;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPythonArtifactMetadataEntry {
+  __typename: "EventPythonArtifactMetadataEntry";
+  label: string;
+  description: string | null;
+  module: string;
+  name: string;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventFloatMetadataEntry {
+  __typename: "EventFloatMetadataEntry";
+  label: string;
+  description: string | null;
+  floatValue: number;
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventIntMetadataEntry {
+  __typename: "EventIntMetadataEntry";
+  label: string;
+  description: string | null;
+  intValue: number;
+}
+
+export type LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries = LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPathMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventJsonMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventUrlMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventTextMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventMarkdownMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPythonArtifactMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventFloatMetadataEntry | LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventIntMetadataEntry;
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult {
+  __typename: "AssetStoreOperationResult";
+  op: AssetStoreOperationType;
+  metadataEntries: LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries[];
+}
+
+export interface LogsScrollingTableMessageFragment_AssetStoreOperationEvent {
+  __typename: "AssetStoreOperationEvent";
+  message: string;
+  timestamp: string;
+  level: LogLevel;
+  stepKey: string | null;
+  assetStoreResult: LogsScrollingTableMessageFragment_AssetStoreOperationEvent_assetStoreResult;
+}
+
 export interface LogsScrollingTableMessageFragment_EngineEvent_metadataEntries_EventPathMetadataEntry {
   __typename: "EventPathMetadataEntry";
   label: string;
@@ -637,4 +711,4 @@ export interface LogsScrollingTableMessageFragment_HookErroredEvent {
   error: LogsScrollingTableMessageFragment_HookErroredEvent_error;
 }
 
-export type LogsScrollingTableMessageFragment = LogsScrollingTableMessageFragment_ExecutionStepSkippedEvent | LogsScrollingTableMessageFragment_StepMaterializationEvent | LogsScrollingTableMessageFragment_PipelineInitFailureEvent | LogsScrollingTableMessageFragment_PipelineFailureEvent | LogsScrollingTableMessageFragment_ExecutionStepFailureEvent | LogsScrollingTableMessageFragment_ExecutionStepInputEvent | LogsScrollingTableMessageFragment_ExecutionStepOutputEvent | LogsScrollingTableMessageFragment_StepExpectationResultEvent | LogsScrollingTableMessageFragment_ObjectStoreOperationEvent | LogsScrollingTableMessageFragment_EngineEvent | LogsScrollingTableMessageFragment_HookErroredEvent;
+export type LogsScrollingTableMessageFragment = LogsScrollingTableMessageFragment_ExecutionStepSkippedEvent | LogsScrollingTableMessageFragment_StepMaterializationEvent | LogsScrollingTableMessageFragment_PipelineInitFailureEvent | LogsScrollingTableMessageFragment_PipelineFailureEvent | LogsScrollingTableMessageFragment_ExecutionStepFailureEvent | LogsScrollingTableMessageFragment_ExecutionStepInputEvent | LogsScrollingTableMessageFragment_ExecutionStepOutputEvent | LogsScrollingTableMessageFragment_StepExpectationResultEvent | LogsScrollingTableMessageFragment_ObjectStoreOperationEvent | LogsScrollingTableMessageFragment_AssetStoreOperationEvent | LogsScrollingTableMessageFragment_EngineEvent | LogsScrollingTableMessageFragment_HookErroredEvent;

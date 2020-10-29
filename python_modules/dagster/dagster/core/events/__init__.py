@@ -808,11 +808,21 @@ class DagsterEvent(
             event_type=DagsterEventType.ASSET_STORE_OPERATION,
             step_context=step_context,
             event_specific_data=AssetStoreOperationData(
-                asset_store_operation.op,
-                asset_store_operation.step_output_handle,
-                asset_store_operation.asset_store_handle,
+                op=asset_store_operation.op,
+                step_key=asset_store_operation.step_output_handle.step_key,
+                output_name=asset_store_operation.step_output_handle.output_name,
+                metadata_entries=[
+                    EventMetadataEntry.text(
+                        asset_store_operation.asset_store_handle.asset_store_key,
+                        label="asset_store_key",
+                    ),
+                    EventMetadataEntry.json(
+                        asset_store_operation.asset_store_handle.asset_metadata,
+                        label="asset_metadata",
+                    ),
+                ],
             ),
-            message='addressable asset operation: {op} for output "{output_name}".'.format(
+            message='Asset store operation: {op} for output "{output_name}".'.format(
                 op=asset_store_operation.op.value,
                 output_name=asset_store_operation.step_output_handle.output_name,
             ),
@@ -918,7 +928,7 @@ class StepExpectationResultData(namedtuple("_StepExpectationResultData", "expect
 
 @whitelist_for_serdes
 class AssetStoreOperationData(
-    namedtuple("_AssetStoreOperationData", "op step_output_handle asset_store")
+    namedtuple("_AssetStoreOperationData", "op step_key output_name metadata_entries")
 ):
     pass
 
