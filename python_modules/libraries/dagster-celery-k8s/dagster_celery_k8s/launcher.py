@@ -236,7 +236,6 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
 
         job = construct_dagster_k8s_job(
             job_config,
-            command=["dagster"],
             args=["api", "execute_run_with_structured_logs", input_json],
             job_name=job_name,
             pod_name=pod_name,
