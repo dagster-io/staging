@@ -43,6 +43,9 @@ def path_to_file(path):
     return script_relative_path(os.path.join("./", path))
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
 def test_dagster_telemetry_enabled(caplog):
     with instance_for_test(enable_telemetry=True):
         runner = CliRunner()
@@ -67,6 +70,9 @@ def test_dagster_telemetry_enabled(caplog):
             assert result.exit_code == 0
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
 def test_dagster_telemetry_disabled(caplog):
     with instance_for_test(enable_telemetry=False):
         runner = CliRunner()
@@ -82,6 +88,9 @@ def test_dagster_telemetry_disabled(caplog):
         assert result.exit_code == 0
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
 def test_dagster_telemetry_unset(caplog):
     with seven.TemporaryDirectory() as temp_dir:
         with environ({"DAGSTER_HOME": temp_dir}):
@@ -112,6 +121,9 @@ def test_dagster_telemetry_unset(caplog):
                 assert result.exit_code == 0
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
 def test_repo_stats(caplog):
     with seven.TemporaryDirectory() as temp_dir:
         with environ({"DAGSTER_HOME": temp_dir}):
@@ -152,6 +164,9 @@ def test_repo_stats(caplog):
                 assert result.exit_code == 0
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
 @pytest.mark.parametrize("env", [{"BUILDKITE": None, "TF_BUILD": None}])
 @responses.activate
 def test_dagster_telemetry_upload(env):
@@ -181,6 +196,9 @@ def test_dagster_telemetry_upload(env):
             assert responses.assert_call_count(DAGSTER_TELEMETRY_URL, 1)
 
 
+@pytest.mark.skipif(
+    os.name == "nt", reason="TemporaryDirectory disabled for win because of event.log contention"
+)
 @pytest.mark.parametrize("env", [{"BUILDKITE": "True"}, {"TF_BUILD": "True"}])
 @responses.activate
 def test_dagster_telemetry_no_test_env_upload(env):
