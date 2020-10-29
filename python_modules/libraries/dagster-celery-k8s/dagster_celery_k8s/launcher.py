@@ -20,6 +20,7 @@ from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_d
 from dagster.utils import frozentags, merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster_k8s.job import (
+    DAGSTER_COMMAND_DEFAULT,
     DagsterK8sJobConfig,
     construct_dagster_k8s_job,
     get_job_name_from_run_id,
@@ -173,6 +174,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         exc_config = _get_validated_celery_k8s_executor_config(run.run_config)
 
         job_image = None
+        job_command = DAGSTER_COMMAND_DEFAULT
         pipeline_origin = None
         env_vars = None
         if isinstance(
@@ -212,6 +214,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
 
         else:
             job_image = exc_config.get("job_image")
+            job_command = exc_config.get("job_command")
             if not job_image:
                 raise DagsterInvariantViolationError(
                     "Cannot find job_image in celery-k8s executor config."
@@ -223,6 +226,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
             instance_config_map=self.instance_config_map,
             postgres_password_secret=self.postgres_password_secret,
             job_image=check.str_param(job_image, "job_image"),
+            job_command=check.str_param(job_command, "job_command"),
             image_pull_policy=exc_config.get("image_pull_policy"),
             image_pull_secrets=exc_config.get("image_pull_secrets"),
             service_account_name=exc_config.get("service_account_name"),
@@ -244,7 +248,6 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
 
         job = construct_dagster_k8s_job(
             job_config,
-            command=["dagster"],
             args=["api", "execute_run_with_structured_logs", input_json],
             job_name=job_name,
             pod_name=pod_name,
