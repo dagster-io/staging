@@ -42,7 +42,6 @@ from .impl import (
     StartRunInSubprocessSuccessful,
     execute_run_in_subprocess,
     get_external_execution_plan_snapshot,
-    get_external_job_params,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
     get_partition_config,
@@ -58,7 +57,6 @@ from .types import (
     CancelExecutionResult,
     ExecuteExternalPipelineArgs,
     ExecutionPlanSnapshotArgs,
-    ExternalJobArgs,
     ExternalScheduleExecutionArgs,
     GetCurrentImageResult,
     ListRepositoriesResponse,
@@ -493,23 +491,6 @@ class DagsterApiServer(DagsterApiServicer):
                     args.schedule_execution_data_mode,
                     args.scheduled_execution_timestamp,
                     args.scheduled_execution_timezone,
-                )
-            )
-        )
-
-    def ExternalJobParams(self, request, _context):
-        external_job_args = deserialize_json_to_dagster_namedtuple(
-            request.serialized_external_job_args
-        )
-        check.inst_param(
-            external_job_args, "external_job_args", ExternalJobArgs,
-        )
-
-        recon_repo = self._recon_repository_from_origin(external_job_args.repository_origin)
-        return api_pb2.ExternalJobParamsReply(
-            serialized_external_job_params_or_external_job_params_error_data=serialize_dagster_namedtuple(
-                get_external_job_params(
-                    recon_repo, external_job_args.instance_ref, external_job_args.name
                 )
             )
         )
