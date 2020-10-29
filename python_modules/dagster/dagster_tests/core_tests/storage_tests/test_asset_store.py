@@ -94,6 +94,22 @@ def test_default_asset_store():
         with open(filepath_b, "rb") as read_obj:
             assert pickle.load(read_obj) == 1
 
+        # Asset Materiliazation events
+        step_materialization_events = list(
+            filter(lambda evt: evt.is_step_materialization, result.event_list)
+        )
+        assert len(step_materialization_events) == 2
+        assert os.path.join(tmpdir_path, result.run_id, "solid_a.compute", "result") == (
+            step_materialization_events[0]
+            .event_specific_data.materialization.metadata_entries[0]
+            .entry_data.path
+        )
+        assert os.path.join(tmpdir_path, result.run_id, "solid_b.compute", "result") == (
+            step_materialization_events[1]
+            .event_specific_data.materialization.metadata_entries[0]
+            .entry_data.path
+        )
+
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
     plan = create_execution_plan(pipeline_def, step_keys_to_execute=step_keys_to_execute)
@@ -128,3 +144,14 @@ def test_step_subset_with_custom_paths():
             assert not evt.is_failure
         # only the selected step subset was executed
         assert set([evt.step_key for evt in step_subset_events]) == {"solid_b.compute"}
+
+        # Asset Materiliazation events
+        step_materialization_events = list(
+            filter(lambda evt: evt.is_step_materialization, step_subset_events)
+        )
+        assert len(step_materialization_events) == 1
+        assert test_asset_metadata_dict["solid_b"]["path"] == (
+            step_materialization_events[0]
+            .event_specific_data.materialization.metadata_entries[0]
+            .entry_data.path
+        )
