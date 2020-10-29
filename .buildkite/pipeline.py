@@ -774,7 +774,8 @@ def python_steps():
     steps += examples_tests()
     steps += integration_tests()
 
-    return steps
+    # return steps
+    return integration_tests()
 
 
 if __name__ == "__main__":
@@ -799,7 +800,8 @@ if __name__ == "__main__":
                     "CI_BRANCH": "$BUILDKITE_BRANCH",
                     "CI_PULL_REQUEST": "$BUILDKITE_PULL_REQUEST",
                 },
-                "steps": all_steps,
+                # "steps": all_steps,
+                "steps": python_steps(),
             },
             default_flow_style=False,
         )
