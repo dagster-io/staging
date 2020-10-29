@@ -78,6 +78,8 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
             "GrpcRunLauncher: Can't launch runs for pipeline not loaded from a GRPC server",
         )
 
+        self._run_id_to_repository_location_handle_cache[run.run_id] = repository_location_handle
+
         self._instance.add_run_tags(
             run.run_id,
             {
@@ -106,8 +108,6 @@ class GrpcRunLauncher(RunLauncher, ConfigurableClass):
                     res.message, serializable_error_info=res.serializable_error_info
                 )
             )
-
-        self._run_id_to_repository_location_handle_cache[run.run_id] = repository_location_handle
 
         return run
 
