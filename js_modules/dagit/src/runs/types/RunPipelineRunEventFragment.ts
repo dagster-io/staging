@@ -3,7 +3,7 @@
 /* eslint-disable */
 // This file was automatically generated and should not be edited.
 
-import { LogLevel, ObjectStoreOperationType } from "./../../types/globalTypes";
+import { LogLevel, ObjectStoreOperationType, AssetStoreOperationType } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL fragment: RunPipelineRunEventFragment
@@ -533,6 +533,80 @@ export interface RunPipelineRunEventFragment_ObjectStoreOperationEvent {
   operationResult: RunPipelineRunEventFragment_ObjectStoreOperationEvent_operationResult;
 }
 
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPathMetadataEntry {
+  __typename: "EventPathMetadataEntry";
+  label: string;
+  description: string | null;
+  path: string;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventJsonMetadataEntry {
+  __typename: "EventJsonMetadataEntry";
+  label: string;
+  description: string | null;
+  jsonString: string;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventUrlMetadataEntry {
+  __typename: "EventUrlMetadataEntry";
+  label: string;
+  description: string | null;
+  url: string;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventTextMetadataEntry {
+  __typename: "EventTextMetadataEntry";
+  label: string;
+  description: string | null;
+  text: string;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventMarkdownMetadataEntry {
+  __typename: "EventMarkdownMetadataEntry";
+  label: string;
+  description: string | null;
+  mdStr: string;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPythonArtifactMetadataEntry {
+  __typename: "EventPythonArtifactMetadataEntry";
+  label: string;
+  description: string | null;
+  module: string;
+  name: string;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventFloatMetadataEntry {
+  __typename: "EventFloatMetadataEntry";
+  label: string;
+  description: string | null;
+  floatValue: number;
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventIntMetadataEntry {
+  __typename: "EventIntMetadataEntry";
+  label: string;
+  description: string | null;
+  intValue: number;
+}
+
+export type RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries = RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPathMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventJsonMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventUrlMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventTextMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventMarkdownMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventPythonArtifactMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventFloatMetadataEntry | RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries_EventIntMetadataEntry;
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult {
+  __typename: "AssetStoreOperationResult";
+  op: AssetStoreOperationType;
+  metadataEntries: RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult_metadataEntries[];
+}
+
+export interface RunPipelineRunEventFragment_AssetStoreOperationEvent {
+  __typename: "AssetStoreOperationEvent";
+  message: string;
+  timestamp: string;
+  level: LogLevel;
+  stepKey: string | null;
+  assetStoreResult: RunPipelineRunEventFragment_AssetStoreOperationEvent_assetStoreResult;
+}
+
 export interface RunPipelineRunEventFragment_EngineEvent_metadataEntries_EventPathMetadataEntry {
   __typename: "EventPathMetadataEntry";
   label: string;
@@ -639,4 +713,4 @@ export interface RunPipelineRunEventFragment_HookErroredEvent {
   error: RunPipelineRunEventFragment_HookErroredEvent_error;
 }
 
-export type RunPipelineRunEventFragment = RunPipelineRunEventFragment_ExecutionStepSkippedEvent | RunPipelineRunEventFragment_StepMaterializationEvent | RunPipelineRunEventFragment_PipelineInitFailureEvent | RunPipelineRunEventFragment_PipelineFailureEvent | RunPipelineRunEventFragment_ExecutionStepFailureEvent | RunPipelineRunEventFragment_ExecutionStepInputEvent | RunPipelineRunEventFragment_ExecutionStepOutputEvent | RunPipelineRunEventFragment_StepExpectationResultEvent | RunPipelineRunEventFragment_ObjectStoreOperationEvent | RunPipelineRunEventFragment_EngineEvent | RunPipelineRunEventFragment_HookErroredEvent;
+export type RunPipelineRunEventFragment = RunPipelineRunEventFragment_ExecutionStepSkippedEvent | RunPipelineRunEventFragment_StepMaterializationEvent | RunPipelineRunEventFragment_PipelineInitFailureEvent | RunPipelineRunEventFragment_PipelineFailureEvent | RunPipelineRunEventFragment_ExecutionStepFailureEvent | RunPipelineRunEventFragment_ExecutionStepInputEvent | RunPipelineRunEventFragment_ExecutionStepOutputEvent | RunPipelineRunEventFragment_StepExpectationResultEvent | RunPipelineRunEventFragment_ObjectStoreOperationEvent | RunPipelineRunEventFragment_AssetStoreOperationEvent | RunPipelineRunEventFragment_EngineEvent | RunPipelineRunEventFragment_HookErroredEvent;
