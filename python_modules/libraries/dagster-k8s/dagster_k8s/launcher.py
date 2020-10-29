@@ -114,6 +114,8 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
         job_namespace="default",
         env_config_maps=None,
         env_secrets=None,
+        k8s_client_batch_api=None,
+        k8s_client_core_api=None,
     ):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self.job_namespace = check.str_param(job_namespace, "job_namespace")
@@ -128,8 +130,9 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             check.opt_str_param(kubeconfig_file, "kubeconfig_file")
             kubernetes.config.load_kube_config(kubeconfig_file)
 
-        self._batch_api = kubernetes.client.BatchV1Api()
-        self._core_api = kubernetes.client.CoreV1Api()
+        # [TODO(Bob)]: Figure out how to use `check` on custom k8s_client_*_api objects.
+        self._batch_api = k8s_client_batch_api or kubernetes.client.BatchV1Api()
+        self._core_api = k8s_client_vore_api or kubernetes.client.CoreV1Api()
 
         self.job_config = None
         self._job_image = check.opt_str_param(job_image, "job_image")
