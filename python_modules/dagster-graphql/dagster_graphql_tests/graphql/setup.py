@@ -46,7 +46,6 @@ from dagster import (
     weekly_schedule,
 )
 from dagster.cli.workspace.load import location_handle_from_python_file
-from dagster.core.definitions.decorators import job
 from dagster.core.definitions.partition import last_empty_partition
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.host_representation import RepositoryLocation
@@ -1007,14 +1006,6 @@ def define_partitions():
     return [integer_set, enum_set, chained_partition_set]
 
 
-def define_jobs():
-    @job(pipeline_name="no_config_pipeline")
-    def job_no_config(_):
-        return {"storage": {"filesystem": {}}}
-
-    return [job_no_config]
-
-
 @pipeline
 def chained_failure_pipeline():
     @lambda_solid
@@ -1080,5 +1071,4 @@ def test_repo():
         ]
         + define_schedules()
         + define_partitions()
-        + define_jobs()
     )
