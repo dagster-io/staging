@@ -30,8 +30,6 @@ from dagster.core.execution.retries import Retries
 from dagster.core.host_representation import external_repository_data_from_def
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import (
-    ExternalExecutionParamsData,
-    ExternalExecutionParamsErrorData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionNamesData,
@@ -62,7 +60,6 @@ from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc import DagsterGrpcClient, DagsterGrpcServer
 from dagster.grpc.impl import (
     get_external_execution_plan_snapshot,
-    get_external_job_params,
     get_external_pipeline_subset_result,
     get_external_schedule_execution,
     get_partition_config,
@@ -74,7 +71,6 @@ from dagster.grpc.types import (
     ExecuteRunArgs,
     ExecuteStepArgs,
     ExecutionPlanSnapshotArgs,
-    ExternalJobArgs,
     ExternalScheduleExecutionArgs,
     ListRepositoriesInput,
     ListRepositoriesResponse,
@@ -273,20 +269,6 @@ def partition_set_execution_param_command(args):
 def schedule_execution_data_command(args):
     recon_repo = recon_repository_from_origin(args.repository_origin)
     return get_external_schedule_execution(recon_repo, args)
-
-
-@unary_api_cli_command(
-    name="job_params",
-    help_str=(
-        "[INTERNAL] Return the execution params for a triggered execution. This is an internal "
-        "utility. Users should generally not invoke this command interactively."
-    ),
-    input_cls=ExternalJobArgs,
-    output_cls=(ExternalExecutionParamsData, ExternalExecutionParamsErrorData),
-)
-def job_params_command(args):
-    recon_repo = recon_repository_from_origin(args.repository_origin)
-    return get_external_job_params(recon_repo, args)
 
 
 @whitelist_for_serdes
@@ -820,7 +802,6 @@ def create_api_cli_group():
     group.add_command(partition_names_command)
     group.add_command(partition_set_execution_param_command)
     group.add_command(schedule_execution_data_command)
-    group.add_command(job_params_command)
     group.add_command(launch_scheduled_execution)
     group.add_command(grpc_command)
     group.add_command(grpc_health_check_command)

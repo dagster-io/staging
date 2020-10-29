@@ -415,6 +415,10 @@ class ExternalJob:
         return self._external_job_data.name
 
     @property
+    def job_type(self):
+        return self._external_job_data.job_type
+
+    @property
     def pipeline_name(self):
         return self._external_job_data.pipeline_name
 
