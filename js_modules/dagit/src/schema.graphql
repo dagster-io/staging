@@ -43,6 +43,28 @@ type AssetsNotSupportedError implements Error {
 
 union AssetsOrError = AssetConnection | AssetsNotSupportedError | PythonError
 
+type AssetStoreOperationEvent implements MessageEvent & StepEvent {
+  runId: String!
+  message: String!
+  timestamp: String!
+  level: LogLevel!
+  stepKey: String
+  solidHandleID: String
+  assetStoreResult: AssetStoreOperationResult!
+}
+
+type AssetStoreOperationResult implements DisplayableEvent {
+  label: String!
+  description: String
+  metadataEntries: [EventMetadataEntry!]!
+  op: AssetStoreOperationType!
+}
+
+enum AssetStoreOperationType {
+  SET_ASSET
+  GET_ASSET
+}
+
 type CodePointer {
   description: String!
   metadata: [CodePointerMetadata!]!
@@ -885,7 +907,7 @@ type PipelineRunConflict implements Error {
   message: String!
 }
 
-union PipelineRunEvent = ExecutionStepFailureEvent | ExecutionStepInputEvent | ExecutionStepOutputEvent | ExecutionStepSkippedEvent | ExecutionStepStartEvent | ExecutionStepSuccessEvent | ExecutionStepUpForRetryEvent | ExecutionStepRestartEvent | LogMessageEvent | PipelineFailureEvent | PipelineInitFailureEvent | PipelineStartEvent | PipelineSuccessEvent | ObjectStoreOperationEvent | StepExpectationResultEvent | StepMaterializationEvent | EngineEvent | HookCompletedEvent | HookSkippedEvent | HookErroredEvent
+union PipelineRunEvent = ExecutionStepFailureEvent | ExecutionStepInputEvent | ExecutionStepOutputEvent | ExecutionStepSkippedEvent | ExecutionStepStartEvent | ExecutionStepSuccessEvent | ExecutionStepUpForRetryEvent | ExecutionStepRestartEvent | LogMessageEvent | PipelineFailureEvent | PipelineInitFailureEvent | PipelineStartEvent | PipelineSuccessEvent | ObjectStoreOperationEvent | AssetStoreOperationEvent | StepExpectationResultEvent | StepMaterializationEvent | EngineEvent | HookCompletedEvent | HookSkippedEvent | HookErroredEvent
 
 type PipelineRunLogsSubscriptionFailure {
   message: String!

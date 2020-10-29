@@ -573,6 +573,22 @@ class DauphinObjectStoreOperationResult(dauphin.ObjectType):
         return _to_dauphin_metadata_entries(self.metadata_entries)  # pylint: disable=no-member
 
 
+class DauphinAssetStoreOperationType(dauphin.Enum):
+    class Meta(object):
+        name = "AssetStoreOperationType"
+
+    SET_ASSET = "SET_ASSET"
+    GET_ASSET = "GET_ASSET"
+
+
+class DauphinAssetStoreOperationResult(dauphin.ObjectType):
+    class Meta(object):
+        name = "AssetStoreOperationResult"
+        interfaces = (DauphinDisplayableEvent,)
+
+    op = dauphin.NonNull("AssetStoreOperationType")
+
+
 class DauphinMaterialization(dauphin.ObjectType):
     class Meta(object):
         name = "Materialization"
@@ -692,6 +708,14 @@ class DauphinObjectStoreOperationEvent(dauphin.ObjectType):
     operation_result = dauphin.NonNull(DauphinObjectStoreOperationResult)
 
 
+class DauphinAssetStoreOperationEvent(dauphin.ObjectType):
+    class Meta(object):
+        name = "AssetStoreOperationEvent"
+        interfaces = (DauphinMessageEvent, DauphinStepEvent)
+
+    asset_store_result = dauphin.NonNull(DauphinAssetStoreOperationResult)
+
+
 class DauphinEngineEvent(dauphin.ObjectType):
     class Meta(object):
         name = "EngineEvent"
@@ -729,6 +753,7 @@ class DauphinPipelineRunEvent(dauphin.Union):
             DauphinPipelineStartEvent,
             DauphinPipelineSuccessEvent,
             DauphinObjectStoreOperationEvent,
+            DauphinAssetStoreOperationEvent,
             DauphinStepExpectationResultEvent,
             DauphinStepMaterializationEvent,
             DauphinEngineEvent,
@@ -824,6 +849,11 @@ def from_dagster_event_record(event_record, pipeline_name):
     elif dagster_event.event_type == DagsterEventType.OBJECT_STORE_OPERATION:
         operation_result = dagster_event.event_specific_data
         return DauphinObjectStoreOperationEvent(operation_result=operation_result, **basic_params)
+    elif dagster_event.event_type == DagsterEventType.ASSET_STORE_OPERATION:
+        asset_store_result = dagster_event.event_specific_data
+        return DauphinAssetStoreOperationEvent(
+            asset_store_result=asset_store_result, **basic_params
+        )
     elif dagster_event.event_type == DagsterEventType.ENGINE_EVENT:
         return DauphinEngineEvent(
             metadataEntries=_to_dauphin_metadata_entries(
