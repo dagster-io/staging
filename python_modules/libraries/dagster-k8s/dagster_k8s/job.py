@@ -24,6 +24,7 @@ K8S_JOB_BACKOFF_LIMIT = 0
 K8S_JOB_TTL_SECONDS_AFTER_FINISHED = 24 * 60 * 60  # 1 day
 
 DAGSTER_HOME_DEFAULT = "/opt/dagster/dagster_home"
+DAGSTER_COMMAND_DEFAULT = "dagster"
 
 # The Kubernetes Secret containing the PG password will be exposed as this env var in the job
 # container.
@@ -168,6 +169,13 @@ def get_job_name_from_run_id(run_id):
     return "dagster-run-{}".format(run_id)
 
 
+class _JobCommandSentinel(object):
+    pass
+
+
+JOB_COMMAND_NOT_PROVIDED = _JobCommandSentinel
+
+
 @whitelist_for_serdes
 class DagsterK8sJobConfig(
     namedtuple(
@@ -181,6 +189,7 @@ class DagsterK8sJobConfig(
     Params:
         job_image (str): The docker image to use. The Job container will be launched with this
             image.
+        command_name (Optional[String]): The `dagster` command to run for the Job container.
         dagster_home (str): The location of DAGSTER_HOME in the Job container; this is where the
             ``dagster.yaml`` file will be mounted from the instance ConfigMap specified here.
         image_pull_policy (Optional[str]): Allows the image pull policy to be overridden, e.g. to
@@ -215,6 +224,7 @@ class DagsterK8sJobConfig(
         cls,
         job_image=None,
         dagster_home=None,
+        job_command=JOB_COMMAND_NOT_PROVIDED,
         image_pull_policy=None,
         image_pull_secrets=None,
         service_account_name=None,
@@ -223,12 +233,16 @@ class DagsterK8sJobConfig(
         env_config_maps=None,
         env_secrets=None,
     ):
+        if job_command == JOB_COMMAND_NOT_PROVIDED:
+            job_command = "dagster"
+
         return super(DagsterK8sJobConfig, cls).__new__(
             cls,
             job_image=check.opt_str_param(job_image, "job_image"),
             dagster_home=check.opt_str_param(
                 dagster_home, "dagster_home", default=DAGSTER_HOME_DEFAULT
             ),
+            job_command=check.opt_str_param(job_command, "job_command"),
             image_pull_policy=check.opt_str_param(image_pull_policy, "image_pull_policy"),
             image_pull_secrets=check.opt_list_param(
                 image_pull_secrets, "image_pull_secrets", of_type=dict
@@ -278,6 +292,12 @@ class DagsterK8sJobConfig(
                 "``dagster.yaml`` file will be mounted from the instance ConfigMap specified here. "
                 "Defaults to /opt/dagster/dagster_home.",
             ),
+            "job_command": Field(
+                StringSource,
+                is_required=False,
+                default_value=DAGSTER_COMMAND_DEFAULT,
+                description="TODO",
+            ),
         }
 
     @classmethod
@@ -292,6 +312,12 @@ class DagsterK8sJobConfig(
                 "loaded from a GRPC server, then this field is required. If the repository is "
                 "loaded from a GRPC server, then leave this field empty."
                 '(Ex: "mycompany.com/dagster-k8s-image:latest").',
+            ),
+            "job_command": Field(
+                StringSource,
+                is_required=False,
+                default_value=DAGSTER_COMMAND_DEFAULT,
+                description="TODO",
             ),
             "image_pull_policy": Field(
                 StringSource,
@@ -433,7 +459,7 @@ def construct_dagster_k8s_job(
     job_container = kubernetes.client.V1Container(
         name=job_name,
         image=job_config.job_image,
-        command=command,
+        command=job_config.command,
         args=args,
         image_pull_policy=job_config.image_pull_policy,
         env=[
