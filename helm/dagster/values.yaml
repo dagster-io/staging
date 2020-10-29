@@ -159,6 +159,12 @@ scheduler:
     tag: "latest"
     pullPolicy: Always
 
+  # The command used for the job container:
+  # - If not defined, the default command is "dagster"
+  # - If set to another command, it will be used in place of "dagster"
+  # - If set to null, the entrypoint of the image will be used
+  # jobCommand: null
+
   # (K8sScheduler only) K8s Namespace for K8s CronJob(s) and launched K8s Job(s).
   # If left empty, the release namespace will be used.
   schedulerNamespace: ""
@@ -295,6 +301,12 @@ k8sRunLauncher:
   #   repository: ""
   #   tag: ""
   #   pullPolicy: Always
+
+  # The command used for the job container:
+  # - If not defined, the default command is "dagster"
+  # - If set to another command, it will be used in place of "dagster"
+  # - If set to null, the entrypoint of the image will be used
+  # jobCommand: null
 
   # The K8s namespace where new jobs will be launched.
   # If left empty, the release namespace will be used.
