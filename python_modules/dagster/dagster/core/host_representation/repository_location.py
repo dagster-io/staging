@@ -5,7 +5,6 @@ import pendulum
 import six
 from dagster import check
 from dagster.api.snapshot_execution_plan import sync_get_external_execution_plan_grpc
-from dagster.api.snapshot_job import sync_get_external_job_params_grpc
 from dagster.api.snapshot_partition import (
     sync_get_external_partition_config_grpc,
     sync_get_external_partition_names_grpc,
@@ -32,7 +31,6 @@ from dagster.core.snap.execution_plan_snapshot import (
     snapshot_from_execution_plan,
 )
 from dagster.grpc.impl import (
-    get_external_job_params,
     get_external_schedule_execution,
     get_partition_config,
     get_partition_names,
@@ -125,10 +123,6 @@ class RepositoryLocation(six.with_metaclass(ABCMeta)):
         schedule_execution_data_mode,
         scheduled_execution_time,
     ):
-        pass
-
-    @abstractmethod
-    def get_external_job_params(self, instance, repository_handle, name):
         pass
 
     @abstractproperty
@@ -295,13 +289,6 @@ class InProcessRepositoryLocation(RepositoryLocation):
             else None,
         )
 
-    def get_external_job_params(self, instance, repository_handle, name):
-        check.inst_param(instance, "instance", DagsterInstance)
-        check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
-        check.str_param(name, "name")
-
-        return get_external_job_params(self._recon_repo, instance_ref=instance.get_ref(), name=name)
-
     def get_external_partition_set_execution_param_data(
         self, repository_handle, partition_set_name, partition_names
     ):
@@ -446,14 +433,6 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
             schedule_name,
             schedule_execution_data_mode,
             scheduled_execution_time,
-        )
-
-    def get_external_job_params(self, instance, repository_handle, name):
-        check.inst_param(instance, "instance", DagsterInstance)
-        check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
-        check.str_param(name, "name")
-        return sync_get_external_job_params_grpc(
-            self._handle.client, instance, repository_handle, name
         )
 
     def get_external_partition_set_execution_param_data(
