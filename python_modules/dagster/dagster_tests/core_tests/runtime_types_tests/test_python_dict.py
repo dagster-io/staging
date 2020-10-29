@@ -165,3 +165,20 @@ def test_complicated_dictionary_typing_fail():
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
         execute_solid(emit_dict)
+
+
+def test_dict_type_loader():
+    test_input = {"hello": 5, "goodbye": 42}
+    emitted = []
+
+    @lambda_solid(input_defs=[InputDefinition("dict_input", dagster_type=typing.Dict[str, int])])
+    def emit_nothing(dict_input):
+        emitted.append(dict_input)
+        return None
+
+    result = execute_solid(
+        emit_nothing,
+        run_config={"solids": {"emit_nothing": {"inputs": {"dict_input": test_input}}}},
+    )
+    assert result.success
+    assert test_input == emitted[0]
