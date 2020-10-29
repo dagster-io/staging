@@ -8,6 +8,7 @@ from dagster import (
     OutputDefinition,
     execute_solid,
     lambda_solid,
+    usable_as_dagster_type,
 )
 
 
@@ -165,3 +166,41 @@ def test_complicated_dictionary_typing_fail():
 
     with pytest.raises(DagsterTypeCheckDidNotPass):
         execute_solid(emit_dict)
+
+
+def test_dict_type_loader():
+    test_input = {"hello": 5, "goodbye": 42}
+
+    @lambda_solid(input_defs=[InputDefinition("dict_input", dagster_type=typing.Dict[str, int])])
+    def emit_dict(dict_input):
+        return dict_input
+
+    result = execute_solid(
+        emit_dict, run_config={"solids": {"emit_dict": {"inputs": {"dict_input": test_input}}}},
+    )
+    assert result.success
+    assert result.output_value() == test_input
+
+
+def test_dict_type_loader_typing_fail():
+    @usable_as_dagster_type
+    class CustomType(str):
+        pass
+
+    test_input = {"hello": "foo", "goodbye": "bar"}
+
+    @lambda_solid(
+        input_defs=[InputDefinition("dict_input", dagster_type=typing.Dict[str, CustomType])]
+    )
+    def emit_nothing(dict_input):
+        return dict_input
+
+    # We expect a "NoneType has no attribute" error because we are trying to call an attribute of
+    # the DagsterTypeLoader of CustomType, which does not exist.
+    with pytest.raises(
+        AttributeError, match="'NoneType' object has no attribute 'construct_from_config_value'"
+    ):
+        execute_solid(
+            emit_nothing,
+            run_config={"solids": {"emit_nothing": {"inputs": {"dict_input": test_input}}}},
+        )
