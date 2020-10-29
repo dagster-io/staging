@@ -25,6 +25,22 @@ def test_get_validated_celery_k8s_executor_config():
     )
 
     assert res == {
+        "job_config": "dagster",
+        "backend": "rpc://",
+        "retries": {"enabled": {}},
+        "job_image": "foo",
+        "image_pull_policy": "IfNotPresent",
+        "load_incluster_config": True,
+        "job_namespace": "default",
+        "repo_location_name": "<<in_process>>",
+    }
+
+    res = _get_validated_celery_k8s_executor_config(
+        {"execution": {CELERY_K8S_CONFIG_KEY: {"config": {"job_config": None}}}}
+    )
+
+    assert res == {
+        "job_config": None,
         "backend": "rpc://",
         "retries": {"enabled": {}},
         "job_image": "foo",

@@ -160,7 +160,7 @@ def test_valid_job_format(run_launcher):
     pod_name = "dagster-run-%s" % run.run_id
     job = construct_dagster_k8s_job(
         job_config=run_launcher.job_config,
-        command=["dagster"],
+        command=[run_launcher.job_config.job_command],
         args=["api", "execute_run_with_structured_logs"],
         job_name=job_name,
         pod_name=pod_name,
@@ -201,7 +201,7 @@ def test_valid_job_format_with_backcompat_resources(run_launcher):
     pod_name = "dagster-run-%s" % run.run_id
     job = construct_dagster_k8s_job(
         job_config=run_launcher.job_config,
-        command=["dagster"],
+        command=[run_launcher.job_config.job_command],
         args=["api", "execute_run_with_structured_logs"],
         job_name=job_name,
         user_defined_k8s_config=user_defined_k8s_config,
@@ -277,7 +277,7 @@ def test_valid_job_format_with_user_defined_k8s_config(run_launcher):
     pod_name = "dagster-run-%s" % run.run_id
     job = construct_dagster_k8s_job(
         job_config=run_launcher.job_config,
-        command=["dagster"],
+        command=[run_launcher.job_config.job_command],
         args=["api", "execute_run_with_structured_logs"],
         job_name=job_name,
         user_defined_k8s_config=user_defined_k8s_config,
