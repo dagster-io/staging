@@ -266,6 +266,15 @@ type EventUrlMetadataEntry implements EventMetadataEntry {
   url: String!
 }
 
+union ExecutePlanResult = ExecutePlanSuccess | PipelineConfigValidationInvalid | PipelineNotFoundError | InvalidStepError | PythonError
+
+type ExecutePlanSuccess {
+  pipeline: Pipeline!
+  hasFailures: Boolean!
+  stepEvents: [StepEvent!]!
+  rawEventRecords: [String!]!
+}
+
 input ExecutionMetadata {
   runId: String
   tags: [ExecutionTag!]
@@ -630,6 +639,7 @@ type Mutation {
   reloadRepositoryLocation(repositoryLocationName: String!): ReloadRepositoryLocationMutationResult!
   launchPartitionBackfill(backfillParams: PartitionBackfillParams!): PartitionBackfillResult!
   triggerExecution(triggerSelector: TriggerSelector!): TriggerMutationResult!
+  executePlan(executionParams: ExecutionParams!, retries: Retries): ExecutePlanResult!
 }
 
 type NullableConfigType implements ConfigType & WrappingConfigType {
@@ -1141,6 +1151,16 @@ type ResourceRequirement {
   resourceKey: String!
 }
 
+input Retries {
+  mode: String
+  retriesPreviousAttempts: [RetriesPreviousAttempts]
+}
+
+input RetriesPreviousAttempts {
+  key: String
+  count: Int
+}
+
 scalar RunConfigData
 
 type RunConfigSchema {
@@ -1413,7 +1433,7 @@ union TriggerMutationResult = TriggerExecutionSuccess | InvalidStepError | Inval
 input TriggerSelector {
   repositoryName: String!
   repositoryLocationName: String!
-  jobName: String!
+  executableName: String!
 }
 
 type TypeCheck implements DisplayableEvent {
