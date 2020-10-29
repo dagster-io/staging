@@ -23,6 +23,7 @@ K8S_JOB_BACKOFF_LIMIT = 0
 K8S_JOB_TTL_SECONDS_AFTER_FINISHED = 24 * 60 * 60  # 1 day
 
 DAGSTER_HOME_DEFAULT = "/opt/dagster/dagster_home"
+DAGSTER_COMMAND_DEFAULT = "dagster"
 
 # The Kubernetes Secret containing the PG password will be exposed as this env var in the job
 # container.
@@ -167,12 +168,19 @@ def get_job_name_from_run_id(run_id):
     return "dagster-run-{}".format(run_id)
 
 
+class _JobCommandSentinel(object):
+    pass
+
+
+JOB_COMMAND_NOT_PROVIDED = _JobCommandSentinel
+
+
 @whitelist_for_serdes
 class DagsterK8sJobConfig(
     namedtuple(
         "_K8sJobTaskConfig",
         "job_image dagster_home image_pull_policy image_pull_secrets service_account_name "
-        "instance_config_map postgres_password_secret env_config_maps env_secrets",
+        "instance_config_map postgres_password_secret env_config_maps env_secrets job_command",
     )
 ):
     """Configuration parameters for launching Dagster Jobs on Kubernetes.
@@ -180,6 +188,11 @@ class DagsterK8sJobConfig(
     Params:
         job_image (str): The docker image to use. The Job container will be launched with this
             image.
+        job_command (Optional[Noneable[String]]): The command to use for the Job pod.
+            By default, the command is "dagster", but can be overridden. If None is provided, then
+            the container's entrypoint commaand is used. See
+            https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes
+            for more details.
         dagster_home (str): The location of DAGSTER_HOME in the Job container; this is where the
             ``dagster.yaml`` file will be mounted from the instance ConfigMap specified here.
         image_pull_policy (Optional[str]): Allows the image pull policy to be overridden, e.g. to
@@ -207,7 +220,6 @@ class DagsterK8sJobConfig(
         env_secrets (Optional[List[str]]): A list of custom Secret names from which to
             draw environment variables (using ``envFrom``) for the Job. Default: ``[]``. See:
             https://kubernetes.io/docs/tasks/inject-data-application/distribute-credentials-secure/#configure-all-key-value-pairs-in-a-secret-as-container-environment-variables
-
     """
 
     def __new__(
@@ -221,13 +233,18 @@ class DagsterK8sJobConfig(
         postgres_password_secret=None,
         env_config_maps=None,
         env_secrets=None,
+        job_command=JOB_COMMAND_NOT_PROVIDED,
     ):
+        if job_command == JOB_COMMAND_NOT_PROVIDED:
+            job_command = "dagster"
+
         return super(DagsterK8sJobConfig, cls).__new__(
             cls,
             job_image=check.opt_str_param(job_image, "job_image"),
             dagster_home=check.opt_str_param(
                 dagster_home, "dagster_home", default=DAGSTER_HOME_DEFAULT
             ),
+            job_command=check.opt_str_param(job_command, "job_command"),
             image_pull_policy=check.opt_str_param(image_pull_policy, "image_pull_policy"),
             image_pull_secrets=check.opt_list_param(
                 image_pull_secrets, "image_pull_secrets", of_type=dict
@@ -277,6 +294,18 @@ class DagsterK8sJobConfig(
                 "``dagster.yaml`` file will be mounted from the instance ConfigMap specified here. "
                 "Defaults to /opt/dagster/dagster_home.",
             ),
+            "job_command": Field(
+                Noneable(StringSource),
+                is_required=False,
+                default_value=DAGSTER_COMMAND_DEFAULT,
+                description=(
+                    "The command to use for the Job pod."
+                    'By default, the command is "dagster", but can be overridden. If None is provided, then'
+                    "the container's entrypoint commaand is used. See"
+                    "https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes"
+                    "for more details.,"
+                ),
+            ),
         }
 
     @classmethod
@@ -291,6 +320,18 @@ class DagsterK8sJobConfig(
                 "loaded from a GRPC server, then this field is required. If the repository is "
                 "loaded from a GRPC server, then leave this field empty."
                 '(Ex: "mycompany.com/dagster-k8s-image:latest").',
+            ),
+            "job_command": Field(
+                Noneable(StringSource),
+                is_required=False,
+                default_value=DAGSTER_COMMAND_DEFAULT,
+                description=(
+                    "The command to use for the Job pod."
+                    'By default, the command is "dagster", but can be overridden. If None is provided, then'
+                    "the container's entrypoint commaand is used. See"
+                    "https://kubernetes.io/docs/tasks/inject-data-application/define-command-argument-container/#notes"
+                    "for more details.,"
+                ),
             ),
             "image_pull_policy": Field(
                 StringSource,
@@ -360,7 +401,6 @@ class DagsterK8sJobConfig(
 
 def construct_dagster_k8s_job(
     job_config,
-    command,
     args,
     job_name,
     user_defined_k8s_config=None,
@@ -387,7 +427,6 @@ def construct_dagster_k8s_job(
         kubernetes.client.V1Job: A Kubernetes Job object.
     """
     check.inst_param(job_config, "job_config", DagsterK8sJobConfig)
-    command = check.list_param(command, "command", of_type=str)
     check.list_param(args, "args", of_type=str)
     check.str_param(job_name, "job_name")
     user_defined_k8s_config = check.opt_inst_param(
@@ -432,7 +471,7 @@ def construct_dagster_k8s_job(
     job_container = kubernetes.client.V1Container(
         name=job_name,
         image=job_config.job_image,
-        command=command,
+        command=job_config.job_command,
         args=args,
         image_pull_policy=job_config.image_pull_policy,
         env=[

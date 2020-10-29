@@ -6,7 +6,12 @@ from dagster.core.host_representation import ExternalSchedule
 from dagster.core.scheduler import DagsterSchedulerError, Scheduler
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 from dagster.utils import merge_dicts
-from dagster_k8s.job import DagsterK8sJobConfig, construct_dagster_k8s_job, get_k8s_job_name
+from dagster_k8s.job import (
+    DAGSTER_COMMAND_DEFAULT,
+    DagsterK8sJobConfig,
+    construct_dagster_k8s_job,
+    get_k8s_job_name,
+)
 
 
 class K8sScheduler(Scheduler, ConfigurableClass):
@@ -23,6 +28,7 @@ class K8sScheduler(Scheduler, ConfigurableClass):
         instance_config_map,
         postgres_password_secret,
         job_image,
+        job_command=DAGSTER_COMMAND_DEFAULT,
         load_incluster_config=True,
         scheduler_namespace="default",
         image_pull_policy="Always",
@@ -50,6 +56,7 @@ class K8sScheduler(Scheduler, ConfigurableClass):
 
         self.job_config = DagsterK8sJobConfig(
             job_image=check.str_param(job_image, "job_image"),
+            job_command=check.str_param(job_command, "job_command"),
             dagster_home=check.str_param(dagster_home, "dagster_home"),
             image_pull_policy=check.str_param(image_pull_policy, "image_pull_policy"),
             image_pull_secrets=check.opt_list_param(
@@ -116,7 +123,6 @@ class K8sScheduler(Scheduler, ConfigurableClass):
 
         job_template = construct_dagster_k8s_job(
             job_config=job_config,
-            command=["dagster"],
             args=[
                 "api",
                 "launch_scheduled_execution",
