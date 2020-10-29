@@ -629,7 +629,6 @@ type Mutation {
   deletePipelineRun(runId: String!): DeletePipelineRunResult!
   reloadRepositoryLocation(repositoryLocationName: String!): ReloadRepositoryLocationMutationResult!
   launchPartitionBackfill(backfillParams: PartitionBackfillParams!): PartitionBackfillResult!
-  triggerExecution(triggerSelector: TriggerSelector!): TriggerMutationResult!
 }
 
 type NullableConfigType implements ConfigType & WrappingConfigType {
@@ -1402,18 +1401,6 @@ union TerminatePipelineExecutionResult = TerminatePipelineExecutionSuccess | Ter
 
 type TerminatePipelineExecutionSuccess {
   run: PipelineRun!
-}
-
-type TriggerExecutionSuccess {
-  launchedRunIds: [String!]!
-}
-
-union TriggerMutationResult = TriggerExecutionSuccess | InvalidStepError | InvalidOutputError | PipelineConfigValidationInvalid | PipelineNotFoundError | PipelineRunConflict | PythonError | PresetNotFoundError | ConflictingExecutionParamsError
-
-input TriggerSelector {
-  repositoryName: String!
-  repositoryLocationName: String!
-  jobName: String!
 }
 
 type TypeCheck implements DisplayableEvent {
