@@ -94,7 +94,7 @@ class ModuleBuildSpec(
 
                 # See: https://github.com/dagster-io/dagster/issues/2512
                 tox_file = "-c %s " % self.tox_file if self.tox_file else ""
-                tox_cmd = "tox -vv {tox_file}-e {ver}{tox_env_suffix}".format(
+                tox_cmd = "tox --sitepackages -vv {tox_file}-e {ver}{tox_env_suffix}".format(
                     tox_file=tox_file, tox_env_suffix=tox_env_suffix, ver=TOX_MAP[version]
                 )
 
