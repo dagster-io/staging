@@ -47,7 +47,7 @@ def pipeline_two():
     solid_two()
 
 
-def test_asset_wipe_errors():
+def test_asset_wipe_errors(asset_instance):
     runner = CliRunner()
     result = runner.invoke(asset_wipe_command)
     assert result.exit_code == 2
@@ -61,7 +61,7 @@ def test_asset_wipe_errors():
     assert "Error, cannot use more than one of: asset key, `--all`." in result.output
 
 
-def test_asset_exit():
+def test_asset_exit(asset_instance):
     runner = CliRunner()
     result = runner.invoke(asset_wipe_command, ["--all"], input="NOT_DELETE\n")
     assert result.exit_code == 0
