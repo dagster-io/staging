@@ -106,6 +106,10 @@ class _PlanBuilder(object):
             step.key for step in self._steps.values()
         ]
 
+        check_default_asset_store_intermediate_storage(
+            self.mode_definition, self.environment_config
+        )
+
         return ExecutionPlan(
             self.pipeline, step_dict, deps, self.storage_is_persistent(), step_keys_to_execute,
         )
@@ -488,3 +492,27 @@ class ExecutionPlan(
 
         # Finally, we build and return the execution plan
         return plan_builder.build()
+
+
+def check_default_asset_store_intermediate_storage(mode_def, environment_config):
+    """Only one of default_asset_store and intermediate_storage should be set."""
+    from dagster.core.storage.system_storage import mem_intermediate_storage
+    from dagster.core.storage.asset_store import mem_asset_store
+
+    intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)
+    intermediate_storage_is_default = intermediate_storage_def == mem_intermediate_storage
+
+    default_asset_store = mode_def.resource_defs["default_asset_store"]
+    default_asset_store_is_default = default_asset_store == mem_asset_store
+
+    if not intermediate_storage_is_default and not default_asset_store_is_default:
+        raise DagsterInvariantViolationError(
+            'You have specified an intermediate storage, "{intermediate_storage_name}", and have '
+            "also specified a default asset store. You must specify only one. To avoid specifying "
+            "an intermediate storage, omit the intermediate_storage_defs argument to your"
+            'ModeDefinition and omit "intermediate_storage" in your run config. To avoid '
+            'specifying a default asset store, omit the "default_asset_store" key from the '
+            "resource_defs argument to your ModeDefinition.".format(
+                intermediate_storage_name=intermediate_storage_def.name
+            )
+        )

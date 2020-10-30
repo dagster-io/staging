@@ -105,7 +105,10 @@ def test_provided_default_on_resources_config():
     assert some_resource_field.default_value == {"config": {"with_default_int": 23434}}
 
     value = EnvironmentConfig.build(pipeline_def, {})
-    assert value.resources == {"some_resource": {"config": {"with_default_int": 23434}}}
+    assert value.resources == {
+        "some_resource": {"config": {"with_default_int": 23434}},
+        "default_asset_store": {},
+    }
 
 
 def test_default_environment():
@@ -250,7 +253,7 @@ def test_whole_environment():
 
     assert isinstance(env, EnvironmentConfig)
     assert env.solids == {"int_config_solid": SolidConfig(123), "no_config_solid": SolidConfig()}
-    assert env.resources == {"test_resource": {"config": 1}}
+    assert env.resources == {"test_resource": {"config": 1}, "default_asset_store": {}}
 
 
 def test_solid_config_error():
@@ -534,6 +537,7 @@ def test_optional_and_required_context():
     assert env_obj.resources == {
         "optional_resource": {"config": {}},
         "required_resource": {"config": {"required_field": "foo"}},
+        "default_asset_store": {},
     }
 
 
