@@ -9,10 +9,10 @@ from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 from dagster.utils.backcompat import experimental
 
-from .base import RunsCoordinator
+from .base import RunCoordinator
 
 
-class QueuedRunsCoordinator(RunsCoordinator, ConfigurableClass):
+class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
     """
     Sends runs to the dequeuer process via the run storage. Requires the external process to be
     alive for runs to be launched.

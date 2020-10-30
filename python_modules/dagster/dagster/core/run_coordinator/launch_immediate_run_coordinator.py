@@ -5,10 +5,10 @@ from dagster.core.host_representation import ExternalPipeline
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
-from .base import RunsCoordinator
+from .base import RunCoordinator
 
 
-class LaunchImmediateRunsCoordinator(RunsCoordinator, ConfigurableClass):
+class LaunchImmediateRunCoordinator(RunCoordinator, ConfigurableClass):
     """Immediately send runs to the run launcher.
     """
 

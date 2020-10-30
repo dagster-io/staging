@@ -12,7 +12,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
 from dagster.core.launcher.default_run_launcher import DefaultRunLauncher
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
-from dagster.core.runs_coordinator import RunsCoordinator
+from dagster.core.run_coordinator import RunCoordinator
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.telemetry import cleanup_telemetry_logger
 from dagster.serdes import ConfigurableClass
@@ -308,7 +308,7 @@ class MockedRunLauncher(RunLauncher, ConfigurableClass):
         check.not_implemented("Termintation not supported")
 
 
-class MockedRunsCoordinator(RunsCoordinator, ConfigurableClass):
+class MockedRunCoordinator(RunCoordinator, ConfigurableClass):
     def __init__(self, inst_data=None):
         self._inst_data = inst_data
         self._queue = []
