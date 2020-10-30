@@ -24,7 +24,7 @@ class OutputDefinition(object):
         name (Optional[str]): Name of the output. (default: "result")
         description (Optional[str]): Human-readable description of the output.
         is_required (Optional[bool]): Whether the presence of this field is required. (default: True)
-        asset_store_key (Optional[str])
+        asset_store_key (str)
         asset_metadata (Optional[Dict[str, Any]])
     """
 
@@ -34,7 +34,7 @@ class OutputDefinition(object):
         name=None,
         description=None,
         is_required=None,
-        asset_store_key=None,
+        asset_store_key="default_asset_store",
         asset_metadata=None,
     ):
         from dagster.core.storage.asset_store import AssetStoreHandle
@@ -43,9 +43,7 @@ class OutputDefinition(object):
         self._dagster_type = resolve_dagster_type(dagster_type)
         self._description = check.opt_str_param(description, "description")
         self._is_required = check.opt_bool_param(is_required, "is_required", default=True)
-        self._asset_store_handle = (
-            AssetStoreHandle(asset_store_key, asset_metadata) if asset_store_key else None
-        )
+        self._asset_store_handle = AssetStoreHandle(asset_store_key, asset_metadata)
 
     @property
     def name(self):
