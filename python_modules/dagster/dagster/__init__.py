@@ -112,6 +112,7 @@ from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import DefaultRunLauncher
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.asset_store import AssetStore, fs_asset_store
 from dagster.core.storage.file_manager import FileHandle, LocalFileHandle, local_file_manager
 from dagster.core.storage.init import InitIntermediateStorageContext, InitSystemStorageContext
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -229,6 +230,7 @@ __all__ = [
     "execute_pipeline_iterator",
     "execute_pipeline",
     "execute_solid_within_pipeline",
+    "fs_asset_store",
     "fs_intermediate_storage",
     "fs_system_storage",
     "in_process_executor",

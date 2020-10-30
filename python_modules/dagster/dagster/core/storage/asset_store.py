@@ -13,6 +13,7 @@ from dagster.core.events import AssetMaterialization
 from dagster.core.execution.context.system import AssetStoreContext
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
+from dagster.utils.backcompat import experimental
 
 
 @whitelist_for_serdes
@@ -122,7 +123,8 @@ class PickledObjectFilesystemAssetStore(AssetStore):
 
 
 @resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
-def default_filesystem_asset_store(init_context):
+@experimental
+def fs_asset_store(init_context):
     """Default asset store.
 
     It allows users to specify a base directory where all the step output will be stored in. It

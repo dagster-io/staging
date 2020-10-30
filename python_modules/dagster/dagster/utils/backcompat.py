@@ -138,8 +138,7 @@ def experimental_arg_warning(arg_name, fn_name, stacklevel=3):
 
 def experimental(fn):
     """
-    Spews an "experimental" warning whenever the given callable is called. If the argument is a
-    class, this means the warning will be emitted when the class is instantiated.
+    Spews an "experimental" warning whenever the given function is called.
 
     Usage:
 
