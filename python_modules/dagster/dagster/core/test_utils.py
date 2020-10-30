@@ -12,6 +12,7 @@ from dagster.core.launcher import RunLauncher
 from dagster.core.launcher.default_run_launcher import DefaultRunLauncher
 from dagster.core.launcher.grpc_run_launcher import GrpcRunLauncher
 from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.telemetry import cleanup_telemetry_logger
 from dagster.serdes import ConfigurableClass
 from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -79,14 +80,14 @@ def environ(env):
 
 
 @contextmanager
-def instance_for_test(overrides=None, enable_telemetry=False):
+def instance_for_test(overrides=None, enable_telemetry=True):
     with seven.TemporaryDirectory() as temp_dir:
         with instance_for_test_tempdir(temp_dir, overrides, enable_telemetry) as instance:
             yield instance
 
 
 @contextmanager
-def instance_for_test_tempdir(temp_dir, overrides=None, enable_telemetry=False):
+def instance_for_test_tempdir(temp_dir, overrides=None, enable_telemetry=True):
     # Disable telemetry by default to avoid writing to the tempdir while cleaning it up
     overrides = merge_dicts(
         overrides if overrides else {}, {"telemetry": {"enabled": enable_telemetry}}
@@ -118,6 +119,8 @@ def cleanup_test_instance(instance):
     instance.run_launcher.join()
     if isinstance(instance.run_launcher, (DefaultRunLauncher, GrpcRunLauncher)):
         instance.run_launcher.cleanup_managed_grpc_servers()
+
+    cleanup_telemetry_logger()
 
 
 def create_run_for_test(
