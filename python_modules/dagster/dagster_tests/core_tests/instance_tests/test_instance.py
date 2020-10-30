@@ -99,7 +99,7 @@ def test_submit_run():
             overrides={
                 "runs_coordinator": {
                     "module": "dagster.core.test_utils",
-                    "class": "MockedRunsCoordinator",
+                    "class": "MockedRunCoordinator",
                 }
             },
         )
@@ -113,8 +113,8 @@ def test_submit_run():
 
         instance.submit_run(run.run_id, None)
 
-        assert len(instance.runs_coordinator.queue()) == 1
-        assert instance.runs_coordinator.queue()[0].run_id == "foo-bar"
+        assert len(instance.run_coordinator.queue()) == 1
+        assert instance.run_coordinator.queue()[0].run_id == "foo-bar"
 
 
 def test_dagster_home_not_set():
