@@ -63,26 +63,6 @@ def construct_intermediate_storage_data(storage_init_context):
     )
 
 
-def intermediate_storage_def_from_config(mode_definition, environment_config):
-    if isinstance(
-        environment_config.intermediate_storage.intermediate_storage_name,
-        EmptyIntermediateStoreBackcompatConfig,
-    ):
-        return None
-    for intermediate_storage_def in mode_definition.intermediate_storage_defs:
-        if (
-            intermediate_storage_def.name
-            == environment_config.intermediate_storage.intermediate_storage_name
-        ):
-            return intermediate_storage_def
-
-    check.failed(
-        "Could not find storage mode {}. Should have be caught by config system".format(
-            environment_config.intermediate_storage.intermediate_storage_name
-        )
-    )
-
-
 def executor_def_from_config(mode_definition, environment_config):
     for executor_def in mode_definition.executor_defs:
         if executor_def.name == environment_config.execution.execution_engine_name:
@@ -122,7 +102,7 @@ def create_context_creation_data(
 
     mode_def = pipeline_def.get_mode_definition(pipeline_run.mode)
     system_storage_def = system_storage_def_from_config(mode_def, environment_config)
-    intermediate_storage_def = intermediate_storage_def_from_config(mode_def, environment_config)
+    intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)
     executor_def = executor_def_from_config(mode_def, environment_config)
 
     return ContextCreationData(

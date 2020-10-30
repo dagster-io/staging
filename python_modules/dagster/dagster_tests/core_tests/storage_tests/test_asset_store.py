@@ -1,8 +1,10 @@
 import os
 import pickle
 
+import pytest
 from dagster import (
     DagsterInstance,
+    DagsterInvariantViolationError,
     ModeDefinition,
     OutputDefinition,
     execute_pipeline,
@@ -23,30 +25,16 @@ from dagster.core.storage.asset_store import (
 
 
 def define_asset_pipeline(asset_store, asset_metadata_dict):
-    @solid(
-        output_defs=[
-            OutputDefinition(
-                asset_store_key="default_fs_asset_store",
-                asset_metadata=asset_metadata_dict.get("solid_a"),
-            )
-        ],
-    )
+    @solid(output_defs=[OutputDefinition(asset_metadata=asset_metadata_dict.get("solid_a"),)],)
     def solid_a(_context):
         return [1, 2, 3]
 
-    @solid(
-        output_defs=[
-            OutputDefinition(
-                asset_store_key="default_fs_asset_store",
-                asset_metadata=asset_metadata_dict.get("solid_b"),
-            )
-        ],
-    )
+    @solid(output_defs=[OutputDefinition(asset_metadata=asset_metadata_dict.get("solid_b"),)],)
     def solid_b(_context, _df):
         return 1
 
     @pipeline(
-        mode_defs=[ModeDefinition("local", resource_defs={"default_fs_asset_store": asset_store})]
+        mode_defs=[ModeDefinition("local", resource_defs={"default_asset_store": asset_store})]
     )
     def asset_pipeline():
         solid_b(solid_a())
@@ -54,7 +42,12 @@ def define_asset_pipeline(asset_store, asset_metadata_dict):
     return asset_pipeline
 
 
-def test_default_asset_store():
+def test_result_output():
+    # SolidExecutionResult
+    pass
+
+
+def test_fs_asset_store():
     with seven.TemporaryDirectory() as tmpdir_path:
         default_asset_store = default_filesystem_asset_store.configured({"base_dir": tmpdir_path})
         pipeline_def = define_asset_pipeline(default_asset_store, {})
@@ -194,3 +187,41 @@ def test_different_asset_stores():
         solid_b(solid_a())
 
     assert execute_pipeline(asset_pipeline).success
+
+
+@resource
+def my_asset_store(_):
+    pass
+
+
+def test_set_asset_store_and_intermediate_storage():
+    from dagster import intermediate_storage, fs_intermediate_storage
+
+    @intermediate_storage()
+    def my_intermediate_storage(_):
+        pass
+
+    with pytest.raises(DagsterInvariantViolationError):
+
+        @pipeline(
+            mode_defs=[
+                ModeDefinition(
+                    resource_defs={"default_asset_store": my_asset_store},
+                    intermediate_storage_defs=[my_intermediate_storage, fs_intermediate_storage],
+                )
+            ]
+        )
+        def my_pipeline():
+            pass
+
+        execute_pipeline(my_pipeline)
+
+
+def test_set_asset_store_configure_intermediate_storage():
+    with pytest.raises(DagsterInvariantViolationError):
+
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"default_asset_store": my_asset_store})])
+        def my_pipeline():
+            pass
+
+        execute_pipeline(my_pipeline, run_config={"intermediate_storage": {"filesystem": {}}})
