@@ -1,10 +1,9 @@
 import {Colors, Icon} from '@blueprintjs/core';
 import * as React from 'react';
-import {useHistory, useRouteMatch} from 'react-router';
-import {Link} from 'react-router-dom';
+import {useHistory} from 'react-router';
+import {Link, useRouteMatch} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {DagsterRepoOption} from 'src/DagsterRepositoryContext';
 import {ShortcutHandler} from 'src/ShortcutHandler';
 import {TimezonePicker} from 'src/TimeComponents';
 import {WebsocketStatus} from 'src/WebsocketStatus';
@@ -14,6 +13,7 @@ import {InstanceDetailsLink} from 'src/nav/InstanceDetailsLink';
 import {RepositoryContentList} from 'src/nav/RepositoryContentList';
 import {RepositoryPicker} from 'src/nav/RepositoryPicker';
 import {SchedulesList} from 'src/nav/SchedulesList';
+import {useWorkspaceState} from 'src/workspace/WorkspaceContext';
 import {useRepositoryLocations} from 'src/workspace/useRepositoryLocations';
 
 const KEYCODE_FOR_1 = 49;
@@ -39,24 +39,18 @@ const INSTANCE_TABS = [
   },
 ];
 
-interface LeftNavProps {
-  loading: boolean;
-  options: DagsterRepoOption[];
-  repo: DagsterRepoOption | null;
-  setRepo: (repo: DagsterRepoOption) => void;
-}
-
-export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
-  loading,
-  options,
-  repo,
-  setRepo,
-}) => {
-  const history = useHistory();
+const LeftNavRepositorySection: React.FC<{}> = () => {
   const match = useRouteMatch<
-    | {selector: string; tab: string; rootTab: undefined}
+    | {repoPath: string; selector: string; tab: string; rootTab: undefined}
     | {selector: undefined; tab: undefined; rootTab: string}
-  >(['/pipeline/:selector/:tab?', '/solid/:selector', '/schedules/:selector', '/:rootTab?']);
+  >([
+    '/workspace/:repoPath/pipelines/:selector/:tab?',
+    '/workspace/:repoPath/solid/:selector',
+    '/workspace/:repoPath/schedules/:selector',
+    '/:rootTab?',
+  ]);
+
+  const {activeRepo, allRepos, loading} = useWorkspaceState();
   const {nodes: locations, refetch} = useRepositoryLocations();
 
   const anyErrors = locations.some((node) => node.__typename === 'RepositoryLocationLoadFailure');
@@ -65,6 +59,50 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
     refetch();
   };
 
+  return (
+    <div
+      className="bp3-dark"
+      style={{
+        background: `rgba(0,0,0,0.3)`,
+        color: Colors.WHITE,
+        display: 'flex',
+        flex: 1,
+        overflow: 'none',
+        flexDirection: 'column',
+        minHeight: 0,
+      }}
+    >
+      {anyErrors ? (
+        <LoadingError>
+          <Icon icon="warning-sign" color={Colors.DARK_GRAY3} iconSize={14} />
+          <div style={{fontSize: '12px', margin: '0 8px'}}>
+            An error occurred while loading a repository.{' '}
+            <Link to="/workspace/repository-locations">View details</Link>
+          </div>
+        </LoadingError>
+      ) : null}
+      {activeRepo ? (
+        <>
+          <RepositoryPicker
+            loading={loading}
+            options={allRepos}
+            repo={activeRepo.repo}
+            onReload={onReload}
+          />
+          <div style={{display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0}}>
+            <ItemHeader>{'Pipelines & Solids:'}</ItemHeader>
+            <RepositoryContentList {...match?.params} repo={activeRepo.repo} />
+            <ItemHeader>Schedules:</ItemHeader>
+            <SchedulesList {...match?.params} repo={activeRepo.repo} />
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+};
+
+export const LeftNav: React.FC<{}> = () => {
+  const history = useHistory();
   return (
     <LeftNavContainer>
       <div>
@@ -88,7 +126,7 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
             shortcutLabel={`⌥${i + 1}`}
             shortcutFilter={(e) => e.keyCode === KEYCODE_FOR_1 + i && e.altKey}
           >
-            <Tab to={t.to} className={match?.params.rootTab === t.tab ? 'selected' : ''}>
+            <Tab to={t.to}>
               {t.icon}
               <TabLabel>{t.label}</TabLabel>
             </Tab>
@@ -96,43 +134,7 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
         ))}
       </div>
       <div style={{height: 20}} />
-      <div
-        className="bp3-dark"
-        style={{
-          background: `rgba(0,0,0,0.3)`,
-          color: Colors.WHITE,
-          display: 'flex',
-          flex: 1,
-          overflow: 'none',
-          flexDirection: 'column',
-          minHeight: 0,
-        }}
-      >
-        <RepositoryPicker
-          loading={loading}
-          options={options}
-          repo={repo}
-          setRepo={setRepo}
-          onReload={onReload}
-        />
-        {anyErrors ? (
-          <LoadingError>
-            <Icon icon="warning-sign" color={Colors.DARK_GRAY3} iconSize={14} />
-            <div style={{fontSize: '12px', margin: '0 8px'}}>
-              An error occurred while loading a repository.{' '}
-              <Link to="/workspace/repository-locations">View details</Link>
-            </div>
-          </LoadingError>
-        ) : null}
-        {repo && (
-          <div style={{display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0}}>
-            <ItemHeader>Pipelines & Solids:</ItemHeader>
-            <RepositoryContentList {...match?.params} repo={repo} />
-            <ItemHeader>Schedules:</ItemHeader>
-            <SchedulesList {...match?.params} repo={repo} />
-          </div>
-        )}
-      </div>
+      <LeftNavRepositorySection />
       <TimezonePicker />
     </LeftNavContainer>
   );
