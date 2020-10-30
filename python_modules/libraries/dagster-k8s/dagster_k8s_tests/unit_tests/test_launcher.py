@@ -1,15 +1,10 @@
 import json
-from dagster_k8s.job import UserDefinedDagsterK8sConfig
-from dagster.core.test_utils import (
-    create_run_for_test,
-    instance_for_test,
-)
+
+from dagster.core.test_utils import create_run_for_test, instance_for_test
 from dagster.seven import mock
-from dagster_test.test_project import (
-    get_test_project_external_pipeline,
-    test_project_docker_image,
-)
 from dagster_k8s import K8sRunLauncher
+from dagster_k8s.job import UserDefinedDagsterK8sConfig
+from dagster_test.test_project import get_test_project_external_pipeline, test_project_docker_image
 
 
 def test_user_defined_k8s_config_in_run_tags():
