@@ -2,6 +2,7 @@ import glob
 import logging
 import os
 import sqlite3
+import time
 from collections import defaultdict
 from contextlib import contextmanager
 
@@ -99,33 +100,44 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         return create_db_conn_string(self._base_dir, run_id)
 
     def _initdb(self, engine):
-
         alembic_config = get_alembic_config(__file__)
 
-        try:
-            SqlEventLogStorageMetadata.create_all(engine)
-            engine.execute("PRAGMA journal_mode=WAL;")
-            stamp_alembic_rev(alembic_config, engine)
-        except (db.exc.DatabaseError, sqlite3.DatabaseError, sqlite3.OperationalError) as exc:
-            # This is SQLite-specific handling for concurrency issues that can arise when, e.g.,
-            # the root nodes of a pipeline execute simultaneously on Airflow with SQLite storage
-            # configured and contend with each other to init the db. When we hit the following
-            # errors, we know that another process is on the case and it's safe to continue:
-            err_msg = str(exc)
-            if not (
-                "table asset_keys already exists" in err_msg
-                or "table secondary_indexes already exists" in err_msg
-                or "table event_logs already exists" in err_msg
-                or "database is locked" in err_msg
-                or "table alembic_version already exists" in err_msg
-                or "UNIQUE constraint failed: alembic_version.version_num" in err_msg
-            ):
-                raise
-            else:
-                logging.info(
-                    "SqliteEventLogStorage._initdb: Encountered apparent concurrent init, "
-                    "swallowing {str_exc}".format(str_exc=err_msg)
-                )
+        retry_limit = 20
+
+        while True:
+            try:
+                SqlEventLogStorageMetadata.create_all(engine)
+                engine.execute("PRAGMA journal_mode=WAL;")
+                stamp_alembic_rev(alembic_config, engine)
+                break
+            except (db.exc.DatabaseError, sqlite3.DatabaseError, sqlite3.OperationalError) as exc:
+                # This is SQLite-specific handling for concurrency issues that can arise when, e.g.,
+                # the root nodes of a pipeline execute simultaneously on Airflow with SQLite storage
+                # configured and contend with each other to init the db. When we hit the following
+                # errors, we know that another process is on the case and it's safe to continue:
+                err_msg = str(exc)
+
+                if not (
+                    "table asset_keys already exists" in err_msg
+                    or "table secondary_indexes already exists" in err_msg
+                    or "table event_logs already exists" in err_msg
+                    or "database is locked" in err_msg
+                    or "table alembic_version already exists" in err_msg
+                    or "UNIQUE constraint failed: alembic_version.version_num" in err_msg
+                ):
+                    raise
+
+                if retry_limit == 0:
+                    raise
+                else:
+                    logging.info(
+                        "SqliteEventLogStorage._initdb: Encountered apparent concurrent init, "
+                        "retrying ({retry_limit} retries left). Exception: {str_exc}".format(
+                            retry_limit=retry_limit, str_exc=err_msg
+                        )
+                    )
+                    time.sleep(0.2)
+                    retry_limit -= 1
 
     @contextmanager
     def connect(self, run_id=None):
@@ -134,8 +146,7 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         conn_string = self.conn_string_for_run_id(run_id)
         engine = create_engine(conn_string, poolclass=NullPool)
 
-        if not os.path.exists(self.path_for_run_id(run_id)):
-            self._initdb(engine)
+        self._initdb(engine)
 
         conn = engine.connect()
         try:
