@@ -86,7 +86,7 @@ def the_repo():
     ]
 
 
-def _default_instance(enable_telemetry=False):
+def _default_instance(enable_telemetry=True):
     return instance_for_test(
         enable_telemetry=enable_telemetry,
         overrides={
