@@ -17,7 +17,7 @@ from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
 from dagster.core.log_manager import DagsterLogManager
-from dagster.core.storage.asset_store import AssetStore
+from dagster.core.storage.asset_store import AssetStore, mem_asset_store
 from dagster.core.storage.file_manager import FileManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -291,6 +291,10 @@ class SystemStepExecutionContext(SystemExecutionContext):
         # get AssetStore from resources using asset_store_key
         asset_store = getattr(self.resources, asset_store_key)
         return check.inst(asset_store, AssetStore)
+
+    def using_asset_store(self, step_output_handle):
+        asset_store_key = self.execution_plan.get_asset_store_key(step_output_handle)
+        return self.mode_def.resource_defs[asset_store_key] != mem_asset_store
 
 
 class SystemComputeExecutionContext(SystemStepExecutionContext):
