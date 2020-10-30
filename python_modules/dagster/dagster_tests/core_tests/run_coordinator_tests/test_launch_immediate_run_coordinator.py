@@ -2,8 +2,8 @@ import pytest
 from dagster_tests.api_tests.utils import get_foo_pipeline_handle
 
 from dagster.check import CheckError
-from dagster.core.runs_coordinator.launch_immediate_runs_coordinator import (
-    LaunchImmediateRunsCoordinator,
+from dagster.core.run_coordinator.launch_immediate_run_coordinator import (
+    LaunchImmediateRunCoordinator,
 )
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import create_run_for_test, instance_for_test
@@ -22,7 +22,7 @@ def instance():
 
 @pytest.fixture()
 def coodinator(instance):  # pylint: disable=redefined-outer-name
-    run_coordinator = LaunchImmediateRunsCoordinator()
+    run_coordinator = LaunchImmediateRunCoordinator()
     run_coordinator.initialize(instance)
     yield run_coordinator
 

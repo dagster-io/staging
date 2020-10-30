@@ -21,7 +21,7 @@ from dagster.core.errors import DagsterInvalidAssetKey
 from dagster.core.events.log import EventRecord
 from dagster.core.instance import DagsterInstance, InstanceType
 from dagster.core.launcher.sync_in_memory_run_launcher import SyncInMemoryRunLauncher
-from dagster.core.runs_coordinator import LaunchImmediateRunsCoordinator
+from dagster.core.run_coordinator import LaunchImmediateRunCoordinator
 from dagster.core.storage.event_log import (
     ConsolidatedSqliteEventLogStorage,
     InMemoryEventLogStorage,
@@ -39,7 +39,7 @@ def get_instance(temp_dir, event_log_storage):
         run_storage=InMemoryRunStorage(),
         event_storage=event_log_storage,
         compute_log_manager=NoOpComputeLogManager(),
-        runs_coordinator=LaunchImmediateRunsCoordinator(),
+        run_coordinator=LaunchImmediateRunCoordinator(),
         run_launcher=SyncInMemoryRunLauncher(),
     )
 
