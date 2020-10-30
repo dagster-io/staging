@@ -6,7 +6,6 @@ from .utils import get_foo_grpc_pipeline_handle, get_foo_pipeline_handle
 
 
 def assert_ran_successfully(events):
-    assert len(events) == 17
     pipeline_start_events = [e for e in events if e.event_type_value == "PIPELINE_START"]
     step_success_events = [e for e in events if e.event_type_value == "STEP_SUCCESS"]
     pipeline_success_events = [e for e in events if e.event_type_value == "PIPELINE_SUCCESS"]
