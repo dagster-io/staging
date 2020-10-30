@@ -3,10 +3,10 @@ import {Tag, IBreadcrumbProps} from '@blueprintjs/core';
 import * as React from 'react';
 import styled from 'styled-components';
 
-import {useActivePipelineForName} from 'src/DagsterRepositoryContext';
 import {explorerPathToString, PipelineExplorerPath} from 'src/PipelinePathUtils';
 import {TopNav} from 'src/nav/TopNav';
 import {FontFamily} from 'src/ui/styles';
+import {useActivePipelineForName} from 'src/workspace/WorkspaceContext';
 
 const SNAPSHOT_PARENT_QUERY = gql`
   query SnapshotQuery($snapshotId: String!) {
@@ -70,7 +70,7 @@ export const SnapshotNav = (props: SnapshotNavProps) => {
     {text: 'Pipelines', icon: 'diagram-tree'},
     {
       text: explorerPath.pipelineName,
-      href: `/pipeline/${explorerPath.pipelineName}`,
+      href: `/workspace/pipelines/${explorerPath.pipelineName}`,
     },
     {
       text: (

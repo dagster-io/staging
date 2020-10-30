@@ -1,5 +1,6 @@
 import {gql, useQuery} from '@apollo/client';
 import * as React from 'react';
+import {useRouteMatch} from 'react-router-dom';
 
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
 import {RepositoryInformationFragment} from 'src/RepositoryInformation';
@@ -8,32 +9,38 @@ import {
   RootRepositoriesQuery,
   RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes,
   RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_location,
+  RootRepositoriesQuery_repositoriesOrError_PythonError,
 } from 'src/types/RootRepositoriesQuery';
 import {RepositorySelector} from 'src/types/globalTypes';
+import {repoAddressAsString} from 'src/workspace/repoAddressAsString';
+import {repoAddressFromPath} from 'src/workspace/repoAddressFromPath';
+import {RepoAddress} from 'src/workspace/types';
 
 export type Repository = RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes;
 export type RepositoryLocation = RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_location;
+export type RepositoryError = RootRepositoriesQuery_repositoriesOrError_PythonError;
 
 export interface DagsterRepoOption {
   repositoryLocation: RepositoryLocation;
   repository: Repository;
 }
 
-export const repositorySelectorFromDagsterRepoOption = (
-  dagsterRepoOption: DagsterRepoOption,
-): RepositorySelector => {
-  const {repository} = dagsterRepoOption;
-
-  return {
-    repositoryLocationName: repository.location.name,
-    repositoryName: repository.name,
-  };
-};
-
 const LAST_REPO_KEY = 'dagit.last-repo';
 
-export const DagsterRepositoryContext = React.createContext<DagsterRepoOption | null>(
-  new Error('DagsterRepositoryContext should never be uninitialized') as any,
+type WorkspaceState = {
+  error: RepositoryError | null;
+  loading: boolean;
+  allRepos: DagsterRepoOption[];
+  activeRepo: null | {
+    repo: DagsterRepoOption;
+    address: RepoAddress;
+    path: string;
+  };
+  repoPath: string | null;
+};
+
+export const WorkspaceContext = React.createContext<WorkspaceState | null>(
+  new Error('WorkspaceContext should never be uninitialized') as any,
 );
 
 export const ROOT_REPOSITORIES_QUERY = gql`
@@ -66,7 +73,7 @@ export const ROOT_REPOSITORIES_QUERY = gql`
   ${RepositoryInformationFragment}
 `;
 
-export const getRepositoryOptionHash = (a: DagsterRepoOption) =>
+const getRepositoryOptionHash = (a: DagsterRepoOption) =>
   `${a.repository.name}:${a.repositoryLocation.name}`;
 
 export const isRepositoryOptionEqual = (a: DagsterRepoOption, b: DagsterRepoOption) =>
@@ -97,12 +104,58 @@ export const useRepositoryOptions = () => {
   return {error: null, loading, options};
 };
 
+export const useWorkspaceState = () => {
+  const match = useRouteMatch<{repoPath: string}>(['/workspace/:repoPath']);
+  const repoPath: string | null = match?.params?.repoPath || null;
+
+  const repoAddress = repoPath ? repoAddressFromPath(repoPath) : null;
+  const {options, loading, error} = useRepositoryOptions();
+  const [localStorageRepo, setLocalStorageRepo] = useLocalStorageState(options);
+
+  const repoForPath = React.useMemo(() => {
+    if (options && !loading && !error && repoAddress) {
+      const {name, location} = repoAddress;
+      return (
+        options.find(
+          (option) =>
+            option.repository.name === name && option.repositoryLocation.name === location,
+        ) || null
+      );
+    }
+    return null;
+  }, [error, loading, options, repoAddress]);
+
+  const activeRepo = React.useMemo(() => {
+    const repo = repoForPath || localStorageRepo || options[0] || null;
+    if (!repo) {
+      return null;
+    }
+    const address = {name: repo.repository.name, location: repo.repositoryLocation.name};
+    const path = repoAddressAsString(address);
+    return {repo, address, path};
+  }, [localStorageRepo, options, repoForPath]);
+
+  React.useEffect(() => {
+    if (activeRepo?.repo && activeRepo.repo !== localStorageRepo) {
+      setLocalStorageRepo(activeRepo.repo);
+    }
+  }, [activeRepo, localStorageRepo, setLocalStorageRepo]);
+
+  return {
+    loading,
+    error,
+    allRepos: options,
+    activeRepo,
+    repoPath,
+  };
+};
+
 /**
- * useCurrentRepositoryState vends `[repo, setRepo]` and internally mirrors the current
+ * useLocalStorageState vends `[repo, setRepo]` and internally mirrors the current
  * selection into localStorage so that the default selection in new browser windows
  * is the repo currently active in your session.
  */
-export const useCurrentRepositoryState = (options: DagsterRepoOption[]) => {
+const useLocalStorageState = (options: DagsterRepoOption[]) => {
   const [repoKey, setRepoKey] = React.useState<string | null>(null);
 
   const setRepo = (next: DagsterRepoOption) => {
@@ -137,8 +190,8 @@ export const useRepositorySelector = (): RepositorySelector => {
 };
 
 export const useRepository = () => {
-  const repoContext = React.useContext(DagsterRepositoryContext);
-  return repoContext?.repository;
+  const workspaceState = React.useContext(WorkspaceContext);
+  return workspaceState?.activeRepo?.repo.repository;
 };
 
 export const useActivePipelineForName = (pipelineName: string) => {
@@ -163,6 +216,13 @@ export const useScheduleSelector = (scheduleName: string) => {
   };
 };
 
+export const optionToRepoAddress = (option: DagsterRepoOption) => {
+  return {
+    name: option.repository.name,
+    location: option.repository.location.name,
+  };
+};
+
 export const INSTANCE_EXECUTABLE_QUERY = gql`
   query InstanceExecutableQuery {
     instance {
@@ -170,6 +230,7 @@ export const INSTANCE_EXECUTABLE_QUERY = gql`
     }
   }
 `;
+
 export const useDagitExecutablePath = () => {
   const {data} = useQuery<InstanceExecutableQuery>(INSTANCE_EXECUTABLE_QUERY, {
     fetchPolicy: 'cache-and-network',
