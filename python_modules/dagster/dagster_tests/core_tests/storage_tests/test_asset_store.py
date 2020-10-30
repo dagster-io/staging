@@ -16,6 +16,7 @@ from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.asset_store import (
     custom_path_filesystem_asset_store,
     default_filesystem_asset_store,
+    mem_asset_store,
 )
 
 
@@ -128,3 +129,35 @@ def test_step_subset_with_custom_paths():
             assert not evt.is_failure
         # only the selected step subset was executed
         assert set([evt.step_key for evt in step_subset_events]) == {"solid_b.compute"}
+
+
+def test_mem_asset_store():
+    @solid(output_defs=[OutputDefinition(asset_store_key="store")],)
+    def solid_a(_context):
+        return 1
+
+    @solid()
+    def solid_b(_context, a):
+        assert a == 1
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"store": mem_asset_store})])
+    def asset_pipeline():
+        solid_b(solid_a())
+
+    execute_pipeline(asset_pipeline)
+
+
+def test_different_asset_stores():
+    @solid(output_defs=[OutputDefinition(asset_store_key="store1")])
+    def solid_a(_context):
+        pass
+
+    @solid()
+    def solid_b(_context, _df):
+        pass
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"store1": mem_asset_store})])
+    def asset_pipeline():
+        solid_b(solid_a())
+
+    execute_pipeline(asset_pipeline)
