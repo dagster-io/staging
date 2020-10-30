@@ -293,6 +293,12 @@ class SystemStepExecutionContext(SystemExecutionContext):
         asset_store = getattr(self.resources, asset_store_key)
         return check.inst(asset_store, AssetStore)
 
+    def using_asset_store(self, step_output_handle):
+        from dagster.core.storage.asset_store import mem_asset_store
+
+        asset_store_key = self.execution_plan.get_asset_store_key(step_output_handle)
+        return self.mode_def.resource_defs[asset_store_key] != mem_asset_store
+
 
 class SystemComputeExecutionContext(SystemStepExecutionContext):
     @property
