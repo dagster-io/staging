@@ -11,7 +11,7 @@ from dagster_celery_k8s.launcher import (
     _get_validated_celery_k8s_executor_config,
 )
 from dagster_k8s.job import UserDefinedDagsterK8sConfig
-from dagster_test.test_project import get_test_project_external_pipeline, test_project_docker_image
+from dagster_test.test_project import get_test_project_external_pipeline
 
 
 def test_get_validated_celery_k8s_executor_config():
@@ -155,7 +155,7 @@ def test_user_defined_k8s_config_in_run_tags():
 
     mock_method_calls = mock_k8s_client_batch_api.method_calls
     assert len(mock_method_calls) > 0
-    method_name, args, kwargs = mock_method_calls[0]
+    method_name, _args, kwargs = mock_method_calls[0]
     assert method_name == "create_namespaced_job"
     job_resources = kwargs["body"].spec.template.spec.containers[0].resources
     assert job_resources == expected_resources
