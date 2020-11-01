@@ -130,6 +130,7 @@ def longitudinal_schedule():
         cron_schedule="*/5 * * * *",  # tick every 5 minutes
         partition_selector=_partition_selector,
         should_execute=_should_execute,
+        execution_timezone="US/Eastern",
     )
 
 
@@ -150,6 +151,40 @@ def get_toys_schedules():
             name="pandas_hello_world_hourly",
             cron_schedule="0 * * * *",
             pipeline_name="pandas_hello_world_pipeline",
+            execution_timezone="US/Eastern",
+            run_config_fn=lambda _: {
+                "solids": {
+                    "mult_solid": {
+                        "inputs": {
+                            "num_df": {
+                                "csv": {
+                                    "path": file_relative_path(
+                                        __file__, "pandas_hello_world/data/num.csv"
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    "sum_solid": {
+                        "inputs": {
+                            "num_df": {
+                                "csv": {
+                                    "path": file_relative_path(
+                                        __file__, "pandas_hello_world/data/num.csv"
+                                    )
+                                }
+                            }
+                        }
+                    },
+                },
+                "storage": {"filesystem": {}},
+            },
+        ),
+        ScheduleDefinition(
+            name="pandas_hello_world_daily",
+            cron_schedule="30 2 * * *",
+            pipeline_name="pandas_hello_world_pipeline",
+            execution_timezone="US/Eastern",
             run_config_fn=lambda _: {
                 "solids": {
                     "mult_solid": {
