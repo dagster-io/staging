@@ -9,6 +9,9 @@ from dagster_test.test_project import get_test_project_external_pipeline, test_p
 
 def test_user_defined_k8s_config_in_run_tags(tmp_path):
     # Construct a K8s run launcher in a fake k8s environment.
+    # [TODO(Bob)]: Find a better way to fake the kube config file.
+    # Option 1: Use a temporary file (like below), but refactor this into a reusable fixture.
+    # Option 2: ???
     kube_path = tmp_path / ".kube"
     kube_path.mkdir()
     kube_config_path = kube_path / "config"
@@ -27,9 +30,6 @@ clusters:
     name: fake-cluster
 """
     )
-    with open(kube_config_path) as kube_config:
-        for line in kube_config.readlines():
-            print(line, end="")
 
     mock_k8s_client_batch_api = mock.MagicMock()
     k8s_run_launcher = K8sRunLauncher(
