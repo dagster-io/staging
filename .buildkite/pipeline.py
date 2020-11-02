@@ -736,43 +736,43 @@ def python_steps():
     steps = []
     steps += publish_test_images()
 
-    # steps += pylint_steps()
-    # steps += [
-    #     StepBuilder("isort")
-    #     .run("pip install isort>=4.3.21", "make isort", "git diff --exit-code",)
-    #     .on_integration_image(SupportedPython.V3_7)
-    #     .build(),
-    #     StepBuilder("black")
-    #     # See: https://github.com/dagster-io/dagster/issues/1999
-    #     .run("make check_black").on_integration_image(SupportedPython.V3_7).build(),
-    #     StepBuilder("mypy examples")
-    #     .run(
-    #         "pip install mypy",
-    #         # start small by making sure the local code type checks
-    #         "mypy examples/airline_demo/airline_demo "
-    #         "examples/legacy_examples/dagster_examples/bay_bikes "
-    #         "examples/docs_snippets/docs_snippets/intro_tutorial/basics/e04_quality/custom_types_mypy* "
-    #         "--ignore-missing-imports",
-    #     )
-    #     .on_integration_image(SupportedPython.V3_7)
-    #     .build(),
-    #     StepBuilder("Validate Library Docs")
-    #     .run("pip install -e python_modules/automation", "dagster-docs validate-libraries")
-    #     .on_integration_image(SupportedPython.V3_7)
-    #     .build(),
-    # ]
+    steps += pylint_steps()
+    steps += [
+        StepBuilder("isort")
+        .run("pip install isort>=4.3.21", "make isort", "git diff --exit-code",)
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
+        StepBuilder("black")
+        # See: https://github.com/dagster-io/dagster/issues/1999
+        .run("make check_black").on_integration_image(SupportedPython.V3_7).build(),
+        StepBuilder("mypy examples")
+        .run(
+            "pip install mypy",
+            # start small by making sure the local code type checks
+            "mypy examples/airline_demo/airline_demo "
+            "examples/legacy_examples/dagster_examples/bay_bikes "
+            "examples/docs_snippets/docs_snippets/intro_tutorial/basics/e04_quality/custom_types_mypy* "
+            "--ignore-missing-imports",
+        )
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
+        StepBuilder("Validate Library Docs")
+        .run("pip install -e python_modules/automation", "dagster-docs validate-libraries")
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
+    ]
 
-    # for m in DAGSTER_PACKAGES_WITH_CUSTOM_TESTS:
-    #     steps += m.get_tox_build_steps()
+    for m in DAGSTER_PACKAGES_WITH_CUSTOM_TESTS:
+        steps += m.get_tox_build_steps()
 
     steps += extra_library_tests()
 
     # https://github.com/dagster-io/dagster/issues/2785
-    # steps += pipenv_smoke_tests()
-    # steps += version_equality_checks()
-    # steps += next_docs_build_tests()
-    # steps += examples_tests()
-    # steps += integration_tests()
+    steps += pipenv_smoke_tests()
+    steps += version_equality_checks()
+    steps += next_docs_build_tests()
+    steps += examples_tests()
+    steps += integration_tests()
 
     return steps
 
