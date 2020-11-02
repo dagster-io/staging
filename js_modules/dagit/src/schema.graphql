@@ -955,6 +955,7 @@ input TriggerSelector {
 type Subscription {
   pipelineRunLogs(runId: ID!, after: Cursor): PipelineRunLogsSubscriptionPayload!
   computeLogs(runId: ID!, stepKey: String!, ioType: ComputeIOType!, cursor: String): ComputeLogFile!
+  handleStateChangeEvents: HandleStateChangeSubscription!
 }
 
 union PipelineRunLogsSubscriptionPayload = PipelineRunLogsSubscriptionSuccess | PipelineRunLogsSubscriptionFailure
@@ -1243,6 +1244,23 @@ scalar Cursor
 enum ComputeIOType {
   STDOUT
   STDERR
+}
+
+type HandleStateChangeSubscription {
+  event: HandleStateChangeEvent!
+}
+
+type HandleStateChangeEvent {
+  eventType: HandleStateChangeEventType!
+  message: String!
+  locationName: String!
+}
+
+enum HandleStateChangeEventType {
+  SERVER_UPDATED
+  SERVER_RECONNECTING
+  SERVER_RECONNECTED
+  SERVER_ERROR
 }
 
 type RegularConfigType implements ConfigType {

@@ -6,6 +6,7 @@ import grpc
 import pytest
 from dagster import check, seven
 from dagster.grpc import DagsterGrpcClient, DagsterGrpcServer, ephemeral_grpc_api_client
+from dagster.grpc.__generated__ import api_pb2
 from dagster.grpc.server import GrpcServerProcess, open_server_process
 from dagster.serdes.ipc import interrupt_ipc_subprocess_pid
 from dagster.utils import find_free_port, safe_tempfile_path
@@ -135,3 +136,66 @@ def test_streaming():
         for sequence_number, result in enumerate(results):
             assert result["sequence_number"] == sequence_number
             assert result["echo"] == "foo"
+
+
+def test_poll_server_id():
+    port = find_free_port()
+    server_process = open_server_process(port=port, socket=None)
+    assert server_process is not None
+
+    try:
+        api_client = DagsterGrpcClient(port=port)
+        results = []
+
+        for _ in range(2):
+            server_id = api_client.get_server_id()
+            results.append(server_id)
+
+        assert len(results) == 2
+        assert results[0] == results[1]
+    finally:
+        if server_process is not None:
+            interrupt_ipc_subprocess_pid(server_process.pid)
+
+
+def test_poll_server_id_with_changing_server():
+    results = []
+
+    def start_server_and_append_server_id():
+        port = find_free_port()
+        server_process = open_server_process(port=port, socket=None)
+        assert server_process is not None
+
+        try:
+            api_client = DagsterGrpcClient(port=port)
+            server_id = api_client.get_server_id()
+            results.append(server_id)
+        finally:
+            if server_process is not None:
+                interrupt_ipc_subprocess_pid(server_process.pid)
+
+    for _ in range(2):
+        start_server_and_append_server_id()
+
+    assert results[0] != results[1]
+
+
+def test_poll_detect_server_restart():
+    port = find_free_port()
+    server_process = open_server_process(port=port, socket=None)
+    assert server_process is not None
+
+    server_error_detected = False
+
+    try:
+        start_time = time.time()
+        api_client = DagsterGrpcClient(port=port)
+        while True:
+            api_client.get_server_id()
+            # After five seconds, kill the server
+            if time.time() - start_time > 5:
+                interrupt_ipc_subprocess_pid(server_process.pid)
+    except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
+        server_error_detected = True
+
+    assert server_error_detected == True

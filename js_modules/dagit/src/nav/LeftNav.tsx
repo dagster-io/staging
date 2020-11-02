@@ -1,3 +1,4 @@
+import {ApolloClient, ApolloConsumer, gql} from '@apollo/client';
 import {Colors, Icon} from '@blueprintjs/core';
 import * as React from 'react';
 import {useHistory, useRouteMatch} from 'react-router';
@@ -14,7 +15,13 @@ import {InstanceDetailsLink} from 'src/nav/InstanceDetailsLink';
 import {RepositoryContentList} from 'src/nav/RepositoryContentList';
 import {RepositoryPicker} from 'src/nav/RepositoryPicker';
 import {SchedulesList} from 'src/nav/SchedulesList';
+import {
+  HandleStateChangeSubscription,
+  HandleStateChangeSubscription_handleStateChangeEvents_event,
+} from 'src/nav/types/HandleStateChangeSubscription';
 import {useRepositoryLocations} from 'src/workspace/useRepositoryLocations';
+import {DirectGraphQLSubscription} from 'src/DirectGraphQLSubscription';
+import {HandleStateChangeEventType} from 'src/types/globalTypes';
 
 const KEYCODE_FOR_1 = 49;
 
@@ -39,11 +46,102 @@ const INSTANCE_TABS = [
   },
 ];
 
+const HANDLE_STATE_CHANGE_SUBSCRIPTION = gql`
+  subscription HandleStateChangeSubscription {
+    handleStateChangeEvents {
+      event {
+        eventType
+        message
+        locationName
+      }
+    }
+  }
+`;
+
 interface LeftNavProps {
   loading: boolean;
   options: DagsterRepoOption[];
   repo: DagsterRepoOption | null;
   setRepo: (repo: DagsterRepoOption) => void;
+}
+
+interface StateObserverProps {
+  client: ApolloClient<any>;
+  onReload: () => void;
+}
+
+interface StateObserverState {
+  latestEvent: HandleStateChangeSubscription_handleStateChangeEvents_event | null;
+}
+
+class StateObserver extends React.Component<StateObserverProps, StateObserverState> {
+  state: StateObserverState = {
+    latestEvent: null,
+  };
+
+  _subscription: DirectGraphQLSubscription<HandleStateChangeSubscription>;
+
+  componentDidMount() {
+    this.subscribeToMessages();
+  }
+
+  componentWillUnmount() {
+    this.unsubscribeFromMessages();
+  }
+
+  subscribeToMessages() {
+    if (this._subscription) {
+      this.unsubscribeFromMessages();
+      this.setState({latestEvent: null});
+    }
+
+    this._subscription = new DirectGraphQLSubscription<HandleStateChangeSubscription>(
+      HANDLE_STATE_CHANGE_SUBSCRIPTION,
+      {},
+      this.onHandleMessages,
+      () => {}, // https://github.com/dagster-io/dagster/issues/2151
+    );
+  }
+
+  onHandleMessages = (messages: HandleStateChangeSubscription[], isFirstResponse: boolean) => {
+    console.log(messages);
+    for (const msg of messages) {
+      const {
+        handleStateChangeEvents: {event},
+      } = msg;
+
+      console.log(event);
+
+      if (event.eventType === HandleStateChangeEventType.SERVER_UPDATED) {
+        this.props.onReload();
+        this.props.client.resetStore();
+        this.setState({latestEvent: null});
+      } else if (event.eventType === HandleStateChangeEventType.SERVER_ERROR) {
+        this.props.onReload();
+        this.props.client.resetStore();
+        this.setState({latestEvent: null});
+      } else {
+        this.setState({latestEvent: event});
+      }
+    }
+  };
+
+  unsubscribeFromMessages() {
+    if (this._subscription) {
+      this._subscription.close();
+    }
+  }
+
+  render() {
+    return (
+      this.state.latestEvent && (
+        <LocationError>
+          <Icon icon="warning-sign" color={Colors.LIGHT_GRAY5} iconSize={14} />
+          <div style={{fontSize: '12px', margin: '0 8px'}}>{this.state.latestEvent.message}</div>
+        </LocationError>
+      )
+    );
+  }
 }
 
 export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
@@ -60,6 +158,9 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
   const {nodes: locations, refetch} = useRepositoryLocations();
 
   const anyErrors = locations.some((node) => node.__typename === 'RepositoryLocationLoadFailure');
+
+  // const {data} = useSubscription<ConnectionMessageSubscription>(CONNECTION_MESSAGE_SUBSCRIPTION);
+  // const {connectionMessages} = data || {};
 
   const onReload = () => {
     refetch();
@@ -124,6 +225,19 @@ export const LeftNav: React.FunctionComponent<LeftNavProps> = ({
             </div>
           </LoadingError>
         ) : null}
+        <ApolloConsumer>
+          {(client) => <StateObserver onReload={onReload} client={client} />}
+        </ApolloConsumer>
+        {/*
+        {connectionMessages ? (
+          <LocationError>
+            <Icon icon="warning-sign" color={Colors.LIGHT_GRAY5} iconSize={14} />
+            <div style={{fontSize: '12px', margin: '0 8px'}}>
+              The server has been disconnected. Attempting to automatically reconnect.{' '}
+              <Link to="/workspace/repository-locations">View details</Link>
+            </div>
+          </LocationError>
+        ) : null} */}
         {repo && (
           <div style={{display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0}}>
             <ItemHeader>Pipelines & Solids:</ItemHeader>
@@ -244,6 +358,30 @@ const LoadingError = styled.div`
   a:hover,
   a:active {
     color: ${Colors.DARK_GRAY3};
+    text-decoration: underline;
+    white-space: nowrap;
+  }
+`;
+
+const LocationError = styled.div`
+  align-items: center;
+  background-color: ${Colors.RED3};
+  border: 0;
+  color: ${Colors.LIGHT_GRAY5};
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 8px 12px;
+  text-align: left;
+
+  &:active {
+    outline: none;
+  }
+
+  & a,
+  a:hover,
+  a:active {
+    color: ${Colors.LIGHT_GRAY5};
     text-decoration: underline;
     white-space: nowrap;
   }

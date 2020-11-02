@@ -12,11 +12,49 @@ from dagster.core.host_representation import (
     ManagedGrpcPythonEnvRepositoryLocationHandle,
     RepositoryLocation,
 )
+from dagster.core.host_representation.state import (
+    HandleStateChangeEvent,
+    HandleStateChangeEventType,
+)
 from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryPythonOrigin
 from dagster.utils.error import SerializableErrorInfo
 from dagster_graphql import dauphin
 from dagster_graphql.implementation.fetch_solids import get_solid, get_solids
 from dagster_graphql.schema.errors import DauphinPythonError
+from graphql.execution.base import ResolveInfo
+
+DauphinHandleStateChangeEventType = dauphin.Enum.from_enum(HandleStateChangeEventType)
+
+
+class DauphinHandleStateChangeSubscription(dauphin.ObjectType):
+    class Meta(object):
+        name = "HandleStateChangeSubscription"
+
+    event = dauphin.Field(dauphin.NonNull("HandleStateChangeEvent"))
+
+
+class DauphinHandleStateChangeEvent(dauphin.ObjectType):
+    class Meta(object):
+        name = "HandleStateChangeEvent"
+
+    event_type = dauphin.NonNull("HandleStateChangeEventType")
+    message = dauphin.NonNull(dauphin.String)
+    location_name = dauphin.NonNull(dauphin.String)
+
+
+def get_pipeline_handle_state_change_observable(graphene_info):
+    check.inst_param(graphene_info, "graphene_info", ResolveInfo)
+    context = graphene_info.context
+
+    return context._state_events.map(
+        lambda event: graphene_info.schema.type_named("HandleStateChangeSubscription")(
+            event=graphene_info.schema.type_named("HandleStateChangeEvent")(
+                event_type=event.event_type,
+                message=event.message,
+                location_name=event.location_name,
+            ),
+        )
+    )
 
 
 class DauphinRepository(dauphin.ObjectType):

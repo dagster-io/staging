@@ -1,8 +1,10 @@
 import sys
 import threading
+import time
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
+import grpc
 import six
 from dagster import check
 from dagster.api.list_repositories import sync_list_repositories_grpc
@@ -16,6 +18,11 @@ from dagster.core.host_representation.origin import (
     RepositoryLocationOrigin,
 )
 from dagster.core.host_representation.selector import PipelineSelector
+from dagster.core.host_representation.state import (
+    HandleStateChangeEvent,
+    HandleStateChangeEventType,
+    HandleStateChangeSubscriber,
+)
 from dagster.core.instance import DagsterInstance
 from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryOrigin, RepositoryPythonOrigin
 
@@ -108,6 +115,16 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         self.executable_path = list_repositories_response.executable_path
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
+        self._state_change_subscribers = []
+        self._current_server_id = None
+
+        self._watch_thread_shutdown_event = threading.Event()
+        self._watch_thread = threading.Thread(
+            target=self._watch_server_thread, args=[self._watch_thread_shutdown_event]
+        )
+        self._watch_thread.daemon = True
+        self._watch_thread.start()
+
     @property
     def port(self):
         return self.origin.port
@@ -133,6 +150,150 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
                 "up-to-date user code image and tag. Exiting."
             )
         return job_image
+
+    def add_state_change_subscriber(self, handle_state_change_subscriber):
+        check.inst_param(
+            handle_state_change_subscriber,
+            "handle_state_change_subscriber",
+            HandleStateChangeSubscriber,
+        )
+        self._state_change_subscribers.append(handle_state_change_subscriber)
+
+    def _send_state_change_event(self, event):
+        for handle_state_change_subscriber in self._state_change_subscribers:
+            handle_state_change_subscriber.handle_event(event)
+
+    def _watch_server_thread(self, shutdown_event):
+        """
+        This thread watches the state of the unmanaged gRPC server and communicates
+        any changes to subscribers. Subcribers can be added using the `add_state_change_subscriber`
+        method.
+
+        The following loop polls the GetServerId endpoint to check if either:
+        1. The server_id has changed
+        2. The server is unreachable
+
+        In the case of (1) The server ID has changed, we send a SEVER_UPDATED event to the
+        subscribers and end the thread.
+
+        In the case of (2) The server is unreachable, we attempt to automatically reconnect. If we
+        are able to reconnect, there are two possibilities:
+
+        a. The server ID has changed
+            -> In this case, we send an SERVER_UPDATED event to the subscribers, and we end
+            the thread.
+        b. The server ID is the same
+            -> In this case, we send an SERVER_RECONNECT event to the subscribers, and we go back to
+            polling the server for changes.
+
+        If we are unable to reconnect to the server within the specified max_reconnect_attempts, we
+        send a SERVER_ERROR event to the subscribers.
+
+        The expectation is that on SERVER_UPDATED and SERVER_ERROR events, the subscibers dispose of
+        this handle, create a new handle, and subscribe to events on the new handle.
+        """
+
+        print("hello")
+
+        poll_interval = 1
+        reconnect_interval = 1
+        max_reconnect_attempts = 10
+
+        def debug(message):
+            if True:
+                print(message)
+
+        def watch_for_changes():
+            while True:
+                debug("Watching for changes")
+                if shutdown_event.is_set():
+                    break
+
+                new_server_id = self.client.get_server_id()
+                if not self._current_server_id:
+                    self._current_server_id = new_server_id
+                elif self._current_server_id != new_server_id:
+                    return self._send_state_change_event(
+                        HandleStateChangeEvent(
+                            HandleStateChangeEventType.SERVER_UPDATED,
+                            message="Handle {} has been updated.".format(self.location_name),
+                            location_name=self.location_name,
+                        )
+                    )
+
+                time.sleep(poll_interval)
+
+        def reconnect_loop():
+            attempts = 0
+            while attempts < max_reconnect_attempts:
+                if shutdown_event.is_set():
+                    break
+                time.sleep(reconnect_interval)
+                try:
+                    new_server_id = self.client.get_server_id()
+
+                    if self._current_server_id != new_server_id:
+                        self._send_state_change_event(
+                            HandleStateChangeEvent(
+                                HandleStateChangeEventType.SERVER_UPDATED,
+                                message="Handle {} has been updated.".format(self.location_name),
+                                location_name=self.location_name,
+                            )
+                        )
+                        return False
+
+                    self._send_state_change_event(
+                        HandleStateChangeEvent(
+                            HandleStateChangeEventType.SERVER_RECONNECTED,
+                            message="Handle {} has been reconnected.".format(self.location_name),
+                            location_name=self.location_name,
+                        )
+                    )
+                    return True
+
+                except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
+                    attempts += 1
+                    pass
+
+            self._send_state_change_event(
+                HandleStateChangeEvent(
+                    HandleStateChangeEventType.SERVER_ERROR,
+                    message="Handle {} has been errored.".format(self.location_name),
+                    location_name=self.location_name,
+                )
+            )
+            return False
+
+        while True:
+            print("Hello")
+            if shutdown_event.is_set():
+                break
+
+            try:
+                # Poll for changes. This watch_for_changes loop exits when either the server ID
+                # changes, or if the gRPC request was unsuccessful.
+                #
+                # In the latter case, we go to the exception handler and attempt to reconect
+                watch_for_changes()
+                break
+            except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
+                debug("Failed query for server id. Going to start watching")
+                self._send_state_change_event(
+                    HandleStateChangeEvent(
+                        HandleStateChangeEventType.SERVER_RECONNECTING,
+                        message="Handle {} has has been disconnected. Attempting to reconnect.".format(
+                            self.location_name
+                        ),
+                        location_name=self.location_name,
+                    )
+                )
+                successful_reconnect = reconnect_loop()
+                if not successful_reconnect:
+                    break
+
+    def cleanup(self):
+        self._watch_thread_shutdown_event.set()
+        # self._watch_thread.join()
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(

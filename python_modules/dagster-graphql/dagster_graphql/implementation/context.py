@@ -1,11 +1,17 @@
 from dagster import check
 from dagster.core.host_representation import PipelineSelector, RepositoryLocation
 from dagster.core.host_representation.external import ExternalPipeline
+from dagster.core.host_representation.handle import GrpcServerRepositoryLocationHandle
+from dagster.core.host_representation.state import (
+    HandleStateChangeEventType,
+    HandleStateChangeSubscriber,
+)
 from dagster.core.instance import DagsterInstance
 from dagster.grpc.types import ScheduleExecutionDataMode
 from dagster_graphql.implementation.utils import UserFacingGraphQLError
 from dagster_graphql.schema.errors import DauphinInvalidSubsetError
 from dagster_graphql.schema.pipelines import DauphinPipeline
+from rx.subjects import Subject
 
 
 class DagsterGraphQLContext:
@@ -13,6 +19,23 @@ class DagsterGraphQLContext:
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._workspace = workspace
         self._repository_locations = {}
+
+        self._state_events = Subject()
+
+        def event_handler(event):
+            print(event.message)
+
+            if event.event_type == HandleStateChangeEventType.SERVER_UPDATED:
+                self.reload_repository_location(event.location_name)
+                new_handle = self._workspace.get_repository_location_handle(event.location_name)
+                new_handle.add_state_change_subscriber(self._subscriber)
+            elif event.event_type == HandleStateChangeEventType.SERVER_ERROR:
+                self.reload_repository_location(event.location_name)
+
+            self._state_events.on_next(event)
+
+        self._subscriber = HandleStateChangeSubscriber(event_handler)
+
         for handle in self._workspace.repository_location_handles:
             check.invariant(
                 self._repository_locations.get(handle.location_name) is None,
@@ -20,9 +43,15 @@ class DagsterGraphQLContext:
                     name=handle.location_name,
                 ),
             )
+
             self._repository_locations[handle.location_name] = RepositoryLocation.from_handle(
                 handle
             )
+
+            # Get notified when repository location changes
+            if isinstance(handle, GrpcServerRepositoryLocationHandle):
+                handle.add_state_change_subscriber(self._subscriber)
+
         self.version = version
 
     @property
@@ -63,6 +92,9 @@ class DagsterGraphQLContext:
             new_location = RepositoryLocation.from_handle(new_handle)
             check.invariant(new_location.name == name)
             self._repository_locations[name] = new_location
+
+            if isinstance(new_handle, GrpcServerRepositoryLocationHandle):
+                new_handle.add_state_change_subscriber(self._subscriber)
         elif name in self._repository_locations:
             del self._repository_locations[name]
 
