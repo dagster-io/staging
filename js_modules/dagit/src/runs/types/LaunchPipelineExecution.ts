@@ -1,7 +1,6 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
-// @generated
 // This file was automatically generated and should not be edited.
 
 import { ExecutionParams } from "./../../types/globalTypes";
@@ -31,7 +30,7 @@ export interface LaunchPipelineExecution_launchPipelineExecution_PipelineNotFoun
 }
 
 export interface LaunchPipelineExecution_launchPipelineExecution_PipelineConfigValidationInvalid_errors {
-  __typename: "RuntimeMismatchConfigError" | "MissingFieldConfigError" | "MissingFieldsConfigError" | "FieldNotDefinedConfigError" | "FieldsNotDefinedConfigError" | "SelectorTypeConfigError";
+  __typename: "FieldNotDefinedConfigError" | "FieldsNotDefinedConfigError" | "MissingFieldConfigError" | "MissingFieldsConfigError" | "RuntimeMismatchConfigError" | "SelectorTypeConfigError";
   message: string;
 }
 

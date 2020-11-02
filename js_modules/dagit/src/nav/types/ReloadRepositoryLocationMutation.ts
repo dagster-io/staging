@@ -1,7 +1,6 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
-// @generated
 // This file was automatically generated and should not be edited.
 
 // ====================================================
@@ -22,7 +21,12 @@ export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_Repos
   message: string;
 }
 
-export type ReloadRepositoryLocationMutation_reloadRepositoryLocation = ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation | ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReloadNotSupported | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationNotFound;
+export interface ReloadRepositoryLocationMutation_reloadRepositoryLocation_PythonError {
+  __typename: "PythonError";
+  message: string;
+}
+
+export type ReloadRepositoryLocationMutation_reloadRepositoryLocation = ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocation | ReloadRepositoryLocationMutation_reloadRepositoryLocation_ReloadNotSupported | ReloadRepositoryLocationMutation_reloadRepositoryLocation_RepositoryLocationNotFound | ReloadRepositoryLocationMutation_reloadRepositoryLocation_PythonError;
 
 export interface ReloadRepositoryLocationMutation {
   reloadRepositoryLocation: ReloadRepositoryLocationMutation_reloadRepositoryLocation;

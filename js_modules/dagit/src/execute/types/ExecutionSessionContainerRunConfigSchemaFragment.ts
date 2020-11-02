@@ -1,7 +1,6 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
-// @generated
 // This file was automatically generated and should not be edited.
 
 // ====================================================
@@ -13,7 +12,7 @@ export interface ExecutionSessionContainerRunConfigSchemaFragment_PipelineNotFou
 }
 
 export interface ExecutionSessionContainerRunConfigSchemaFragment_RunConfigSchema_rootConfigType {
-  __typename: "RegularConfigType" | "ArrayConfigType" | "ScalarUnionConfigType" | "NullableConfigType" | "EnumConfigType" | "CompositeConfigType";
+  __typename: "ArrayConfigType" | "CompositeConfigType" | "EnumConfigType" | "NullableConfigType" | "RegularConfigType" | "ScalarUnionConfigType";
   key: string;
 }
 

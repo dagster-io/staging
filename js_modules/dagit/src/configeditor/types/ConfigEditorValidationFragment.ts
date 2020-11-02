@@ -1,7 +1,6 @@
 // @generated
 /* tslint:disable */
 /* eslint-disable */
-// @generated
 // This file was automatically generated and should not be edited.
 
 import { EvaluationErrorReason } from "./../../types/globalTypes";
@@ -32,7 +31,7 @@ export interface ConfigEditorValidationFragment_PipelineConfigValidationInvalid_
 }
 
 export interface ConfigEditorValidationFragment_PipelineConfigValidationInvalid_errors {
-  __typename: "RuntimeMismatchConfigError" | "MissingFieldConfigError" | "MissingFieldsConfigError" | "FieldNotDefinedConfigError" | "FieldsNotDefinedConfigError" | "SelectorTypeConfigError";
+  __typename: "FieldNotDefinedConfigError" | "FieldsNotDefinedConfigError" | "MissingFieldConfigError" | "MissingFieldsConfigError" | "RuntimeMismatchConfigError" | "SelectorTypeConfigError";
   reason: EvaluationErrorReason;
   message: string;
   stack: ConfigEditorValidationFragment_PipelineConfigValidationInvalid_errors_stack;
