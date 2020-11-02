@@ -16,7 +16,7 @@ def test_user_defined_k8s_config_in_run_tags(tmp_path):
     kube_path.mkdir()
     kube_config_path = kube_path / "config"
     kube_config_path.write_text(
-        """
+        u"""
 apiVersion: v1
 kind: Config
 
