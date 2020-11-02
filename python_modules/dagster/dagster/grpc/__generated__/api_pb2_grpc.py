@@ -37,6 +37,11 @@ class DagsterApiStub(object):
             request_serializer=api__pb2.StreamingPingRequest.SerializeToString,
             response_deserializer=api__pb2.StreamingPingEvent.FromString,
         )
+        self.GetServerId = channel.stream_stream(
+            "/api.DagsterApi/GetServerId",
+            request_serializer=api__pb2.GetServerIdRequest.SerializeToString,
+            response_deserializer=api__pb2.GetServerIdEvent.FromString,
+        )
         self.ExecutionPlanSnapshot = channel.unary_unary(
             "/api.DagsterApi/ExecutionPlanSnapshot",
             request_serializer=api__pb2.ExecutionPlanSnapshotRequest.SerializeToString,
@@ -140,6 +145,12 @@ class DagsterApiServicer(object):
         raise NotImplementedError("Method not implemented!")
 
     def StreamingPing(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def GetServerId(self, request_iterator, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details("Method not implemented!")
@@ -264,6 +275,11 @@ def add_DagsterApiServicer_to_server(servicer, server):
             servicer.StreamingPing,
             request_deserializer=api__pb2.StreamingPingRequest.FromString,
             response_serializer=api__pb2.StreamingPingEvent.SerializeToString,
+        ),
+        "GetServerId": grpc.stream_stream_rpc_method_handler(
+            servicer.GetServerId,
+            request_deserializer=api__pb2.GetServerIdRequest.FromString,
+            response_serializer=api__pb2.GetServerIdEvent.SerializeToString,
         ),
         "ExecutionPlanSnapshot": grpc.unary_unary_rpc_method_handler(
             servicer.ExecutionPlanSnapshot,
@@ -436,6 +452,35 @@ class DagsterApi(object):
             "/api.DagsterApi/StreamingPing",
             api__pb2.StreamingPingRequest.SerializeToString,
             api__pb2.StreamingPingEvent.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def GetServerId(
+        request_iterator,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.stream_stream(
+            request_iterator,
+            target,
+            "/api.DagsterApi/GetServerId",
+            api__pb2.GetServerIdRequest.SerializeToString,
+            api__pb2.GetServerIdEvent.FromString,
             options,
             channel_credentials,
             insecure,

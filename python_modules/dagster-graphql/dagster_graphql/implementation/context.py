@@ -1,6 +1,11 @@
+import threading
+import time
+
+import grpc
 from dagster import check
 from dagster.core.host_representation import PipelineSelector, RepositoryLocation
 from dagster.core.host_representation.external import ExternalPipeline
+from dagster.core.host_representation.handle import GrpcServerRepositoryLocationHandle
 from dagster.core.instance import DagsterInstance
 from dagster.grpc.types import ScheduleExecutionDataMode
 from dagster_graphql.implementation.utils import UserFacingGraphQLError
@@ -13,6 +18,8 @@ class DagsterGraphQLContext:
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._workspace = workspace
         self._repository_locations = {}
+        self._grpc_server_watch_threads = {}
+
         for handle in self._workspace.repository_location_handles:
             check.invariant(
                 self._repository_locations.get(handle.location_name) is None,
@@ -20,10 +27,69 @@ class DagsterGraphQLContext:
                     name=handle.location_name,
                 ),
             )
+
             self._repository_locations[handle.location_name] = RepositoryLocation.from_handle(
                 handle
             )
+
+            # Start watch thread for all non-managed grpc locations
+            if isinstance(handle, GrpcServerRepositoryLocationHandle):
+                self._grpc_server_watch_threads[
+                    handle.location_name
+                ] = self._start_watch_server_thread(handle)
+
         self.version = version
+
+    def _start_watch_server_thread(self, handle):
+        watch_thread = threading.Thread(target=self._watch_server_thread, args=[handle])
+        watch_thread.daemon = True
+        watch_thread.start()
+        return watch_thread
+
+    def _watch_server_thread(self, handle):
+        check.inst_param(handle, "handle", GrpcServerRepositoryLocationHandle)
+
+        def hold_stream_to_server():
+            client = handle.client
+            request_iterator = client.server_id_request_iterator()
+            for _ in client.streaming_server_id(request_iterator=request_iterator):
+                # TODO: Potentially optimize by keeping track of the server id and minimizing
+                # the need for reload
+                pass
+
+        def reconnect_loop():
+            backoff = 1
+            while True:
+                print(  # pylint: disable=print-call
+                    "gRPC server for handle {} has been disconnected. Attempting to reconnect".format(
+                        handle.location_name
+                    )
+                )
+                time.sleep(backoff)
+                try:
+                    handle.client.ping(echo="hi")
+                    print(  # pylint: disable=print-call
+                        "Successfully reconnected to handle {}".format(handle.location_name)
+                    )
+                    return
+                except grpc._channel._InactiveRpcError:  # pylint: disable=protected-access
+                    # Potentially do exponential backoff
+                    # backoff *= 2
+                    pass
+
+        while True:
+            try:
+                hold_stream_to_server()
+            except grpc._channel._Rendezvous:  # pylint: disable=protected-access
+                reconnect_loop()
+
+                # Reload handle and send signal to Dagit that the data has been reloaded
+                self.reload_repository_location(handle.location_name)
+                self.send_reload_signal_to_dagit(handle.location_name)
+
+    def send_reload_signal_to_dagit(self, name):
+        # TODO: Needs to be implemented
+        pass
 
     @property
     def instance(self):
