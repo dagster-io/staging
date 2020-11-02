@@ -56,7 +56,7 @@ class Workspace:
 
     @property
     def repository_location_names(self):
-        return list(self._location_handle_dict.keys())
+        return list(self._location_origin_dict.keys())
 
     @property
     def repository_location_errors(self):
