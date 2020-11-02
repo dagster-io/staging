@@ -407,6 +407,18 @@ def log_repo_stats(instance, source, pipeline=None, repo=None):
         )
 
 
+def log_workspace_stats(instance, workspace):
+    from dagster.cli.workspace import Workspace
+
+    check.inst_param(instance, "instance", DagsterInstance)
+    check.inst_param(workspace, "workspace", Workspace)
+
+    for repository_location_handle in workspace.repository_location_handles:
+        for code_pointer in repository_location_handle.repository_code_pointer_dict.values():
+            recon_repo = ReconstructableRepository(code_pointer)
+            log_repo_stats(instance=instance, repo=recon_repo, source="dagit")
+
+
 def log_action(instance, action, client_time=None, elapsed_time=None, metadata=None):
     check.inst_param(instance, "instance", DagsterInstance)
     if client_time is None:

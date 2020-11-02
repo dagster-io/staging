@@ -158,6 +158,18 @@ def test_successful_host_dagit_ui_from_legacy_repository():
             )
 
 
+def test_successful_host_dagit_ui_log_workspace_stats():
+    with mock.patch("gevent.pywsgi.WSGIServer"), seven.TemporaryDirectory() as temp_dir:
+        instance = DagsterInstance.get(temp_dir)
+        with load_workspace_from_yaml_paths(
+            [file_relative_path(__file__, "./workspace.yaml")]
+        ) as workspace, mock.patch("dagit.cli.log_workspace_stats") as mock_log_workspace_stats:
+            host_dagit_ui_with_workspace(
+                instance=instance, workspace=workspace, host=None, port=2343, path_prefix=""
+            )
+            mock_log_workspace_stats.assert_called_once()
+
+
 def _define_mock_server(fn):
     class _Server(object):
         def __init__(self, *args, **kwargs):
