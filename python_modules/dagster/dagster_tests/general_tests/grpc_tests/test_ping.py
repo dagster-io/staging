@@ -6,6 +6,7 @@ import grpc
 import pytest
 from dagster import check, seven
 from dagster.grpc import DagsterGrpcClient, DagsterGrpcServer, ephemeral_grpc_api_client
+from dagster.grpc.__generated__ import api_pb2
 from dagster.grpc.server import GrpcServerProcess, open_server_process
 from dagster.serdes.ipc import interrupt_ipc_subprocess_pid
 from dagster.utils import find_free_port, safe_tempfile_path
@@ -135,3 +136,81 @@ def test_streaming():
         for sequence_number, result in enumerate(results):
             assert result["sequence_number"] == sequence_number
             assert result["echo"] == "foo"
+
+
+def test_stream_server_id():
+    def create_request_stream():
+        return iter([api_pb2.GetServerIdRequest(echo="foo")] * 2)
+
+    port = find_free_port()
+    server_process = open_server_process(port=port, socket=None)
+    assert server_process is not None
+
+    try:
+        api_client = DagsterGrpcClient(port=port)
+        results = []
+        for result in api_client.streaming_server_id(request_iterator=create_request_stream()):
+            results.append(result)
+
+        assert len(results) == 2
+        assert results[0] == results[1]
+    finally:
+        if server_process is not None:
+            interrupt_ipc_subprocess_pid(server_process.pid)
+
+
+def test_stream_server_id_with_changing_server():
+    def create_request_stream():
+        return iter([api_pb2.GetServerIdRequest(echo="foo")])
+
+    results = []
+
+    def start_server_and_append_server_id():
+        port = find_free_port()
+        server_process = open_server_process(port=port, socket=None)
+        assert server_process is not None
+
+        try:
+            api_client = DagsterGrpcClient(port=port)
+            for result in api_client.streaming_server_id(request_iterator=create_request_stream()):
+                results.append(result)
+        finally:
+            if server_process is not None:
+                interrupt_ipc_subprocess_pid(server_process.pid)
+
+    for _ in range(2):
+        start_server_and_append_server_id()
+
+    assert results[0] != results[1]
+
+
+def test_stream_detect_server_restart():
+    port = find_free_port()
+    server_process = open_server_process(port=port, socket=None)
+    assert server_process is not None
+
+    # For some reason, checking the error using pytest.raises does not work, so
+    # we use a boolean flag to track the error isntead
+    #
+    # with pytest.raises(grpc._channel._Rendezvous):
+    #     start_time = time.time()
+    #     api_client = DagsterGrpcClient(port=port)
+    #     for _ in api_client.streaming_server_id(request_iterator=infinite_generator()):
+    #         # After five seconds, kill the server
+    #         if time.time() - start_time > 5:
+    #             interrupt_ipc_subprocess_pid(server_process.pid)
+
+    server_error_detected = False
+
+    try:
+        start_time = time.time()
+        api_client = DagsterGrpcClient(port=port)
+        request_iterator = api_client.server_id_request_iterator()
+        for _ in api_client.streaming_server_id(request_iterator=request_iterator):
+            # After five seconds, kill the server
+            if time.time() - start_time > 5:
+                interrupt_ipc_subprocess_pid(server_process.pid)
+    except grpc._channel._Rendezvous:  # pylint: disable=protected-access
+        server_error_detected = False
+
+    assert server_error_detected == True

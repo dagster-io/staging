@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import time
 import warnings
 from contextlib import contextmanager
 
@@ -81,6 +82,13 @@ class DagsterGrpcClient(object):
             for response in response_stream:
                 yield response
 
+    def _bidirectional_streaming_query(self, method, **kwargs):
+        with grpc.insecure_channel(self._server_address) as channel:
+            stub = DagsterApiStub(channel)
+            response_stream = getattr(stub, method)(**kwargs)
+            for response in response_stream:
+                yield response
+
     def ping(self, echo):
         check.str_param(echo, "echo")
         res = self._query("Ping", api_pb2.PingRequest, echo=echo)
@@ -105,6 +113,17 @@ class DagsterGrpcClient(object):
                 "sequence_number": res.sequence_number,
                 "echo": res.echo,
             }
+
+    def server_id_request_iterator(self, interval=2):
+        while 1:
+            yield api_pb2.GetServerIdRequest(echo="foo")
+            time.sleep(interval)
+
+    def streaming_server_id(self, request_iterator):
+        for res in self._bidirectional_streaming_query(
+            "GetServerId", request_iterator=request_iterator
+        ):
+            yield res.server_id
 
     def execution_plan_snapshot(self, execution_plan_snapshot_args):
         check.inst_param(
