@@ -131,7 +131,7 @@ def test_user_defined_k8s_config_in_run_tags(tmp_path):
     kube_path.mkdir()
     kube_config_path = kube_path / "config"
     kube_config_path.write_text(
-        """
+        u"""
 apiVersion: v1
 kind: Config
 
@@ -152,6 +152,7 @@ clusters:
         postgres_password_secret="dagster-postgresql-secret",
         dagster_home="/opt/dagster/dagster_home",
         load_incluster_config=False,
+        kubeconfig_file=str(kube_config_path),
         k8s_client_batch_api=mock_k8s_client_batch_api,
     )
 
