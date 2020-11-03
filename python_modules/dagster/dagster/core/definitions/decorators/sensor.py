@@ -5,7 +5,7 @@ from dagster.utils.backcompat import experimental
 
 @experimental
 def sensor(
-    pipeline_name, name=None, run_config_fn=None, tags_fn=None, solid_selection=None, mode=None,
+    pipeline_name, name=None, solid_selection=None, mode=None,
 ):
     """
     The decorated function will be called to determine whether the provided job should execute,
@@ -36,9 +36,7 @@ def sensor(
         return SensorDefinition(
             name=sensor_name,
             pipeline_name=pipeline_name,
-            should_execute=fn,
-            run_config_fn=run_config_fn,
-            tags_fn=tags_fn,
+            job_config_fn=fn,
             solid_selection=solid_selection,
             mode=mode,
         )

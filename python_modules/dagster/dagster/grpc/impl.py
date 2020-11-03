@@ -288,31 +288,11 @@ def get_external_sensor_execution(recon_repo, instance_ref, sensor_name, last_ev
         try:
             with user_code_error_boundary(
                 SensorExecutionError,
-                lambda: "Error occurred during the execution of should_execute for sensor "
+                lambda: "Error occurred during the execution of job_config_fn for sensor "
                 "{sensor_name}".format(sensor_name=sensor_def.name),
             ):
-                if not sensor_def.should_execute(sensor_context):
-                    return ExternalSensorExecutionData(
-                        should_execute=False, run_config=None, tags=None
-                    )
-
-            with user_code_error_boundary(
-                SensorExecutionError,
-                lambda: "Error occurred during the execution of run_config_fn for sensor "
-                "{sensor_name}".format(sensor_name=sensor_def.name),
-            ):
-                run_config = sensor_def.get_run_config(sensor_context)
-
-            with user_code_error_boundary(
-                SensorExecutionError,
-                lambda: "Error occurred during the execution of tags_fn for sensor "
-                "{sensor_name}".format(sensor_name=sensor_def.name),
-            ):
-                tags = sensor_def.get_tags(sensor_context)
-
-            return ExternalSensorExecutionData(
-                should_execute=True, run_config=run_config, tags=tags
-            )
+                job_config_list = sensor_def.get_job_config(sensor_context)
+                return ExternalSensorExecutionData(job_config_list=job_config_list)
         except SensorExecutionError:
             return ExternalSensorExecutionErrorData(
                 serializable_error_info_from_exc_info(sys.exc_info())

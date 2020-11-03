@@ -9,6 +9,7 @@ from collections import namedtuple
 
 from dagster import check
 from dagster.core.definitions import (
+    JobConfig,
     JobDefinition,
     JobType,
     PartitionSetDefinition,
@@ -233,15 +234,11 @@ class ExternalJobData(
 
 
 @whitelist_for_serdes
-class ExternalSensorExecutionData(
-    namedtuple("_ExternalSensorExecutionData", "should_execute run_config tags")
-):
-    def __new__(cls, should_execute=None, run_config=None, tags=None):
+class ExternalSensorExecutionData(namedtuple("_ExternalSensorExecutionData", "job_config_list")):
+    def __new__(cls, job_config_list=None):
         return super(ExternalSensorExecutionData, cls).__new__(
             cls,
-            should_execute=check.opt_bool_param(should_execute, "should_execute"),
-            run_config=check.opt_dict_param(run_config, "run_config"),
-            tags=check.opt_dict_param(tags, "tags", key_type=str, value_type=str),
+            job_config_list=check.list_param(job_config_list, "job_config_list", of_type=JobConfig),
         )
 
 
