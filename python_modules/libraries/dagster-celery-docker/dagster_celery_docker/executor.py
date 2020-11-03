@@ -32,7 +32,7 @@ def celery_docker_config():
             {
                 "image": Field(
                     StringSource,
-                    is_required=True,
+                    is_required=False,
                     description="The docker image to be used for step execution.",
                 ),
                 "registry": Field(
@@ -248,7 +248,11 @@ def create_docker_task(celery_app, **task_kwargs):
 
         command = "dagster api execute_step_with_structured_logs {}".format(json.dumps(input_json))
 
-        docker_image = docker_config["image"]
+        docker_image = (
+            docker_config["image"]
+            if docker_config.get("image")
+            else pipeline_origin.repository_origin.container_image
+        )
 
         client = docker.client.from_env()
 
