@@ -1,3 +1,4 @@
+from collections import namedtuple
 from enum import Enum
 
 from dagster import check
@@ -6,6 +7,17 @@ from dagster.serdes import whitelist_for_serdes
 
 from .mode import DEFAULT_MODE_NAME
 from .utils import check_valid_name
+
+
+@whitelist_for_serdes
+class JobConfig(namedtuple("_JobConfig", "run_config tags execution_key")):
+    def __new__(cls, run_config=None, tags=None, execution_key=None):
+        return super(JobConfig, cls).__new__(
+            cls,
+            run_config=check.opt_dict_param(run_config, "run_config"),
+            tags=check.opt_dict_param(tags, "tags"),
+            execution_key=check.opt_str_param(execution_key, "execution_key"),
+        )
 
 
 @whitelist_for_serdes
