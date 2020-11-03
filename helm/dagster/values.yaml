@@ -426,6 +426,41 @@ ingress:
     succeedingPaths:
 
 ####################################################################################################
+# Dagster Daemon [EXPERIMENTAL]: (Optional) Deploy a daemon for run coordination, etc.
+####################################################################################################
+dagsterDaemon:
+  enabled: false
+
+  image:
+    repository: "dagster/k8s-dagit"
+    tag: "latest"
+    pullPolicy: Always
+
+  # NOTE: currently only the run coordinator is supported. In the future there will be one command
+  # to launch multiple components in the daemon.
+  #
+  # `dagster-daemon run-coordinator run --help` for optional cli arguments
+  cliArgs: [run-coordinator, run]
+
+  # Changes the instance to use the QueuedRunCoordinator, so that runs will be launched by the
+  # daemon
+  queuedRunCoordinator:
+    enabled: false
+
+  env:
+    YOUR_ENV_VAR: ""
+  env_config_maps:
+    - ""
+  env_secrets:
+    - ""
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  podSecurityContext: {}
+  securityContext: {}
+  resources: {}
+
+####################################################################################################
 # Extra Manifests: (Optional) Create additional k8s resources within this chart
 ####################################################################################################
 extraManifests:
