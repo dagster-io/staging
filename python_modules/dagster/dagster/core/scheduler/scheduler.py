@@ -429,7 +429,7 @@ class Scheduler(six.with_metaclass(abc.ABCMeta)):
         """
 
 
-class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
+class DagsterDaemonScheduler(Scheduler, ConfigurableClass):
     """Scheduler implementation that launches runs from the `dagster scheduler run`
     long-lived process.
     """
@@ -447,7 +447,7 @@ class DagsterCommandLineScheduler(Scheduler, ConfigurableClass):
 
     @staticmethod
     def from_config_value(inst_data, config_value):
-        return DagsterCommandLineScheduler(inst_data=inst_data,)
+        return DagsterDaemonScheduler(inst_data=inst_data,)
 
     def debug_info(self):
         return ""
