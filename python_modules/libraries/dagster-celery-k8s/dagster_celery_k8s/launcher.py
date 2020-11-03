@@ -188,7 +188,7 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
                     )
                 )
 
-            job_image = repository_location_handle.get_current_image()
+            job_image = repository_location_handle.reload_current_image()
             env_vars = {"DAGSTER_CURRENT_IMAGE": job_image}
 
             repository_name = external_pipeline.repository_handle.repository_name

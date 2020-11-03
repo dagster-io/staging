@@ -287,7 +287,8 @@ class DagsterApiServer(DagsterApiServicer):
         return ReconstructableRepository(
             self._repository_symbols_and_code_pointers.code_pointers_by_repo_name[
                 external_repository_origin.repository_name
-            ]
+            ],
+            self._get_current_image(),
         )
 
     def _recon_pipeline_from_origin(self, external_pipeline_origin):
@@ -781,8 +782,11 @@ class DagsterApiServer(DagsterApiServicer):
             )
         )
 
+    def _get_current_image(self):
+        return os.getenv("DAGSTER_CURRENT_IMAGE")
+
     def GetCurrentImage(self, request, _context):
-        current_image = os.getenv("DAGSTER_CURRENT_IMAGE")
+        current_image = self._get_current_image()
         serializable_error_info = None
 
         if not current_image:

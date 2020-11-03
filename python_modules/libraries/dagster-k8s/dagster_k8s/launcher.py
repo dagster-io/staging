@@ -258,7 +258,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
                     )
                 )
 
-            job_image = repository_location_handle.get_current_image()
+            job_image = repository_location_handle.reload_current_image()
 
             job_config = self._get_grpc_job_config(job_image)
 
