@@ -233,15 +233,23 @@ class ExternalJobData(
 
 
 @whitelist_for_serdes
-class ExternalSensorExecutionData(
-    namedtuple("_ExternalSensorExecutionData", "should_execute run_config tags")
-):
-    def __new__(cls, should_execute=None, run_config=None, tags=None):
-        return super(ExternalSensorExecutionData, cls).__new__(
+class ExternalJobParamData(namedtuple("_ExternalJobParamData", "run_config tags")):
+    def __new__(cls, run_config=None, tags=None):
+        return super(ExternalJobParamData, cls).__new__(
             cls,
-            should_execute=check.opt_bool_param(should_execute, "should_execute"),
             run_config=check.opt_dict_param(run_config, "run_config"),
             tags=check.opt_dict_param(tags, "tags", key_type=str, value_type=str),
+        )
+
+
+@whitelist_for_serdes
+class ExternalSensorExecutionData(namedtuple("_ExternalSensorExecutionData", "job_params_list")):
+    def __new__(cls, job_params_list=None):
+        return super(ExternalSensorExecutionData, cls).__new__(
+            cls,
+            job_params_list=check.list_param(
+                job_params_list, "job_params_list", of_type=ExternalJobParamData
+            ),
         )
 
 

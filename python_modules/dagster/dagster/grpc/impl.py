@@ -24,6 +24,7 @@ from dagster.core.events import EngineEventData
 from dagster.core.execution.api import create_execution_plan, execute_run_iterator
 from dagster.core.host_representation import external_pipeline_data_from_def
 from dagster.core.host_representation.external_data import (
+    ExternalJobParamData,
     ExternalPartitionConfigData,
     ExternalPartitionExecutionErrorData,
     ExternalPartitionExecutionParamData,
@@ -286,31 +287,20 @@ def get_external_sensor_execution(recon_repo, instance_ref, sensor_name, last_ch
         try:
             with user_code_error_boundary(
                 SensorExecutionError,
-                lambda: "Error occurred during the execution of should_execute for sensor "
+                lambda: "Error occurred during the execution of job_param_fn for sensor "
                 "{sensor_name}".format(sensor_name=sensor_def.name),
             ):
-                if not sensor_def.should_execute(sensor_context):
-                    return ExternalSensorExecutionData(
-                        should_execute=False, run_config=None, tags=None
-                    )
-
-            with user_code_error_boundary(
-                SensorExecutionError,
-                lambda: "Error occurred during the execution of run_config_fn for sensor "
-                "{sensor_name}".format(sensor_name=sensor_def.name),
-            ):
-                run_config = sensor_def.get_run_config(sensor_context)
-
-            with user_code_error_boundary(
-                SensorExecutionError,
-                lambda: "Error occurred during the execution of tags_fn for sensor "
-                "{sensor_name}".format(sensor_name=sensor_def.name),
-            ):
-                tags = sensor_def.get_tags(sensor_context)
-
-            return ExternalSensorExecutionData(
-                should_execute=True, run_config=run_config, tags=tags
-            )
+                job_param_dict_list = sensor_def.get_job_params(sensor_context)
+                check.is_list(job_param_dict_list, of_type=dict)
+                return ExternalSensorExecutionData(
+                    job_params_list=[
+                        ExternalJobParamData(
+                            run_config=job_param_dict.get("run_config"),
+                            tags=job_param_dict.get("tags"),
+                        )
+                        for job_param_dict in job_param_dict_list
+                    ]
+                )
         except SensorExecutionError:
             return ExternalSensorExecutionErrorData(
                 serializable_error_info_from_exc_info(sys.exc_info())

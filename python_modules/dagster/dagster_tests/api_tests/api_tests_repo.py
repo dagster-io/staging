@@ -132,9 +132,12 @@ def define_baz_partitions():
     }
 
 
-@sensor(pipeline_name="foo_pipeline", run_config_fn=lambda _: {"foo": "FOO"})
+@sensor(pipeline_name="foo_pipeline")
 def sensor_foo(_):
-    return True
+    return [
+        {"run_config": {"foo": "FOO"}, "tags": {"foo": "foo_tag"}},
+        {"run_config": {"foo": "BAR"}},
+    ]
 
 
 @sensor(pipeline_name="foo_pipeline")
