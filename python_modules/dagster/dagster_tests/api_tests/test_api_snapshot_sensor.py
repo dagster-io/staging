@@ -17,7 +17,9 @@ def test_external_sensor_grpc():
             instance, repository_handle, "sensor_foo"
         )
         assert isinstance(result, ExternalSensorExecutionData)
-        assert result.run_config == {"foo": "FOO"}
+        assert len(result.job_params_list) == 1
+        job_params = result.job_params_list[0]
+        assert job_params.run_config == {"foo": "FOO"}
 
 
 def test_external_sensor_error():

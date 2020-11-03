@@ -10,8 +10,14 @@ def get_toys_sensors():
         try:
             mtime = os.path.getmtime(filepath)
         except OSError:
-            return False
+            return []
 
-        return not context.last_checked_time or mtime > context.last_checked_time
+        if not context.last_checked_time:
+            return []
+
+        if mtime > context.last_checked_time:
+            return [{}]
+
+        return []
 
     return [event_sensor]

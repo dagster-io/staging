@@ -134,7 +134,7 @@ def define_baz_partitions():
 
 @sensor(pipeline_name="foo_pipeline")
 def sensor_foo(_):
-    return True
+    return [{}]
 
 
 @sensor(pipeline_name="foo_pipeline")
