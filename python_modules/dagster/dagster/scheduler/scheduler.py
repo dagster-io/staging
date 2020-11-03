@@ -32,6 +32,8 @@ from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 from dagster.utils.log import default_format_string
 
+from .sensor import launch_sensor_runs
+
 
 class ScheduleTickHolder:
     def __init__(self, tick, instance, logger):
@@ -111,6 +113,7 @@ def execute_scheduler_command(interval, max_catchup_runs):
             end_datetime_utc = pendulum.now("UTC")
 
             launch_scheduled_runs(instance, logger, end_datetime_utc, max_catchup_runs)
+            launch_sensor_runs(instance, logger)
 
             time_left = interval - (pendulum.now("UTC") - end_datetime_utc).seconds
 
