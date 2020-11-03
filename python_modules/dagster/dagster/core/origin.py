@@ -70,12 +70,19 @@ class RepositoryPythonOrigin(
     necessary to load a target RepositoryDefinition in a "user process" locally.
     """
 
-    def __new__(cls, executable_path, code_pointer):
-        return super(RepositoryPythonOrigin, cls).__new__(
+    def __new__(cls, executable_path, code_pointer, container_image=None):
+        origin = super(RepositoryPythonOrigin, cls).__new__(
             cls,
             check.str_param(executable_path, "executable_path"),
             check.inst_param(code_pointer, "code_pointer", CodePointer),
         )
+
+        # Leaving this out of the namedtuple to keep get_origin_id stable. This hack can be removed
+        # after RepositoryPythonOrigins no longer need to stay stable after
+        # https://dagster.phacility.com/D4941
+        origin._container_image = check.opt_str_param(container_image, "container_image")
+
+        return origin
 
     def get_cli_args(self):
         return self.code_pointer.get_cli_args()
@@ -91,6 +98,10 @@ class RepositoryPythonOrigin(
     @property
     def loadable_target_origin(self):
         return self.code_pointer.get_loadable_target_origin(self.executable_path)
+
+    @property
+    def container_image(self):
+        return self._container_image  # pylint: disable=no-member
 
 
 class PipelineOrigin(six.with_metaclass(ABCMeta)):

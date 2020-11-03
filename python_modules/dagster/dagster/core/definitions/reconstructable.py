@@ -27,12 +27,16 @@ def get_ephemeral_repository_name(pipeline_name):
 
 
 @whitelist_for_serdes
-class ReconstructableRepository(namedtuple("_ReconstructableRepository", "pointer")):
+class ReconstructableRepository(
+    namedtuple("_ReconstructableRepository", "pointer container_image")
+):
     def __new__(
-        cls, pointer,
+        cls, pointer, container_image=None,
     ):
         return super(ReconstructableRepository, cls).__new__(
-            cls, pointer=check.inst_param(pointer, "pointer", CodePointer),
+            cls,
+            pointer=check.inst_param(pointer, "pointer", CodePointer),
+            container_image=check.opt_str_param(container_image, "container_image"),
         )
 
     @lru_cache(maxsize=1)
@@ -65,7 +69,11 @@ class ReconstructableRepository(namedtuple("_ReconstructableRepository", "pointe
         return cls(pointer=CodePointer.from_legacy_repository_yaml(absolute_file_path))
 
     def get_origin(self):
-        return RepositoryPythonOrigin(executable_path=sys.executable, code_pointer=self.pointer)
+        return RepositoryPythonOrigin(
+            executable_path=sys.executable,
+            code_pointer=self.pointer,
+            container_image=self.container_image,
+        )
 
     def get_origin_id(self):
         return self.get_origin().get_id()
