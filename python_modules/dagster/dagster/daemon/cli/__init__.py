@@ -3,19 +3,28 @@ import sys
 
 import click
 from dagster import __version__
+from dagster.core.instance import DagsterInstance
+from dagster.daemon import DagsterDaemonController
 
-from .run_coordinator_cli import create_run_coordinator_cli_group
+
+@click.command(
+    name="run", help="Run any daemons configured on the DagsterInstance.",
+)
+def run_command():
+    with DagsterInstance.get() as instance:
+        controller = DagsterDaemonController(instance)
+        controller.run()
 
 
 def create_dagster_daemon_cli():
     commands = {
-        "run-coordinator": create_run_coordinator_cli_group(),
+        "run": run_command,
     }
 
     @click.group(commands=commands)
     @click.version_option(version=__version__)
     def group():
-        "CLI tools for working with dagster run coordination daemons."
+        "CLI tools for working with the dagster daemon process."
 
     return group
 
