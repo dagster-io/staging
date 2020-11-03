@@ -1,7 +1,66 @@
+from collections import namedtuple
+
 from dagster import check
 from dagster.core.definitions.job import JobContext, JobDefinition, JobType
+from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.instance import DagsterInstance
+from dagster.serdes import whitelist_for_serdes
 from dagster.utils.backcompat import experimental_class_warning
+
+
+@whitelist_for_serdes
+class SensorTickData(namedtuple("_SensorTickData", "run_params skip_message")):
+    """ The set of run launching data associated with a single evaluation of a sensor body. This
+    is the expected return value for the `sensor_runs_fn` provided to the SensorDefinition. Contains
+    information about what runs should be launched (`run_params`) and any useful information to
+    display should the evaluation not yield any runs.
+
+    Attributes:
+        run_params (Optional[List[SensorRunParams]]): An optional list of params for runs to be
+            launched upon sensor evaluation.  Each `SensorRunParams` represents a distinct run to be
+            launched.
+        skip_message (Optional[str]): An optional message to annotate any sensor response that
+            skipped launching any runs.  Note: Will raise an error for any non-None value if a
+            non-empty list of SensorRunParams is passed for `run_params`.
+    """
+
+    def __new__(cls, run_params=None, skip_message=None):
+        check.opt_list_param(run_params, "run_params", SensorRunParams)
+        check.opt_str_param(skip_message, "skip_message")
+
+        if skip_message and run_params:
+            raise DagsterInvalidDefinitionError(
+                "Provided both `run_params` and `skip_message` as arguments to SensorTickData. "
+                "Must provide only one of the two."
+            )
+
+        return super(SensorTickData, cls).__new__(
+            cls, run_params=run_params, skip_message=skip_message,
+        )
+
+
+@whitelist_for_serdes
+class SensorRunParams(namedtuple("_SensorRunParams", "run_config tags execution_key")):
+    """ Represents all the information required to launch a single run instigated by a sensor body.
+        This is one of a list of `SensorRunParams` returned as part of the `SensorTickData` returned
+        by a SensorDefinition's `sensor_runs_fn`.
+
+    Attributes:
+        run_config (Optional[Dict]): The environment config that parameterizes the run execution to
+            be launched, as a dict.
+        tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach
+            to the launched run.
+        execution_key (Optional[str]): A string key to identify this launched run, to be used for
+            deduplication across sensor evaluations.
+    """
+
+    def __new__(cls, run_config=None, tags=None, execution_key=None):
+        return super(SensorRunParams, cls).__new__(
+            cls,
+            run_config=check.opt_dict_param(run_config, "run_config"),
+            tags=check.opt_dict_param(tags, "tags"),
+            execution_key=check.opt_str_param(execution_key, "execution_key"),
+        )
 
 
 class SensorExecutionContext(JobContext):
@@ -36,37 +95,21 @@ class SensorDefinition(JobDefinition):
     Args:
         name (str): The name of the sensor to create.
         pipeline_name (str): The name of the pipeline to execute when the sensor fires.
-        should_execute (Callable[[SensorExecutionContext], bool]): A function that runs
-            at an interval to determine whether a run should be launched or not. Takes a
-            :py:class:`~dagster.SensorExecutionContext` and returns a boolean (``True`` if the
-            sensor should execute).
-        run_config_fn (Callable[[SensorExecutionContext], [Dict]]): A function that takes a
-            SensorExecutionContext object and returns the environment configuration that
-            parameterizes this execution, as a dict.
-        tags_fn (Optional[Callable[[SensorExecutionContext], Optional[Dict[str, str]]]]): A
-            function that generates tags to attach to the sensors runs. Takes a
-            :py:class:`~dagster.SensorExecutionContext` and returns a dictionary of tags (string
-            key-value pairs).
+        sensor_tick_fn (Callable[[SensorExecutionContext], SensorTickData): A function
+            that runs at an interval to determine whether a run should be launched or not. Takes a
+            :py:class:`~dagster.SensorExecutionContext` and returns a SensorTickData which contains
+            information on each run that should be launched.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute when the sensor runs. e.g. ``['*some_solid+', 'other_solid']``
         mode (Optional[str]): The mode to apply when executing this sensor. (default: 'default')
     """
 
     __slots__ = [
-        "_run_config_fn",
-        "_tags_fn",
-        "_should_execute",
+        "_sensor_tick_fn",
     ]
 
     def __init__(
-        self,
-        name,
-        pipeline_name,
-        should_execute,
-        run_config_fn=None,
-        tags_fn=None,
-        solid_selection=None,
-        mode=None,
+        self, name, pipeline_name, sensor_tick_fn, solid_selection=None, mode=None,
     ):
         experimental_class_warning("SensorDefinition")
         super(SensorDefinition, self).__init__(
@@ -76,20 +119,11 @@ class SensorDefinition(JobDefinition):
             mode=mode,
             solid_selection=solid_selection,
         )
-        self._should_execute = check.callable_param(should_execute, "should_execute")
-        self._run_config_fn = check.opt_callable_param(
-            run_config_fn, "run_config_fn", default=lambda _context: {}
-        )
-        self._tags_fn = check.opt_callable_param(tags_fn, "tags_fn", default=lambda _context: {})
+        self._sensor_tick_fn = check.callable_param(sensor_tick_fn, "sensor_tick_fn")
 
-    def get_run_config(self, context):
+    def get_tick_data(self, context):
         check.inst_param(context, "context", SensorExecutionContext)
-        return self._run_config_fn(context)
-
-    def get_tags(self, context):
-        check.inst_param(context, "context", SensorExecutionContext)
-        return self._tags_fn(context)
-
-    def should_execute(self, context):
-        check.inst_param(context, "context", SensorExecutionContext)
-        return self._should_execute(context)
+        result = self._sensor_tick_fn(context)
+        if not result:
+            return SensorTickData()
+        return check.inst(result, SensorTickData)

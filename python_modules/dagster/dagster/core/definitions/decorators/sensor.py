@@ -5,22 +5,22 @@ from dagster.utils.backcompat import experimental
 
 @experimental
 def sensor(
-    pipeline_name, name=None, run_config_fn=None, tags_fn=None, solid_selection=None, mode=None,
+    pipeline_name, name=None, solid_selection=None, mode=None,
 ):
     """
     The decorated function will be called to determine whether the provided job should execute,
     taking a :py:class:`~dagster.core.definitions.sensor.SensorExecutionContext`
     as its only argument, returning a boolean if the execution should fire
 
+    The decorated function will be called at an interval to determine whether a run should be
+    launched or not. Takes a :py:class:`~dagster.SensorExecutionContext` and returns a
+    SensorTickData.
+
     Args:
         name (str): The name of this sensor
-        run_config_fn (Optional[Callable[[SensorExecutionContext], Optional[Dict]]]): A function
-            that takes a SensorExecutionContext object and returns the environment configuration
-            that parameterizes this execution, as a dict.
-        tags_fn (Optional[Callable[[SensorExecutionContext], Optional[Dict[str, str]]]]): A function
-            that generates tags to attach to the sensor runs. Takes a
-            :py:class:`~dagster.SensorExecutionContext` and returns a dictionary of tags (string
-            key-value pairs).
+        sensor_tick_fn (Callable[[SensorExecutionContext], SensorTickData]): A function
+            that runs at an interval to determine whether a run should be launched or not. Takes a
+            :py:class:`~dagster.SensorExecutionContext` and returns a SensorTickData.
         solid_selection (Optional[List[str]]): A list of solid subselection (including single
             solid names) to execute for runs for this sensor e.g.
             ``['*some_solid+', 'other_solid']``
@@ -36,9 +36,7 @@ def sensor(
         return SensorDefinition(
             name=sensor_name,
             pipeline_name=pipeline_name,
-            should_execute=fn,
-            run_config_fn=run_config_fn,
-            tags_fn=tags_fn,
+            sensor_tick_fn=fn,
             solid_selection=solid_selection,
             mode=mode,
         )
