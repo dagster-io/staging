@@ -2,7 +2,6 @@ import {shallowCompareKeys} from '@blueprintjs/core/lib/cjs/common/utils';
 import React from 'react';
 
 import {filterByQuery} from 'src/GraphQueryImpl';
-import {TokenizingFieldValue} from 'src/TokenizingField';
 import {formatStepKey} from 'src/Util';
 import {GaantChartLayout} from 'src/gaant/Constants';
 import {GaantChartMode} from 'src/gaant/GaantChart';
@@ -46,23 +45,6 @@ function getStartTime(a: PartitionRunMatrixRunFragment) {
 
 function byStartTimeAsc(a: PartitionRunMatrixRunFragment, b: PartitionRunMatrixRunFragment) {
   return getStartTime(a) - getStartTime(b);
-}
-
-function runsMatchingTagTokens(
-  runs: PartitionRunMatrixRunFragment[],
-  tokens: TokenizingFieldValue[],
-) {
-  return runs.filter(
-    (run) =>
-      tokens.length === 0 ||
-      tokens.some(({token, value}) => {
-        if (token === 'tag') {
-          const [tkey, tvalue] = value.split('=');
-          return run.tags.some((tag) => tag.key === tkey && tag.value === tvalue);
-        }
-        throw new Error(`Unknown token: ${token}`);
-      }),
-  );
 }
 
 function buildMatrixData(
@@ -130,8 +112,12 @@ function buildMatrixData(
     return {
       x: box.x,
       name: box.node.name,
-      totalFailurePercent: Math.round((totalFailures.length / partitionColumns.length) * 100),
-      finalFailurePercent: Math.round((finalFailures.length / partitionColumns.length) * 100),
+      totalFailurePercent: partitionColumns.length
+        ? Math.round((totalFailures.length / partitionColumns.length) * 100)
+        : 0,
+      finalFailurePercent: partitionColumns.length
+        ? Math.round((finalFailures.length / partitionColumns.length) * 100)
+        : 0,
     };
   });
 
@@ -159,7 +145,6 @@ interface MatrixDataInputs {
   solidHandles: SolidHandle[] | false;
   partitions: {name: string; runs: PartitionRunMatrixRunFragment[]}[];
   stepQuery: string;
-  runsFilter: TokenizingFieldValue[];
   options: DisplayOptions;
 }
 
@@ -186,12 +171,6 @@ export const useMatrixData = (inputs: MatrixDataInputs) => {
     return cachedMatrixData.current.result;
   }
 
-  // Filter the runs down to the subset matching the tags input (eg: backfillId)
-  const partitionsFiltered = inputs.partitions.map((p) => ({
-    ...p,
-    runs: runsMatchingTagTokens(p.runs, inputs.runsFilter),
-  }));
-
   // Filter the pipeline's structure and build the flat gaant layout for the left hand side
   const solidsFiltered = filterByQuery(
     inputs.solidHandles.map((h) => h.solid),
@@ -200,7 +179,7 @@ export const useMatrixData = (inputs: MatrixDataInputs) => {
   const layout = buildLayout({nodes: solidsFiltered.all, mode: GaantChartMode.FLAT});
 
   // Build the matrix of step + partition squares - presorted to match the gaant layout
-  const result = buildMatrixData(layout, partitionsFiltered, inputs.options);
+  const result = buildMatrixData(layout, inputs.partitions, inputs.options);
   cachedMatrixData.current = {result, inputs};
   return result;
 };

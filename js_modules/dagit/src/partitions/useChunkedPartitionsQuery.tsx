@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import {useRepositorySelector} from 'src/DagsterRepositoryContext';
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
+import {TokenizingFieldValue} from 'src/TokenizingField';
 import {PARTITION_GRAPH_SET_RUN_FRAGMENT} from 'src/partitions/PartitionGraphSet';
 import {PARTITION_RUN_MATRIX_RUN_FRAGMENT} from 'src/partitions/PartitionRunMatrix';
 import {
@@ -36,7 +37,11 @@ const InitialDataState: DataState = {
  * This React hook mirrors `useCursorPaginatedQuery` but collects each page of partitions
  * in slices that are smaller than pageSize and cause the results to load incrementally.
  */
-export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: number | 'all') {
+export function useChunkedPartitionsQuery(
+  partitionSetName: string,
+  pageSize: number | 'all',
+  runsFilter: TokenizingFieldValue[],
+) {
   const {repositoryName, repositoryLocationName} = useRepositorySelector();
   const client = useApolloClient();
 
@@ -52,6 +57,11 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
     version.current = v;
 
     setDataState((dataState) => ({...dataState, runs: [], loading: true}));
+
+    const runTags = runsFilter.map((token) => {
+      const [key, value] = token.value.split('=');
+      return {key, value};
+    });
 
     const run = async () => {
       // Load the partition names in the current page range
@@ -89,6 +99,7 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
               limit: 1000,
               filter: {
                 tags: [
+                  ...runTags,
                   {key: 'dagster/partition_set', value: partitionSetName},
                   {key: 'dagster/partition', value: partitionName},
                 ],
@@ -154,7 +165,15 @@ export function useChunkedPartitionsQuery(partitionSetName: string, pageSize: nu
     };
 
     run();
-  }, [pageSize, cursor, client, partitionSetName, repositoryName, repositoryLocationName]);
+  }, [
+    pageSize,
+    cursor,
+    client,
+    partitionSetName,
+    repositoryName,
+    repositoryLocationName,
+    runsFilter,
+  ]);
 
   // Note: cursor === null is page zero and cursors specify subsequent pages.
 
