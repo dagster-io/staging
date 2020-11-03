@@ -1,8 +1,6 @@
 from dagster.api.snapshot_sensor import sync_get_external_sensor_execution_data_ephemeral_grpc
-from dagster.core.host_representation.external_data import (
-    ExternalSensorExecutionData,
-    ExternalSensorExecutionErrorData,
-)
+from dagster.core.definitions.sensor import SensorTickData
+from dagster.core.host_representation.external_data import ExternalSensorExecutionErrorData
 from dagster.core.test_utils import instance_for_test
 
 from .utils import get_bar_repo_handle
@@ -14,8 +12,11 @@ def test_external_sensor_grpc():
             result = sync_get_external_sensor_execution_data_ephemeral_grpc(
                 instance, repository_handle, "sensor_foo", None
             )
-            assert isinstance(result, ExternalSensorExecutionData)
-            assert result.run_config == {"foo": "FOO"}
+            assert isinstance(result, SensorTickData)
+            assert len(result.run_params) == 2
+            job_config = result.run_params[0]
+            assert job_config.run_config == {"foo": "FOO"}
+            assert job_config.tags == {"foo": "foo_tag"}
 
 
 def test_external_sensor_error():

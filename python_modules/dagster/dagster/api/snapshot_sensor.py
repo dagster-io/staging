@@ -1,8 +1,6 @@
 from dagster import check
-from dagster.core.host_representation.external_data import (
-    ExternalSensorExecutionData,
-    ExternalSensorExecutionErrorData,
-)
+from dagster.core.definitions.sensor import SensorTickData
+from dagster.core.host_representation.external_data import ExternalSensorExecutionErrorData
 from dagster.core.host_representation.handle import RepositoryHandle
 from dagster.grpc.types import SensorExecutionArgs
 
@@ -39,5 +37,5 @@ def sync_get_external_sensor_execution_data_grpc(
                 last_evaluation_time=last_evaluation_time,
             )
         ),
-        (ExternalSensorExecutionData, ExternalSensorExecutionErrorData),
+        (SensorTickData, ExternalSensorExecutionErrorData),
     )
