@@ -4,6 +4,7 @@ import time
 from dagster import DagsterEvent, DagsterEventType, DagsterInstance, check
 from dagster.core.events.log import DagsterEventRecord
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
+from dagster.daemon.daemon import DagsterDaemon
 from dagster.utils.backcompat import experimental
 from dagster.utils.external import external_pipeline_from_run
 
@@ -13,31 +14,18 @@ IN_PROGRESS_STATUSES = [
 ]
 
 
-class QueuedRunCoordinatorDaemon:
+class QueuedRunCoordinatorDaemon(DagsterDaemon):
     """
     Used with the QueuedRunCoordinator on the instance. This process finds queued runs from the run
     store and launches them.
     """
 
     @experimental
-    def __init__(self, instance, max_concurrent_runs=10):
+    def __init__(self, instance, max_concurrent_runs):
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._max_concurrent_runs = check.int_param(max_concurrent_runs, "max_concurrent_runs")
 
-    def run(self, interval_seconds=2):
-        """
-        Run the coordinator daemon
-
-        Arguments:
-            interval_seconds (float): time in seconds to wait between dequeuing attempts
-        """
-        check.numeric_param(interval_seconds, "interval_seconds")
-
-        while True:
-            self.attempt_to_launch_runs()
-            time.sleep(interval_seconds)
-
-    def attempt_to_launch_runs(self):
+    def run_iteration(self):
         max_runs_to_launch = self._max_concurrent_runs - self._count_in_progress_runs()
 
         # Possibly under 0 if runs were launched without queuing

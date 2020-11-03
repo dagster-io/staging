@@ -3,6 +3,7 @@ import time
 import weakref
 
 from dagster import DagsterEvent, DagsterEventType, DagsterInstance, check
+from dagster.config.source import IntSource
 from dagster.core.events.log import DagsterEventRecord
 from dagster.core.host_representation import ExternalPipeline
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
@@ -19,9 +20,12 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
     """
 
     @experimental
-    def __init__(self, inst_data=None):
+    def __init__(self, max_concurrent_runs=None, inst_data=None):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self._instance_ref = None
+        self.max_concurrent_runs = check.opt_int_param(
+            max_concurrent_runs, "max_concurrent_runs", 10
+        )
 
     @property
     def inst_data(self):
@@ -29,11 +33,11 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
 
     @classmethod
     def config_type(cls):
-        return {}
+        return {"max_concurrent_runs": IntSource}
 
     @classmethod
     def from_config_value(cls, inst_data, config_value):
-        return cls(inst_data=inst_data, **config_value)
+        return cls(inst_data=inst_data, max_concurrent_runs=config_value.get("max_concurrent_runs"))
 
     def initialize(self, instance):
         check.inst_param(instance, "instance", DagsterInstance)
