@@ -1,2 +1,8 @@
 load_from:
   - python_module: dagster_test.toys.repo
+  - python_environment:
+      executable_path: "python"
+      target:
+        python_file:
+          relative_path: python_modules/dagit/dagit_tests/toy/bar_repo.py
+          location_name: working_location
