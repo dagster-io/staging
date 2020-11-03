@@ -1,0 +1,41 @@
+import * as React from 'react';
+import {Redirect, Route, RouteComponentProps, Switch} from 'react-router-dom';
+
+import {PipelineExplorerSnapshotRoot} from 'src/PipelineExplorerRoot';
+import {explorerPathFromString} from 'src/PipelinePathUtils';
+import {PipelineRunsRoot} from 'src/PipelineRunsRoot';
+import {SnapshotNav} from 'src/snapshots/SnapshotNav';
+
+export const SnapshotRoot: React.FC<RouteComponentProps<{pipelinePath: string; tab?: string}>> = (
+  props,
+) => {
+  const {pipelinePath, tab} = props.match.params;
+  const explorerPath = explorerPathFromString(pipelinePath);
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        minWidth: 0,
+        width: '100%',
+        height: '100%',
+      }}
+    >
+      <SnapshotNav activeTab={tab} explorerPath={explorerPath} />
+      <Switch>
+        <Route path="/instance/snapshots/:pipelinePath/runs" component={PipelineRunsRoot} />
+        <Route
+          path="/instance/snapshots/:pipelinePath/definition"
+          component={PipelineExplorerSnapshotRoot}
+        />
+        <Route
+          path="/instance/snapshots/:pipelinePath"
+          render={({match}) => (
+            <Redirect to={`/instance/snapshots/${match.params.pipelinePath}/definition`} />
+          )}
+        />
+      </Switch>
+    </div>
+  );
+};
