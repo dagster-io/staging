@@ -83,6 +83,7 @@ def backfill_test_schedule():
         cron_schedule="* * * * *",  # tick every minute
         partition_selector=backfilling_partition_selector,
         should_execute=_should_execute,
+        execution_timezone="US/Pacific",
     )
 
 
@@ -104,6 +105,7 @@ def materialization_schedule():
         cron_schedule="* * * * *",  # tick every minute
         partition_selector=backfilling_partition_selector,
         should_execute=_should_execute,
+        execution_timezone="US/Pacific",
     )
 
 
@@ -130,6 +132,7 @@ def longitudinal_schedule():
         cron_schedule="*/5 * * * *",  # tick every 5 minutes
         partition_selector=_partition_selector,
         should_execute=_should_execute,
+        execution_timezone="US/Pacific",
     )
 
 
@@ -145,6 +148,7 @@ def get_toys_schedules():
             cron_schedule="* * * * *",
             pipeline_name="many_events",
             run_config_fn=lambda _: {"storage": {"filesystem": {}}},
+            execution_timezone="US/Pacific",
         ),
         ScheduleDefinition(
             name="pandas_hello_world_hourly",
@@ -177,5 +181,6 @@ def get_toys_schedules():
                 },
                 "storage": {"filesystem": {}},
             },
+            execution_timezone="US/Pacific",
         ),
     ]
