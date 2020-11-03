@@ -130,3 +130,11 @@ data:
           hostname: {{ include "dagster.postgresql.host" . }}
           db_name:  {{ .Values.postgresql.postgresqlDatabase	}}
           port: {{ .Values.postgresql.service.port }}
+
+    {{- if .Values.dagsterDaemon.queuedRunCoordinator }}
+    run_coordinator:
+      module: dagster.core.run_coordinator
+      class: QueuedRunCoordinator
+    {{- end }}
+    telemetry:
+      enabled: false
