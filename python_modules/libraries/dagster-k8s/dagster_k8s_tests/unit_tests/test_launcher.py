@@ -7,30 +7,8 @@ from dagster_k8s.job import UserDefinedDagsterK8sConfig
 from dagster_test.test_project import get_test_project_external_pipeline, test_project_docker_image
 
 
-def test_user_defined_k8s_config_in_run_tags(tmp_path):
+def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     # Construct a K8s run launcher in a fake k8s environment.
-    # [TODO(Bob)]: Find a better way to fake the kube config file.
-    # Option 1: Use a temporary file (like below), but refactor this into a reusable fixture.
-    # Option 2: ???
-    kube_path = tmp_path / ".kube"
-    kube_path.mkdir()
-    kube_config_path = kube_path / "config"
-    kube_config_path.write_text(
-        u"""
-apiVersion: v1
-kind: Config
-
-current-context: fake-context
-contexts:
-  - context:
-      cluster: fake-cluster
-    name: fake-context
-clusters:
-  - cluster: {}
-    name: fake-cluster
-"""
-    )
-
     mock_k8s_client_batch_api = mock.MagicMock()
     k8s_run_launcher = K8sRunLauncher(
         service_account_name="dagit-admin",
@@ -39,7 +17,7 @@ clusters:
         dagster_home="/opt/dagster/dagster_home",
         job_image=test_project_docker_image(),
         load_incluster_config=False,
-        kubeconfig_file=str(kube_config_path),
+        kubeconfig_file=kubeconfig_file,
         k8s_client_batch_api=mock_k8s_client_batch_api,
     )
 

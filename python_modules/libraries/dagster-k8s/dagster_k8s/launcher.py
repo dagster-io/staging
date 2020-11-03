@@ -130,7 +130,6 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
             check.opt_str_param(kubeconfig_file, "kubeconfig_file")
             kubernetes.config.load_kube_config(kubeconfig_file)
 
-        # [TODO(Bob)]: Figure out how to use `check` on custom k8s_client_*_api objects.
         self._batch_api = k8s_client_batch_api or kubernetes.client.BatchV1Api()
         self._core_api = k8s_client_core_api or kubernetes.client.CoreV1Api()
 
