@@ -56,36 +56,15 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
             with pipeline_context.instance.compute_log_manager.watch(
                 step_context.pipeline_run, step_context.step.key
             ):
-                uncovered_inputs = get_uncovered_inputs(
-                    execution_plan.step_keys_to_execute, step, step_output_handles
-                )
-                if uncovered_inputs:
-                    # In partial pipeline execution, we may end up here without having validated the
-                    # missing dependent outputs were optional
-                    _assert_missing_inputs_optional(uncovered_inputs, execution_plan, step.key)
-
-                    step_context.log.info(
-                        (
-                            "Not all inputs covered for {step}. Not executing. Output missing for "
-                            "inputs: {uncovered_inputs}"
-                        ).format(uncovered_inputs=uncovered_inputs, step=step.key)
-                    )
-                    step_event = DagsterEvent.step_skipped_event(step_context)
+                for step_event in check.generator(
+                    _dagster_event_sequence_for_step(step_context, retries)
+                ):
+                    check.inst(step_event, DagsterEvent)
+                    if step_event.is_successful_output:
+                        step_output_handles.add(step_event.event_specific_data.step_output_handle)
                     step_event_list.append(step_event)
                     yield step_event
-                    active_execution.mark_skipped(step.key)
-                else:
-                    for step_event in check.generator(
-                        _dagster_event_sequence_for_step(step_context, retries)
-                    ):
-                        check.inst(step_event, DagsterEvent)
-                        if step_event.is_successful_output:
-                            step_output_handles.add(
-                                step_event.event_specific_data.step_output_handle
-                            )
-                        step_event_list.append(step_event)
-                        yield step_event
-                        active_execution.handle_event(step_event)
+                    active_execution.handle_event(step_event)
 
                 active_execution.verify_complete(pipeline_context, step.key)
 
@@ -97,37 +76,6 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
             # pass a list of step events to hooks
             for hook_event in _trigger_hook(step_context, step_event_list):
                 yield hook_event
-
-
-def get_uncovered_inputs(plan_steps, step, outputs):
-    """
-    TODO: checks and doc
-
-    Returns:
-        List[StepOutputHandle]
-    """
-    from dagster.core.execution.plan.objects import ExecutionStep
-
-    check.inst_param(step, "step", ExecutionStep)
-    uncovered_inputs = []
-    for step_input in step.step_inputs:
-
-        if step_input.is_from_single_output:
-            for source_handle in step_input.source_handles:
-                if source_handle.step_key in plan_steps and source_handle not in outputs:
-                    uncovered_inputs.append(source_handle)
-
-        elif step_input.is_from_multiple_outputs:
-            missing_source_handles = []
-            for source_handle in step_input.source_handles:
-                if source_handle.step_key in plan_steps and source_handle not in outputs:
-                    missing_source_handles.append(source_handle)
-
-            # only report as uncovered if all are missing from a multi-dep input
-            if len(missing_source_handles) == len(step_input.source_handles):
-                uncovered_inputs = uncovered_inputs + missing_source_handles
-
-    return uncovered_inputs
 
 
 def _trigger_hook(step_context, step_event_list):
