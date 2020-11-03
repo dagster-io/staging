@@ -22,11 +22,11 @@ import {
   getStepExpectationSuccessForRun,
   getStepMaterializationCountForRun,
 } from 'src/partitions/PartitionGraphUtils';
-import {PartitionGraphSetPartitionFragment} from 'src/partitions/types/PartitionGraphSetPartitionFragment';
+import {PartitionGraphSetRunFragment} from 'src/partitions/types/PartitionGraphSetRunFragment';
 import {RunsFilter} from 'src/runs/RunsFilter';
 
 export const PartitionGraphSet: React.FunctionComponent<{
-  partitions: PartitionGraphSetPartitionFragment[];
+  partitions: {name: string; runs: PartitionGraphSetRunFragment[]}[];
   allStepKeys: string[];
 }> = ({partitions, allStepKeys}) => {
   const initial: {[stepKey: string]: boolean} = {[PIPELINE_LABEL]: true};
@@ -116,17 +116,14 @@ export const PartitionGraphSet: React.FunctionComponent<{
   );
 };
 
-export const PARTITION_GRAPH_SET_PARTITION_FRAGMENT = gql`
-  fragment PartitionGraphSetPartitionFragment on Partition {
-    name
-    runs {
-      status
-      tags {
-        key
-        value
-      }
-      ...PartitionGraphFragment
+export const PARTITION_GRAPH_SET_RUN_FRAGMENT = gql`
+  fragment PartitionGraphSetRunFragment on PipelineRun {
+    status
+    tags {
+      key
+      value
     }
+    ...PartitionGraphFragment
   }
   ${PARTITION_GRAPH_FRAGMENT}
 `;
@@ -147,10 +144,7 @@ const PartitionContentContainer = styled.div`
   margin: 0 auto;
 `;
 
-const applyFilter = (
-  filter: TokenizingFieldValue,
-  run: PartitionGraphSetPartitionFragment['runs'][0],
-) => {
+const applyFilter = (filter: TokenizingFieldValue, run: PartitionGraphSetRunFragment) => {
   if (filter.token === 'id') {
     return run.runId === filter.value;
   }

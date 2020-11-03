@@ -19,19 +19,17 @@ import {
 } from 'src/partitions/RunMatrixUtils';
 import {RunTagsTokenizingField} from 'src/partitions/RunTagsTokenizingField';
 import {SliceSlider} from 'src/partitions/SliceSlider';
-import {PartitionRunMatrixPartitionFragment} from 'src/partitions/types/PartitionRunMatrixPartitionFragment';
 import {
   PartitionRunMatrixPipelineQuery,
   PartitionRunMatrixPipelineQueryVariables,
 } from 'src/partitions/types/PartitionRunMatrixPipelineQuery';
+import {PartitionRunMatrixRunFragment} from 'src/partitions/types/PartitionRunMatrixRunFragment';
 import {
   useMatrixData,
   MatrixStep,
   DisplayOptions,
   StatusSquareFinalColor,
 } from 'src/partitions/useMatrixData';
-
-type Partition = PartitionRunMatrixPartitionFragment;
 
 const TITLE_TOTAL_FAILURES = 'This step failed at least once for this percent of partitions.';
 
@@ -60,7 +58,7 @@ interface PartitionRunSelection {
 
 interface PartitionRunMatrixProps {
   pipelineName: string;
-  partitions: Partition[];
+  partitions: {name: string; runs: PartitionRunMatrixRunFragment[]}[];
   runTags?: {[key: string]: string};
 }
 
@@ -76,7 +74,7 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
   const [stepSortOrder, setSortBy] = React.useState<string>('');
   const [options, setOptions] = React.useState<DisplayOptions>({
     showPrevious: false,
-    showFailuresAndGapsOnly: true,
+    showFailuresAndGapsOnly: false,
     colorizeByAge: false,
   });
   React.useEffect(() => {
@@ -375,31 +373,28 @@ const Divider = styled.div`
   border-top: 1px solid ${Colors.GRAY5};
 `;
 
-export const PARTITION_RUN_MATRIX_PARTITION_FRAGMENT = gql`
-  fragment PartitionRunMatrixPartitionFragment on Partition {
-    name
-    runs {
-      runId
-      tags {
-        key
-        value
+export const PARTITION_RUN_MATRIX_RUN_FRAGMENT = gql`
+  fragment PartitionRunMatrixRunFragment on PipelineRun {
+    runId
+    tags {
+      key
+      value
+    }
+    stats {
+      __typename
+      ... on PipelineRunStatsSnapshot {
+        startTime
       }
-      stats {
+    }
+    stepStats {
+      __typename
+      stepKey
+      status
+      materializations {
         __typename
-        ... on PipelineRunStatsSnapshot {
-          startTime
-        }
       }
-      stepStats {
-        __typename
-        stepKey
-        status
-        materializations {
-          __typename
-        }
-        expectationResults {
-          success
-        }
+      expectationResults {
+        success
       }
     }
   }

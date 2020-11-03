@@ -7,11 +7,10 @@ import {formatStepKey} from 'src/Util';
 import {GaantChartLayout} from 'src/gaant/Constants';
 import {GaantChartMode} from 'src/gaant/GaantChart';
 import {buildLayout} from 'src/gaant/GaantChartLayout';
-import {PartitionRunMatrixPartitionFragment} from 'src/partitions/types/PartitionRunMatrixPartitionFragment';
 import {PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles} from 'src/partitions/types/PartitionRunMatrixPipelineQuery';
+import {PartitionRunMatrixRunFragment} from 'src/partitions/types/PartitionRunMatrixRunFragment';
 import {StepEventStatus} from 'src/types/globalTypes';
 
-type Partition = PartitionRunMatrixPartitionFragment;
 type SolidHandle = PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles;
 
 export type StatusSquareColor =
@@ -41,15 +40,18 @@ export interface MatrixStep {
   unix: number;
 }
 
-function getStartTime(a: Partition['runs'][0]) {
+function getStartTime(a: PartitionRunMatrixRunFragment) {
   return ('startTime' in a.stats && a.stats.startTime) || 0;
 }
 
-function byStartTimeAsc(a: Partition['runs'][0], b: Partition['runs'][0]) {
+function byStartTimeAsc(a: PartitionRunMatrixRunFragment, b: PartitionRunMatrixRunFragment) {
   return getStartTime(a) - getStartTime(b);
 }
 
-function runsMatchingTagTokens(runs: Partition['runs'], tokens: TokenizingFieldValue[]) {
+function runsMatchingTagTokens(
+  runs: PartitionRunMatrixRunFragment[],
+  tokens: TokenizingFieldValue[],
+) {
   return runs.filter(
     (run) =>
       tokens.length === 0 ||
@@ -65,7 +67,7 @@ function runsMatchingTagTokens(runs: Partition['runs'], tokens: TokenizingFieldV
 
 function buildMatrixData(
   layout: GaantChartLayout,
-  partitions: Partition[],
+  partitions: {name: string; runs: PartitionRunMatrixRunFragment[]}[],
   options: DisplayOptions,
 ) {
   // Note this is sorting partition runs in place, I don't think it matters and
@@ -155,7 +157,7 @@ function buildMatrixData(
 
 interface MatrixDataInputs {
   solidHandles: SolidHandle[] | false;
-  partitions: Partition[];
+  partitions: {name: string; runs: PartitionRunMatrixRunFragment[]}[];
   stepQuery: string;
   runsFilter: TokenizingFieldValue[];
   options: DisplayOptions;
