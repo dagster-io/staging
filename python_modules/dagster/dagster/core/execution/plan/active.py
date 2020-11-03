@@ -24,6 +24,10 @@ class ActiveExecution(object):
 
         self._context_guard = False  # Prevent accidental direct use
 
+        # If a step is complete, but has not yielded one of its outputs, then downstream steps
+        # with optional inputs should be skipped.
+        self._step_outputs = set()
+
         # All steps to be executed start out here in _pending
         self._pending = self._plan.execution_deps()
 
@@ -111,30 +115,9 @@ class ActiveExecution(object):
             if requirements.intersection(failed_or_abandoned_steps):
                 new_steps_to_abandon.append(step_key)
 
-            # If all upstream deps are good - this is executable
-            elif requirements.issubset(self._success):
-                new_steps_to_execute.append(step_key)
-
-            # If some upstream deps skipped...
+            # If all upstream deps are done, but none have failed, then we either execute or skip
             elif requirements.issubset(successful_or_skipped_steps):
-                step = self.get_step_by_key(step_key)
-
-                # The base case is downstream step will skip
-                should_skip = True
-
-                # Unless a fan-in input has any successful inputs
-                for inp in step.step_inputs:
-                    if inp.is_from_multiple_outputs:
-                        if any([key in self._success for key in inp.dependency_keys]):
-                            should_skip = False
-
-                # but no missing regular inputs
-                for inp in step.step_inputs:
-                    if inp.is_from_single_output:
-                        if any([key not in self._success for key in inp.dependency_keys]):
-                            should_skip = True
-
-                if should_skip:
+                if self._should_skip(step_key, requirements):
                     new_steps_to_skip.append(step_key)
                 else:
                     new_steps_to_execute.append(step_key)
@@ -160,6 +143,37 @@ class ActiveExecution(object):
         for key in ready_to_retry:
             self._executable.append(key)
             del self._waiting_to_retry[key]
+
+    def _should_skip(self, step_key, requirements):
+        step = self.get_step_by_key(step_key)
+
+        for step_input in step.step_inputs:
+            missing_source_handles = [
+                source_handle
+                for source_handle in step_input.source_handles
+                if source_handle.step_key in requirements
+                and source_handle not in self._step_outputs
+            ]
+            if missing_source_handles and len(missing_source_handles) == len(
+                step_input.source_handles
+            ):
+                for handle in missing_source_handles:
+                    if (
+                        handle.step_key in self._success
+                        and not self._plan.get_step_output(handle).optional
+                    ):
+                        check.invariant(False, "abc")  # TODO
+                        # raise DagsterStepOutputNotFoundError(
+                        #     (
+                        #         "When preparing to execute {step}, discovered required output "
+                        #         "missing from previous step: {nonoptionals}"
+                        #     ).format(nonoptionals=nonoptionals, step=step_key),
+                        #     step_key=nonoptionals[0].step_key,
+                        #     output_name=nonoptionals[0].output_name,
+                        # )
+                return True
+
+        return False
 
     def sleep_til_ready(self):
         now = time.time()
@@ -347,6 +361,8 @@ class ActiveExecution(object):
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,
             )
+        elif dagster_event.is_successful_output:
+            self.mark_step_produced_output(dagster_event.event_specific_data.step_output_handle)
 
     def verify_complete(self, pipeline_context, step_key):
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
@@ -371,6 +387,10 @@ class ActiveExecution(object):
         self._unknown_state.add(step_key)
         # mark as abandoned so downstream tasks do not execute
         self.mark_abandoned(step_key)
+
+    # factored out for test
+    def mark_step_produced_output(self, step_output_handle):
+        self._step_outputs.add(step_output_handle)
 
     @property
     def is_complete(self):
