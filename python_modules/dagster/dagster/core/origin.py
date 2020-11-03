@@ -63,18 +63,20 @@ class RepositoryGrpcServerOrigin(
 
 @whitelist_for_serdes
 class RepositoryPythonOrigin(
-    namedtuple("_RepositoryPythonOrigin", "executable_path code_pointer"), RepositoryOrigin,
+    namedtuple("_RepositoryPythonOrigin", "executable_path code_pointer container_image"),
+    RepositoryOrigin,
 ):
     """
     Derived from the handle structure in the host process, this is the subset of information
     necessary to load a target RepositoryDefinition in a "user process" locally.
     """
 
-    def __new__(cls, executable_path, code_pointer):
+    def __new__(cls, executable_path, code_pointer, container_image=None):
         return super(RepositoryPythonOrigin, cls).__new__(
             cls,
             check.str_param(executable_path, "executable_path"),
             check.inst_param(code_pointer, "code_pointer", CodePointer),
+            check.opt_str_param(container_image, "container_image"),
         )
 
     def get_cli_args(self):

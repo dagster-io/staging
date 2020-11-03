@@ -248,7 +248,11 @@ def create_docker_task(celery_app, **task_kwargs):
 
         command = "dagster api execute_step_with_structured_logs {}".format(json.dumps(input_json))
 
-        docker_image = docker_config["image"]
+        docker_image = (
+            pipeline_origin.repository_origin.container_image
+            if pipeline_origin.repository_origin.container_image
+            else docker_config["image"]
+        )
 
         client = docker.client.from_env()
 

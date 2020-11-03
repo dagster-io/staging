@@ -285,14 +285,16 @@ def test_origin_ids_stable(monkeypatch):
         "/path/to/file", "the_repo", "/path/to/working_dir"
     )
 
+    # The fact that this test fails is bad, these origin requirements are the worst
+
     # ensure monkeypatch worked
     assert file_repo.get_origin().executable_path == "/fake/python"
 
-    assert file_repo.get_origin_id() == "3766b1c554fd961b88b9301756250febff3d0ffa"
+    assert file_repo.get_origin_id() == "53a3d830c7fe779440ddb55afefa9fd1bbb2bf0e"
     schedule = file_repo.get_reconstructable_schedule("simple_schedule")
-    assert schedule.get_origin_id() == "7c60d01588673ffcaea16b6fd59d998dc63ed3c3"
+    assert schedule.get_origin_id() == "78f2c43ef322d34c7451d3a633b2dc435e4922fc"
 
     module_repo = ReconstructableRepository.for_module("dummy_module", "the_repo")
-    assert module_repo.get_origin_id() == "86503fc349d4ecf44bd22ca1de64c10f8ffcebbd"
+    assert module_repo.get_origin_id() == "c7dc794c05475cd355219f57252814e0560cddb4"
     module_schedule = module_repo.get_reconstructable_schedule("simple_schedule")
-    assert module_schedule.get_origin_id() == "e4c7131b74ad600969876d8fa461f215ced9631a"
+    assert module_schedule.get_origin_id() == "8f9e511b2b395a15d90852565902d3a0a5831d19"
