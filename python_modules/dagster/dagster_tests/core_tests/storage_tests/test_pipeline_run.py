@@ -7,7 +7,7 @@ from dagster.core.host_representation.origin import (
     ExternalRepositoryOrigin,
     InProcessRepositoryLocationOrigin,
 )
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
+from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsOrder
 
 
 def test_queued_pipeline_origin_check():
@@ -28,3 +28,7 @@ def test_queued_pipeline_origin_check():
 
     with pytest.raises(check.CheckError):
         PipelineRun().with_status(PipelineRunStatus.QUEUED)
+
+
+def test_pipeline_run_order():
+    assert PipelineRunsOrder(tag="foo-tag")

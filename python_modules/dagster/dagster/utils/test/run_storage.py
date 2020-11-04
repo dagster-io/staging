@@ -2,7 +2,13 @@ import pytest
 from dagster.core.definitions import PipelineDefinition
 from dagster.core.errors import DagsterRunAlreadyExists, DagsterSnapshotDoesNotExist
 from dagster.core.snap import create_pipeline_snapshot_id
-from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from dagster.core.storage.pipeline_run import (
+    PipelineRun,
+    PipelineRunStatus,
+    PipelineRunsFilter,
+    PipelineRunsOrder,
+    PipelineRunsOrderDirection,
+)
 from dagster.core.storage.tags import PARENT_RUN_ID_TAG, ROOT_RUN_ID_TAG
 from dagster.core.utils import make_new_run_id
 from dagster.serdes import serialize_pp
@@ -549,6 +555,85 @@ class TestRunStorage:
         )
         assert len(cursor_four_limit_one) == 1
         assert cursor_four_limit_one[0].run_id == two
+
+    # Ordering
+
+    def test_fetch_ordered(self, storage):
+        one, two = [make_new_run_id() for _ in [0] * 2]
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=one, pipeline_name="some_pipeline", tags={"mytag": "abc"}
+            )
+        )
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=two, pipeline_name="some_pipeline", tags={"mytag": "def"}
+            )
+        )
+
+        runs = storage.get_runs(
+            order_by=PipelineRunsOrder(
+                tag="mytag", tag_type=str, direction=PipelineRunsOrderDirection.ASCENDING
+            )
+        )
+        assert [r.run_id for r in runs] == [one, two]
+
+        runs = storage.get_runs(
+            order_by=PipelineRunsOrder(
+                tag="mytag", tag_type=str, direction=PipelineRunsOrderDirection.DESCENDING
+            )
+        )
+        assert [r.run_id for r in runs] == [two, one]
+
+    def test_fetch_ordered_missing_tag(self, storage):
+        one, two = [make_new_run_id() for _ in [0] * 2]
+        storage.add_run(TestRunStorage.build_run(run_id=one, pipeline_name="some_pipeline"))
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=two, pipeline_name="some_pipeline", tags={"mytag": "def"}
+            )
+        )
+
+        runs = storage.get_runs(
+            order_by=PipelineRunsOrder(
+                tag="mytag", tag_type=str, direction=PipelineRunsOrderDirection.ASCENDING
+            )
+        )
+        assert [r.run_id for r in runs] == [one, two]
+
+        runs = storage.get_runs(
+            order_by=PipelineRunsOrder(
+                tag="mytag", tag_type=str, direction=PipelineRunsOrderDirection.DESCENDING
+            )
+        )
+        assert [r.run_id for r in runs] == [two, one]
+
+    def test_fetch_ordered_int_tag(self, storage):
+        one, two = [make_new_run_id() for _ in [0] * 2]
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=one, pipeline_name="some_pipeline", tags={"mytag": "-1"}
+            )
+        )
+        storage.add_run(
+            TestRunStorage.build_run(
+                run_id=two, pipeline_name="some_pipeline", tags={"mytag": "def"}
+            )
+        )
+
+        runs = storage.get_runs(
+            order_by=PipelineRunsOrder(
+                tag="mytag", tag_type=int, direction=PipelineRunsOrderDirection.ASCENDING
+            )
+        )
+        assert [r.run_id for r in runs] == [one, two]
+
+        runs = storage.get_runs(
+            order_by=PipelineRunsOrder(
+                tag="mytag", tag_type=int, direction=PipelineRunsOrderDirection.DESCENDING
+            )
+        )
+        assert [r.run_id for r in runs] == [two, one]
 
     def test_delete(self, storage):
         assert storage

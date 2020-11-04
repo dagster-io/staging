@@ -36,7 +36,7 @@ class RunStorage(six.with_metaclass(ABCMeta)):
         """
 
     @abstractmethod
-    def get_runs(self, filters=None, cursor=None, limit=None):
+    def get_runs(self, filters=None, order_by=None, cursor=None, limit=None):
         """Return all the runs present in the storage that match the given filters.
 
         Args:

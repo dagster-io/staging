@@ -11,7 +11,13 @@ from dagster.core.snap import (
 )
 from dagster.utils import frozendict, merge_dicts
 
-from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from ..pipeline_run import (
+    PipelineRun,
+    PipelineRunStatus,
+    PipelineRunsFilter,
+    PipelineRunsOrder,
+    PipelineRunsOrderDirection,
+)
 from .base import RunStorage
 
 
@@ -71,36 +77,60 @@ class InMemoryRunStorage(RunStorage):
         elif event.event_type == DagsterEventType.PIPELINE_DEQUEUED:
             self._runs[run_id] = self._runs[run_id].with_status(PipelineRunStatus.NOT_STARTED)
 
-    def get_runs(self, filters=None, cursor=None, limit=None):
+    def get_runs(self, filters=None, order_by=None, cursor=None, limit=None):
         check.opt_inst_param(filters, "filters", PipelineRunsFilter)
+        check.opt_inst_param(order_by, "order_by", PipelineRunsOrder)
         check.opt_str_param(cursor, "cursor")
         check.opt_int_param(limit, "limit")
 
-        if not filters:
-            return self._slice(list(self._runs.values())[::-1], cursor, limit)
+        runs = list(reversed(self._runs.values()))
 
-        def run_filter(run):
-            if filters.run_ids and run.run_id not in filters.run_ids:
-                return False
+        if filters:
 
-            if filters.status and filters.status != run.status:
-                return False
+            def run_filter(run):
+                if filters.run_ids and run.run_id not in filters.run_ids:
+                    return False
 
-            if filters.pipeline_name and filters.pipeline_name != run.pipeline_name:
-                return False
+                if filters.status and filters.status != run.status:
+                    return False
 
-            if filters.tags and not all(
-                run.tags.get(key) == value for key, value in filters.tags.items()
-            ):
-                return False
+                if filters.pipeline_name and filters.pipeline_name != run.pipeline_name:
+                    return False
 
-            if filters.snapshot_id and filters.snapshot_id != run.pipeline_snapshot_id:
-                return False
+                if filters.tags and not all(
+                    run.tags.get(key) == value for key, value in filters.tags.items()
+                ):
+                    return False
 
-            return True
+                if filters.snapshot_id and filters.snapshot_id != run.pipeline_snapshot_id:
+                    return False
 
-        matching_runs = list(filter(run_filter, reversed(self._runs.values())))
-        return self._slice(matching_runs, cursor=cursor, limit=limit)
+                return True
+
+            runs = list(filter(run_filter, runs))
+
+        if order_by:
+
+            def get_run_key(run):
+                tag = run.tags.get(order_by.tag, "")
+
+                if order_by.tag_type == str:
+                    return tag
+                elif order_by.tag_type == int:
+                    try:
+                        return int(tag)
+                    except ValueError:
+                        return 0
+                else:
+                    raise ValueError("Unsupported tag type '{}'".format(order_by.tag_type))
+
+            runs = sorted(
+                runs,
+                key=get_run_key,
+                reverse=order_by.direction == PipelineRunsOrderDirection.DESCENDING,
+            )
+
+        return self._slice(runs, cursor=cursor, limit=limit)
 
     def get_runs_count(self, filters=None):
         check.opt_inst_param(filters, "filters", PipelineRunsFilter)

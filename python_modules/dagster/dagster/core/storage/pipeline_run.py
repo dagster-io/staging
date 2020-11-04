@@ -341,6 +341,32 @@ class PipelineRunsFilter(
         return PipelineRunsFilter(tags=PipelineRun.tags_for_partition_set(partition_set, partition))
 
 
+class PipelineRunsOrderDirection(Enum):
+    ASCENDING = "ascending"
+    DESCENDING = "descending"
+
+
+@whitelist_for_serdes
+class PipelineRunsOrder(namedtuple("_PipelineRunsFilter", "tag tag_type direction")):
+    def __new__(cls, tag=None, tag_type=None, direction=None):
+
+        check.str_param(tag, "tag")
+        check.opt_inst_param(tag_type, "tag_type", type, default=str)
+        check.opt_inst_param(
+            direction,
+            "direction",
+            PipelineRunsOrderDirection,
+            default=PipelineRunsOrderDirection.ASCENDING,
+        )
+        check.invariant(
+            tag_type in [str, int],
+            "Only str and int types are currently supported for sorting tags",
+        )
+        return super(PipelineRunsOrder, cls).__new__(
+            cls, tag=tag, tag_type=tag_type, direction=direction
+        )
+
+
 ###################################################################################################
 # GRAVEYARD
 #
