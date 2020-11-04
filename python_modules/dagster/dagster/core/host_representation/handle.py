@@ -20,14 +20,18 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryOrigin, RepositoryPythonOrigin
 
 
-def _get_repository_python_origin(executable_path, repository_code_pointer_dict, repository_name):
+def _get_repository_python_origin(
+    executable_path, repository_code_pointer_dict, repository_name, metadata
+):
     if repository_name not in repository_code_pointer_dict:
         raise DagsterInvariantViolationError(
             "Unable to find repository name {} on GRPC server.".format(repository_name)
         )
 
     code_pointer = repository_code_pointer_dict[repository_name]
-    return RepositoryPythonOrigin(executable_path=executable_path, code_pointer=code_pointer)
+    return RepositoryPythonOrigin(
+        executable_path=executable_path, code_pointer=code_pointer, metadata=metadata
+    )
 
 
 class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
@@ -108,6 +112,8 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         self.executable_path = list_repositories_response.executable_path
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
+        self.container_image = self.client.get_current_image().current_image
+
     @property
     def port(self):
         return self.origin.port
@@ -124,7 +130,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
     def location_name(self):
         return self.origin.location_name
 
-    def get_current_image(self):
+    def _reload_current_image(self):
         job_image = self.client.get_current_image().current_image
         if not job_image:
             raise DagsterInvariantViolationError(
@@ -136,7 +142,10 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
-            self.executable_path, self.repository_code_pointer_dict, repository_name
+            self.executable_path,
+            self.repository_code_pointer_dict,
+            repository_name,
+            {"container_image": self.container_image},
         )
 
     def reload_repository_python_origin(self, repository_name):
@@ -148,6 +157,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
             list_repositories_response.executable_path,
             list_repositories_response.repository_code_pointer_dict,
             repository_name,
+            self._reload_current_image(),  # This should probably just come back from sync_list_repositories_grpc
         )
 
 
@@ -184,9 +194,14 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
 
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
+        self.container_image = self.client.get_current_image().current_image
+
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
-            self.executable_path, self.repository_code_pointer_dict, repository_name
+            self.executable_path,
+            self.repository_code_pointer_dict,
+            repository_name,
+            self.container_image,
         )
 
     @property
@@ -237,7 +252,7 @@ class InProcessRepositoryLocationHandle(RepositoryLocationHandle):
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
-            sys.executable, self.repository_code_pointer_dict, repository_name
+            sys.executable, self.repository_code_pointer_dict, repository_name, None,
         )
 
 

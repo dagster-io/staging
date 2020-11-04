@@ -1,16 +1,23 @@
 import sys
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple
+from os import stat
 
 import six
 from dagster import check
 from dagster.core.code_pointer import CodePointer
-from dagster.serdes import create_snapshot_id, whitelist_for_serdes
+from dagster.serdes import (
+    Persistable,
+    create_snapshot_id,
+    default_to_storage_value,
+    whitelist_for_persistence,
+    whitelist_for_serdes,
+)
 
 
 class RepositoryOrigin(six.with_metaclass(ABCMeta)):
     def get_id(self):
-        return create_snapshot_id(self)
+        return create_snapshot_id(self.with_no_metadata())
 
     @abstractmethod
     def get_pipeline_origin(self, pipeline_name):
@@ -23,6 +30,9 @@ class RepositoryOrigin(six.with_metaclass(ABCMeta)):
     @abstractmethod
     def get_cli_args(self):
         pass
+
+    def with_no_metadata(self):
+        return self
 
 
 @whitelist_for_serdes
@@ -61,21 +71,30 @@ class RepositoryGrpcServerOrigin(
             )
 
 
-@whitelist_for_serdes
+@whitelist_for_persistence
 class RepositoryPythonOrigin(
-    namedtuple("_RepositoryPythonOrigin", "executable_path code_pointer"), RepositoryOrigin,
+    namedtuple("_RepositoryPythonOrigin", "executable_path code_pointer metadata"),
+    RepositoryOrigin,
+    Persistable,
 ):
     """
     Derived from the handle structure in the host process, this is the subset of information
     necessary to load a target RepositoryDefinition in a "user process" locally.
     """
 
-    def __new__(cls, executable_path, code_pointer):
+    def __new__(cls, executable_path, code_pointer, metadata=None):
         return super(RepositoryPythonOrigin, cls).__new__(
             cls,
             check.str_param(executable_path, "executable_path"),
             check.inst_param(code_pointer, "code_pointer", CodePointer),
+            check.opt_dict_param(metadata, "metadata"),
         )
+
+    def to_storage_value(self):
+        val = super(RepositoryPythonOrigin, self).to_storage_value()
+        if not val["metadata"]:
+            del val["metadata"]
+        return val
 
     def get_cli_args(self):
         return self.code_pointer.get_cli_args()
@@ -92,10 +111,13 @@ class RepositoryPythonOrigin(
     def loadable_target_origin(self):
         return self.code_pointer.get_loadable_target_origin(self.executable_path)
 
+    def with_no_metadata(self):
+        return self._replace(metadata=None)
+
 
 class PipelineOrigin(six.with_metaclass(ABCMeta)):
     def get_id(self):
-        return create_snapshot_id(self)
+        return create_snapshot_id(self.with_no_metadata())
 
     @abstractmethod
     def get_repo_cli_args(self):
@@ -104,6 +126,9 @@ class PipelineOrigin(six.with_metaclass(ABCMeta)):
     @abstractproperty
     def executable_path(self):
         pass
+
+    def with_no_metadata(self):
+        return self
 
 
 @whitelist_for_serdes
@@ -127,6 +152,9 @@ class PipelinePythonOrigin(
     def get_repo_pointer(self):
         return self.repository_origin.code_pointer
 
+    def with_no_metadata(self):
+        return self._replace(repository_origin=self.repository_origin.with_no_metadata())
+
 
 @whitelist_for_serdes
 class PipelineGrpcServerOrigin(
@@ -149,7 +177,7 @@ class PipelineGrpcServerOrigin(
 
 class ScheduleOrigin(six.with_metaclass(ABCMeta)):
     def get_id(self):
-        return create_snapshot_id(self)
+        return create_snapshot_id(self.with_no_metadata())
 
     @abstractmethod
     def get_repo_origin(self):
@@ -162,6 +190,9 @@ class ScheduleOrigin(six.with_metaclass(ABCMeta)):
     @abstractproperty
     def executable_path(self):
         pass
+
+    def with_no_metadata(self):
+        return self
 
 
 @whitelist_for_serdes
@@ -187,6 +218,9 @@ class SchedulePythonOrigin(
 
     def get_repo_pointer(self):
         return self.repository_origin.code_pointer
+
+    def with_no_metadata(self):
+        return self._replace(repository_origin=self.repository_origin.with_no_metadata())
 
 
 @whitelist_for_serdes
