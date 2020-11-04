@@ -43,6 +43,7 @@ DAGSTER_HOME_FALLBACK = "~/.dagster"
 DAGSTER_TELEMETRY_URL = "http://telemetry.dagster.io/actions"
 MAX_BYTES = 10485760  # 10 MB = 10 * 1024 * 1024 bytes
 UPDATE_REPO_STATS = "update_repo_stats"
+UPDATE_WORKSPACE_STATS = "update_workspace_stats"
 START_DAGIT_WEBSERVER = "start_dagit_webserver"
 TELEMETRY_VERSION = "0.2"
 
@@ -414,11 +415,24 @@ def log_workspace_stats(instance, workspace):
     check.inst_param(instance, "instance", DagsterInstance)
     check.inst_param(workspace, "workspace", Workspace)
 
+    if not _get_instance_telemetry_enabled(instance):
+        return
+
     for repository_location_handle in workspace.repository_location_handles:
         repo_location = RepositoryLocation.from_handle(repository_location_handle)
 
         for external_repo in repo_location.get_repositories().values():
             log_external_repo_stats(instance, source="dagit", external_repo=external_repo)
+
+    write_telemetry_log_line(
+        TelemetryEntry(
+            action=UPDATE_WORKSPACE_STATS,
+            client_time=str(datetime.datetime.now()),
+            event_id=str(uuid.uuid4()),
+            instance_id=_get_or_set_instance_id(),
+            metadata={"num_repositories": len(workspace.repository_location_handles)},
+        )._asdict()
+    )
 
 
 def log_action(instance, action, client_time=None, elapsed_time=None, metadata=None):

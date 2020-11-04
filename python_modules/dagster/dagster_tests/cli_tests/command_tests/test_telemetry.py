@@ -14,6 +14,7 @@ from dagster.core.definitions.reconstructable import get_ephemeral_repository_na
 from dagster.core.telemetry import (
     DAGSTER_TELEMETRY_URL,
     UPDATE_REPO_STATS,
+    UPDATE_WORKSPACE_STATS,
     cleanup_telemetry_logger,
     get_dir_from_dagster_home,
     hash_name,
@@ -152,12 +153,20 @@ def test_log_workspace_stats(caplog):
         ) as workspace:
             log_workspace_stats(instance, workspace)
 
-            for record in caplog.records:
-                message = json.loads(record.getMessage())
-                assert message.get("action") == UPDATE_REPO_STATS
-                assert set(message.keys()) == EXPECTED_KEYS
+            assert len(caplog.records) == 3
 
-            assert len(caplog.records) == 2
+            messages = [json.loads(record.getMessage()) for record in caplog.records]
+            repo_logs = [
+                message for message in messages if message.get("action") == UPDATE_REPO_STATS
+            ]
+            assert len(repo_logs) == 2
+            assert all(set(repo_log.keys()) == EXPECTED_KEYS for repo_log in repo_logs)
+
+            workspace_logs = [
+                message for message in messages if message.get("action") == UPDATE_WORKSPACE_STATS
+            ]
+            assert len(workspace_logs) == 1
+            assert next(iter(workspace_logs)).get("metadata").get("num_repositories") == 2
 
 
 # Note that both environment must be set together. Otherwise, if env={"BUILDKITE": None} ran in the

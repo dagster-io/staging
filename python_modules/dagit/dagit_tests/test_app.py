@@ -7,7 +7,12 @@ from dagit.cli import host_dagit_ui_with_workspace, ui
 from dagster import seven
 from dagster.cli.workspace.load import load_workspace_from_yaml_paths
 from dagster.core.instance import DagsterInstance
-from dagster.core.telemetry import START_DAGIT_WEBSERVER, UPDATE_REPO_STATS, hash_name
+from dagster.core.telemetry import (
+    START_DAGIT_WEBSERVER,
+    UPDATE_REPO_STATS,
+    UPDATE_WORKSPACE_STATS,
+    hash_name,
+)
 from dagster.core.test_utils import instance_for_test_tempdir
 from dagster.seven import mock
 from dagster.utils import file_relative_path
@@ -287,6 +292,9 @@ def test_dagit_logs(
                         expected_num_pipelines_in_repo
                     )
 
+                if message.get("action") == UPDATE_WORKSPACE_STATS:
+                    assert message.get("metadata").get("num_repositories") == 2
+
                 assert set(message.keys()) == set(
                     [
                         "action",
@@ -303,6 +311,8 @@ def test_dagit_logs(
                     ]
                 )
 
-            assert actions == set([START_DAGIT_WEBSERVER, UPDATE_REPO_STATS])
-            assert len(caplog.records) == 3
+            assert actions == set(
+                [START_DAGIT_WEBSERVER, UPDATE_REPO_STATS, UPDATE_WORKSPACE_STATS]
+            )
+            assert len(caplog.records) == 4
             assert server_mock.call_args_list == [mock.call()]
