@@ -19,7 +19,8 @@ def check_events_for_failures(events):
 
 # Using AirflowSkipException is a canonical way for tasks to skip themselves; see example
 # here: http://bit.ly/2YtigEm
-def check_events_for_skips(events):
+def maybe_skip(main_execution_plan):
+    # skip if we have no inputs
     check.list_param(events, "events", of_type=DagsterEvent)
     skipped = any([e.event_type_value == DagsterEventType.STEP_SKIPPED.value for e in events])
     if skipped:
@@ -137,10 +138,10 @@ def invoke_steps_within_python_operator(
                 step_keys_to_execute=step_keys,
                 mode=mode,
             )
+            maybe_skip(events)
 
             events = execute_plan(execution_plan, instance, pipeline_run, run_config=run_config)
             check_events_for_failures(events)
-            check_events_for_skips(events)
             return events
 
 
