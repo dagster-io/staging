@@ -141,7 +141,7 @@ def test_dataframe_csv_missing_inputs():
     assert len(exc_info.value.errors) == 1
 
     assert exc_info.value.errors[0].message == (
-        """Missing required field "solids" at the root. """
+        """Missing required config entry "solids" at the root. """
         """Available Fields: "['execution', 'intermediate_storage', 'loggers', """
         """'resources', 'solids', 'storage']"."""
     )
@@ -176,8 +176,9 @@ def test_dataframe_csv_missing_input_collision():
             },
         )
 
-    assert 'Error 1: Undefined field "inputs" at path root:solids:df_as_input.' in str(
-        exc_info.value
+    assert (
+        'Error 1: Received unexpected config entry "inputs" at path root:solids:df_as_input.'
+        in str(exc_info.value)
     )
 
     assert "yup" not in called
