@@ -341,9 +341,7 @@ def test_using_file_system_for_subplan_missing_input():
     failures = [event for event in events if event.event_type_value == "STEP_FAILURE"]
     assert len(failures) == 1
     assert failures[0].step_key == "add_one.compute"
-    assert failures[0].event_specific_data.error.message.startswith(
-        "dagster.core.errors.DagsterStepOutputNotFoundError"
-    )
+    assert "DagsterStepOutputNotFoundError" in failures[0].event_specific_data.error.message
 
 
 def test_using_file_system_for_subplan_invalid_step():
