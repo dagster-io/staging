@@ -1,9 +1,11 @@
 import json
 
 import pytest
-from dagster import check
+from dagster import check, pipeline, reconstructable
+from dagster.core.host_representation.handle import RepositoryHandle, RepositoryLocationHandle
 from dagster.core.test_utils import create_run_for_test, environ, instance_for_test
 from dagster.seven import mock
+from dagster.utils.hosted_user_process import external_pipeline_from_recon_pipeline
 from dagster_celery_k8s.config import get_celery_engine_config
 from dagster_celery_k8s.executor import CELERY_K8S_CONFIG_KEY
 from dagster_celery_k8s.launcher import (
@@ -11,7 +13,6 @@ from dagster_celery_k8s.launcher import (
     _get_validated_celery_k8s_executor_config,
 )
 from dagster_k8s.job import UserDefinedDagsterK8sConfig
-from dagster_test.test_project import get_test_project_external_pipeline
 
 
 def test_get_validated_celery_k8s_executor_config():
@@ -145,6 +146,18 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     user_defined_k8s_config_json = json.dumps(user_defined_k8s_config.to_dict())
     tags = {"dagster-k8s/config": user_defined_k8s_config_json}
 
+    # Create fake external pipeline.
+    recon_pipeline = reconstructable(fake_pipeline)
+    recon_repo = recon_pipeline.repository
+    repo_def = recon_repo.get_definition()
+    location_handle = RepositoryLocationHandle.create_in_process_location(recon_repo.pointer)
+    repo_handle = RepositoryHandle(
+        repository_name=repo_def.name, repository_location_handle=location_handle,
+    )
+    fake_external_pipeline = external_pipeline_from_recon_pipeline(
+        recon_pipeline, solid_selection=None, repository_handle=repo_handle,
+    )
+
     # Launch the run in a fake Dagster instance.
     with instance_for_test() as instance:
         celery_k8s_run_launcher.initialize(instance)
@@ -152,10 +165,10 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
         pipeline_name = "demo_pipeline"
         run_config = {"execution": {"celery-k8s": {"config": {"job_image": "fake-image-name"}}}}
         run = create_run_for_test(
-            instance, pipeline_name=pipeline_name, run_config=run_config, tags=tags
+            instance, pipeline_name=pipeline_name, run_config=run_config, tags=tags,
         )
-        external_pipeline = get_test_project_external_pipeline(pipeline_name)
-        celery_k8s_run_launcher.launch_run(instance, run, external_pipeline)
+
+        celery_k8s_run_launcher.launch_run(instance, run, fake_external_pipeline)
 
     # Check that user defined k8s config was passed down to the k8s job.
     mock_method_calls = mock_k8s_client_batch_api.method_calls
@@ -164,3 +177,8 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     assert method_name == "create_namespaced_job"
     job_resources = kwargs["body"].spec.template.spec.containers[0].resources
     assert job_resources == expected_resources
+
+
+@pipeline
+def fake_pipeline():
+    pass
