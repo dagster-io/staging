@@ -60,9 +60,15 @@ def composite_descent(pipeline_def, solids_config):
     where the runtime calls into user-defined config mapping functions to
     produce config for child solids of composites.
 
-    pipeline_def (PipelineDefintiion): PipelineDefinition
-    solids_config (dict): Configuration for the solids in the pipeline. The "solids" entry
-    of the run_config. Assumed to have already been validated.
+    Args:
+        pipeline_def (PipelineDefintion): PipelineDefinition
+        solids_config (dict): Configuration for the solids in the pipeline. The "solids" entry
+            of the run_config. Assumed to have already been validated.
+
+    Returns:
+        Dict[str, SolidConfig]: A dictionary mapping string representations of SolidHandles to
+            SolidConfig objects. It includes an entry for solids at every level of the
+            composite tree - i.e. not just leaf solids, but composite solids as well
     """
     check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
     check.dict_param(solids_config, "solids_config")

@@ -75,3 +75,27 @@ def test_config_for_no_config():
         execute_pipeline(
             pipeline_def, {"solids": {"no_config_solid": {"config": {"some_config": 1}}}}
         )
+
+
+def test_extra_config_ignored():
+    @solid(config_schema={"some_config": str})
+    def solid1(_):
+        return "public.table_1"
+
+    @solid
+    def solid2(_, input_table="public.table_1"):
+        return input_table
+
+    @pipeline
+    def my_pipeline():
+        solid2(solid1())
+
+    run_config = {"solids": {"solid1": {"config": {"some_config": "a"}}}}
+    assert execute_pipeline(my_pipeline, run_config=run_config).success
+
+    # same run config is valid even though solid1 not in subset
+    assert execute_pipeline(my_pipeline, run_config=run_config, solid_selection=["solid2"]).success
+
+    with pytest.raises(DagsterInvalidConfigError):
+        # typos still raise, solid_1 instead of solid1
+        execute_pipeline(my_pipeline, {"solids": {"solid_1": {"config": {"some_config": "a"}}}})
