@@ -4,7 +4,6 @@ from dagster import check
 from dagster.core.definitions import Failure, HookExecutionResult, RetryRequested
 from dagster.core.errors import (
     DagsterError,
-    DagsterStepOutputNotFoundError,
     DagsterUserCodeExecutionError,
     HookExecutionError,
     user_code_error_boundary,
@@ -123,21 +122,6 @@ def _trigger_hook(step_context, step_event_list):
         else:
             # hook_fn finishes successfully
             yield DagsterEvent.hook_completed(hook_context, hook_def)
-
-
-def _assert_missing_inputs_optional(uncovered_inputs, execution_plan, step_key):
-    nonoptionals = [
-        handle for handle in uncovered_inputs if not execution_plan.get_step_output(handle).optional
-    ]
-    if nonoptionals:
-        raise DagsterStepOutputNotFoundError(
-            (
-                "When executing {step} discovered required outputs missing "
-                "from previous step: {nonoptionals}"
-            ).format(nonoptionals=nonoptionals, step=step_key),
-            step_key=nonoptionals[0].step_key,
-            output_name=nonoptionals[0].output_name,
-        )
 
 
 def _dagster_event_sequence_for_step(step_context, retries):
