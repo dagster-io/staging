@@ -1,2 +1,5 @@
 load_from:
-  - python_file: repo.py
+  - grpc_server:
+      host: localhost
+      port: 8080
+      location_name: "grpc_server"
