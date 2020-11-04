@@ -16,7 +16,10 @@ def create_run_coordinator_cli_group():
     "--interval-seconds", help="How long to wait (seconds) between polls for runs", default=2
 )
 @click.option(
-    "--max-concurrent-runs", help="Max number of runs that should be executing at once", default=10,
+    "--max-concurrent-runs",
+    help="Max number of runs that should be executing at once. Any runs beyond this limit will "
+    "remain queued. Value -1 disables the limit",
+    default=-1,
 )
 def run_command(interval_seconds, max_concurrent_runs):
     coordinator = QueuedRunCoordinatorDaemon(

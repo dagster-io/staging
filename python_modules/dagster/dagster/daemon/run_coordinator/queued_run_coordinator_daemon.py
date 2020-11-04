@@ -20,9 +20,17 @@ class QueuedRunCoordinatorDaemon:
     """
 
     @experimental
-    def __init__(self, instance, max_concurrent_runs=10):
+    def __init__(self, instance, max_concurrent_runs=-1):
+        """
+        Arguments:
+            instance (DagsterInstance): The instance to use
+            max_concurrent_runs (int): The maximum number of runs to have in progress at once.
+                Beyond this number, runs will remain queued. The value -1 disables this limit.
+        """
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._max_concurrent_runs = check.int_param(max_concurrent_runs, "max_concurrent_runs")
+
+        self._max_concurrent_runs_enabled = self._max_concurrent_runs != -1
 
     def run(self, interval_seconds=2):
         """
@@ -38,13 +46,16 @@ class QueuedRunCoordinatorDaemon:
             time.sleep(interval_seconds)
 
     def attempt_to_launch_runs(self):
-        max_runs_to_launch = self._max_concurrent_runs - self._count_in_progress_runs()
+        if self._max_concurrent_runs_enabled:
+            max_runs_to_launch = self._max_concurrent_runs - self._count_in_progress_runs()
 
-        # Possibly under 0 if runs were launched without queuing
-        if max_runs_to_launch <= 0:
-            return
+            # Possibly under 0 if runs were launched without queuing
+            if max_runs_to_launch <= 0:
+                return
 
-        runs = self._get_queued_runs(limit=max_runs_to_launch)
+            runs = self._get_queued_runs(limit=max_runs_to_launch)
+        else:
+            runs = self._get_queued_runs()
 
         for run in runs:
             with external_pipeline_from_run(run) as external_pipeline:
@@ -68,9 +79,10 @@ class QueuedRunCoordinatorDaemon:
 
     def _get_queued_runs(self, limit=None):
         queued_runs_filter = PipelineRunsFilter(status=PipelineRunStatus.QUEUED)
-
         runs = self._instance.get_runs(filters=queued_runs_filter, limit=limit)
-        assert len(runs) <= limit
+
+        if limit:
+            assert len(runs) <= limit
         return runs
 
     def _count_in_progress_runs(self):
