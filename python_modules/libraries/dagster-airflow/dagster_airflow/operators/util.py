@@ -1,8 +1,8 @@
 import os
 
 import dateutil.parser
-from airflow.exceptions import AirflowException, AirflowSkipException
-from dagster import DagsterEventType, check
+from airflow.exceptions import AirflowException
+from dagster import check
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
@@ -15,16 +15,6 @@ def check_events_for_failures(events):
             raise AirflowException(
                 "step failed with error: %s" % event.event_specific_data.error.to_string()
             )
-
-
-# Using AirflowSkipException is a canonical way for tasks to skip themselves; see example
-# here: http://bit.ly/2YtigEm
-def maybe_skip(main_execution_plan):
-    # skip if we have no inputs
-    check.list_param(events, "events", of_type=DagsterEvent)
-    skipped = any([e.event_type_value == DagsterEventType.STEP_SKIPPED.value for e in events])
-    if skipped:
-        raise AirflowSkipException("Dagster emitted skip event, skipping execution in Airflow")
 
 
 def convert_airflow_datestr_to_epoch_ts(airflow_ts):
@@ -138,7 +128,6 @@ def invoke_steps_within_python_operator(
                 step_keys_to_execute=step_keys,
                 mode=mode,
             )
-            maybe_skip(events)
 
             events = execute_plan(execution_plan, instance, pipeline_run, run_config=run_config)
             check_events_for_failures(events)

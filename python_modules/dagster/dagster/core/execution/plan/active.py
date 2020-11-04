@@ -24,8 +24,7 @@ class ActiveExecution(object):
 
         self._context_guard = False  # Prevent accidental direct use
 
-        # If a step is complete, but has not yielded one of its outputs, then downstream steps
-        # with optional inputs should be skipped.
+        # We decide what steps to skip based on what outputs are yielded by upstream steps
         self._step_outputs = set()
 
         # All steps to be executed start out here in _pending
@@ -145,6 +144,9 @@ class ActiveExecution(object):
             del self._waiting_to_retry[key]
 
     def _should_skip(self, step_key, requirements):
+        """If all the upstream steps of a step are complete or skipped, and, for at least one of the
+        step's inputs, none of the upstream steps have yielded an output, we should skip the step.
+        """
         step = self.get_step_by_key(step_key)
 
         for step_input in step.step_inputs:
@@ -157,20 +159,6 @@ class ActiveExecution(object):
             if missing_source_handles and len(missing_source_handles) == len(
                 step_input.source_handles
             ):
-                for handle in missing_source_handles:
-                    if (
-                        handle.step_key in self._success
-                        and not self._plan.get_step_output(handle).optional
-                    ):
-                        check.invariant(False, "abc")  # TODO
-                        # raise DagsterStepOutputNotFoundError(
-                        #     (
-                        #         "When preparing to execute {step}, discovered required output "
-                        #         "missing from previous step: {nonoptionals}"
-                        #     ).format(nonoptionals=nonoptionals, step=step_key),
-                        #     step_key=nonoptionals[0].step_key,
-                        #     output_name=nonoptionals[0].output_name,
-                        # )
                 return True
 
         return False

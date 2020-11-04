@@ -19,7 +19,7 @@ from dagster_airflow_tests.test_fixtures import (
 )
 from dagster_test.test_project import test_project_environments_path
 
-from .utils import validate_pipeline_execution, validate_skip_pipeline_execution
+from .utils import validate_pipeline_execution
 
 
 @requires_airflow_db
@@ -102,24 +102,6 @@ def test_gcs_storage(
         image=dagster_docker_image,
     )
     validate_pipeline_execution(results)
-
-
-@requires_airflow_db
-def test_skip_operator(
-    dagster_airflow_docker_operator_pipeline, dagster_docker_image
-):  # pylint: disable=redefined-outer-name
-    pipeline_name = "optional_outputs"
-    environments_path = test_project_environments_path()
-    results = dagster_airflow_docker_operator_pipeline(
-        pipeline_name=pipeline_name,
-        recon_repo=ReconstructableRepository.for_module(
-            "dagster_test.test_project.test_pipelines.repo", "define_demo_execution_repo",
-        ),
-        environment_yaml=[os.path.join(environments_path, "env_filesystem.yaml")],
-        op_kwargs={"host_tmp_dir": "/tmp"},
-        image=dagster_docker_image,
-    )
-    validate_skip_pipeline_execution(results)
 
 
 @requires_airflow_db
