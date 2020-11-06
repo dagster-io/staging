@@ -301,6 +301,10 @@
             "path": "/_apidocs/hooks"
           },
           {
+            "name": "Assets (Experimental)",
+            "path": "/_apidocs/assets"
+          },
+          {
             "name": "Utilities",
             "path": "/_apidocs/utilities"
           },

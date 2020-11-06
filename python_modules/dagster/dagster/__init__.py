@@ -111,6 +111,12 @@ from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import DefaultRunLauncher
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.asset_store import (
+    AssetStore,
+    custom_path_filesystem_asset_store,
+    filesystem_asset_store,
+    mem_asset_store,
+)
 from dagster.core.storage.file_manager import FileHandle, LocalFileHandle, local_file_manager
 from dagster.core.storage.init import InitIntermediateStorageContext, InitSystemStorageContext
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -314,4 +320,9 @@ __all__ = [
     "hourly_schedule",
     "monthly_schedule",
     "weekly_schedule",
+    # asset store
+    "AssetStore",
+    "mem_asset_store",
+    "filesystem_asset_store",
+    "custom_path_filesystem_asset_store",
 ]
