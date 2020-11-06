@@ -18,10 +18,12 @@ from dagster.core.definitions.events import AssetMaterialization, AssetStoreOper
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.storage.asset_store import (
     AssetStore,
+    VersionedPickledObjectFilesystemAssetStore,
     custom_path_filesystem_asset_store,
     default_filesystem_asset_store,
     mem_asset_store,
 )
+from dagster.seven import mock
 
 
 def define_asset_pipeline(asset_store, asset_metadata_dict):
@@ -255,3 +257,13 @@ def test_set_asset_store_configure_intermediate_storage():
             pass
 
         execute_pipeline(my_pipeline, run_config={"intermediate_storage": {"filesystem": {}}})
+
+
+def test_versioned_asset_store():
+    with seven.TemporaryDirectory() as temp_dir:
+        store = VersionedPickledObjectFilesystemAssetStore(temp_dir)
+        context = mock.MagicMock(step_key="foo", output_name="bar")
+        store.set_asset_with_version(context, "cat", "version1")
+        assert store.has_asset_with_version(context, "version1")
+        assert store.get_asset_with_version(context, "version1") == "cat"
+        assert not store.has_asset_with_version(context, "version2")
