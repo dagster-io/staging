@@ -491,6 +491,7 @@ class ExecutionPlan(
 
 def check_default_asset_store_intermediate_storage(mode_def, environment_config):
     """Only one of default_asset_store and intermediate_storage should be set."""
+    # pylint: disable=comparison-with-callable
     from dagster.core.storage.system_storage import mem_intermediate_storage
     from dagster.core.storage.asset_store import mem_asset_store
 
