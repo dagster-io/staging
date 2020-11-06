@@ -13,6 +13,10 @@ from dagster.core.definitions import (
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
 from dagster.core.execution.context.system import AssetStoreContext
+from dagster.core.execution.resolve_versions import (
+    resolve_step_output_versions_helper,
+    resolve_step_versions_helper,
+)
 from dagster.core.system_config.objects import (
     EmptyIntermediateStoreBackcompatConfig,
     EnvironmentConfig,
@@ -111,7 +115,12 @@ class _PlanBuilder:
         check_asset_store_intermediate_storage(self.mode_definition, self.environment_config)
 
         return ExecutionPlan(
-            self.pipeline, step_dict, deps, self.storage_is_persistent(), step_keys_to_execute,
+            self.pipeline,
+            step_dict,
+            deps,
+            self.storage_is_persistent(),
+            step_keys_to_execute,
+            self.environment_config,
         )
 
     def storage_is_persistent(self):
@@ -276,11 +285,18 @@ def get_step_input(
 
 class ExecutionPlan(
     namedtuple(
-        "_ExecutionPlan", "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute",
+        "_ExecutionPlan",
+        "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute environment_config",
     )
 ):
     def __new__(
-        cls, pipeline, step_dict, deps, artifacts_persisted, step_keys_to_execute,
+        cls,
+        pipeline,
+        step_dict,
+        deps,
+        artifacts_persisted,
+        step_keys_to_execute,
+        environment_config,
     ):
         missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
         if missing_steps:
@@ -301,6 +317,9 @@ class ExecutionPlan(
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
             step_keys_to_execute=check.list_param(
                 step_keys_to_execute, "step_keys_to_execute", of_type=str
+            ),
+            environment_config=check.inst_param(
+                environment_config, "environment_config", EnvironmentConfig
             ),
         )
 
@@ -384,6 +403,7 @@ class ExecutionPlan(
             self.deps,
             self.artifacts_persisted,
             step_keys_to_execute,
+            self.environment_config,
         )
 
     def construct_asset_store_context(self, step_output_handle, asset_store_handle):
@@ -402,6 +422,12 @@ class ExecutionPlan(
             solid_def=solid_def,
             source_run_id=None,
         )
+
+    def resolve_step_versions(self):
+        return resolve_step_versions_helper(self)
+
+    def resolve_step_output_versions(self):
+        return resolve_step_output_versions_helper(self)
 
     def start(
         self, retries, sort_key_fn=None,
