@@ -521,7 +521,7 @@ def _launch_scheduled_execution(
         return
 
     try:
-        launched_run = instance.launch_run(possibly_invalid_pipeline_run.run_id, external_pipeline)
+        launched_run = instance.submit_run(possibly_invalid_pipeline_run.run_id, external_pipeline)
     except Exception:  # pylint: disable=broad-except
         stream.send(
             ScheduledExecutionFailed(

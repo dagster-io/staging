@@ -931,7 +931,7 @@ def _execute_backfill_command_at_location(cli_args, print_fn, instance, repo_loc
                 solid_selection=frozenset(solid_selection) if solid_selection else None,
             )
 
-            instance.launch_run(run.run_id, external_pipeline)
+            instance.submit_run(run.run_id, external_pipeline)
 
         print_fn("Launched backfill job `{}`".format(backfill_id))
 
