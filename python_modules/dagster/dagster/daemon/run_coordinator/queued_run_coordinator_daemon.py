@@ -38,15 +38,28 @@ class QueuedRunCoordinatorDaemon:
             time.sleep(interval_seconds)
 
     def attempt_to_launch_runs(self):
-        max_runs_to_launch = self._max_concurrent_runs - self._count_in_progress_runs()
+        in_progress = self._count_in_progress_runs()
+        max_runs_to_launch = self._max_concurrent_runs - in_progress
 
         # Possibly under 0 if runs were launched without queuing
         if max_runs_to_launch <= 0:
+            print(  # pylint: disable=print-call
+                "{} runs are currently in progress. Maximum is {}, won't launch more.".format(
+                    in_progress, self._max_concurrent_runs
+                )
+            )
             return
 
-        runs = self._get_queued_runs(limit=max_runs_to_launch)
+        queued_runs = self._get_queued_runs(limit=max_runs_to_launch)
 
-        for run in runs:
+        if not queued_runs:
+            print("Poll returned no queued runs.")  # pylint: disable=print-call
+        else:
+            print(  # pylint: disable=print-call
+                "Retrieved {} queued runs to launch.".format(len(queued_runs))
+            )
+
+        for run in queued_runs:
             with external_pipeline_from_run(run) as external_pipeline:
                 enqueued_event = DagsterEvent(
                     event_type_value=DagsterEventType.PIPELINE_DEQUEUED.value,
