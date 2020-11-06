@@ -732,9 +732,9 @@ class Failure(Exception):
         )
 
 
-class RetryRequested(Exception):  # base exception instead?
+class RetryRequested(Exception):
     """
-    EXPERIMENTAL: A simple tool for retrying the execution of a step in dagster.
+    An exception to raise from a solid to indicate that it should be retried.
 
     Args:
         max_retries (Optional[int]):
