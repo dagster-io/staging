@@ -13,6 +13,7 @@ from dagster.core.events import AssetMaterialization
 from dagster.core.execution.context.system import StepOutputContext
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
+from dagster.utils.backcompat import experimental
 
 
 @whitelist_for_serdes
@@ -21,7 +22,7 @@ class AssetStoreHandle(namedtuple("_AssetStoreHandle", "asset_store_key asset_me
         return super(AssetStoreHandle, cls).__new__(
             cls,
             asset_store_key=check.str_param(asset_store_key, "asset_store_key"),
-            asset_metadata=asset_metadata,
+            asset_metadata=check.opt_dict_param(asset_metadata, "asset_metadata", key_type=str),
         )
 
 
@@ -29,9 +30,9 @@ class AssetStore(six.with_metaclass(ABCMeta)):
     """
     Base class for user-provided asset store.
 
-    Extend this class to handle asset operations. Users should implement ``set_asset`` to write a
-    data object that can be tracked by the Dagster machinery and ``get_asset`` to read an existing
-    data object.
+    Extend this class to handle asset operations. Users should implement ``set_asset`` to store a
+    data object that can be tracked by the Dagster machinery and ``get_asset`` to retrive a data
+    object.
     """
 
     @abstractmethod
@@ -41,10 +42,14 @@ class AssetStore(six.with_metaclass(ABCMeta)):
         Args:
             context (StepOutputContext): The context of the step output that produces this asset.
             obj (Any): The data object to be stored.
-            asset_metadata (Optional[Any]): The serializable metadata defined on the step that
-                produced the given data object. For example, users can provide a file path if the
-                data object will be stored in a filesystem, or provide information of a database
+            asset_metadata (Optional[Dict[str, Any]]): A dict of the metadata that is used for the
+                step to store the given data object. For example, users can provide a file path if
+                the data object will be stored in a filesystem, or provide information of a database
                 table when it is going to load the data into the table.
+
+        Returns:
+            Union[None, AssetMaterialization, Iterator[AssetMaterialization]]: Zero, one, or
+                multiple :py:class:`AssetMaterialization` events
         """
 
     @abstractmethod
@@ -53,8 +58,8 @@ class AssetStore(six.with_metaclass(ABCMeta)):
 
         Args:
             context (StepOutputContext): The context of the step output that produces this asset.
-            asset_metadata (Optional[Any]): The metadata defined on the step that produced the
-                data object to get.
+            asset_metadata (Optional[Dict[str, Any]]): A dict of the metadata that is used for the
+                step to retrieve the data object.
 
         Returns:
             Any: The data object.
@@ -73,11 +78,19 @@ class InMemoryAssetStore(AssetStore):
 
 
 @resource
+@experimental
 def mem_asset_store(_):
     return InMemoryAssetStore()
 
 
 class PickledObjectFilesystemAssetStore(AssetStore):
+    """Built-in filesystem asset store that stores and retrieves values using pickling.
+
+    Args:
+        base_dir (Optional[str]): base directory where all the step outputs which use this asset
+            store will be stored in.
+    """
+
     def __init__(self, base_dir=None):
         self.base_dir = check.opt_str_param(base_dir, "base_dir")
         self.write_mode = "wb"
@@ -115,17 +128,43 @@ class PickledObjectFilesystemAssetStore(AssetStore):
 
 
 @resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
-def default_filesystem_asset_store(init_context):
-    """Default asset store.
+@experimental
+def fs_asset_store(init_context):
+    """Built-in filesystem asset store that stores and retrieves values using pickling.
 
     It allows users to specify a base directory where all the step output will be stored in. It
     serializes and deserializes output values (assets) using pickling and automatically constructs
     the filepaths for the assets.
+
+    Example usage:
+
+    .. code-block:: python
+
+        @solid(output_defs=[OutputDefinition(asset_store_key="asset_store")])
+        def sample_data(context, df):
+            return df[:5]
+
+        @pipeline(
+            mode_defs=[
+                ModeDefinition(resource_defs={"asset_store": fs_asset_store}),
+            ],
+        )
+        def pipe():
+            sample_data()
     """
+
     return PickledObjectFilesystemAssetStore(init_context.resource_config["base_dir"])
 
 
 class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
+    """Built-in filesystem asset store that stores and retrieves values using pickling and
+    allow users to specify file path for outputs.
+
+    Args:
+        base_dir (Optional[str]): base directory where all the step outputs which use this asset
+            store will be stored in.
+    """
+
     def __init__(self, base_dir=None):
         self.base_dir = check.opt_str_param(base_dir, "base_dir")
         self.write_mode = "wb"
@@ -166,11 +205,34 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
 
 
 @resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
-def custom_path_filesystem_asset_store(init_context):
+@experimental
+def custom_path_fs_asset_store(init_context):
     """Built-in asset store that allows users to custom output file path per output definition.
 
     It also allows users to specify a base directory where all the step output will be stored in. It
     serializes and deserializes output values (assets) using pickling and stores the pickled object
     in the user-provided file paths.
+
+    Example usage:
+
+    .. code-block:: python
+
+        @solid(
+            output_defs=[
+                OutputDefinition(
+                    asset_store_key="asset_store", asset_metadata={"path": "path/to/sample_output"}
+                )
+            ]
+        )
+        def sample_data(context, df):
+            return df[:5]
+
+        @pipeline(
+            mode_defs=[
+                ModeDefinition(resource_defs={"asset_store": custom_path_fs_asset_store}),
+            ],
+        )
+        def pipe():
+            sample_data()
     """
     return CustomPathPickledObjectFilesystemAssetStore(init_context.resource_config["base_dir"])
