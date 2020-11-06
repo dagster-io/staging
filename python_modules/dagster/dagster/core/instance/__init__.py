@@ -1113,11 +1113,12 @@ class DagsterInstance:
     def launch_run(self, run_id, external_pipeline):
         """Launch a pipeline run.
 
-        This method delegates to the ``RunLauncher``, if any, configured on the instance, and will
-        call its implementation of ``RunLauncher.launch_run()`` to begin the execution of the
-        specified run. Runs should be created in the instance (e.g., by calling
-        ``DagsterInstance.create_run()``) *before* this method is called, and
-        should be in the ``PipelineRunStatus.NOT_STARTED`` state.
+        This method is typically called using `instance.submit_run` rather than being invoked
+        directly. This method delegates to the ``RunLauncher``, if any, configured on the instance,
+        and will call its implementation of ``RunLauncher.launch_run()`` to begin the execution of
+        the specified run. Runs should be created in the instance (e.g., by calling
+        ``DagsterInstance.create_run()``) *before* this method is called, and should be in the
+        ``PipelineRunStatus.NOT_STARTED`` state.
 
         Args:
             run_id (str): The id of the run the launch.
