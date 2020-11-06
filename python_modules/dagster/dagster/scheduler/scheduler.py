@@ -397,7 +397,7 @@ def _schedule_run_at_time(
 
     if run_to_launch.status != PipelineRunStatus.FAILURE:
         try:
-            instance.launch_run(run_to_launch.run_id, external_pipeline)
+            instance.submit_run(run_to_launch.run_id, external_pipeline)
             logger.info(
                 "Completed scheduled launch of run {run_id} for {schedule_name}".format(
                     run_id=run_to_launch.run_id, schedule_name=schedule_name
