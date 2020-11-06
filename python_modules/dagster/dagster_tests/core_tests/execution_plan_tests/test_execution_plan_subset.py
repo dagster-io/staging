@@ -28,13 +28,8 @@ def define_two_int_pipeline():
     )
 
 
-def find_events(events, event_type=None, step_key=None):
-    return [
-        e
-        for e in events
-        if (not event_type or e.event_type_value == event_type)
-        and (not step_key or e.step_key == step_key)
-    ]
+def find_events(events, event_type=None):
+    return [e for e in events if (not event_type or e.event_type_value == event_type)]
 
 
 def test_execution_plan_simple_two_steps():
@@ -82,7 +77,7 @@ def test_execution_plan_two_outputs():
     )
     events = execute_plan(execution_plan, pipeline_run=pipeline_run, instance=instance)
 
-    output_events = [e for e in events if e.event_type_value == "STEP_OUTPUT"]
+    output_events = find_events(events, event_type="STEP_OUTPUT")
     assert output_events[0].step_key == "return_one_two.compute"
     assert output_events[0].step_output_data.output_name == "num_one"
     assert output_events[1].step_key == "return_one_two.compute"
