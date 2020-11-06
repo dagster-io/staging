@@ -32,7 +32,6 @@ from dagster.core.execution.plan.objects import (
     StepSuccessData,
     TypeCheckData,
 )
-from dagster.core.execution.resolve_versions import resolve_step_output_versions
 from dagster.core.storage.asset_store import AssetStoreHandle
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.utils import ensure_gen, iterate_with_context, raise_interrupts_immediately
@@ -313,9 +312,9 @@ def _create_step_events_for_output(step_context, output):
     step = step_context.step
     step_output = step.step_output_named(output.output_name)
 
-    version = resolve_step_output_versions(
-        step_context.execution_plan, step_context.environment_config, step_context.mode_def,
-    )[StepOutputHandle(step_context.step.key, output.output_name)]
+    version = step_context.execution_plan.resolve_step_output_versions()[
+        StepOutputHandle(step_context.step.key, output.output_name)
+    ]
 
     for output_event in _type_checked_step_output_event_sequence(step_context, output, version):
         yield output_event
