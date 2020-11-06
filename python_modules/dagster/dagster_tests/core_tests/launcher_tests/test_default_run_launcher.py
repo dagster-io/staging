@@ -508,22 +508,34 @@ def test_engine_events(get_external_pipeline, run_config):  # pylint: disable=re
             if _is_multiprocess(run_config):
                 messages = [
                     "Started process for pipeline",
+                    "Starting initialization of resources",
+                    "Finished initialization of resources",
                     "Executing steps using multiprocess executor",
                     "Launching subprocess for return_one.compute",
                     "Executing step return_one.compute in subprocess",
+                    "Starting initialization of resources",
+                    "Finished initialization of resources",
                     # multiply_by_2 and multiply_by_3 launch and execute in non-deterministic order
+                    "",
+                    "",
+                    "",
+                    "",
                     "",
                     "",
                     "",
                     "",
                     "Launching subprocess for add.compute",
                     "Executing step add.compute in subprocess",
+                    "Starting initialization of resources",
+                    "Finished initialization of resources",
                     "Multiprocess executor: parent process exiting",
                     "Process for pipeline exited",
                 ]
             else:
                 messages = [
                     "Started process for pipeline",
+                    "Starting initialization of resources",
+                    "Finished initialization of resources",
                     "Executing steps in process",
                     "Finished steps in process",
                     "Process for pipeline exited",
