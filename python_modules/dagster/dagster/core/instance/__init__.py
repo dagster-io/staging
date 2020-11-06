@@ -555,7 +555,9 @@ class DagsterInstance:
             }
         )
 
-        return execution_plan.build_memoized_plan(step_keys_to_execute, step_output_addresses)
+        return execution_plan.build_memoized_plan(
+            step_keys_to_execute, step_output_addresses, step_output_versions
+        )
 
     def create_run_for_pipeline(
         self,

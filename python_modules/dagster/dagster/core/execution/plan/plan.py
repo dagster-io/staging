@@ -278,11 +278,18 @@ def get_step_input(
 
 class ExecutionPlan(
     namedtuple(
-        "_ExecutionPlan", "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute",
+        "_ExecutionPlan",
+        "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute step_output_versions",
     )
 ):
     def __new__(
-        cls, pipeline, step_dict, deps, artifacts_persisted, step_keys_to_execute,
+        cls,
+        pipeline,
+        step_dict,
+        deps,
+        artifacts_persisted,
+        step_keys_to_execute,
+        step_output_versions=None,
     ):
         missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
         if missing_steps:
@@ -303,6 +310,9 @@ class ExecutionPlan(
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
             step_keys_to_execute=check.list_param(
                 step_keys_to_execute, "step_keys_to_execute", of_type=str
+            ),
+            step_output_versions=check.opt_dict_param(
+                step_output_versions, "step_output_versions", key_type=StepOutputHandle,
             ),
         )
 
@@ -388,7 +398,7 @@ class ExecutionPlan(
             step_keys_to_execute,
         )
 
-    def build_memoized_plan(self, step_keys_to_execute, addresses):
+    def build_memoized_plan(self, step_keys_to_execute, addresses, step_output_versions):
         """Using cached outputs from previous runs, create a new execution plan.
 
         For steps where values have been cached, addresses are provided so that at runtime, those
@@ -400,6 +410,9 @@ class ExecutionPlan(
             addresses: (Dict[(str, StepOutputHandle), str]): A dictionary mapping pipeline name and
                 step output handle to an "address", which the intermediate storage can use to
                 retrieve the value for this step output.
+            step_output_versions: (Dict[StepOutputHandle, str]): A dictionary mapping step output
+                handle to a string version. This is stored on the execution plan to avoid
+                recomputation during the context of execution.
         Returns:
             ExecutionPlan: An execution plan where addresses have been provided to steps such that
                 the intermediate storage layer can retrieve the addresses instead of searching for
@@ -450,6 +463,7 @@ class ExecutionPlan(
             self.deps,
             self.artifacts_persisted,
             step_keys_to_execute,
+            step_output_versions,
         )
 
     def start(
