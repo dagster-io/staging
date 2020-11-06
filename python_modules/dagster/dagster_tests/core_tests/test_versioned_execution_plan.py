@@ -21,15 +21,8 @@ from dagster.core.definitions import InputDefinition
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
 from dagster.core.execution.plan.objects import StepOutputHandle
-from dagster.core.execution.resolve_versions import (
-    join_and_hash,
-    resolve_config_version,
-    resolve_resource_versions,
-    resolve_step_output_versions,
-    resolve_step_versions,
-)
+from dagster.core.execution.resolve_versions import join_and_hash, resolve_config_version
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
-from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.seven import mock
 
 
@@ -117,25 +110,9 @@ def versioned_pipeline_expected_step2_output_version():
     return join_and_hash(step2_version + "result")
 
 
-def resolve_step_versions_for_test(execution_plan, run_config=None, mode=None):
-    return resolve_step_versions(
-        execution_plan=execution_plan,
-        environment_config=EnvironmentConfig.build(execution_plan.pipeline_def, run_config, mode),
-        mode_def=execution_plan.pipeline_def.get_mode_definition(mode),
-    )
-
-
-def resolve_step_output_versions_for_test(execution_plan, run_config=None, mode=None):
-    return resolve_step_output_versions(
-        execution_plan=execution_plan,
-        environment_config=EnvironmentConfig.build(execution_plan.pipeline_def, run_config, mode),
-        mode_def=execution_plan.pipeline_def.get_mode_definition(mode),
-    )
-
-
 def test_resolve_step_versions_no_external_dependencies():
     speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    versions = resolve_step_versions_for_test(speculative_execution_plan)
+    versions = speculative_execution_plan.resolve_step_versions()
 
     assert (
         versions["versioned_solid_no_input.compute"] == versioned_pipeline_expected_step1_version()
@@ -148,10 +125,10 @@ def test_resolve_step_versions_no_external_dependencies():
 
 
 def test_resolve_step_output_versions_no_external_dependencies():
-    speculative_execution_plan = create_execution_plan(versioned_pipeline)
-    versions = resolve_step_output_versions_for_test(
-        speculative_execution_plan, run_config={}, mode="default"
+    speculative_execution_plan = create_execution_plan(
+        versioned_pipeline, run_config={}, mode="default"
     )
+    versions = speculative_execution_plan.resolve_step_output_versions()
 
     assert (
         versions[StepOutputHandle("versioned_solid_no_input.compute", "result")]
@@ -189,9 +166,7 @@ def test_default_unmemoized_steps():
             "must have a version."
         ),
     ):
-        instance.resolve_memoized_execution_plan(
-            speculative_execution_plan, run_config={}, mode="default"
-        )
+        instance.resolve_memoized_execution_plan(speculative_execution_plan)
 
 
 def test_resolve_memoized_execution_plan_no_stored_results():
@@ -200,9 +175,7 @@ def test_resolve_memoized_execution_plan_no_stored_results():
     instance = DagsterInstance.ephemeral()
     instance.get_addresses_for_step_output_versions = mock.MagicMock(return_value={})
 
-    memoized_execution_plan = instance.resolve_memoized_execution_plan(
-        speculative_execution_plan, run_config={}, mode="default"
-    )
+    memoized_execution_plan = instance.resolve_memoized_execution_plan(speculative_execution_plan)
 
     assert set(memoized_execution_plan.step_keys_to_execute) == {
         "versioned_solid_no_input.compute",
@@ -219,9 +192,7 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
         return_value={(versioned_pipeline.name, step_output_handle): "some_address"}
     )
 
-    memoized_execution_plan = instance.resolve_memoized_execution_plan(
-        speculative_execution_plan, run_config={}, mode="default"
-    )
+    memoized_execution_plan = instance.resolve_memoized_execution_plan(speculative_execution_plan)
 
     assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input.compute"]
 
@@ -244,7 +215,7 @@ def test_resolve_memoized_execution_plan_partial_versioning():
     )
 
     assert instance.resolve_memoized_execution_plan(
-        speculative_execution_plan, run_config={}, mode="default"
+        speculative_execution_plan
     ).step_keys_to_execute == ["solid_takes_input.compute"]
 
 
@@ -301,7 +272,7 @@ def run_test_with_builtin_type(type_to_test, loader_version, type_value):
         versioned_pipeline_ext_input_builtin_type, run_config=run_config,
     )
 
-    versions = resolve_step_versions_for_test(speculative_execution_plan, run_config=run_config)
+    versions = speculative_execution_plan.resolve_step_versions()
 
     ext_input_version = join_and_hash(str(type_value))
     input_version = join_and_hash(loader_version + ext_input_version)
@@ -344,7 +315,7 @@ def versioned_pipeline_default_value():
 
 def test_resolve_step_versions_default_value():
     speculative_execution_plan = create_execution_plan(versioned_pipeline_default_value)
-    versions = resolve_step_versions_for_test(speculative_execution_plan)
+    versions = speculative_execution_plan.resolve_step_versions()
 
     default_val_version = join_and_hash("DEFAULTVAL")
 
@@ -433,13 +404,10 @@ def test_resource_versions():
             "test_resource_no_version": {"config": {"input_str": "banana"}},
         }
     }
-    environment_config = EnvironmentConfig.build(
-        modes_pipeline, run_config=run_config, mode="fakemode",
-    )
 
-    resource_versions_by_key = resolve_resource_versions(
-        environment_config, modes_pipeline.get_mode_definition("fakemode")
-    )
+    execution_plan = create_execution_plan(modes_pipeline, run_config=run_config, mode="fakemode")
+
+    resource_versions_by_key = execution_plan.resolve_resource_versions()
 
     assert resource_versions_by_key["test_resource"] == join_and_hash(
         resolve_config_version({"config": {"input_str": "apple"}}), test_resource.version
@@ -477,21 +445,14 @@ def versioned_modes_pipeline():
 def test_step_versions_with_resources():
     run_config = {"resources": {"test_resource": {"config": {"input_str": "apple"}}}}
     speculative_execution_plan = create_execution_plan(
-        versioned_modes_pipeline, run_config=run_config,
+        versioned_modes_pipeline, run_config=run_config, mode="fakemode"
     )
 
-    versions = resolve_step_versions_for_test(
-        speculative_execution_plan, run_config=run_config, mode="fakemode"
-    )
+    versions = speculative_execution_plan.resolve_step_versions()
 
     solid_def_version = fake_solid_resources_versioned.version
     solid_config_version = resolve_config_version(None)
-    environment_config = EnvironmentConfig.build(
-        versioned_modes_pipeline, mode="fakemode", run_config=run_config
-    )
-    resource_versions_by_key = resolve_resource_versions(
-        environment_config, versioned_modes_pipeline.get_mode_definition("fakemode")
-    )
+    resource_versions_by_key = speculative_execution_plan.resolve_resource_versions()
     solid_resources_version = join_and_hash(
         *[
             resource_versions_by_key[resource_key]
@@ -528,6 +489,6 @@ def test_step_versions_composite_solid():
 
     speculative_execution_plan = create_execution_plan(wrap_pipeline, run_config=run_config,)
 
-    versions = resolve_step_versions_for_test(speculative_execution_plan, run_config=run_config)
+    versions = speculative_execution_plan.resolve_step_versions()
 
     assert versions["do_stuff.scalar_config_solid.compute"] == None

@@ -5,6 +5,7 @@ from dagster.core.definitions import (
     GraphDefinition,
     IPipeline,
     InputDefinition,
+    ModeDefinition,
     Solid,
     SolidDefinition,
     SolidHandle,
@@ -12,6 +13,11 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
+from dagster.core.execution.resolve_versions import (
+    join_and_hash,
+    resolve_config_version,
+    resolve_step_input_versions,
+)
 from dagster.core.system_config.objects import (
     EmptyIntermediateStoreBackcompatConfig,
     EnvironmentConfig,
@@ -107,7 +113,13 @@ class _PlanBuilder(object):
         ]
 
         return ExecutionPlan(
-            self.pipeline, step_dict, deps, self.storage_is_persistent(), step_keys_to_execute,
+            self.pipeline,
+            step_dict,
+            deps,
+            self.storage_is_persistent(),
+            step_keys_to_execute,
+            self.environment_config,
+            self.mode_definition,
         )
 
     def storage_is_persistent(self):
@@ -278,11 +290,19 @@ def get_step_input(
 
 class ExecutionPlan(
     namedtuple(
-        "_ExecutionPlan", "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute",
+        "_ExecutionPlan",
+        "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute environment_config mode_definition",
     )
 ):
     def __new__(
-        cls, pipeline, step_dict, deps, artifacts_persisted, step_keys_to_execute,
+        cls,
+        pipeline,
+        step_dict,
+        deps,
+        artifacts_persisted,
+        step_keys_to_execute,
+        environment_config,
+        mode_definition,
     ):
         missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
         if missing_steps:
@@ -304,6 +324,10 @@ class ExecutionPlan(
             step_keys_to_execute=check.list_param(
                 step_keys_to_execute, "step_keys_to_execute", of_type=str
             ),
+            environment_config=check.inst_param(
+                environment_config, "environment_config", EnvironmentConfig
+            ),
+            mode_definition=check.inst_param(mode_definition, "mode_definition", ModeDefinition),
         )
 
     @property
@@ -386,6 +410,8 @@ class ExecutionPlan(
             self.deps,
             self.artifacts_persisted,
             step_keys_to_execute,
+            self.environment_config,
+            self.mode_definition,
         )
 
     def build_memoized_plan(self, step_keys_to_execute, addresses):
@@ -395,11 +421,14 @@ class ExecutionPlan(
         steps do not need to re-execute.
 
         Args:
-            step_keys_to_execute (List[String]): A list of execution step keys to actually run in this
-                execution plan.
+            step_keys_to_execute (List[String]): A list of execution step keys to actually run in
+                this execution plan.
             addresses: (Dict[(str, StepOutputHandle), str]): A dictionary mapping pipeline name and
                 step output handle to an "address", which the intermediate storage can use to
                 retrieve the value for this step output.
+            step_output_versions: (Dict[StepOutputHandle, str]): A dictionary mapping step output
+                handle to a string version. This is stored on the execution plan to avoid
+                recomputation during the context of execution.
         Returns:
             ExecutionPlan: An execution plan where addresses have been provided to steps such that
                 the intermediate storage layer can retrieve the addresses instead of searching for
@@ -450,7 +479,103 @@ class ExecutionPlan(
             self.deps,
             self.artifacts_persisted,
             step_keys_to_execute,
+            self.environment_config,
+            self.mode_definition,
         )
+
+    def resolve_resource_versions(self):
+        """Resolves the version of each resource provided within the EnvironmentConfig.
+
+        If `environment_config` was constructed from the mode represented by `mode_def`, then
+        `environment_config` will have an entry for each resource in the mode (even if it does not
+        require any configuration). For each resource, calculates a version for the run config provided
+        by `environment_config`, and joins with the corresponding version for the resource definition.
+
+        Returns:
+            Dict[str, Optional[str]]: dictionary where each key is a resource key, and each value is the
+                resolved version of the corresponding resource.
+        """
+
+        assert set(self.environment_config.resources.keys()) == set(
+            self.mode_definition.resource_defs.keys()
+        )  # verify that environment config and mode_def refer to the same resources
+
+        resource_versions = {}
+
+        for resource_key, config in self.environment_config.resources.items():
+            resource_def_version = self.mode_definition.resource_defs[resource_key].version
+            resource_versions[resource_key] = join_and_hash(
+                resolve_config_version(config), resource_def_version
+            )
+
+        return resource_versions
+
+    def resolve_step_versions(self):
+        """Resolves the version of each step in an execution plan.
+
+        Execution plan provides execution steps for analysis. It returns dict[str, str] where each key
+        is a step key, and each value is the associated version for that step.
+
+        The version for a step combines the versions of all inputs to the step, and the version of the
+        solid that the step contains. The inputs consist of all input definitions provided to the step.
+        The process for computing the step version is as follows:
+            1.  Compute the version for each input to the step.
+            2.  Compute the version of the solid provided to the step.
+            3.  Sort, concatenate and hash the input and solid versions.
+
+        The solid version combines the version of the solid definition, the versions of the required
+        resources, and the version of the config provided to the solid.
+        The process for computing the solid version is as follows:
+            1.  Sort, concatenate and hash the versions of the required resources.
+            2.  Resolve the version of the configuration provided to the solid.
+            3.  Sort, concatenate and hash together the concatted resource versions, the config version,
+                    and the solid's version definition.
+
+        Returns:
+            Dict[str, Optional[str]]: A dictionary that maps the key of an execution step to a version.
+                If a step has no computed version, then the step key maps to None.
+        """
+
+        resource_versions_by_key = self.resolve_resource_versions()
+
+        step_versions = {}  # step_key (str) -> version (str)
+
+        for step in self.steps:
+            input_version_dict = resolve_step_input_versions(step, step_versions)
+            input_versions = [version for version in input_version_dict.values()]
+
+            solid_name = str(step.solid_handle)
+            solid_def_version = step.solid.definition.version
+            solid_config_version = resolve_config_version(
+                self.environment_config.solids[solid_name].config
+            )
+            hashed_resources = [
+                resource_versions_by_key[resource_key]
+                for resource_key in step.solid.definition.required_resource_keys
+            ]
+            solid_resources_version = join_and_hash(*hashed_resources)
+            solid_version = join_and_hash(
+                solid_def_version, solid_config_version, solid_resources_version
+            )
+
+            from_versions = input_versions + [solid_version]
+
+            step_version = join_and_hash(*from_versions)
+
+            step_versions[step.key] = step_version
+
+        return step_versions
+
+    def resolve_step_output_versions(self):
+
+        step_versions = self.resolve_step_versions()
+        return {
+            StepOutputHandle(step.key, output_name): join_and_hash(
+                output_name, step_versions[step.key]
+            )
+            for step in self.steps
+            for output_name in step.step_output_dict.keys()
+        }
 
     def start(
         self, retries, sort_key_fn=None,
