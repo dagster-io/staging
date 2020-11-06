@@ -12,6 +12,14 @@ from dagster.utils.error import SerializableErrorInfo
 
 @whitelist_for_serdes
 class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name")):
+    """The reference to a step output.
+
+    Args:
+        step_key (str): The step_key for a compute step.
+        output_name (str): The name of the output. (default: 'result').
+
+    """
+
     @staticmethod
     def from_step(step, output_name="result"):
         check.inst_param(step, "step", ExecutionStep)

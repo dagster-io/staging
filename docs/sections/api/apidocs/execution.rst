@@ -36,10 +36,13 @@ Execution context
 .. autoclass:: AbstractComputeExecutionContext
    :members:
 
-.. autoclass:: SystemComputeExecutionContext
+.. currentmodule:: dagster
+
+.. autoclass:: SystemStepExecutionContext
    :members:
 
-.. currentmodule:: dagster
+.. autoclass:: SystemComputeExecutionContext
+   :members:
 
 .. autoclass:: reconstructable
    :members:
@@ -212,3 +215,9 @@ Contexts
 
 .. autoclass:: HookContext
    :members:
+
+
+Objects
+--------
+
+.. autoclass:: StepOutputHandle
