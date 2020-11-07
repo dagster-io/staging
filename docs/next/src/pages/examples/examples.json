@@ -30,6 +30,11 @@
         "description": "Simplify solid config schemas with config mapping."
     },
     {
+        "name": "dbt_example",
+        "title": "dbt Integration",
+        "description": "Examples to use dagster-dbt to integrate  existing dbt project with Dagster."
+    },
+    {
         "name": "dep_dsl",
         "title": "Dependency DSL",
         "description": "Create a custom DSL for defining pipelines"
