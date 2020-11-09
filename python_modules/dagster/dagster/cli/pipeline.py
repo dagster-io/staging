@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import logging
 import os
 import re
 import sys
@@ -39,10 +40,11 @@ from dagster.core.host_representation.external_data import (
     ExternalPartitionSetExecutionParamData,
 )
 from dagster.core.host_representation.selector import PipelineSelector
-from dagster.core.instance import DagsterInstance
+from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.snap import PipelineSnapshot, SolidInvocationSnap
 from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshotErrorData
 from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.telemetry import log_external_repo_stats, telemetry_wrapper
 from dagster.core.utils import make_new_backfill_id
 from dagster.seven import IS_WINDOWS, JSONDecodeError, json
@@ -469,6 +471,13 @@ def _create_external_pipeline_run(
     run_config, mode, tags, solid_selection = _check_execute_external_pipeline_args(
         external_pipeline, run_config, mode, preset, tags, solid_selection,
     )
+
+    if is_memoized_run(tags):
+        logging.warning(
+            "Tag \"{tag}\" was found when initializing pipeline run, however, memoized "
+            "execution is only supported from the command line. This pipeline will run, but "
+            "outputs from previous executions will be ignored.".format(tag=MEMOIZED_RUN_TAG)
+        )
 
     pipeline_name = external_pipeline.name
     pipeline_selector = PipelineSelector(

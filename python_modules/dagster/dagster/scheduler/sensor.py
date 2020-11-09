@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import time
@@ -17,10 +18,10 @@ from dagster.core.host_representation.external_data import (
     ExternalSensorExecutionData,
     ExternalSensorExecutionErrorData,
 )
-from dagster.core.instance import DagsterInstance
+from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.scheduler.job import JobStatus, JobTickData, JobTickStatus, SensorJobData
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from dagster.core.storage.tags import RUN_KEY_TAG, check_tags
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG, RUN_KEY_TAG, check_tags
 from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
@@ -327,6 +328,12 @@ def _create_sensor_run(
     tags = merge_dicts(
         merge_dicts(pipeline_tags, run_request.tags), PipelineRun.tags_for_sensor(external_sensor)
     )
+    if is_memoized_run(tags):
+        logging.warning(
+            "Tag \"{tag}\" was found when initializing pipeline run, however, memoized "
+            "execution is only supported from the command line. This pipeline will run, but "
+            "outputs from previous executions will be ignored.".format(tag=MEMOIZED_RUN_TAG)
+        )
     if run_request.run_key:
         tags[RUN_KEY_TAG] = run_request.run_key
 

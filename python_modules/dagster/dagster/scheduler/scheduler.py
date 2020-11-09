@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import sys
 import time
@@ -14,10 +15,10 @@ from dagster.core.host_representation import (
     RepositoryLocation,
     RepositoryLocationHandle,
 )
-from dagster.core.instance import DagsterInstance
+from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.scheduler.job import JobState, JobStatus, JobTickData, JobTickStatus, JobType
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from dagster.core.storage.tags import SCHEDULED_EXECUTION_TIME_TAG, check_tags
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG, SCHEDULED_EXECUTION_TIME_TAG, check_tags
 from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
@@ -401,6 +402,13 @@ def _create_scheduler_run(
     pipeline_tags = external_pipeline.tags or {}
     check_tags(pipeline_tags, "pipeline_tags")
     tags = merge_dicts(pipeline_tags, schedule_tags)
+
+    if is_memoized_run(tags):
+        logging.warning(
+            "Tag \"{tag}\" was found when initializing pipeline run, however, memoized "
+            "execution is only supported from the command line. This pipeline will run, but "
+            "outputs from previous executions will be ignored.".format(tag=MEMOIZED_RUN_TAG)
+        )
 
     tags[SCHEDULED_EXECUTION_TIME_TAG] = schedule_time.in_tz("UTC").isoformat()
 
