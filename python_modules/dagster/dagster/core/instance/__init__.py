@@ -534,6 +534,10 @@ class DagsterInstance:
         Returns:
             ExecutionPlan: Execution plan configured to only run unmemoized steps.
         """
+        # pylint: disable=comparison-with-callable
+        from dagster.core.execution.context.init import InitResourceContext
+        from dagster.core.storage.asset_store import mem_asset_store
+
         pipeline_def = execution_plan.pipeline.get_definition()
         pipeline_name = pipeline_def.name
 
@@ -552,13 +556,35 @@ class DagsterInstance:
             }
         )
 
-        step_keys_to_execute = list(
-            {
-                step_output_handle.step_key
-                for step_output_handle in step_output_versions.keys()
-                if (pipeline_name, step_output_handle) not in step_output_addresses
-            }
-        )
+        environment_config = execution_plan.environment_config
+        pipeline_def = execution_plan.pipeline.get_definition()
+        mode_def = pipeline_def.get_mode_definition(environment_config.mode)
+
+        step_keys_to_execute = []
+
+        for step_output_handle, version in step_output_versions.items():
+            asset_store_key = execution_plan.get_asset_store_key(step_output_handle)
+            # TODO: get rid of this condition once intermediate storage is deprecated.
+            # If asset_store_key is not None, then we are using asset store for intermediate storage
+            # needs.
+            if asset_store_key and mode_def.resource_defs[asset_store_key] != mem_asset_store:
+                resource_config = environment_config.resources[asset_store_key]["config"]
+                resource_def = mode_def.resource_defs[asset_store_key]
+                resource_context = InitResourceContext(
+                    resource_config, pipeline_def, resource_def, ""
+                )
+                asset_store = resource_def.resource_fn(resource_context)
+                asset_store_handle = execution_plan.get_asset_store_handle(step_output_handle)
+                context = execution_plan.construct_asset_store_context(
+                    step_output_handle, asset_store_handle
+                )
+                if not asset_store.has_asset(context):
+                    step_keys_to_execute.append(step_output_handle.step_key)
+
+            # Otherwise, we are using intermediate storage, and should check step_output_addresses
+            else:
+                if (pipeline_name, step_output_handle) not in step_output_addresses:
+                    step_keys_to_execute.append(step_output_handle.step_key)
 
         return execution_plan.build_memoized_plan(step_keys_to_execute, step_output_addresses)
 
