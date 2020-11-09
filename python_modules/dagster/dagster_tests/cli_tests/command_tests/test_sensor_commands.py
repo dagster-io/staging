@@ -11,6 +11,7 @@ from dagster.cli.sensor import (
     sensor_list_command,
     sensor_start_command,
     sensor_stop_command,
+    sensor_test_command,
     sensor_up_command,
 )
 from dagster.core.host_representation import ExternalRepository
@@ -59,7 +60,7 @@ def test_sensors_up_and_list(gen_sensor_args):
             result = runner.invoke(sensor_list_command, cli_args)
 
             assert result.exit_code == 0
-            assert result.output == "Repository bar\n**************\nJob: foo_sensor [STOPPED]\n"
+            assert result.output == "Repository bar\n**************\nSensor: foo_sensor [STOPPED]\n"
 
 
 @pytest.mark.parametrize("gen_sensor_args", sensor_command_contexts())
@@ -142,3 +143,19 @@ def test_check_repo_and_scheduler_instance_scheduler_not_set():
             ),
         ):
             check_repo_and_scheduler(repository, instance)
+
+
+@pytest.mark.parametrize("gen_sensor_args", sensor_command_contexts())
+def test_sensor_test(gen_sensor_args):
+    with gen_sensor_args as (cli_args, instance):
+        runner = CliRunner()
+        with mock.patch("dagster.core.instance.DagsterInstance.get") as _instance:
+            _instance.return_value = instance
+
+            result = runner.invoke(sensor_test_command, cli_args + ["foo_sensor"],)
+
+            assert result.exit_code == 0
+            assert (
+                result.output
+                == "Sensor returning run parameters for 1 run(s):\n\n[{'foo': 'FOO'}]\n"
+            )
