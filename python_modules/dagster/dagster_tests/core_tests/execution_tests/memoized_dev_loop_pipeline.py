@@ -1,6 +1,16 @@
 import os
 
-from dagster import Field, InputDefinition, ModeDefinition, Output, String, pipeline, solid
+from dagster import (
+    Field,
+    InputDefinition,
+    ModeDefinition,
+    Output,
+    OutputDefinition,
+    String,
+    pipeline,
+    solid,
+)
+from dagster.core.storage.asset_store import versioned_filesystem_asset_store
 from dagster.core.storage.system_storage import fs_intermediate_storage
 
 
@@ -83,3 +93,35 @@ def basic_pipeline():
         _string_input_1=take_string_1(create_string_1()),
         _string_input_2=take_string_2(create_string_2()),
     )
+
+
+@solid(
+    version="create_string_version",
+    config_schema={"input_str": Field(String)},
+    output_defs=[
+        OutputDefinition(name="created_string", asset_store_key="asset_store", asset_metadata={})
+    ],
+)
+def create_string_1_asset(context):
+    return context.solid_config["input_str"]
+
+
+@solid(
+    input_defs=[InputDefinition("_string_input", String)],
+    version="take_string_version",
+    config_schema={"input_str": Field(String)},
+    output_defs=[
+        OutputDefinition(name="taken_string", asset_store_key="asset_store", asset_metadata={})
+    ],
+)
+def take_string_1_asset(context, _string_input):
+    return context.solid_config["input_str"] + _string_input
+
+
+@pipeline(
+    mode_defs=[
+        ModeDefinition("only_mode", resource_defs={"asset_store": versioned_filesystem_asset_store})
+    ]
+)
+def asset_pipeline():
+    return take_string_1_asset(create_string_1_asset())
