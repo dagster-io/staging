@@ -165,9 +165,9 @@ export const PartitionRunMatrix: React.FunctionComponent<PartitionRunMatrixProps
       </Dialog>
       <OptionsContainer>
         <strong>Run Matrix</strong>
-        <div style={{width: 20}} />
+        <div style={{width: 10}} />
         <Checkbox
-          label="Show Previous Run States"
+          label="Show Previous States"
           checked={options.showPrevious}
           onChange={() => setOptions({...options, showPrevious: !options.showPrevious})}
           style={{marginBottom: 0, height: 20}}
