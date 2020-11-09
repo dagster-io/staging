@@ -1,6 +1,9 @@
 import hashlib
+import logging
 
 from dagster import check
+from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.execution.context.init import InitResourceContext
 from dagster.core.execution.plan.inputs import (
     FromConfig,
     FromDefaultValue,
@@ -8,6 +11,8 @@ from dagster.core.execution.plan.inputs import (
     FromStepOutput,
 )
 from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.storage.asset_store import mem_asset_store
+from dagster.utils.backcompat import experimental
 
 
 def resolve_step_input_versions(step, step_versions):
@@ -204,3 +209,51 @@ def resolve_step_output_versions_helper(execution_plan):
         for step in execution_plan.steps
         for output_name in step.step_output_dict.keys()
     }
+
+
+@experimental
+def resolve_memoized_execution_plan(execution_plan):
+    """
+        Returns:
+            ExecutionPlan: Execution plan configured to only run unmemoized steps.
+        """
+    # pylint: disable=comparison-with-callable
+
+    pipeline_def = execution_plan.pipeline.get_definition()
+    pipeline_name = pipeline_def.name
+
+    step_output_versions = execution_plan.resolve_step_output_versions()
+    if all(version is None for version in step_output_versions.values()):
+        raise DagsterInvariantViolationError(
+            "While creating a memoized pipeline run, no steps have versions. At least one step "
+            "must have a version."
+        )
+
+    environment_config = execution_plan.environment_config
+    pipeline_def = execution_plan.pipeline.get_definition()
+    mode_def = pipeline_def.get_mode_definition(environment_config.mode)
+
+    step_keys_to_execute = []
+
+    for step_output_handle, version in step_output_versions.items():
+        asset_store_key = execution_plan.get_asset_store_key(step_output_handle)
+        # TODO: https://github.com/dagster-io/dagster/issues/3302
+        # The following code block is HIGHLY experimental. It initializes an asset store outside of
+        # the resource initialization context, and will ignore any exit hooks defined for the asset
+        # store.
+        resource_config = (
+            environment_config.resources[asset_store_key]["config"]
+            if "config" in environment_config.resources[asset_store_key]
+            else {}
+        )
+        resource_def = mode_def.resource_defs[asset_store_key]
+        resource_context = InitResourceContext(resource_config, pipeline_def, resource_def, "")
+        asset_store = resource_def.resource_fn(resource_context)
+        asset_store_handle = execution_plan.get_asset_store_handle(step_output_handle)
+        context = execution_plan.construct_asset_store_context(
+            step_output_handle, asset_store_handle
+        )
+        if not asset_store.has_asset(context):
+            step_keys_to_execute.append(step_output_handle.step_key)
+
+    return execution_plan.build_subset_plan(step_keys_to_execute)
