@@ -190,7 +190,7 @@ def test_default_unmemoized_steps():
         ),
     ):
         instance.resolve_memoized_execution_plan(
-            speculative_execution_plan, run_config={}, mode="default"
+            speculative_execution_plan, run_config={}, mode="default", run_id=""
         )
 
 
@@ -201,7 +201,7 @@ def test_resolve_memoized_execution_plan_no_stored_results():
     instance.get_addresses_for_step_output_versions = mock.MagicMock(return_value={})
 
     memoized_execution_plan = instance.resolve_memoized_execution_plan(
-        speculative_execution_plan, run_config={}, mode="default"
+        speculative_execution_plan, run_config={}, mode="default", run_id=""
     )
 
     assert set(memoized_execution_plan.step_keys_to_execute) == {
@@ -220,7 +220,7 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
     )
 
     memoized_execution_plan = instance.resolve_memoized_execution_plan(
-        speculative_execution_plan, run_config={}, mode="default"
+        speculative_execution_plan, run_config={}, mode="default", run_id=""
     )
 
     assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input.compute"]
@@ -244,7 +244,7 @@ def test_resolve_memoized_execution_plan_partial_versioning():
     )
 
     assert instance.resolve_memoized_execution_plan(
-        speculative_execution_plan, run_config={}, mode="default"
+        speculative_execution_plan, run_config={}, mode="default", run_id=""
     ).step_keys_to_execute == ["solid_takes_input.compute"]
 
 

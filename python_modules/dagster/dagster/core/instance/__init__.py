@@ -520,13 +520,16 @@ class DagsterInstance:
     def get_run_group(self, run_id):
         return self._run_storage.get_run_group(run_id)
 
-    def resolve_memoized_execution_plan(self, execution_plan, run_config, mode):
+    def resolve_memoized_execution_plan(self, execution_plan, run_config, mode, run_id):
         """
         Returns:
             ExecutionPlan: Execution plan configured to only run unmemoized steps.
         """
+        from dagster.core.execution.context.init import InitResourceContext
+
         pipeline_def = execution_plan.pipeline.get_definition()
         pipeline_name = pipeline_def.name
+        mode_def = pipeline_def.get_mode_definition(mode)
 
         step_output_versions = resolve_step_output_versions(
             execution_plan,
@@ -547,13 +550,28 @@ class DagsterInstance:
             }
         )
 
-        step_keys_to_execute = list(
-            {
-                step_output_handle.step_key
-                for step_output_handle in step_output_versions.keys()
-                if (pipeline_name, step_output_handle) not in step_output_addresses
-            }
-        )
+        environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode)
+
+        step_keys_to_execute = []
+
+        for step_output_handle, version in step_output_versions.items():
+            asset_store_key = execution_plan.get_asset_store_key(step_output_handle)
+            # If asset_store_key is not None, then we are using asset store for intermediate storage
+            # needs.
+            if asset_store_key:
+                resource_config = environment_config.resources[asset_store_key]["config"]
+                resource_def = mode_def.resource_defs[asset_store_key]
+                resource_context = InitResourceContext(
+                    resource_config, pipeline_def, resource_def, run_id if run_id else ""
+                )
+                asset_store = resource_def.resource_fn(resource_context)
+                if not asset_store.has_asset_with_version(step_output_handle, {}, version):
+                    step_keys_to_execute.append(step_output_handle.step_key)
+
+            # Otherwise, we are using intermediate storage, and should check step_output_addresses
+            else:
+                if (pipeline_name, step_output_handle) not in step_output_addresses:
+                    step_keys_to_execute.append(step_output_handle.step_key)
 
         return execution_plan.build_memoized_plan(
             step_keys_to_execute, step_output_addresses, step_output_versions
@@ -621,7 +639,7 @@ class DagsterInstance:
                 )
 
             subsetted_execution_plan = self.resolve_memoized_execution_plan(
-                full_execution_plan, run_config=run_config, mode=mode,
+                full_execution_plan, run_config=run_config, mode=mode, run_id=run_id
             )  # TODO: tighter integration with existing step_keys_to_execute functionality
             step_keys_to_execute = subsetted_execution_plan.step_keys_to_execute
         else:
