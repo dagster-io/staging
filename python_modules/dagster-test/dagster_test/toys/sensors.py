@@ -4,6 +4,7 @@ import os
 from dagster import check
 from dagster.core.definitions.sensor import RunParams, RunSkippedData, SensorDefinition
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster_aws.s3.sensor import s3_sensor
 
 
 def directory_file_sensor(
@@ -90,4 +91,18 @@ def get_toys_sensors():
                 },
             )
 
-    return [toy_file_sensor]
+    s3_bucket = os.environ.get("DAGSTER_AWS_SENSOR_BUCKET")
+
+    @s3_sensor(pipeline_name="log_s3_pipeline", bucket=s3_bucket, default_interval=300)
+    def aws_s3_log(modified_s3_objects):
+        for obj in modified_s3_objects:
+            yield RunParams(
+                run_config={
+                    "solids": {"log_path": {"config": {"bucket": s3_bucket, "path": obj["Key"]}}}
+                },
+                execution_key="{key}:{mtime}".format(
+                    key=obj["Key"], mtime=str(obj["LastModified"])
+                ),
+            )
+
+    return [toy_file_sensor, aws_s3_log]
