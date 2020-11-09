@@ -4,6 +4,8 @@ import os
 import sys
 import time
 
+from dagster.utils import setup_windows_interrupt_support
+
 POLLING_INTERVAL = 0.1
 
 
@@ -49,4 +51,5 @@ def execute_polling(args):
 
 
 if __name__ == "__main__":
+    setup_windows_interrupt_support()
     execute_polling(sys.argv[1:])
