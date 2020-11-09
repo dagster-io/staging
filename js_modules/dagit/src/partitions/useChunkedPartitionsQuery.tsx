@@ -80,6 +80,9 @@ export function useChunkedPartitionsQuery(
         },
       });
 
+      if (version.current !== v) {
+        return;
+      }
       const partitionNames =
         (namesResult.data.partitionSetOrError.__typename === 'PartitionSet' &&
           namesResult.data.partitionSetOrError.partitionsOrError.__typename === 'Partitions' &&
@@ -165,6 +168,10 @@ export function useChunkedPartitionsQuery(
     };
 
     run();
+
+    return () => {
+      version.current += 1;
+    };
   }, [
     pageSize,
     cursor,
