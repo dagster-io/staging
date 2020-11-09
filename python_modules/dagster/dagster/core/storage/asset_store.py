@@ -204,7 +204,7 @@ class VersionedAssetStore(AssetStore):
             step_output_handle,
             obj,
             asset_metadata,
-            context.execution_plan.step_output_versions[step_output_handle],
+            context.execution_plan.resolve_step_output_versions()[step_output_handle],
         )
 
     @abstractmethod
@@ -216,7 +216,7 @@ class VersionedAssetStore(AssetStore):
             context,
             step_output_handle,
             asset_metadata,
-            context.execution_plan.step_output_versions[step_output_handle],
+            context.execution_plan.resolve_step_output_versions()[step_output_handle],
         )
 
     @abstractmethod
