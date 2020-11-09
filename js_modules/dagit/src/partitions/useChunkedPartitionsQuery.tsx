@@ -134,7 +134,7 @@ export function useChunkedPartitionsQuery(
         const recent = await fetchRunsForFilter(client, {
           limit: 10,
           filter: {
-            tags: [{key: 'dagster/partition_set', value: partitionSetName}],
+            tags: [...runTags, {key: 'dagster/partition_set', value: partitionSetName}],
           },
         });
 
@@ -142,7 +142,7 @@ export function useChunkedPartitionsQuery(
         const pending = await fetchRunsForFilter(client, {
           filter: {
             status: PipelineRunStatus.STARTED,
-            tags: [{key: 'dagster/partition_set', value: partitionSetName}],
+            tags: [...runTags, {key: 'dagster/partition_set', value: partitionSetName}],
           },
         });
 
