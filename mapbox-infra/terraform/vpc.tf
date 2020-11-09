@@ -1,6 +1,6 @@
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "2.6.0"
+  version = "2.63.0"
 
   name                 = "elementl-mapbox-vpc"
   cidr                 = "10.0.0.0/16"
@@ -15,6 +15,14 @@ module "vpc" {
     "kubernetes.io/cluster/${local.cluster_name}" = "shared"
     CreatedBy                                     = "terraform"
     ManagedBy                                     = "elementl"
+  }
+
+  public_route_table_tags = {
+    ManagedBy = "elementl"
+  }
+
+  private_route_table_tags = {
+    ManagedBy = "elementl"
   }
 
   public_subnet_tags = {
@@ -32,5 +40,14 @@ module "vpc" {
 
 resource "aws_db_subnet_group" "default" {
   name       = "${local.deployment_name}-db-subnet"
+  subnet_ids = module.vpc.private_subnets
+
+  tags = {
+    ManagedBy = "elementl"
+  }
+}
+
+resource "aws_elasticache_subnet_group" "default" {
+  name       = "${local.deployment_name}-elasticache-subnet"
   subnet_ids = module.vpc.private_subnets
 }

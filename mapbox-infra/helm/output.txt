@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "push_images.py", line 232, in <module>
+    run_dev_loop()
+  File "/Users/bobchen/.pyenv/versions/dagster37/lib/python3.7/site-packages/click/core.py", line 829, in __call__
+    return self.main(*args, **kwargs)
+  File "/Users/bobchen/.pyenv/versions/dagster37/lib/python3.7/site-packages/click/core.py", line 782, in main
+    rv = self.invoke(ctx)
+  File "/Users/bobchen/.pyenv/versions/dagster37/lib/python3.7/site-packages/click/core.py", line 1066, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+  File "/Users/bobchen/.pyenv/versions/dagster37/lib/python3.7/site-packages/click/core.py", line 610, in invoke
+    return callback(*args, **kwargs)
+  File "push_images.py", line 203, in run_dev_loop
+    _build_and_push_images()
+  File "push_images.py", line 106, in _build_and_push_images
+    assert process.returncode == 0
+AssertionError

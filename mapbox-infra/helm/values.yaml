@@ -1,0 +1,32 @@
+dagit:
+  image:
+    repository: 968703565975.dkr.ecr.us-west-1.amazonaws.com/dagster-k8s-demo
+    tag: <USER>-test
+
+celery:
+  replicaCount: 1
+  image:
+    repository: 968703565975.dkr.ecr.us-west-1.amazonaws.com/prezi-celery
+    tag: <USER>-test
+
+pipeline_run:
+  image:
+    repository: 968703565975.dkr.ecr.us-west-1.amazonaws.com/dagster-k8s-demo
+    tag: <USER>-test
+
+postgresql:
+  # dont deploy one
+  enabled: false
+  postgresqlHost: <postgres_address from the output of terraform apply>
+  service:
+    port: 5432
+  postgresqlDatabase: testdb
+  postgresqlUsername: postgres
+  postgresqlPassword: password
+
+rabbitmq:
+  enabled: false
+
+redis:
+  enabled: true
+  host: <redis_endpoint from the output of terraform apply>

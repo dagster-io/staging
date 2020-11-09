@@ -14,6 +14,10 @@ variable "postgres_instance_type" {
   default = "db.m5.xlarge"
 }
 
+variable "redis_instance_type" {
+  default = "cache.m3.medium"
+}
+
 locals {
   deployment_name = "mapbox-eks"
   cluster_name    = "mapbox-eks-cluster"

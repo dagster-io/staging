@@ -4,4 +4,4 @@ export AWS_ACCESS_KEY_ID=$(echo $aws_credentials|jq '.Credentials.AccessKeyId'|t
 export AWS_SECRET_ACCESS_KEY=$(echo $aws_credentials|jq '.Credentials.SecretAccessKey'|tr -d '"')
 export AWS_SESSION_TOKEN=$(echo $aws_credentials|jq '.Credentials.SessionToken'|tr -d '"')
 
-pbpaste | aws sts decode-authorization-message --encoded-message "${RES}" | jq .DecodedMessage -r | jq
+aws sts decode-authorization-message --encoded-message $1 | jq .DecodedMessage -r | jq

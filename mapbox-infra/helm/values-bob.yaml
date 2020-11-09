@@ -1,0 +1,41 @@
+dagit:
+  image:
+    repository: 968703565975.dkr.ecr.us-west-1.amazonaws.com/dagster-k8s-demo
+    tag: bob-test
+
+celery:
+  replicaCount: 1
+  image:
+    repository: 968703565975.dkr.ecr.us-west-1.amazonaws.com/prezi-celery
+    tag: bob-test
+
+userDeployments:
+  enabled: true
+  deployments:
+    - name: "k8s-example-editable"
+      image:
+        repository: 968703565975.dkr.ecr.us-west-1.amazonaws.com/k8s-example-editable
+        tag: bob-test
+        pullPolicy: Always
+      dagsterApiGrpcArgs:
+        - "-f"
+        - "/example_project/example_repo/repo.py"
+      port: 3030
+      replicaCount: 1
+
+postgresql:
+  # dont deploy one
+  enabled: false
+  postgresqlHost: mapbox-eks-postgres.cwjexgdpgdpr.us-west-2.rds.amazonaws.com
+  service:
+    port: 5432
+  postgresqlDatabase: testdb
+  postgresqlUsername: postgres
+  postgresqlPassword: password
+
+rabbitmq:
+  enabled: false
+
+redis:
+  enabled: false
+  host: <redis_endpoint from the output of terraform apply>
