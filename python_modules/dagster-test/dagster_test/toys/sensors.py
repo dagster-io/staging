@@ -6,6 +6,8 @@ from dagster.core.definitions.sensor import RunParams, RunSkippedData, SensorDef
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster_aws.s3.sensor import s3_sensor
 
+from .schedules import longitudinal_partition_set
+
 
 def directory_file_sensor(
     directory_name, pipeline_name, name=None, solid_selection=None, mode=None
@@ -105,4 +107,10 @@ def get_toys_sensors():
                 ),
             )
 
-    return [toy_file_sensor, aws_s3_log]
+    return [
+        toy_file_sensor,
+        aws_s3_log,
+        longitudinal_partition_set.create_sequential_backfill_sensor(
+            "longitudinal_backfill_sensor"
+        ),
+    ]

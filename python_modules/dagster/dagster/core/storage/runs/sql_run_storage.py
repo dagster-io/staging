@@ -176,6 +176,13 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             if len(filters.tags) > 0:
                 query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tags))
 
+        if filters.tag_keys:
+            query = query.where(
+                db.or_(*(RunTagsTable.c.key == key for key in filters.tag_keys))
+            ).group_by(RunsTable.c.run_body, RunsTable.c.id)
+            if len(filters.tag_keys) > 0:
+                query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tag_keys))
+
         if filters.snapshot_id:
             query = query.where(RunsTable.c.snapshot_id == filters.snapshot_id)
 
@@ -196,7 +203,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         base_query_columns = [getattr(RunsTable.c, column) for column in columns]
 
         # If we have a tags filter, then we need to select from a joined table
-        if filters.tags:
+        if filters.tags or filters.tag_keys:
             base_query = db.select(base_query_columns).select_from(
                 RunsTable.join(RunTagsTable, RunsTable.c.run_id == RunTagsTable.c.run_id)
             )
