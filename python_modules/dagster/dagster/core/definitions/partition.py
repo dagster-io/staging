@@ -6,7 +6,7 @@ from dagster.core.definitions.schedule import ScheduleDefinition, ScheduleExecut
 from dagster.core.definitions.sensor import SensorDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from dagster.core.storage.tags import check_tags, PARTITION_NAME_TAG, BACKFILL_ID_TAG
+from dagster.core.storage.tags import BACKFILL_ID_TAG, PARTITION_NAME_TAG, check_tags
 from dagster.utils import merge_dicts
 
 from .mode import DEFAULT_MODE_NAME
@@ -320,7 +320,7 @@ class PartitionScheduleDefinition(ScheduleDefinition):
 
 def sequential_backfill_sensor(name, partition_set_def):
     check.str_param(name, "name")
-    check.inst_param(partition_set_def, 'partition_set_def', PartitionSetDefinition)
+    check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
 
     def _execution_fn(context):
         if not context.last_evaluation_time:
