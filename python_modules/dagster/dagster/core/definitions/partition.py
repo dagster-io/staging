@@ -1,10 +1,12 @@
 from collections import namedtuple
 
 from dagster import check
+from dagster.core.definitions.job import JobConfig
 from dagster.core.definitions.schedule import ScheduleDefinition, ScheduleExecutionContext
+from dagster.core.definitions.sensor import SensorDefinition
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from dagster.core.storage.tags import check_tags
+from dagster.core.storage.tags import check_tags, PARTITION_NAME_TAG, BACKFILL_ID_TAG
 from dagster.utils import merge_dicts
 
 from .mode import DEFAULT_MODE_NAME
@@ -275,6 +277,9 @@ class PartitionSetDefinition(
             execution_timezone=execution_timezone,
         )
 
+    def create_sequential_backfill_sensor(self, name):
+        return sequential_backfill_sensor(name, self)
+
 
 class PartitionScheduleDefinition(ScheduleDefinition):
     __slots__ = ["_partition_set"]
@@ -311,3 +316,68 @@ class PartitionScheduleDefinition(ScheduleDefinition):
 
     def get_partition_set(self):
         return self._partition_set
+
+
+def sequential_backfill_sensor(name, partition_set_def):
+    check.str_param(name, "name")
+    check.inst_param(partition_set_def, 'partition_set_def', PartitionSetDefinition)
+
+    def _execution_fn(context):
+        if not context.last_evaluation_time:
+            return []
+
+        runs = context.instance.get_runs(
+            PipelineRunsFilter(
+                pipeline_name=partition_set_def.pipeline_name,
+                status=PipelineRunStatus.SUCCESS,
+                tag_keys=[PARTITION_NAME_TAG, BACKFILL_ID_TAG],
+            ),
+            limit=1,
+        )
+
+        if not runs:
+            return []
+
+        run = runs[0]
+        partition_name = run.tags.get(PARTITION_NAME_TAG)
+        backfill_name = run.tags.get(BACKFILL_ID_TAG)
+
+        last_matched = False
+        next_partition = None
+
+        partitions = partition_set_def.get_partitions()
+        for partition in partitions:
+            if last_matched:
+                next_partition = partition
+            elif partition.name == partition_name:
+                last_matched = True
+
+        if not next_partition:
+            return []
+
+        existing_runs = context.instance.get_runs(
+            PipelineRunsFilter(
+                pipeline_name=partition_set_def.pipeline_name,
+                status=PipelineRunStatus.SUCCESS,
+                tags={PARTITION_NAME_TAG: next_partition.name, BACKFILL_ID_TAG: backfill_name},
+            ),
+            limit=1,
+        )
+
+        if existing_runs:
+            return []
+
+        return [
+            JobConfig(
+                run_config=partition_set_def.run_config_for_partition(next_partition),
+                tags=partition_set_def.tags_for_partition(next_partition),
+            )
+        ]
+
+    return SensorDefinition(
+        name=name,
+        pipeline_name=partition_set_def.name,
+        mode=partition_set_def.mode,
+        job_config_fn=_execution_fn,
+        solid_selection=partition_set_def.solid_selection,
+    )

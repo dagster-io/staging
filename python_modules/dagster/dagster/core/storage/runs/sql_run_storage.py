@@ -174,6 +174,13 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             if len(filters.tags) > 0:
                 query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tags))
 
+        if filters.tag_keys:
+            query = query.where(
+                db.or_(*(db.and_(RunTagsTable.c.key == key) for key in filters.tag_keys))
+            ).group_by(RunsTable.c.run_body, RunsTable.c.id)
+            if len(filters.tag_keys) > 0:
+                query = query.having(db.func.count(RunsTable.c.run_id) == len(filters.tag_keys))
+
         if filters.snapshot_id:
             query = query.where(RunsTable.c.snapshot_id == filters.snapshot_id)
 
