@@ -117,7 +117,7 @@ def define_bar_partitions():
 def define_bar_sensors():
     @sensor(pipeline_name="baz")
     def foo_sensor(_):
-        return SensorRunParams(run_config={})
+        return SensorRunParams(run_config={"foo": "FOO"})
 
     return {"foo_sensor": foo_sensor}
 
