@@ -5,6 +5,8 @@ from dagster import PartitionSetDefinition, ScheduleExecutionContext
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.utils.partitions import date_partition_range
 
+from .longitudinal import longitudinal_config
+
 
 def _fetch_runs_by_partition(instance, partition_set_def, status_filters=None):
     # query runs db for this partition set
@@ -115,25 +117,24 @@ def materialization_schedule():
     )
 
 
-def longitudinal_schedule():
-    from .longitudinal import longitudinal_config
+longitudinal_partition_set = PartitionSetDefinition(
+    name="ingest_and_train",
+    pipeline_name="longitudinal_pipeline",
+    partition_fn=date_partition_range(start=datetime.datetime(2020, 1, 1)),
+    run_config_fn_for_partition=longitudinal_config,
+)
 
+
+def longitudinal_schedule():
     schedule_name = "longitudinal_demo"
 
-    partition_set = PartitionSetDefinition(
-        name="ingest_and_train",
-        pipeline_name="longitudinal_pipeline",
-        partition_fn=date_partition_range(start=datetime.datetime(2020, 1, 1)),
-        run_config_fn_for_partition=longitudinal_config,
-    )
-
     def _should_execute(context):
-        return backfill_should_execute(context, partition_set, retry_failed=True)
+        return backfill_should_execute(context, longitudinal_partition_set, retry_failed=True)
 
     def _partition_selector(context, partition_set):
         return backfilling_partition_selector(context, partition_set, retry_failed=True)
 
-    return partition_set.create_schedule_definition(
+    return longitudinal_partition_set.create_schedule_definition(
         schedule_name=schedule_name,
         cron_schedule="*/5 * * * *",  # tick every 5 minutes
         partition_selector=_partition_selector,
