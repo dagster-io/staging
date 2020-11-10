@@ -3,10 +3,18 @@ from __future__ import print_function
 import os
 import sys
 import time
+from collections import namedtuple
 
-from dagster.utils import delay_interrupts, raise_delayed_interrupts
+from dagster.serdes import whitelist_for_serdes
+from dagster.serdes.ipc import ipc_write_stream
+from dagster.utils import delay_interrupts, pop_delayed_interrupts
 
 POLLING_INTERVAL = 0.1
+
+
+@whitelist_for_serdes
+class WindowsTailProcessStartedEvent(namedtuple("WindowsTailProcessStartedEvent", "")):
+    pass
 
 
 def current_process_is_orphaned(parent_pid):
@@ -32,21 +40,28 @@ def tail_polling(filepath, stream=sys.stdout, parent_pid=None):
     """
     with open(filepath, "r") as file:
         for block in iter(lambda: file.read(1024), None):
-            raise_delayed_interrupts()
             if block:
                 print(block, end="", file=stream)  # pylint: disable=print-call
             else:
-                if parent_pid and current_process_is_orphaned(parent_pid):
-                    sys.exit()
+                if pop_delayed_interrupts() or (
+                    parent_pid and current_process_is_orphaned(parent_pid)
+                ):
+                    return
                 time.sleep(POLLING_INTERVAL)
 
 
 def execute_polling(args):
-    if not args or len(args) != 2:
+    if not args or len(args) != 3:
         return
 
     filepath = args[0]
     parent_pid = int(args[1])
+    ipc_output_file = args[2]
+
+    # Signal to the calling process that we have started and are
+    # ready to receive the signal to terminate once execution has finished
+    with ipc_write_stream(ipc_output_file) as ipc_stream:
+        ipc_stream.send(WindowsTailProcessStartedEvent())
 
     tail_polling(filepath, sys.stdout, parent_pid)
 
