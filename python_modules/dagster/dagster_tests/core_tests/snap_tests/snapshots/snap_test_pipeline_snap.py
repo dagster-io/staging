@@ -1029,7 +1029,14 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         }
       ],
       "name": "default",
-      "resource_def_snaps": [],
+      "resource_def_snaps": [
+        {
+          "__class__": "ResourceDefSnap",
+          "config_field_snap": null,
+          "description": null,
+          "name": "default_asset_store"
+        }
+      ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
     }
   ],
@@ -2084,7 +2091,14 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         }
       ],
       "name": "default",
-      "resource_def_snaps": [],
+      "resource_def_snaps": [
+        {
+          "__class__": "ResourceDefSnap",
+          "config_field_snap": null,
+          "description": null,
+          "name": "default_asset_store"
+        }
+      ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
     }
   ],
@@ -2116,7 +2130,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_empty_pipeline_snap_props 2'] = 'e8da419eb4aea15e7b5cd6aad16cbf1b9ac60160'
+snapshots['test_empty_pipeline_snap_props 2'] = '4ec2812d4fc1c4da153f40dfd341209e71b327f7'
 
 snapshots['test_pipeline_snap_all_props 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -3141,7 +3155,14 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         }
       ],
       "name": "default",
-      "resource_def_snaps": [],
+      "resource_def_snaps": [
+        {
+          "__class__": "ResourceDefSnap",
+          "config_field_snap": null,
+          "description": null,
+          "name": "default_asset_store"
+        }
+      ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
     }
   ],
@@ -3175,7 +3196,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
   }
 }'''
 
-snapshots['test_pipeline_snap_all_props 2'] = 'cc80e18499883386fdbdae884179c9fccf3289fb'
+snapshots['test_pipeline_snap_all_props 2'] = 'f8cc4b6d602af9c18beca0e969a6c4d1d367b969'
 
 snapshots['test_two_invocations_deps_snap 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4216,7 +4237,14 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         }
       ],
       "name": "default",
-      "resource_def_snaps": [],
+      "resource_def_snaps": [
+        {
+          "__class__": "ResourceDefSnap",
+          "config_field_snap": null,
+          "description": null,
+          "name": "default_asset_store"
+        }
+      ],
       "root_config_key": "Shape.2f9eb2ea67ca27d614d082efc26b5a4ff7466ecf"
     }
   ],
@@ -4248,7 +4276,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_two_invocations_deps_snap 2'] = '546ccf905542ee3e133a7fbb10f972f659631ed2'
+snapshots['test_two_invocations_deps_snap 2'] = '9b9e5d90997829cc2312145a80f486b297ae1289'
 
 snapshots['test_basic_dep_fan_out 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -5329,7 +5357,14 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         }
       ],
       "name": "default",
-      "resource_def_snaps": [],
+      "resource_def_snaps": [
+        {
+          "__class__": "ResourceDefSnap",
+          "config_field_snap": null,
+          "description": null,
+          "name": "default_asset_store"
+        }
+      ],
       "root_config_key": "Shape.ddf9231cc0c13fd1ef3f3717d0743e3d817cf91c"
     }
   ],
@@ -5386,7 +5421,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_dep_fan_out 2'] = '9c87daae69a4dca3fec53d819c92ee3e18466d0e'
+snapshots['test_basic_dep_fan_out 2'] = '7d6fef2047b5a8d67247dc8afc920447e7cf54d9'
 
 snapshots['test_basic_fan_in 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6442,7 +6477,14 @@ snapshots['test_basic_fan_in 1'] = '''{
         }
       ],
       "name": "default",
-      "resource_def_snaps": [],
+      "resource_def_snaps": [
+        {
+          "__class__": "ResourceDefSnap",
+          "config_field_snap": null,
+          "description": null,
+          "name": "default_asset_store"
+        }
+      ],
       "root_config_key": "Shape.a18bd09d0a3d5af64d95af39f68813a0247c4344"
     }
   ],
@@ -6499,7 +6541,7 @@ snapshots['test_basic_fan_in 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_fan_in 2'] = '30a9983657f57a9a5a897f3716ebb3377b019b7f'
+snapshots['test_basic_fan_in 2'] = 'dccd25aa80686a5073957a7117900f9716299630'
 
 snapshots['test_deserialize_solid_def_snaps_multi_type_config 1'] = '''{
   "__class__": "ConfigTypeSnap",
