@@ -4,13 +4,14 @@ import io
 import os
 import subprocess
 import sys
-import time
+import uuid
 import warnings
 from contextlib import contextmanager
 
 from dagster.core.execution import poll_compute_logs, watch_orphans
-from dagster.serdes.ipc import interrupt_ipc_subprocess, open_ipc_subprocess
-from dagster.seven import IS_WINDOWS, wait_for_process
+from dagster.core.execution.poll_compute_logs import WindowsTailProcessStartedEvent
+from dagster.serdes.ipc import interrupt_ipc_subprocess, open_ipc_subprocess, read_unary_response
+from dagster.seven import IS_WINDOWS, get_system_temp_directory, wait_for_process
 from dagster.utils import ensure_file
 
 WIN_PY36_COMPUTE_LOG_DISABLED_MSG = """\u001b[33mWARNING: Compute log capture is disabled for the current environment. Set the environment variable `PYTHONLEGACYWINDOWSSTDIO` to enable.\n\u001b[0m"""
@@ -91,14 +92,28 @@ def execute_windows_tail(path, stream):
     poll_file = os.path.abspath(poll_compute_logs.__file__)
     stream = stream if _fileno(stream) else None
 
+    ipc_output_file = os.path.join(
+        get_system_temp_directory(), "execute-windows-tail-{uuid}".format(uuid=uuid.uuid4().hex)
+    )
+
     try:
         tail_process = open_ipc_subprocess(
-            [sys.executable, poll_file, path, str(os.getpid())], stdout=stream
+            [sys.executable, poll_file, path, str(os.getpid()), ipc_output_file], stdout=stream
         )
         yield (tail_process.pid, None)
     finally:
         if tail_process:
-            time.sleep(2 * poll_compute_logs.POLLING_INTERVAL)
+            event = read_unary_response(ipc_output_file)
+
+            if not isinstance(event, WindowsTailProcessStartedEvent):
+                raise Exception(
+                    "Received unexpected IPC event from windows tail process: {event}".format(
+                        event=event
+                    )
+                )
+
+            # Now that we know the tail process has started, tell it to terminate once there is
+            # nothing more to output
             interrupt_ipc_subprocess(tail_process)
             wait_for_process(tail_process)
 
