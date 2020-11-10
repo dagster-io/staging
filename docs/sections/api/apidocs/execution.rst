@@ -212,3 +212,6 @@ Contexts
 
 .. autoclass:: HookContext
    :members:
+
+.. autoclass:: StepOutputContext
+   :members:
