@@ -178,14 +178,14 @@ def test_asset_store_multi_materialization():
         def __init__(self):
             self.values = {}
 
-        def set_asset(self, _context, step_output_handle, obj, _asset_metadata):
-            self.values[step_output_handle] = obj
+        def set_asset(self, context, obj, _asset_metadata):
+            self.values[context.get_keys()] = obj
 
             yield AssetMaterialization(asset_key="yield_one")
             yield AssetMaterialization(asset_key="yield_two")
 
-        def get_asset(self, _context, step_output_handle, _asset_metadata):
-            return self.values[step_output_handle]
+        def get_asset(self, context, _asset_metadata):
+            return self.values[context.get_keys()]
 
     @resource
     def dummy_asset_store(_):

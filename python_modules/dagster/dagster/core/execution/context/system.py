@@ -14,6 +14,7 @@ from dagster.core.definitions.pipeline_base import IPipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
 from dagster.core.log_manager import DagsterLogManager
@@ -286,6 +287,11 @@ class SystemStepExecutionContext(SystemExecutionContext):
     def for_hook(self, hook_def):
         return HookContext(self._execution_context_data, self.log, hook_def, self.step)
 
+    def for_step_output(self, step_output_handle):
+        return StepOutputContext(
+            self._execution_context_data, self.log, self.step, step_output_handle
+        )
+
     def get_asset_store(self, asset_store_key):
         from dagster.core.storage.asset_store import AssetStore
 
@@ -371,3 +377,52 @@ class HookContext(SystemExecutionContext):
     def solid_config(self):
         solid_config = self.environment_config.solids.get(str(self._step.solid_handle))
         return solid_config.config if solid_config else None
+
+
+class StepOutputContext(SystemExecutionContext):
+    """The ``context`` object available to :py:class:`AssetStore`.
+
+    Attributes:
+        run_id (str): The id for this run of the pipeline.
+        step_key (str): The step_key for a compute step.
+        output_name (str): The name of the output. (default: 'result').
+    """
+
+    def __init__(self, execution_context_data, log_manager, step, step_output_handle):
+        from dagster.core.execution.plan.objects import ExecutionStep
+
+        super(StepOutputContext, self).__init__(execution_context_data, log_manager)
+        self._log_manager = log_manager
+        self._step = check.inst_param(step, "step", ExecutionStep)
+        self._step_output_handle = check.inst_param(
+            step_output_handle, "step_output_handle", StepOutputHandle
+        )
+
+    @property
+    def step_key(self):
+        return self._step_output_handle.step_key
+
+    @property
+    def output_name(self):
+        return self._step_output_handle.output_name
+
+    def get_keys(self):
+        """Utility method to get a collection of keys that as a whole represent a unique step output.
+
+        Returns:
+            Tuple[str, ...]: A tuple of keys, i.e. run id, step key, and output name
+        """
+        # resolve run_id as it's part of the file path
+        if (
+            # this is re-execution
+            self.pipeline_run.parent_run_id
+            # only part of the pipeline is being re-executed
+            and self.pipeline_run.step_keys_to_execute
+            # this step is not being executed
+            and self.step_key not in self.pipeline_run.step_keys_to_execute
+        ):
+            run_id = self.pipeline_run.parent_run_id
+        else:
+            run_id = self.run_id
+
+        return (run_id, self.step_key, self.output_name)
