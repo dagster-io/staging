@@ -9,6 +9,7 @@ service DagsterApi {
   rpc Heartbeat (PingRequest) returns (PingReply) {}
   rpc StreamingPing (StreamingPingRequest) returns (stream StreamingPingEvent) {}
   rpc GetServerId (Empty) returns (GetServerIdReply) {}
+  rpc UpdateServerId (Empty) returns (GetServerIdReply) {}
   rpc ExecutionPlanSnapshot (ExecutionPlanSnapshotRequest) returns (ExecutionPlanSnapshotReply) {}
   rpc ListRepositories (ListRepositoriesRequest) returns (ListRepositoriesReply) {}
   rpc ExternalPartitionNames (ExternalPartitionNamesRequest) returns (ExternalPartitionNamesReply) {}
