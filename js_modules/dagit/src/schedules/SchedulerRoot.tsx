@@ -17,7 +17,7 @@ import {RepositoryInformation} from 'src/RepositoryInformation';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {TopNav} from 'src/nav/TopNav';
 import {ScheduleStateRow} from 'src/schedules/ScheduleRow';
-import {SCHEDULE_STATE_FRAGMENT, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
+import {SCHEDULE_STATE_FRAGMENT} from 'src/schedules/ScheduleUtils';
 import {SCHEDULER_FRAGMENT, SchedulerInfo} from 'src/schedules/SchedulerInfo';
 import {
   SchedulerRootQuery,
@@ -211,7 +211,6 @@ const ScheduleStates: React.FunctionComponent<{
       <div style={{display: 'flex'}}>
         <h2 style={{marginBottom: 0}}>All Schedules:</h2>
         <div style={{flex: 1}} />
-        <SchedulerTimezoneNote />
       </div>
       <Divider />
 

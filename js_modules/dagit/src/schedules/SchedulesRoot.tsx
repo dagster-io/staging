@@ -22,7 +22,7 @@ import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {TopNav} from 'src/nav/TopNav';
 import {ReconcileButton} from 'src/schedules/ReconcileButton';
 import {ScheduleRow, ScheduleStateRow} from 'src/schedules/ScheduleRow';
-import {SCHEDULES_ROOT_QUERY, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
+import {SCHEDULES_ROOT_QUERY} from 'src/schedules/ScheduleUtils';
 import {SchedulerInfo} from 'src/schedules/SchedulerInfo';
 import {
   SchedulesRootQuery,
@@ -178,7 +178,6 @@ const ScheduleTable: React.FunctionComponent<{
       <div style={{display: 'flex'}}>
         <Header>Schedules</Header>
         <div style={{flex: 1}} />
-        <SchedulerTimezoneNote />
       </div>
       <div>
         {`${props.schedules.length} loaded from `}

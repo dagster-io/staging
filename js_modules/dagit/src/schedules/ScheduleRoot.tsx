@@ -9,7 +9,7 @@ import {Loading} from 'src/Loading';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {TopNav} from 'src/nav/TopNav';
 import {ScheduleRow, ScheduleRowHeader} from 'src/schedules/ScheduleRow';
-import {SCHEDULE_DEFINITION_FRAGMENT, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
+import {SCHEDULE_DEFINITION_FRAGMENT} from 'src/schedules/ScheduleUtils';
 import {ScheduleRootQuery} from 'src/schedules/types/ScheduleRootQuery';
 import {Page} from 'src/ui/Page';
 import {Table} from 'src/ui/Table';
@@ -42,7 +42,6 @@ export const ScheduleRoot: React.FunctionComponent<RouteComponentProps<{
             <ScrollContainer>
               <TopNav breadcrumbs={breadcrumbs} />
               <Page>
-                <SchedulerTimezoneNote />
                 <Table striped style={{width: '100%'}}>
                   <thead>
                     <ScheduleRowHeader schedule={scheduleDefinitionOrError} />

@@ -121,16 +121,3 @@ export const SCHEDULES_ROOT_QUERY = gql`
   ${PythonErrorInfo.fragments.PythonErrorFragment}
   ${RepositoryInformationFragment}
 `;
-
-export const SchedulerTimezoneNote = () => (
-  <div
-    style={{
-      color: Colors.GRAY3,
-      fontSize: 12.5,
-      marginBottom: 20,
-    }}
-  >
-    Schedule cron intervals displayed below are in the system time of the machine running the
-    scheduler.
-  </div>
-);
