@@ -29,3 +29,8 @@ def toys_repository():
         branch_pipeline,
         unreliable_pipeline,
     ] + get_toys_schedules()
+
+
+@repository
+def other_repository():
+    return [composition]
