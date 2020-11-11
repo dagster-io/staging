@@ -113,6 +113,7 @@ export interface ScheduleDefinitionFragment {
   __typename: "ScheduleDefinition";
   name: string;
   cronSchedule: string;
+  executionTimezone: string | null;
   pipelineName: string;
   solidSelection: (string | null)[] | null;
   mode: string;

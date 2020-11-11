@@ -71,6 +71,7 @@ export const SCHEDULE_DEFINITION_FRAGMENT = gql`
   fragment ScheduleDefinitionFragment on ScheduleDefinition {
     name
     cronSchedule
+    executionTimezone
     pipelineName
     solidSelection
     mode

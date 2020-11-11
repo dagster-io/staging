@@ -149,7 +149,15 @@ export const ScheduleRow: React.FC<{
     onCompleted: displayScheduleMutationErrors,
   });
 
-  const {name, cronSchedule, pipelineName, mode, solidSelection, scheduleState} = schedule;
+  const {
+    name,
+    cronSchedule,
+    executionTimezone,
+    pipelineName,
+    mode,
+    solidSelection,
+    scheduleState,
+  } = schedule;
 
   const scheduleId = scheduleState?.scheduleOriginId;
 
@@ -205,6 +213,13 @@ export const ScheduleRow: React.FC<{
           ) : (
             <div>-</div>
           )}
+        </td>
+        <td
+          style={{
+            maxWidth: 100,
+          }}
+        >
+          <div>{executionTimezone}</div>
         </td>
         <td
           style={{
@@ -267,6 +282,13 @@ export const ScheduleRow: React.FC<{
         ) : (
           <div>-</div>
         )}
+      </td>
+      <td
+        style={{
+          maxWidth: 100,
+        }}
+      >
+        <div>{executionTimezone}</div>
       </td>
       <td style={{maxWidth: 100}}>
         {latestTick ? (
@@ -403,6 +425,7 @@ export const ScheduleRowHeader: React.FunctionComponent<{
         <th>Schedule Name</th>
         <th>Pipeline</th>
         <th>Schedule</th>
+        <th>Time Zone</th>
         <th>Execution Params</th>
       </tr>
     );
@@ -413,6 +436,7 @@ export const ScheduleRowHeader: React.FunctionComponent<{
         <th>Schedule Name</th>
         <th>Pipeline</th>
         <th>Schedule</th>
+        <th>Time Zone</th>
         <th>Last Tick</th>
         <th>Latest Runs</th>
         <th>Execution Params</th>

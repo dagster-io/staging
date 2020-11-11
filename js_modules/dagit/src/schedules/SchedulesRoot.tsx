@@ -231,6 +231,7 @@ const ScheduleTable: React.FunctionComponent<ScheduleTableProps> = (props) => {
               <th>Schedule Name</th>
               <th>Pipeline</th>
               <th style={{width: '150px'}}>Schedule</th>
+              <th style={{width: '100px'}}>Time Zone</th>
               <th style={{width: '100px'}}>Last Tick</th>
               <th>Latest Runs</th>
               <th>Execution Params</th>
@@ -310,6 +311,7 @@ const ScheduleStatesWithoutDefinitionsTable: React.FC<ScheduleStateTableProps> =
             <tr>
               <th style={{flex: 1.4}}>Schedule Name</th>
               <th style={{maxWidth: 150}}>Schedule</th>
+              <th style={{maxWidth: 100}}>Time Zone</th>
               <th style={{maxWidth: 100}}>Last Tick</th>
               <th style={{flex: 1}}>Latest Runs</th>
             </tr>

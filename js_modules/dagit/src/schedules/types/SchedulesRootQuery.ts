@@ -198,6 +198,7 @@ export interface SchedulesRootQuery_scheduleDefinitionsOrError_ScheduleDefinitio
   __typename: "ScheduleDefinition";
   name: string;
   cronSchedule: string;
+  executionTimezone: string | null;
   pipelineName: string;
   solidSelection: (string | null)[] | null;
   mode: string;
