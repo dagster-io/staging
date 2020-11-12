@@ -9,14 +9,20 @@ from dagster.core.code_pointer import (
 )
 from dagster.core.host_representation import (
     ExternalRepository,
+    GrpcServerRepositoryLocationHandle,
     ManagedGrpcPythonEnvRepositoryLocationHandle,
     RepositoryLocation,
+)
+from dagster.core.host_representation.grpc_server_state_subscriber import (
+    LocationStateChangeEventType,
 )
 from dagster.core.origin import RepositoryGrpcServerOrigin, RepositoryPythonOrigin
 from dagster.utils.error import SerializableErrorInfo
 from dagster_graphql import dauphin
 from dagster_graphql.implementation.fetch_solids import get_solid, get_solids
 from dagster_graphql.schema.errors import DauphinPythonError
+
+DauphinLocationStateChangeEventType = dauphin.Enum.from_enum(LocationStateChangeEventType)
 
 
 class DauphinRepository(dauphin.ObjectType):
@@ -141,6 +147,7 @@ class DauphinRepositoryLocation(dauphin.ObjectType):
     is_reload_supported = dauphin.NonNull(dauphin.Boolean)
     environment_path = dauphin.String()
     repositories = dauphin.non_null_list("Repository")
+    server_id = dauphin.String()
 
     def __init__(self, location):
         self._location = check.inst_param(location, "location", RepositoryLocation)
@@ -150,12 +157,19 @@ class DauphinRepositoryLocation(dauphin.ObjectType):
             else None
         )
 
+        server_id = (
+            location.location_handle.server_id
+            if isinstance(location.location_handle, GrpcServerRepositoryLocationHandle)
+            else None
+        )
+
         check.invariant(location.name is not None)
 
         super(DauphinRepositoryLocation, self).__init__(
             name=location.name,
             environment_path=environment_path,
             is_reload_supported=location.is_reload_supported,
+            server_id=server_id,
         )
 
     def resolve_id(self, _):
@@ -238,3 +252,34 @@ class DauphinRepositoryLocationConnection(dauphin.ObjectType):
         name = "RepositoryLocationConnection"
 
     nodes = dauphin.non_null_list("RepositoryLocationOrLoadFailure")
+
+
+class DauphinLocationStateChangeSubscription(dauphin.ObjectType):
+    class Meta(object):
+        name = "LocationStateChangeSubscription"
+
+    event = dauphin.Field(dauphin.NonNull("LocationStateChangeEvent"))
+
+
+class DauphinLocationStateChangeEvent(dauphin.ObjectType):
+    class Meta(object):
+        name = "LocationStateChangeEvent"
+
+    event_type = dauphin.NonNull("LocationStateChangeEventType")
+    message = dauphin.NonNull(dauphin.String)
+    location_name = dauphin.NonNull(dauphin.String)
+    server_id = dauphin.Field(dauphin.String)
+
+
+def get_location_state_change_observable(graphene_info):
+    context = graphene_info.context
+    return context._location_state_events.map(
+        lambda event: graphene_info.schema.type_named("LocationStateChangeSubscription")(
+            event=graphene_info.schema.type_named("LocationStateChangeEvent")(
+                event_type=event.event_type,
+                location_name=event.location_name,
+                message=event.message,
+                server_id=event.server_id,
+            ),
+        )
+    )
