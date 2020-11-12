@@ -2,6 +2,7 @@ import typing
 from abc import abstractmethod
 from enum import Enum as PythonEnum
 from functools import partial
+from typing import Optional
 
 from dagster import check
 from dagster.builtins import BuiltinEnum
@@ -756,7 +757,18 @@ DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
 )
 
 
-def resolve_dagster_type(dagster_type):
+def resolve_dagster_type(dagster_type: Any) -> DagsterType:
+    result = try_resolve_dagster_type(dagster_type)
+    if not result:
+        raise DagsterInvalidDefinitionError(f"{dagster_type} is not a valid dagster type.")
+
+    return result
+
+
+def try_resolve_dagster_type(dagster_type: Any) -> Optional[DagsterType]:
+    """
+    Tries to resolve the given object to a dagster type.  If unable to do so, returns None.
+    """
     # circular dep
     from .python_dict import PythonDict, Dict
     from .python_set import PythonSet, DagsterSetApi
@@ -827,9 +839,7 @@ def resolve_dagster_type(dagster_type):
             )
         )
 
-    raise DagsterInvalidDefinitionError(
-        "{dagster_type} is not a valid dagster type.".format(dagster_type=dagster_type)
-    )
+    return None
 
 
 ALL_RUNTIME_BUILTINS = list(_RUNTIME_MAP.values())
