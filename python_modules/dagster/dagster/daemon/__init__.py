@@ -1,3 +1,6 @@
 from .controller import DagsterDaemonController
 from .daemon import DagsterDaemon, SchedulerDaemon, get_default_daemon_logger
 from .run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
+
+DAEMON_HEARTBEAT_INTERVAL_SECONDS = 30
+DAEMON_HEARTBEAT_TOLERANCE_SECONDS = 60
