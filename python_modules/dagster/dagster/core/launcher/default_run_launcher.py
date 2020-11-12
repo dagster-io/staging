@@ -212,5 +212,4 @@ class DefaultRunLauncher(RunLauncher, ConfigurableClass):
         """
         for repository_location_handle in self._run_id_to_repository_location_handle_cache.values():
             if isinstance(repository_location_handle, ManagedGrpcPythonEnvRepositoryLocationHandle):
-                repository_location_handle.client.cleanup_server()
                 repository_location_handle.grpc_server_process.wait()
