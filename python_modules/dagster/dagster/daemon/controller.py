@@ -54,6 +54,7 @@ class DagsterDaemonController(object):
 
     def run_iteration(self, curr_time):
         for daemon in self.daemons:
+            self._instance._event_storage.add_daemon_heartbeat()
             if (not daemon.last_iteration_time) or (
                 (curr_time - daemon.last_iteration_time).total_seconds() >= daemon.interval_seconds
             ):
