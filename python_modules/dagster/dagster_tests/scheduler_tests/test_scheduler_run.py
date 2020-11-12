@@ -4,6 +4,7 @@ import sys
 import time
 from contextlib import contextmanager
 
+import objgraph
 import pendulum
 import pytest
 from dagster import DagsterEventType, daily_schedule, hourly_schedule, pipeline, repository, solid
@@ -652,121 +653,136 @@ def _get_unloadable_schedule_origin():
 
 @pytest.mark.parametrize("external_repo_context", repos())
 def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
-    with instance_with_schedules(external_repo_context) as (instance, external_repo):
-        good_schedule = external_repo.get_external_schedule("simple_schedule")
-        bad_schedule = external_repo.get_external_schedule(
-            "bad_should_execute_schedule_on_odd_days"
-        )
+    for trial in range(25):
+        with capfd.disabled():
+            print("TRIAL: " + str(trial))
 
-        good_origin = good_schedule.get_origin()
-        bad_origin = bad_schedule.get_origin()
-        unloadable_origin = _get_unloadable_schedule_origin()
-        initial_datetime = pendulum.datetime(
-            year=2019, month=2, day=27, hour=0, minute=0, second=0,
-        )
-        with pendulum.test(initial_datetime):
-            instance.start_schedule_and_update_storage_state(good_schedule)
-            instance.start_schedule_and_update_storage_state(bad_schedule)
-
-            unloadable_schedule_state = ScheduleState(
-                unloadable_origin,
-                ScheduleStatus.RUNNING,
-                "0 0 * * *",
-                pendulum.now("UTC").timestamp(),
-            )
-            instance.add_schedule_state(unloadable_schedule_state)
-
-            launch_scheduled_runs(instance, logger(), pendulum.now("UTC"))
-
-            assert instance.get_runs_count() == 1
-            wait_for_all_runs_to_start(instance)
-            validate_run_started(
-                instance.get_runs()[0],
-                execution_time=initial_datetime,
-                partition_time=pendulum.datetime(2019, 2, 26),
+        with instance_with_schedules(external_repo_context) as (instance, external_repo):
+            good_schedule = external_repo.get_external_schedule("simple_schedule")
+            bad_schedule = external_repo.get_external_schedule(
+                "bad_should_execute_schedule_on_odd_days"
             )
 
-            good_ticks = instance.get_schedule_ticks(good_origin.get_id())
-            assert len(good_ticks) == 1
-            validate_tick(
-                good_ticks[0],
-                good_schedule,
-                initial_datetime,
-                ScheduleTickStatus.SUCCESS,
-                instance.get_runs()[0].run_id,
+            good_origin = good_schedule.get_origin()
+            bad_origin = bad_schedule.get_origin()
+            unloadable_origin = _get_unloadable_schedule_origin()
+            initial_datetime = pendulum.datetime(
+                year=2019, month=2, day=27, hour=0, minute=0, second=0,
             )
+            with pendulum.test(initial_datetime):
+                instance.start_schedule_and_update_storage_state(good_schedule)
+                instance.start_schedule_and_update_storage_state(bad_schedule)
 
-            bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
-            assert len(bad_ticks) == 1
+                unloadable_schedule_state = ScheduleState(
+                    unloadable_origin,
+                    ScheduleStatus.RUNNING,
+                    "0 0 * * *",
+                    pendulum.now("UTC").timestamp(),
+                )
+                instance.add_schedule_state(unloadable_schedule_state)
 
-            assert bad_ticks[0].status == ScheduleTickStatus.FAILURE
+                launch_scheduled_runs(instance, logger(), pendulum.now("UTC"))
 
-            assert (
-                "Error occurred during the execution of should_execute "
-                "for schedule bad_should_execute_schedule" in bad_ticks[0].error.message
-            )
+                captured = capfd.readouterr()
+                with capfd.disabled():
+                    print("OUT 1: \n\n" + str(captured.out))
+                    print("ERR 1: \n\n" + str(captured.err))
 
-            unloadable_ticks = instance.get_schedule_ticks(unloadable_origin.get_id())
-            assert len(unloadable_ticks) == 0
+                    assert instance.get_runs_count() == 1
+                    wait_for_all_runs_to_start(instance)
+                    validate_run_started(
+                        instance.get_runs()[0],
+                        execution_time=initial_datetime,
+                        partition_time=pendulum.datetime(2019, 2, 26),
+                    )
 
-            captured = capfd.readouterr()
-            assert "Scheduler failed for also_doesnt_exist" in captured.out
-            assert "doesnt_exist not found at module scope" in captured.out
+                    good_ticks = instance.get_schedule_ticks(good_origin.get_id())
+                    assert len(good_ticks) == 1
+                    validate_tick(
+                        good_ticks[0],
+                        good_schedule,
+                        initial_datetime,
+                        ScheduleTickStatus.SUCCESS,
+                        instance.get_runs()[0].run_id,
+                    )
 
-        initial_datetime = initial_datetime.add(days=1)
-        with pendulum.test(initial_datetime):
-            new_now = pendulum.now("UTC")
-            launch_scheduled_runs(instance, logger(), new_now)
+                    bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
+                    assert len(bad_ticks) == 1
 
-            assert instance.get_runs_count() == 3
-            wait_for_all_runs_to_start(instance)
+                    assert bad_ticks[0].status == ScheduleTickStatus.FAILURE
 
-            good_schedule_runs = instance.get_runs(
-                filters=PipelineRunsFilter.for_schedule(good_schedule)
-            )
-            assert len(good_schedule_runs) == 2
-            validate_run_started(
-                good_schedule_runs[0],
-                execution_time=new_now,
-                partition_time=pendulum.datetime(2019, 2, 27),
-            )
+                    assert (
+                        "Error occurred during the execution of should_execute "
+                        "for schedule bad_should_execute_schedule" in bad_ticks[0].error.message
+                    )
 
-            good_ticks = instance.get_schedule_ticks(good_origin.get_id())
-            assert len(good_ticks) == 2
-            validate_tick(
-                good_ticks[0],
-                good_schedule,
-                new_now,
-                ScheduleTickStatus.SUCCESS,
-                good_schedule_runs[0].run_id,
-            )
+                    unloadable_ticks = instance.get_schedule_ticks(unloadable_origin.get_id())
+                    assert len(unloadable_ticks) == 0
 
-            bad_schedule_runs = instance.get_runs(
-                filters=PipelineRunsFilter.for_schedule(bad_schedule)
-            )
-            assert len(bad_schedule_runs) == 1
-            validate_run_started(
-                bad_schedule_runs[0],
-                execution_time=new_now,
-                partition_time=pendulum.datetime(2019, 2, 27),
-            )
+                assert "Scheduler failed for also_doesnt_exist" in captured.out
+                assert "doesnt_exist not found at module scope" in captured.out
 
-            bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
-            assert len(bad_ticks) == 2
-            validate_tick(
-                bad_ticks[0],
-                bad_schedule,
-                new_now,
-                ScheduleTickStatus.SUCCESS,
-                bad_schedule_runs[0].run_id,
-            )
+            initial_datetime = initial_datetime.add(days=1)
+            with pendulum.test(initial_datetime):
+                new_now = pendulum.now("UTC")
+                launch_scheduled_runs(instance, logger(), new_now)
 
-            unloadable_ticks = instance.get_schedule_ticks(unloadable_origin.get_id())
-            assert len(unloadable_ticks) == 0
+                captured = capfd.readouterr()
+                with capfd.disabled():
+                    print("OUT 2: \n\n" + str(captured.out))
+                    print("ERR 2: \n\n" + str(captured.err))
 
-            captured = capfd.readouterr()
-            assert "Scheduler failed for also_doesnt_exist" in captured.out
-            assert "doesnt_exist not found at module scope" in captured.out
+                    assert instance.get_runs_count() == 3
+                    wait_for_all_runs_to_start(instance)
+
+                    good_schedule_runs = instance.get_runs(
+                        filters=PipelineRunsFilter.for_schedule(good_schedule)
+                    )
+                    assert len(good_schedule_runs) == 2
+                    validate_run_started(
+                        good_schedule_runs[0],
+                        execution_time=new_now,
+                        partition_time=pendulum.datetime(2019, 2, 27),
+                    )
+
+                    good_ticks = instance.get_schedule_ticks(good_origin.get_id())
+                    assert len(good_ticks) == 2
+                    validate_tick(
+                        good_ticks[0],
+                        good_schedule,
+                        new_now,
+                        ScheduleTickStatus.SUCCESS,
+                        good_schedule_runs[0].run_id,
+                    )
+
+                    bad_schedule_runs = instance.get_runs(
+                        filters=PipelineRunsFilter.for_schedule(bad_schedule)
+                    )
+                    assert len(bad_schedule_runs) == 1
+                    validate_run_started(
+                        bad_schedule_runs[0],
+                        execution_time=new_now,
+                        partition_time=pendulum.datetime(2019, 2, 27),
+                    )
+
+                    bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
+                    assert len(bad_ticks) == 2
+                    validate_tick(
+                        bad_ticks[0],
+                        bad_schedule,
+                        new_now,
+                        ScheduleTickStatus.SUCCESS,
+                        bad_schedule_runs[0].run_id,
+                    )
+
+                    unloadable_ticks = instance.get_schedule_ticks(unloadable_origin.get_id())
+                    assert len(unloadable_ticks) == 0
+
+                assert "Scheduler failed for also_doesnt_exist" in captured.out
+                assert "doesnt_exist not found at module scope" in captured.out
+
+                print("SHOWING MOST COMMONT TYPES:")
+                objgraph.show_most_common_types(limit=50)
 
 
 @pytest.mark.parametrize("external_repo_context", repos())
