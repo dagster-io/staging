@@ -2,7 +2,7 @@ import os
 
 import pytest
 import yaml
-from dagster import check
+from dagster import check, seven
 from dagster.utils import file_relative_path
 from dagster.utils.yaml_utils import (
     load_yaml_from_glob_list,
@@ -31,7 +31,7 @@ def test_from_glob_list():
         ]
     ) == {"key_one": {"key_one_one": "value_one", "key_one_two": "value_two"}}
 
-    assert load_yaml_from_glob_list([file_relative_path(__file__, "yamls/*.yaml")]) == {
+    assert load_yaml_from_glob_list([file_relative_path(__file__, "yamls/yaml_*.yaml")]) == {
         "key_one": {"key_one_one": "value_one", "key_one_two": "value_two"}
     }
 
@@ -110,3 +110,8 @@ final: "result"
     ):
         bad_yaml = "--- `"
         merge_yaml_strings([a, bad_yaml])
+
+
+def test_date_parsing():
+    val = load_yaml_from_path(file_relative_path(__file__, "yamls/has_date.yaml"))
+    roundtrip = seven.json.loads(seven.json.dumps(val))
