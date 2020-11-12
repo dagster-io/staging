@@ -55,10 +55,10 @@ class IPCErrorMessage(namedtuple("_IPCErrorMessage", "serializable_error_info me
     use case.
     """
 
-    def __new__(cls, serializable_error_info, message):
+    def __new__(cls, serializable_error_info=None, message=None):
         return super(IPCErrorMessage, cls).__new__(
             cls,
-            serializable_error_info=check.inst_param(
+            serializable_error_info=check.opt_inst_param(
                 serializable_error_info, "serializable_error_info", SerializableErrorInfo
             ),
             message=check.opt_str_param(message, "message"),
