@@ -54,6 +54,7 @@ class DagsterGraphQLContext:
     def _location_state_events_handler(self, event):
         # If the server was updated or we were not able to reconnect, we immediately reload the
         # location handle
+        # print(event)
 
         if event.event_type == LocationStateChangeEventType.LOCATION_UPDATED:
             # Reload the handle to get updated repository data and re-attach a subscriber
@@ -90,9 +91,11 @@ class DagsterGraphQLContext:
 
         if self._workspace.has_repository_location_handle(name):
             new_handle = self._workspace.get_repository_location_handle(name)
+            new_handle.add_state_subscriber(self._location_state_subscriber)
             new_location = RepositoryLocation.from_handle(new_handle)
             check.invariant(new_location.name == name)
             self._repository_locations[name] = new_location
+
         elif name in self._repository_locations:
             del self._repository_locations[name]
 
