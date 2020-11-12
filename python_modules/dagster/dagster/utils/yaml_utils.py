@@ -6,6 +6,20 @@ from dagster import check
 
 from .merger import deep_merge_dicts
 
+_BAD_YAML_RESOLVERS = [
+    "tag:yaml.org,2002:timestamp",  # parses dates in to datetime objects
+]
+JsonRoundTripSafeLoader = yaml.SafeLoader
+# remove problematic implicit resolvers
+JsonRoundTripSafeLoader.yaml_implicit_resolvers = {
+    k: [r for r in v if r[0] not in _BAD_YAML_RESOLVERS]
+    for k, v in JsonRoundTripSafeLoader.yaml_implicit_resolvers.items()
+}
+
+
+def parse_yaml(str_val):
+    return yaml.load(str_val, Loader=JsonRoundTripSafeLoader)
+
 
 def load_yaml_from_globs(*globs):
     return load_yaml_from_glob_list(list(globs))
@@ -68,7 +82,7 @@ def merge_yaml_strings(yaml_strs):
     check.list_param(yaml_strs, "yaml_strs", of_type=str)
 
     # Read YAML strings.
-    yaml_dicts = list([yaml.safe_load(y) for y in yaml_strs])
+    yaml_dicts = list([parse_yaml(y) for y in yaml_strs])
 
     for yaml_dict in yaml_dicts:
         check.invariant(
@@ -82,4 +96,4 @@ def merge_yaml_strings(yaml_strs):
 def load_yaml_from_path(path):
     check.str_param(path, "path")
     with open(path, "r") as ff:
-        return yaml.safe_load(ff)
+        return parse_yaml(ff)
