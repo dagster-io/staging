@@ -144,3 +144,18 @@ class AssetAwareEventLogStorage(six.with_metaclass(ABCMeta)):
     @abstractmethod
     def wipe_asset(self, asset_key):
         """Remove asset index history from event log for given asset_key"""
+
+
+class DaemonHeartbeatEventLogStorage(six.with_metaclass(ABCMeta)):
+    """
+    Holds heartbeats from the Dagster Daemon so that other system components can alert when it's not
+    alive.
+    """
+
+    @abstractmethod
+    def add_daemon_heartbeat(self, daemon="dagster-daemon", current_time_seconds=None):
+        """Called on a regular interval by the daemon"""
+
+    @abstractmethod
+    def daemon_healthy(self, daemon="dagster-daemon", current_time_seconds=None):
+        """True if the daemon has posted a heartbeat recently"""

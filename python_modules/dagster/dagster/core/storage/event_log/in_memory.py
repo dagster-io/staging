@@ -6,11 +6,18 @@ from dagster.core.events import DagsterEventType
 from dagster.core.events.log import EventRecord
 from dagster.serdes import ConfigurableClass
 
-from .base import AssetAwareEventLogStorage, EventLogSequence, EventLogStorage
+from .base import (
+    AssetAwareEventLogStorage,
+    DaemonHeartbeatEventLogStorage,
+    EventLogSequence,
+    EventLogStorage,
+)
 from .version_addresses import get_addresses_for_step_output_versions_helper
 
 
-class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, ConfigurableClass):
+class InMemoryEventLogStorage(
+    EventLogStorage, AssetAwareEventLogStorage, DaemonHeartbeatEventLogStorage, ConfigurableClass
+):
     """
     In memory only event log storage. Used by ephemeral DagsterInstance or for testing purposes.
 
@@ -201,4 +208,16 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
         return get_addresses_for_step_output_versions_helper(
             step_output_versions,
             [(record.timestamp, record.dagster_event) for record in object_store_operation_records],
+        )
+
+    # Daemon Hearbeats
+
+    def add_daemon_heartbeat(self, daemon="dagster-daemon", current_time_seconds=None):
+        raise NotImplementedError(
+            "The dagster daemon lives in a separate process. It cannot use in memory storage."
+        )
+
+    def daemon_healthy(self, daemon="dagster-daemon", current_time_seconds=None):
+        raise NotImplementedError(
+            "The dagster daemon lives in a separate process. It cannot use in memory storage."
         )

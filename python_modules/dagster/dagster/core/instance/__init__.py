@@ -405,6 +405,12 @@ class DagsterInstance:
             )
         )
 
+    # event storage
+
+    @property
+    def event_storage(self):
+        return self._event_storage
+
     # schedule storage
 
     @property

@@ -1,7 +1,7 @@
 import logging
 from abc import abstractmethod
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import six
 import sqlalchemy as db
@@ -16,9 +16,14 @@ from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dag
 from dagster.utils import datetime_as_float, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRunStatsSnapshot
-from .base import AssetAwareEventLogStorage, EventLogStorage
+from .base import AssetAwareEventLogStorage, DaemonHeartbeatEventLogStorage, EventLogStorage
 from .migration import migrate_asset_key_data
-from .schema import AssetKeyTable, SecondaryIndexMigrationTable, SqlEventLogStorageTable
+from .schema import (
+    AssetKeyTable,
+    DaemonHeartbeatsTable,
+    SecondaryIndexMigrationTable,
+    SqlEventLogStorageTable,
+)
 from .version_addresses import get_addresses_for_step_output_versions_helper
 
 SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
@@ -28,7 +33,7 @@ REINDEX_DATA_MIGRATIONS = {
 }
 
 
-class SqlEventLogStorage(EventLogStorage):
+class SqlEventLogStorage(EventLogStorage, DaemonHeartbeatEventLogStorage):
     """Base class for SQL backed event log storages.
     """
 
@@ -334,6 +339,7 @@ class SqlEventLogStorage(EventLogStorage):
         with self.connect() as conn:
             conn.execute(SqlEventLogStorageTable.delete())  # pylint: disable=no-value-for-parameter
             conn.execute(AssetKeyTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(DaemonHeartbeatsTable.delete())  # pylint: disable=no-value-for-parameter
 
     def delete_events(self, run_id):
         check.str_param(run_id, "run_id")
@@ -376,6 +382,46 @@ class SqlEventLogStorage(EventLogStorage):
                             AssetKeyTable.c.asset_key.in_(keys_to_remove)
                         )
                     )
+
+    # Daemon heartbeats
+    def add_daemon_heartbeat(self, daemon="dagster-daemon", current_time_seconds=None):
+        row_values = {
+            "daemon": daemon,
+            "timestamp": datetime.fromtimestamp(current_time_seconds)
+            if current_time_seconds
+            else datetime.now(),
+        }
+
+        with self.connect(run_id="daemon-heartbeats") as conn:
+            conn.execute(  # pylint: disable=no-value-for-parameter
+                DaemonHeartbeatsTable.insert().values(  # pylint: disable=no-value-for-parameter
+                    **row_values
+                )  # pylint: disable=no-value-for-parameter
+            )
+
+    def daemon_healthy(self, daemon="dagster-daemon", current_time_seconds=None):
+        from dagster.daemon import DAEMON_HEARTBEAT_TOLERANCE_SECONDS
+
+        with self.connect(run_id="daemon-heartbeats") as conn:
+            query = (
+                db.select([DaemonHeartbeatsTable.c.timestamp])
+                .order_by(DaemonHeartbeatsTable.c.timestamp.desc())
+                .limit(1)
+            )
+            row = conn.execute(query).fetchone()
+            if not row:
+                return False
+            heartbeat_datetime = row[0]
+
+            current_datetime = (
+                datetime.fromtimestamp(current_time_seconds)
+                if current_time_seconds
+                else datetime.now()
+            )
+
+            return current_datetime <= heartbeat_datetime + timedelta(
+                seconds=DAEMON_HEARTBEAT_TOLERANCE_SECONDS
+            )
 
     @property
     def is_persistent(self):
