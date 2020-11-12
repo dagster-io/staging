@@ -180,7 +180,12 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
         )
         self.heartbeat_thread.daemon = True
         self.heartbeat_thread.start()
-        list_repositories_response = sync_list_repositories_grpc(self.client)
+
+        try:
+            list_repositories_response = sync_list_repositories_grpc(self.client)
+        except:
+            self.cleanup()
+            raise
 
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict
 
