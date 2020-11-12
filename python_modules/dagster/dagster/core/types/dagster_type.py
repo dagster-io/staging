@@ -742,6 +742,16 @@ DAGSTER_INVALID_TYPE_ERROR_MESSAGE = (
 
 
 def resolve_dagster_type(dagster_type):
+    result = try_resolve_dagster_type(dagster_type)
+    if not result:
+        raise DagsterInvalidDefinitionError(
+            "{dagster_type} is not a valid dagster type.".format(dagster_type=dagster_type)
+        )
+
+    return result
+
+
+def try_resolve_dagster_type(dagster_type):
     # circular dep
     from .python_dict import PythonDict, Dict
     from .python_set import PythonSet, DagsterSetApi
@@ -812,9 +822,7 @@ def resolve_dagster_type(dagster_type):
             )
         )
 
-    raise DagsterInvalidDefinitionError(
-        "{dagster_type} is not a valid dagster type.".format(dagster_type=dagster_type)
-    )
+    return None
 
 
 ALL_RUNTIME_BUILTINS = list(_RUNTIME_MAP.values())

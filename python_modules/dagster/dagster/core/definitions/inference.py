@@ -63,6 +63,7 @@ def has_explicit_return_type(fn):
 
 
 def _input_param_type(type_annotation):
+
     if sys.version_info.major >= 3 and type_annotation is not inspect.Parameter.empty:
         return type_annotation
     return None
@@ -77,22 +78,25 @@ def infer_input_definitions_for_lambda_solid(solid_name, fn):
 
 
 def _infer_inputs_from_params(params, decorator_name, solid_name, descriptions=None):
+    from dagster.core.types.dagster_type import try_resolve_dagster_type, Any
+
     descriptions = descriptions or {}
     input_defs = []
     for param in params:
         try:
+            param_type = _input_param_type(param.annotation)
+            dagster_type = try_resolve_dagster_type(param_type) or Any
+            print(dagster_type)
             if param.default is not funcsigs.Parameter.empty:
                 input_def = InputDefinition(
                     param.name,
-                    _input_param_type(param.annotation),
+                    dagster_type,
                     default_value=param.default,
                     description=descriptions.get(param.name),
                 )
             else:
                 input_def = InputDefinition(
-                    param.name,
-                    _input_param_type(param.annotation),
-                    description=descriptions.get(param.name),
+                    param.name, dagster_type, description=descriptions.get(param.name),
                 )
 
             input_defs.append(input_def)
