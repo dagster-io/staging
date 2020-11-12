@@ -2,6 +2,7 @@ import inspect
 
 from dagster.check import CheckError
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.types.dagster_type import Any, try_resolve_dagster_type
 from dagster.seven import funcsigs, is_module_available
 
 from .input import InputDefinition
@@ -37,7 +38,10 @@ def infer_output_definitions(decorator_name, solid_name, fn):
         return [
             OutputDefinition()
             if signature.return_annotation is funcsigs.Signature.empty
-            else OutputDefinition(signature.return_annotation, description=description)
+            else OutputDefinition(
+                dagster_type=try_resolve_dagster_type(signature.return_annotation) or Any,
+                description=description,
+            )
         ]
 
     except CheckError as type_error:
@@ -72,18 +76,18 @@ def _infer_inputs_from_params(params, decorator_name, solid_name, descriptions=N
     input_defs = []
     for param in params:
         try:
+            param_type = _input_param_type(param.annotation)
+            dagster_type = try_resolve_dagster_type(param_type) or Any
             if param.default is not funcsigs.Parameter.empty:
                 input_def = InputDefinition(
                     param.name,
-                    _input_param_type(param.annotation),
+                    dagster_type,
                     default_value=param.default,
                     description=descriptions.get(param.name),
                 )
             else:
                 input_def = InputDefinition(
-                    param.name,
-                    _input_param_type(param.annotation),
-                    description=descriptions.get(param.name),
+                    param.name, dagster_type, description=descriptions.get(param.name),
                 )
 
             input_defs.append(input_def)
