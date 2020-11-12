@@ -5,6 +5,7 @@ from collections import namedtuple
 
 import six
 from dagster import check
+from dagster.api.get_server_id import sync_get_server_id
 from dagster.api.list_repositories import sync_list_repositories_grpc
 from dagster.core.definitions.reconstructable import repository_def_from_pointer
 from dagster.core.errors import DagsterInvariantViolationError
@@ -106,9 +107,9 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         host = self.origin.host
 
         self.client = DagsterGrpcClient(port=port, socket=socket, host=host)
-
         list_repositories_response = sync_list_repositories_grpc(self.client)
 
+        self.server_id = sync_get_server_id(self.client)
         self.repository_names = set(
             symbol.repository_name for symbol in list_repositories_response.repository_symbols
         )
@@ -116,11 +117,12 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         self._state_subscribers = []
         watch_thread_shutdown_event, watch_thread = create_grpc_watch_thread(
             self.client,
-            on_updated=lambda: self._send_state_event_to_subscribers(
+            on_updated=lambda new_server_id: self._send_state_event_to_subscribers(
                 LocationStateChangeEvent(
                     LocationStateChangeEventType.LOCATION_ERROR,
                     location_name=self.location_name,
                     message="Server has been updated.",
+                    server_id=new_server_id,
                 )
             ),
             on_error=lambda: self._send_state_event_to_subscribers(
@@ -131,6 +133,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
                 )
             ),
         )
+
         self._watch_thread_shutdown_event = watch_thread_shutdown_event
         self._watch_thread = watch_thread
         self._watch_thread.start()
@@ -148,7 +151,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
 
     def cleanup(self):
         self._watch_thread_shutdown_event.set()
-        self._watch_thread.join()
+        # self._watch_thread.join()
 
     @property
     def port(self):
