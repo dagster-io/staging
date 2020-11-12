@@ -16,7 +16,7 @@ describe('RepositoryPicker', () => {
       nodes: () => new MockList(2),
     }),
     RepositoryLocationsOrError: () => ({
-      __typename: 'RepositoryLocation',
+      __typename: 'RepositoryLocationConnection',
     }),
     RepositoryLocation: () => ({
       isReloadSupported: true,
