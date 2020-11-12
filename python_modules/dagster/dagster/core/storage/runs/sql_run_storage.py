@@ -2,7 +2,7 @@ import logging
 import zlib
 from abc import abstractmethod
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 import six
@@ -23,7 +23,7 @@ from dagster.utils import merge_dicts
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from .base import RunStorage
-from .schema import RunTagsTable, RunsTable, SnapshotsTable
+from .schema import DaemonHeartbeatsTable, RunTagsTable, RunsTable, SnapshotsTable
 
 
 class SnapshotType(Enum):
@@ -526,6 +526,46 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
 
         return defensively_unpack_pipeline_snapshot_query(logging, row) if row else None
 
+        # Daemon heartbeats
+
+    def add_daemon_heartbeat(self, current_time_seconds=None):
+        row_values = {
+            "timestamp": datetime.fromtimestamp(current_time_seconds)
+            if current_time_seconds
+            else datetime.now(),
+        }
+
+        with self.connect() as conn:
+            conn.execute(  # pylint: disable=no-value-for-parameter
+                DaemonHeartbeatsTable.insert().values(  # pylint: disable=no-value-for-parameter
+                    **row_values
+                )  # pylint: disable=no-value-for-parameter
+            )
+
+    def daemon_healthy(self, current_time_seconds=None):
+        from dagster.daemon.controller import DAEMON_HEARTBEAT_TOLERANCE_SECONDS
+
+        with self.connect() as conn:
+            query = (
+                db.select([DaemonHeartbeatsTable.c.timestamp])
+                .order_by(DaemonHeartbeatsTable.c.timestamp.desc())
+                .limit(1)
+            )
+            row = conn.execute(query).fetchone()
+            if not row:
+                return False
+            heartbeat_datetime = row[0]
+
+            current_datetime = (
+                datetime.fromtimestamp(current_time_seconds)
+                if current_time_seconds
+                else datetime.now()
+            )
+
+            return current_datetime <= heartbeat_datetime + timedelta(
+                seconds=DAEMON_HEARTBEAT_TOLERANCE_SECONDS
+            )
+
     def wipe(self):
         """Clears the run storage."""
         with self.connect() as conn:
@@ -533,6 +573,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             conn.execute(RunsTable.delete())  # pylint: disable=no-value-for-parameter
             conn.execute(RunTagsTable.delete())  # pylint: disable=no-value-for-parameter
             conn.execute(SnapshotsTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(DaemonHeartbeatsTable.delete())
 
 
 GET_PIPELINE_SNAPSHOT_QUERY_ID = "get-pipeline-snapshot"
