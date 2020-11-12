@@ -1,3 +1,4 @@
+import {ApolloConsumer} from '@apollo/client';
 import {Colors, Icon} from '@blueprintjs/core';
 import * as React from 'react';
 import {useHistory} from 'react-router';
@@ -13,6 +14,7 @@ import {InstanceDetailsLink} from 'src/nav/InstanceDetailsLink';
 import {RepositoryContentList} from 'src/nav/RepositoryContentList';
 import {RepositoryPicker} from 'src/nav/RepositoryPicker';
 import {SchedulesList} from 'src/nav/SchedulesList';
+import {StateObserver} from 'src/nav/StateObserver';
 import {Group} from 'src/ui/Group';
 import {Caption} from 'src/ui/Text';
 import {useWorkspaceState, useRepositoryLocations} from 'src/workspace/WorkspaceContext';
@@ -79,6 +81,9 @@ const LeftNavRepositorySection = () => {
         repo={activeRepo?.repo || null}
         onReload={onReload}
       />
+      <ApolloConsumer>
+        {(client) => <StateObserver onReload={onReload} client={client} />}
+      </ApolloConsumer>
       {anyErrors ? (
         <Group
           background={Colors.GOLD5}
@@ -138,6 +143,7 @@ export const LeftNav = () => {
         ))}
       </div>
       <div style={{height: 20}} />
+
       <LeftNavRepositorySection />
       <TimezonePicker />
     </LeftNavContainer>
