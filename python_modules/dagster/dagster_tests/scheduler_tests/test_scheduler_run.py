@@ -502,8 +502,7 @@ def test_bad_env_fn(external_repo_context, capfd):
                 initial_datetime,
                 JobTickStatus.FAILURE,
                 None,
-                "Error occurred during the execution of run_config_fn for "
-                "schedule bad_env_fn_schedule",
+                "Error occurred during the execution function for schedule bad_env_fn_schedule",
             )
 
             captured = capfd.readouterr()
@@ -511,8 +510,8 @@ def test_bad_env_fn(external_repo_context, capfd):
             assert "Failed to fetch schedule data for bad_env_fn_schedule: " in captured.out
 
             assert (
-                "Error occurred during the execution of run_config_fn for "
-                "schedule bad_env_fn_schedule" in captured.out
+                "Error occurred during the execution function for schedule bad_env_fn_schedule"
+                in captured.out
             )
 
 
@@ -539,8 +538,7 @@ def test_bad_should_execute(external_repo_context, capfd):
                 initial_datetime,
                 JobTickStatus.FAILURE,
                 None,
-                "Error occurred during the execution of should_execute for "
-                "schedule bad_should_execute_schedule",
+                "Error occurred during the execution function for schedule bad_should_execute_schedule",
             )
 
             captured = capfd.readouterr()
@@ -549,8 +547,8 @@ def test_bad_should_execute(external_repo_context, capfd):
             ) in captured.out
 
             assert (
-                "Error occurred during the execution of should_execute "
-                "for schedule bad_should_execute_schedule" in captured.out
+                "Error occurred during the execution function for schedule bad_should_execute_schedule"
+                in captured.out
             )
 
             assert "Exception: bananas" in captured.out
@@ -581,7 +579,7 @@ def test_skip(external_repo_context, capfd):
                 captured.out
                 == """2019-02-26 18:00:00 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: skip_schedule
 2019-02-26 18:00:00 - SchedulerDaemon - INFO - Launching run for skip_schedule at 2019-02-27 00:00:00+0000
-2019-02-26 18:00:00 - SchedulerDaemon - INFO - should_execute returned False for skip_schedule, skipping
+2019-02-26 18:00:00 - SchedulerDaemon - INFO - No run requests returned for skip_schedule, skipping
 """
             )
 
@@ -699,7 +697,7 @@ def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
             assert bad_ticks[0].status == JobTickStatus.FAILURE
 
             assert (
-                "Error occurred during the execution of should_execute "
+                "Error occurred during the execution function "
                 "for schedule bad_should_execute_schedule" in bad_ticks[0].error.message
             )
 
