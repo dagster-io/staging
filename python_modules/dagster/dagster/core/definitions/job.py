@@ -1,3 +1,4 @@
+from collections import namedtuple
 from enum import Enum
 
 from dagster import check
@@ -33,6 +34,38 @@ class JobContext:
     @property
     def instance(self):
         return self._instance
+
+
+@whitelist_for_serdes
+class RunSkippedData(namedtuple("_RunSkippedData", "skip_message")):
+    def __new__(cls, skip_message=None):
+        return super(RunSkippedData, cls).__new__(
+            cls, skip_message=check.opt_str_param(skip_message, "skip_message")
+        )
+
+
+@whitelist_for_serdes
+class RunParams(namedtuple("_RunParams", "run_config tags execution_key")):
+    """
+    Represents all the information required to launch a single run instigated by a sensor body.
+    Must be returned by a ExecutionDefinition's evaluation function for a run to be launched.
+
+    Attributes:
+        run_config (Optional[Dict]): The environment config that parameterizes the run execution to
+            be launched, as a dict.
+        tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach
+            to the launched run.
+        execution_key (Optional[str]): A string key to identify this launched run, to be used for
+            deduplication across evaluations.
+    """
+
+    def __new__(cls, run_config=None, tags=None, execution_key=None):
+        return super(RunParams, cls).__new__(
+            cls,
+            run_config=check.opt_dict_param(run_config, "run_config"),
+            tags=check.opt_dict_param(tags, "tags"),
+            execution_key=check.opt_str_param(execution_key, "execution_key"),
+        )
 
 
 class JobDefinition:

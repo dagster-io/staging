@@ -114,7 +114,7 @@ def test_failure_recovery_before_run_created(
 
 
 @pytest.mark.parametrize("external_repo_context", repos())
-@pytest.mark.parametrize("crash_location", ["RUN_CREATED", "RUN_LAUNCHED"])
+@pytest.mark.parametrize("crash_location", ["RUNS_CREATED", "RUN_LAUNCHED"])
 @pytest.mark.parametrize("crash_signal", get_crash_signals())
 def test_failure_recovery_after_run_created(
     external_repo_context, crash_location, crash_signal, capfd
@@ -147,7 +147,7 @@ def test_failure_recovery_after_run_created(
 
             assert instance.get_runs_count() == 1
 
-            if crash_location == "RUN_CREATED":
+            if crash_location == "RUNS_CREATED":
                 run = instance.get_runs()[0]
                 # Run was created, but hasn't launched yet
                 assert run.tags[SCHEDULED_EXECUTION_TIME_TAG] == frozen_datetime.isoformat()
@@ -202,7 +202,7 @@ def test_failure_recovery_after_run_created(
             )
 
             captured = capfd.readouterr()
-            if crash_location == "RUN_CREATED":
+            if crash_location == "RUNS_CREATED":
                 assert (
                     "Run {run_id} already created for this execution of simple_schedule".format(
                         run_id=instance.get_runs()[0].run_id

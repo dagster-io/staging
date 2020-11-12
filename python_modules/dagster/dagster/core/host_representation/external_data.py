@@ -18,7 +18,7 @@ from dagster.core.definitions import (
     ScheduleDefinition,
 )
 from dagster.core.definitions.partition import PartitionScheduleDefinition
-from dagster.core.definitions.sensor import RunParams
+from dagster.core.definitions.sensor import RunParams, RunSkippedData
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
@@ -195,14 +195,23 @@ class ExternalScheduleData(
 
 @whitelist_for_serdes
 class ExternalScheduleExecutionData(
-    namedtuple("_ExternalScheduleExecutionData", "run_config tags should_execute")
+    namedtuple("_ExternalScheduleExecutionData", "run_params skip_message")
 ):
-    def __new__(cls, run_config=None, tags=None, should_execute=None):
+    def __new__(cls, run_params=None, skip_message=None):
         return super(ExternalScheduleExecutionData, cls).__new__(
             cls,
-            run_config=check.opt_dict_param(run_config, "run_config"),
-            tags=check.opt_dict_param(tags, "tags", key_type=str, value_type=str),
-            should_execute=check.opt_bool_param(should_execute, "should_execute"),
+            run_params=check.opt_list_param(run_params, "run_params", RunParams),
+            skip_message=check.opt_str_param(skip_message, "skip_message"),
+        )
+
+    @staticmethod
+    def from_execution_data(execution_data):
+        check.opt_list_param(execution_data, "execution_data", (RunSkippedData, RunParams))
+        return ExternalScheduleExecutionData(
+            run_params=[datum for datum in execution_data if isinstance(datum, RunParams)],
+            skip_message=execution_data[0].skip_message
+            if execution_data and isinstance(execution_data[0], RunSkippedData)
+            else None,
         )
 
 
@@ -242,6 +251,16 @@ class ExternalSensorExecutionData(
         check.opt_str_param(skip_message, "skip_message")
         return super(ExternalSensorExecutionData, cls).__new__(
             cls, run_params=run_params, skip_message=skip_message,
+        )
+
+    @staticmethod
+    def from_execution_data(tick_data):
+        check.opt_list_param(tick_data, "tick_data", (RunSkippedData, RunParams))
+        return ExternalSensorExecutionData(
+            run_params=[datum for datum in tick_data if isinstance(datum, RunParams)],
+            skip_message=tick_data[0].skip_message
+            if tick_data and isinstance(tick_data[0], RunSkippedData)
+            else None,
         )
 
 
