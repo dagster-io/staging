@@ -1,3 +1,4 @@
+import time
 from collections import OrderedDict, defaultdict
 
 from dagster import check
@@ -224,3 +225,9 @@ class InMemoryRunStorage(RunStorage):
                 run_groups[root_run_id]["count"] += 1
 
         return run_groups
+
+    def add_daemon_heartbeat(self, current_time_seconds=None):
+        return NotImplemented()
+
+    def daemon_healthy(self, current_time_seconds=None):
+        return False

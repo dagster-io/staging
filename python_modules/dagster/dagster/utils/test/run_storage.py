@@ -874,3 +874,13 @@ class TestRunStorage:
 
         assert first_root_run.run_id in run_groups
         assert second_root_run.run_id not in run_groups
+
+    ### Daemon Heartbeat tests ###
+
+    def test_daemon_heartbeat(self, storage):
+        assert not storage.daemon_healthy(current_time_seconds=10000)
+
+        storage.add_daemon_heartbeat(current_time_seconds=10000)
+        assert storage.daemon_healthy(current_time_seconds=10001)
+
+        assert not storage.daemon_healthy(current_time_seconds=20000)
