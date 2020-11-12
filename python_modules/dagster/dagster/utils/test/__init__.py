@@ -4,8 +4,8 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 
-# top-level include is dangerous in terms of incurring circular deps
-from dagster import (
+import pytest
+from dagster import (  # top-level include is dangerous in terms of incurring circular deps
     DagsterInvariantViolationError,
     DependencyDefinition,
     Failure,
@@ -53,6 +53,9 @@ from ..temp_file import (
     get_temp_file_names,
 )
 from ..typing_api import is_typing_type
+
+pytest.register_assert_rewrite("dagster.utils.test.run_storage")
+from . import run_storage  # isort:skip
 
 
 def create_test_pipeline_execution_context(logger_defs=None):
