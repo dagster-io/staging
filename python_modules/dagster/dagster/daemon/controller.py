@@ -1,7 +1,12 @@
+import uuid
+
 from dagster.core.run_coordinator import QueuedRunCoordinator
 from dagster.core.scheduler import DagsterDaemonScheduler
 from dagster.daemon.daemon import SchedulerDaemon, get_default_daemon_logger
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
+
+DAEMON_HEARTBEAT_INTERVAL_SECONDS = 30
+DAEMON_HEARTBEAT_TOLERANCE_SECONDS = 60
 
 
 def _sorted_quoted(strings):
@@ -12,7 +17,10 @@ class DagsterDaemonController(object):
     def __init__(self, instance):
         self._instance = instance
 
+        self._daemon_uuid = str(uuid.uuid4())
+
         self._daemons = {}
+        self._last_heartbeat_time = None
 
         self._logger = get_default_daemon_logger("dagster-daemon")
 
@@ -53,6 +61,19 @@ class DagsterDaemonController(object):
         return list(self._daemons.values())
 
     def run_iteration(self, curr_time):
+        # Add a hearbeat to storage. Note that the time to call `run_iteration` on all the daemons
+        # should not be near DAEMON_HEARTBEAT_TOLERANCE_SECONDS
+        should_add_heartbeat = False
+        if not self._last_heartbeat_time:
+            should_add_heartbeat = True
+        else:
+            time_since_last_heartbeat = (curr_time - self._last_heartbeat_time).total_seconds()
+            if time_since_last_heartbeat >= DAEMON_HEARTBEAT_INTERVAL_SECONDS:
+                should_add_heartbeat = True
+
+        if should_add_heartbeat:
+            self._instance.add_daemon_heartbeat(self._daemon_uuid, None)
+
         for daemon in self.daemons:
             if (not daemon.last_iteration_time) or (
                 (curr_time - daemon.last_iteration_time).total_seconds() >= daemon.interval_seconds
