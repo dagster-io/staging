@@ -4,6 +4,8 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
+import { GrpcServerState } from "./../../types/globalTypes";
+
 // ====================================================
 // GraphQL query operation: RootRepositoriesQuery
 // ====================================================
@@ -61,6 +63,8 @@ export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLoca
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation {
   __typename: "RepositoryLocation";
   isReloadSupported: boolean;
+  serverId: string | null;
+  serverState: GrpcServerState | null;
   name: string;
   repositories: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories[];
 }

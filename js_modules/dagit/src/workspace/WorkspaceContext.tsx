@@ -52,6 +52,8 @@ export const ROOT_REPOSITORIES_QUERY = gql`
           __typename
           ... on RepositoryLocation {
             isReloadSupported
+            serverId
+            serverState
             name
             repositories {
               id

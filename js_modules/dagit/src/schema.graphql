@@ -46,6 +46,15 @@ type RepositoryLocation {
   isReloadSupported: Boolean!
   environmentPath: String
   repositories: [Repository!]!
+  serverId: String
+  serverState: GrpcServerState
+}
+
+enum GrpcServerState {
+  SERVER_CONNECTED
+  SERVER_RECONNECTING
+  SERVER_ERROR
+  SERVER_UPDATED
 }
 
 type Pipeline implements SolidContainer & IPipelineSnapshot {
@@ -956,6 +965,7 @@ input TriggerSelector {
 type Subscription {
   pipelineRunLogs(runId: ID!, after: Cursor): PipelineRunLogsSubscriptionPayload!
   computeLogs(runId: ID!, stepKey: String!, ioType: ComputeIOType!, cursor: String): ComputeLogFile!
+  grpcServerStateChangeEvents: GrpcServerStateChangeSubscription!
 }
 
 union PipelineRunLogsSubscriptionPayload = PipelineRunLogsSubscriptionSuccess | PipelineRunLogsSubscriptionFailure
@@ -1244,6 +1254,24 @@ scalar Cursor
 enum ComputeIOType {
   STDOUT
   STDERR
+}
+
+type GrpcServerStateChangeSubscription {
+  event: GrpcServerStateChangeEvent!
+}
+
+type GrpcServerStateChangeEvent {
+  eventType: GrpcServerStateChangeEventType!
+  message: String!
+  locationName: String!
+  serverId: String
+}
+
+enum GrpcServerStateChangeEventType {
+  SERVER_UPDATED
+  SERVER_DISCONNECTED
+  SERVER_RECONNECTED
+  SERVER_ERROR
 }
 
 type RegularConfigType implements ConfigType {
