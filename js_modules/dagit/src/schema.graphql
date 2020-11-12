@@ -48,6 +48,7 @@ type RepositoryLocation {
   isReloadSupported: Boolean!
   environmentPath: String
   repositories: [Repository!]!
+  serverId: String
 }
 
 type Pipeline implements SolidContainer & IPipelineSnapshot {
@@ -963,6 +964,7 @@ input TriggerSelector {
 type Subscription {
   pipelineRunLogs(runId: ID!, after: Cursor): PipelineRunLogsSubscriptionPayload!
   computeLogs(runId: ID!, stepKey: String!, ioType: ComputeIOType!, cursor: String): ComputeLogFile!
+  locationStateChangeEvents: LocationStateChangeSubscription!
 }
 
 union PipelineRunLogsSubscriptionPayload = PipelineRunLogsSubscriptionSuccess | PipelineRunLogsSubscriptionFailure
@@ -1251,6 +1253,24 @@ scalar Cursor
 enum ComputeIOType {
   STDOUT
   STDERR
+}
+
+type LocationStateChangeSubscription {
+  event: LocationStateChangeEvent!
+}
+
+type LocationStateChangeEvent {
+  eventType: LocationStateChangeEventType!
+  message: String!
+  locationName: String!
+  serverId: String
+}
+
+enum LocationStateChangeEventType {
+  LOCATION_UPDATED
+  LOCATION_DISCONNECTED
+  LOCATION_RECONNECTED
+  LOCATION_ERROR
 }
 
 type RegularConfigType implements ConfigType {
