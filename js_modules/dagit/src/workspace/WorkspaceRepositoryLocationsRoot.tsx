@@ -141,8 +141,17 @@ export const WorkspaceRepositoryLocationsRoot = () => {
                 <td style={{width: '20%'}}>
                   <LocationStatus locationOrError={node} reloading={node.name === reloading} />
                 </td>
+
                 <td style={{width: '100%'}}>
                   <ReloadButton location={node.name} onReload={onReload} />
+                </td>
+                <td style={{width: '20%'}}>
+                  {node.__typename === 'RepositoryLocation' && node.serverId && (
+                    <>
+                      <p>Server ID: {node.serverId}</p>
+                      <p>Server State: {node.serverState}</p>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

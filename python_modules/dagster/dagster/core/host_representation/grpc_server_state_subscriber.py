@@ -4,6 +4,13 @@ from enum import Enum
 from dagster import check
 
 
+class GrpcServerState(Enum):
+    SERVER_CONNECTED = "SERVER_CONNECTED"
+    SERVER_RECONNECTING = "SERVER_DISCONNECTED"
+    SERVER_ERROR = "SERVER_ERROR"
+    SERVER_UPDATED = "SERVER_UPDATED"
+
+
 class GrpcServerStateChangeEventType(Enum):
     SERVER_UPDATED = "SERVER_UPDATED"
     SERVER_DISCONNECTED = "SERVER_DISCONNECTED"

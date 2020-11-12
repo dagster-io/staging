@@ -54,15 +54,18 @@ class DagsterGraphQLContext:
     def repository_location_names(self):
         return self._workspace.repository_location_names
 
+    @property
+    def grpc_server_state_events(self):
+        return self._grpc_server_state_events
+
     def _grpc_server_state_events_handler(self, event):
         # If the server was updated or we were not able to reconnect, we immediately reload the
         # location handle
+        # print(event)
 
         if event.event_type == GrpcServerStateChangeEventType.SERVER_UPDATED:
             # Reload the handle to get updated repository data and re-attach a subscriber
             self.reload_repository_location(event.location_name)
-            new_handle = self._workspace.get_repository_location_handle(event.location_name)
-            new_handle.add_grpc_server_state_subscriber(self._grpc_server_state_subscriber)
         elif event.event_type == GrpcServerStateChangeEventType.SERVER_ERROR:
             # Just reload the handle in order to update the workspace with the correct
             # error messages
@@ -96,6 +99,10 @@ class DagsterGraphQLContext:
             new_location = RepositoryLocation.from_handle(new_handle)
             check.invariant(new_location.name == name)
             self._repository_locations[name] = new_location
+
+            if isinstance(new_handle, GrpcServerRepositoryLocationHandle):
+                new_handle.add_grpc_server_state_subscriber(self._grpc_server_state_subscriber)
+
         elif name in self._repository_locations:
             del self._repository_locations[name]
 
