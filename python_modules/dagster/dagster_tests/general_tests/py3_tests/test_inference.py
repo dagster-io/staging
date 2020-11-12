@@ -4,6 +4,7 @@ from dagster import (
     InputDefinition,
     Int,
     composite_solid,
+    execute_pipeline,
     execute_solid,
     lambda_solid,
     pipeline,
@@ -358,3 +359,33 @@ def test_pipeline_api_stability():
 
     # assert definition does not error
     assert empty
+
+
+def test_unresolvable_type_annotation_input():
+    class MyClass:
+        pass
+
+    @solid
+    def my_solid(_, _input1: MyClass):
+        pass
+
+    @pipeline
+    def my_pipeline():
+        my_solid()
+
+    execute_pipeline(my_pipeline)
+
+
+def test_unresolvable_type_annotation_output():
+    class MyClass:
+        pass
+
+    @solid
+    def my_solid(_) -> MyClass:
+        pass
+
+    @pipeline
+    def my_pipeline():
+        my_solid()
+
+    execute_pipeline(my_pipeline)
