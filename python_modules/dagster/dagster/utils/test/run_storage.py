@@ -874,3 +874,19 @@ class TestRunStorage:
 
         assert first_root_run.run_id in run_groups
         assert second_root_run.run_id not in run_groups
+
+    def _skip_in_memory(self, storage):
+        from dagster.core.storage.runs import InMemoryRunStorage
+
+        if isinstance(storage, InMemoryRunStorage):
+            pytest.skip()
+
+    def test_empty_heartbeat(self, storage):
+        self._skip_in_memory(storage)
+        assert storage.daemon_healthy() is False
+
+    def test_add_heartbeat(self, storage):
+        self._skip_in_memory(storage)
+        storage.add_daemon_heartbeat(current_time_seconds=1000)
+        assert storage.daemon_healthy(current_time_seconds=1001) is True
+        assert storage.daemon_healthy(current_time_seconds=2000) is False

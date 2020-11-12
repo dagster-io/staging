@@ -243,3 +243,18 @@ class RunStorage(six.with_metaclass(ABCMeta)):
 
     def optimize_for_dagit(self, statement_timeout):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
+
+    # Daemon Heartbeat Storage
+    #
+    # Holds heartbeats from the Dagster Daemon so that other system components can alert when it's not
+    # alive.
+    # This is temporarily placed along with run storage to avoid adding a new instance concept. It
+    # should be split out once all metadata storages are configured together.
+
+    @abstractmethod
+    def add_daemon_heartbeat(self, current_time_seconds=None):
+        """Called on a regular interval by the daemon"""
+
+    @abstractmethod
+    def daemon_healthy(self, current_time_seconds=None):
+        """True if the daemon has posted a heartbeat recently"""

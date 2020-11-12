@@ -224,3 +224,15 @@ class InMemoryRunStorage(RunStorage):
                 run_groups[root_run_id]["count"] += 1
 
         return run_groups
+
+    # Daemon Hearbeats
+
+    def add_daemon_heartbeat(self, current_time_seconds=None):
+        raise NotImplementedError(
+            "The dagster daemon lives in a separate process. It cannot use in memory storage."
+        )
+
+    def daemon_healthy(self, current_time_seconds=None):
+        raise NotImplementedError(
+            "The dagster daemon lives in a separate process. It cannot use in memory storage."
+        )

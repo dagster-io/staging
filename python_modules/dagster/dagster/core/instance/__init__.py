@@ -1289,3 +1289,26 @@ class DagsterInstance:
                 For each step output, an address if there is one and None otherwise.
         """
         return self._event_storage.get_addresses_for_step_output_versions(step_output_versions)
+
+        # dagster daemon
+
+    def daemon_expected(self):
+        """
+        True if the instance is configured to require the dagster-daemon
+        """
+        from dagster.core.run_coordinator import QueuedRunCoordinator
+        from dagster.core.scheduler import DagsterDaemonScheduler
+
+        return isinstance(self.run_coordinator, QueuedRunCoordinator) or isinstance(
+            self.scheduler, DagsterDaemonScheduler
+        )
+
+    def add_daemon_heartbeat(self):
+        """Called on a regular interval by the dagster-daemon, if configured"""
+        check.invariant(self.daemon_expected())
+        self._run_storage.add_daemon_heartbeat()
+
+    def daemon_healthy(self):
+        """True if the daemon has posted a heartbeat recently"""
+        check.invariant(self.daemon_expected())
+        return self._run_storage.daemon_healthy()
