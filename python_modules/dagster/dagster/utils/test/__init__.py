@@ -4,6 +4,7 @@ import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 
+import pytest
 # top-level include is dangerous in terms of incurring circular deps
 from dagster import (
     DagsterInvariantViolationError,
@@ -53,6 +54,9 @@ from ..temp_file import (
     get_temp_file_names,
 )
 from ..typing_api import is_typing_type
+from . import run_storage
+
+pytest.register_assert_rewrite("dagster.utils.test.run_storage")
 
 
 def create_test_pipeline_execution_context(logger_defs=None):

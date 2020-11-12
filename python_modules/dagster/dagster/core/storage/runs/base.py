@@ -1,9 +1,10 @@
 from abc import ABCMeta, abstractmethod
 
 import six
+from dagster.core.storage.daemon_heartbeats import DaemonHeartBeatStorage
 
 
-class RunStorage(six.with_metaclass(ABCMeta)):
+class RunStorage(six.with_metaclass(ABCMeta), DaemonHeartBeatStorage):
     """Abstract base class for storing pipeline run history.
 
     Note that run storages using SQL databases as backing stores should implement
