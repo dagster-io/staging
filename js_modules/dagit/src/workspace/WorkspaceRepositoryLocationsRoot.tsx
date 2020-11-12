@@ -141,6 +141,7 @@ export const WorkspaceRepositoryLocationsRoot = () => {
                 <td style={{width: '20%'}}>
                   <LocationStatus locationOrError={node} reloading={node.name === reloading} />
                 </td>
+
                 <td style={{width: '100%'}}>
                   <ReloadButton location={node.name} onReload={onReload} />
                 </td>

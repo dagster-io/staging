@@ -5,6 +5,7 @@ from collections import namedtuple
 
 import six
 from dagster import check
+from dagster.api.get_server_id import sync_get_server_id
 from dagster.api.list_repositories import sync_list_repositories_grpc
 from dagster.core.definitions.reconstructable import repository_def_from_pointer
 from dagster.core.errors import DagsterInvariantViolationError
@@ -103,44 +104,36 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         host = self.origin.host
 
         self.client = DagsterGrpcClient(port=port, socket=socket, host=host)
-
         list_repositories_response = sync_list_repositories_grpc(self.client)
 
+        self.server_id = sync_get_server_id(self.client)
         self.repository_names = set(
             symbol.repository_name for symbol in list_repositories_response.repository_symbols
         )
 
         self._server_state_subscribers = []
-        watch_thread_shutdown_event, watch_thread = create_grpc_watch_thread(
-            self.client,
-            on_disconnect=lambda: self._send_grpc_server_state_event_to_subscribers(
-                GrpcServerStateChangeEvent(
-                    GrpcServerStateChangeEventType.SERVER_DISCONNECTED,
-                    location_name=self.location_name,
-                    message="Server has been disconnected. Attempting to reconnect.",
-                )
-            ),
-            on_updated=lambda: self._send_grpc_server_state_event_to_subscribers(
+
+        def on_updated(new_server_id):
+            self._send_grpc_server_state_event_to_subscribers(
                 GrpcServerStateChangeEvent(
                     GrpcServerStateChangeEventType.SERVER_UPDATED,
                     location_name=self.location_name,
                     message="Server has been updated.",
+                    server_id=new_server_id,
                 )
-            ),
-            on_reconnected=lambda: self._send_grpc_server_state_event_to_subscribers(
-                GrpcServerStateChangeEvent(
-                    GrpcServerStateChangeEventType.SERVER_RECONNECTED,
-                    location_name=self.location_name,
-                    message="Server has been reconnected.",
-                )
-            ),
-            on_error=lambda: self._send_grpc_server_state_event_to_subscribers(
+            )
+
+        def on_error():
+            self._send_grpc_server_state_event_to_subscribers(
                 GrpcServerStateChangeEvent(
                     GrpcServerStateChangeEventType.SERVER_ERROR,
                     location_name=self.location_name,
                     message="Unable to reconnect to server. In error state",
                 )
-            ),
+            )
+
+        watch_thread_shutdown_event, watch_thread = create_grpc_watch_thread(
+            self.client, on_updated=on_updated, on_error=on_error,
         )
         self._watch_thread_shutdown_event = watch_thread_shutdown_event
         self._watch_thread = watch_thread
@@ -159,7 +152,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
 
     def cleanup(self):
         self._watch_thread_shutdown_event.set()
-        self._watch_thread.join()
+        # self._watch_thread.join()
 
     @property
     def port(self):
