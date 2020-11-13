@@ -12,8 +12,8 @@ from contextlib import contextmanager
 import click
 from dagster import check, seven
 from dagster.cli.workspace.cli_target import (
+    get_external_repository_origin_from_kwargs,
     get_repository_location_from_kwargs,
-    get_repository_origin_from_kwargs,
     get_working_directory_from_kwargs,
     python_origin_target_argument,
     repository_target_argument,
@@ -28,15 +28,15 @@ from dagster.core.execution.api import (
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import ExternalScheduleExecutionErrorData
+from dagster.core.host_representation.origin import ExternalJobOrigin
 from dagster.core.host_representation.selector import PipelineSelector
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler import (
-    ScheduleTickData,
-    ScheduleTickStatus,
     ScheduledExecutionFailed,
     ScheduledExecutionSkipped,
     ScheduledExecutionSuccess,
 )
+from dagster.core.scheduler.job import JobTickData, JobTickStatus, JobType
 from dagster.core.storage.tags import check_tags
 from dagster.core.telemetry import telemetry_wrapper
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -209,13 +209,13 @@ class _ScheduleTickHolder:
 
 @contextmanager
 def _schedule_tick_state(instance, stream, tick_data):
-    tick = instance.create_schedule_tick(tick_data)
+    tick = instance.create_job_tick(tick_data)
     holder = _ScheduleTickHolder(tick=tick, instance=instance)
     try:
         yield holder
     except Exception:  # pylint: disable=broad-except
         error_data = serializable_error_info_from_exc_info(sys.exc_info())
-        holder.update_with_status(ScheduleTickStatus.FAILURE, error=error_data)
+        holder.update_with_status(JobTickStatus.FAILURE, error=error_data)
         stream.send(ScheduledExecutionFailed(run_id=None, errors=[error_data]))
     finally:
         holder.write()
@@ -390,20 +390,20 @@ def grpc_health_check_command(port=None, socket=None, host="localhost"):
 def launch_scheduled_execution(output_file, schedule_name, **kwargs):
     with ipc_write_stream(output_file) as stream:
         with DagsterInstance.get() as instance:
-            repository_origin = get_repository_origin_from_kwargs(kwargs)
-            schedule_origin = repository_origin.get_schedule_origin(schedule_name)
+            external_repository_origin = get_external_repository_origin_from_kwargs(kwargs)
+            job_origin = ExternalJobOrigin(external_repository_origin, schedule_name)
 
             # open the tick scope before we load any external artifacts so that
             # load errors are stored in DB
             with _schedule_tick_state(
                 instance,
                 stream,
-                ScheduleTickData(
-                    schedule_origin_id=schedule_origin.get_id(),
-                    schedule_name=schedule_name,
+                JobTickData(
+                    job_origin_id=job_origin.get_id(),
+                    job_name=schedule_name,
+                    job_type=JobType.SCHEDULE,
+                    status=JobTickStatus.STARTED,
                     timestamp=time.time(),
-                    cron_schedule=None,  # not yet loaded
-                    status=ScheduleTickStatus.STARTED,
                 ),
             ) as tick:
                 with get_repository_location_from_kwargs(kwargs) as repo_location:
@@ -423,10 +423,7 @@ def launch_scheduled_execution(output_file, schedule_name, **kwargs):
                         ),
                     )
                     external_schedule = external_repo.get_external_schedule(schedule_name)
-                    tick.update_with_status(
-                        status=ScheduleTickStatus.STARTED,
-                        cron_schedule=external_schedule.cron_schedule,
-                    )
+                    tick.update_with_status(status=JobTickStatus.STARTED)
                     _launch_scheduled_execution(
                         instance, repo_location, external_repo, external_schedule, tick, stream
                     )
@@ -463,12 +460,12 @@ def _launch_scheduled_execution(
 
     if isinstance(schedule_execution_data, ExternalScheduleExecutionErrorData):
         error = schedule_execution_data.error
-        tick.update_with_status(ScheduleTickStatus.FAILURE, error=error)
+        tick.update_with_status(JobTickStatus.FAILURE, error=error)
         stream.send(ScheduledExecutionFailed(run_id=None, errors=[error]))
         return
     elif not schedule_execution_data.should_execute:
         # Update tick to skipped state and return
-        tick.update_with_status(ScheduleTickStatus.SKIPPED)
+        tick.update_with_status(JobTickStatus.SKIPPED)
         stream.send(ScheduledExecutionSkipped())
         return
     else:
@@ -506,7 +503,7 @@ def _launch_scheduled_execution(
         parent_pipeline_snapshot=external_pipeline.parent_pipeline_snapshot,
     )
 
-    tick.update_with_status(ScheduleTickStatus.SUCCESS, run_id=possibly_invalid_pipeline_run.run_id)
+    tick.update_with_status(JobTickStatus.SUCCESS, run_id=possibly_invalid_pipeline_run.run_id)
 
     # If there were errors, inject them into the event log and fail the run
     if len(errors) > 0:

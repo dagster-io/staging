@@ -15,18 +15,58 @@ class JobStatus(Enum):
 
 
 @whitelist_for_serdes
-class JobState(
-    namedtuple("_JobState", "origin job_type status last_completed_timestamp last_cursor")
-):
-    def __new__(cls, origin, job_type, status, last_completed_timestamp=None, last_cursor=None):
+class SensorJobData(namedtuple("_SensorJobData", "last_completed_timestamp last_cursor")):
+    def __new__(cls, last_completed_timestamp=None, last_cursor=None):
+        return super(SensorJobData, cls).__new__(
+            cls,
+            check.opt_float_param(last_completed_timestamp, "last_completed_timestamp"),
+            check.opt_str_param(last_cursor, "last_cursor"),
+        )
+
+
+@whitelist_for_serdes
+class ScheduleJobData(namedtuple("_ScheduleJobData", "cron_schedule start_timestamp")):
+    def __new__(cls, cron_schedule, start_timestamp=None):
+        return super(ScheduleJobData, cls).__new__(
+            cls,
+            check.str_param(cron_schedule, "cron_schedule"),
+            # Time in UTC at which the user started running the schedule (distinct from
+            # `start_date` on partition-based schedules, which is used to define
+            # the range of partitions)
+            check.opt_float_param(start_timestamp, "start_timestamp"),
+        )
+
+
+def check_job_data(job_type, job_specific_data):
+    check.inst_param(job_type, "job_type", JobType)
+    if job_type == JobType.SCHEDULE:
+        check.inst_param(job_specific_data, "job_specific_data", ScheduleJobData)
+    elif job_type == JobType.SENSOR:
+        check.opt_inst_param(job_specific_data, "job_specific_data", SensorJobData)
+    else:
+        check.failed(
+            "Unexpected job type {}, expected one of JobType.SENSOR, JobType.SCHEDULE".format(
+                job_type
+            )
+        )
+
+    return job_specific_data
+
+
+@whitelist_for_serdes
+class JobState(namedtuple("_JobState", "origin job_type status job_specific_data")):
+    def __new__(cls, origin, job_type, status, job_specific_data=None):
         return super(JobState, cls).__new__(
             cls,
             check.inst_param(origin, "origin", ExternalJobOrigin),
             check.inst_param(job_type, "job_type", JobType),
             check.inst_param(status, "status", JobStatus),
-            check.opt_float_param(last_completed_timestamp, "last_completed_timestamp"),
-            check.opt_str_param(last_cursor, "last_cursor"),
+            check_job_data(job_type, job_specific_data),
         )
+
+    @property
+    def name(self):
+        return self.origin.job_name
 
     @property
     def job_name(self):
@@ -46,28 +86,16 @@ class JobState(
             self.origin,
             job_type=self.job_type,
             status=status,
-            last_completed_timestamp=self.last_completed_timestamp,
-            last_cursor=self.last_cursor,
+            job_specific_data=self.job_specific_data,
         )
 
-    def with_timestamp(self, last_completed_timestamp):
-        check.float_param(last_completed_timestamp, "last_completed_timestamp")
+    def with_data(self, job_specific_data):
+        check_job_data(self.job_type, job_specific_data)
         return JobState(
             self.origin,
             job_type=self.job_type,
             status=self.status,
-            last_completed_timestamp=last_completed_timestamp,
-            last_cursor=self.last_cursor,
-        )
-
-    def with_cursor(self, last_cursor):
-        check.str_param(last_cursor, "last_cursor")
-        return JobState(
-            self.origin,
-            job_type=self.job_type,
-            status=self.status,
-            last_completed_timestamp=self.last_completed_timestamp,
-            last_cursor=last_cursor,
+            job_specific_data=job_specific_data,
         )
 
 
@@ -211,3 +239,20 @@ def _validate_job_tick_args(job_type, status, run_id=None, error=None):
         check.inst_param(error, "error", SerializableErrorInfo)
     else:
         check.invariant(error is None, "Job tick status was not FAILURE but error was provided")
+
+
+class JobTickStatsSnapshot(
+    namedtuple(
+        "JobTickStatsSnapshot", ("ticks_started ticks_succeeded ticks_skipped ticks_failed"),
+    )
+):
+    def __new__(
+        cls, ticks_started, ticks_succeeded, ticks_skipped, ticks_failed,
+    ):
+        return super(JobTickStatsSnapshot, cls).__new__(
+            cls,
+            ticks_started=check.int_param(ticks_started, "ticks_started"),
+            ticks_succeeded=check.int_param(ticks_succeeded, "ticks_succeeded"),
+            ticks_skipped=check.int_param(ticks_skipped, "ticks_skipped"),
+            ticks_failed=check.int_param(ticks_failed, "ticks_failed"),
+        )

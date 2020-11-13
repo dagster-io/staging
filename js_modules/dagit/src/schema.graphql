@@ -32,6 +32,7 @@ type RepositoryConnection {
 
 type Repository {
   id: ID!
+  externalId: String!
   name: String!
   location: RepositoryLocation!
   pipelines: [Pipeline!]!
@@ -444,8 +445,8 @@ type ScheduleDefinition {
 type ScheduleState {
   scheduleOriginId: String!
   scheduleName: String!
-  cronSchedule: String!
   status: ScheduleStatus!
+  cronSchedule: String!
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
   ticks(limit: Int): [ScheduleTick!]!
@@ -466,12 +467,12 @@ enum ScheduleStatus {
 
 type ScheduleTick {
   tickId: String!
-  status: ScheduleTickStatus!
+  status: JobTickStatus!
   timestamp: Float!
   tickSpecificData: ScheduleTickSpecificData
 }
 
-enum ScheduleTickStatus {
+enum JobTickStatus {
   STARTED
   SKIPPED
   SUCCESS
