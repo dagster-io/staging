@@ -4,6 +4,7 @@ import os
 
 import click
 import six
+import yaml
 from dagster import DagsterInvariantViolationError, check
 from dagster.cli.workspace.cli_target import (
     get_external_repository_from_kwargs,
@@ -368,9 +369,10 @@ def execute_test_command(sensor_name, last_modified, cli_args, print_fn, instanc
                     print_fn(
                         "Sensor returning run parameters for {num} run(s):\n\n{run_params}".format(
                             num=len(sensor_runtime_data.run_params),
-                            run_params=[
-                                param.run_config for param in sensor_runtime_data.run_params
-                            ],
+                            run_params="\n".join(
+                                yaml.safe_dump(param.run_config, default_flow_style=False)
+                                for param in sensor_runtime_data.run_params
+                            ),
                         )
                     )
 
