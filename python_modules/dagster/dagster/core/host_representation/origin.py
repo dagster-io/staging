@@ -167,9 +167,8 @@ class ExternalRepositoryOrigin(
     def get_pipeline_origin(self, pipeline_name):
         return ExternalPipelineOrigin(self, pipeline_name)
 
-    @abstractmethod
     def get_schedule_origin(self, schedule_name):
-        return ExternalScheduleOrigin(self, schedule_name)
+        return ExternalJobOrigin(self, schedule_name)
 
     def get_job_origin(self, job_name):
         return ExternalJobOrigin(self, job_name)
