@@ -181,7 +181,7 @@ const ScheduleStates: React.FunctionComponent<{
   // Build map of repositoryOriginId to DagsterRepoOption
   const repositoryOriginIdMap = {};
   for (const option of options) {
-    repositoryOriginIdMap[option.repository.id] = option;
+    repositoryOriginIdMap[option.repository.externalId] = option;
   }
 
   // Seperate out schedules into in-scope and out-of-scope

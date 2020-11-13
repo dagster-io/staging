@@ -43,6 +43,7 @@ export const ROOT_REPOSITORIES_QUERY = gql`
       ... on RepositoryConnection {
         nodes {
           id
+          externalId
           name
           pipelines {
             name

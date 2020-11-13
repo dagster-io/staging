@@ -65,8 +65,8 @@ class DauphinScheduleDefinition(dauphin.ObjectType):
         self._external_schedule = check.inst_param(
             external_schedule, "external_schedule", ExternalSchedule
         )
-        self._schedule_state = graphene_info.context.instance.get_schedule_state(
-            self._external_schedule.get_origin_id()
+        self._schedule_state = graphene_info.context.instance.get_job_state(
+            self._external_schedule.get_external_origin_id()
         )
 
         super(DauphinScheduleDefinition, self).__init__(

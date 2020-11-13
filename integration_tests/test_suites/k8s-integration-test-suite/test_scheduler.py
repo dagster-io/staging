@@ -12,7 +12,7 @@ from dagster.core.host_representation import (
     RepositoryLocation,
     RepositoryLocationHandle,
 )
-from dagster.core.scheduler import ScheduleStatus
+from dagster.core.scheduler.job import JobStatus, JobType
 from dagster.core.scheduler.scheduler import (
     DagsterScheduleDoesNotExist,
     DagsterScheduleReconciliationError,
@@ -117,11 +117,11 @@ def test_init(
         # Check schedules are saved to disk
         assert "schedules" in os.listdir(schedule_tempdir)
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 3
 
-        schedules = instance.all_stored_schedule_state()
+        schedules = instance.all_stored_job_state(job_type=JobType.SCHEDULE)
         for schedule in schedules:
-            assert schedule.status == ScheduleStatus.STOPPED
+            assert schedule.status == JobStatus.STOPPED
 
 
 @mark_scheduler
@@ -148,7 +148,7 @@ def test_re_init(
         # Check schedules are saved to disk
         assert "schedules" in os.listdir(schedule_tempdir)
 
-        schedule_states = instance.all_stored_schedule_state()
+        schedule_states = instance.all_stored_job_state(job_type=JobType.SCHEDULE)
 
         for state in schedule_states:
             if state.name == "no_config_pipeline_every_min_schedule":
@@ -171,7 +171,7 @@ def test_start_and_stop_schedule(
         schedule = external_repo.get_external_schedule(
             schedule_name="no_config_pipeline_every_min_schedule"
         )
-        schedule_origin_id = schedule.get_origin_id()
+        schedule_origin_id = schedule.get_external_origin_id()
 
         instance.start_schedule_and_update_storage_state(external_schedule=schedule)
 
@@ -219,7 +219,7 @@ def test_start_schedule_cron_job(
         assert len(cron_jobs) == 3
 
         external_schedules_dict = {
-            external_repo.get_external_schedule(name).get_origin_id(): schedule_def
+            external_repo.get_external_schedule(name).get_external_origin_id(): schedule_def
             for name, schedule_def in schedules_dict.items()
         }
 
@@ -250,12 +250,12 @@ def test_remove_schedule_def(
         # Initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 3
 
         with get_smaller_external_repo() as smaller_repo:
             instance.reconcile_scheduler_state(smaller_repo)
 
-            assert len(instance.all_stored_schedule_state()) == 2
+            assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 2
 
 
 @mark_scheduler
@@ -276,14 +276,14 @@ def test_add_schedule_def(
             external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
         )
 
-        assert len(instance.all_stored_schedule_state()) == 2
+        assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 2
         assert len(instance.scheduler.get_all_cron_jobs()) == 2
         assert len(instance.scheduler_debug_info().errors) == 0
 
         # Reconcile with an additional schedule added
         instance.reconcile_scheduler_state(external_repo)
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 3
         assert len(instance.scheduler.get_all_cron_jobs()) == 2
         assert len(instance.scheduler_debug_info().errors) == 0
 
@@ -291,7 +291,7 @@ def test_add_schedule_def(
             external_repo.get_external_schedule("default_config_pipeline_every_min_schedule")
         )
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 3
         assert len(instance.scheduler.get_all_cron_jobs()) == 3
         assert len(instance.scheduler_debug_info().errors) == 0
 
@@ -329,14 +329,18 @@ def test_start_and_stop_schedule_cron_tab(
 
         # Stop second schedule
         instance.stop_schedule_and_update_storage_state(
-            external_repo.get_external_schedule("no_config_pipeline_daily_schedule").get_origin_id()
+            external_repo.get_external_schedule(
+                "no_config_pipeline_daily_schedule"
+            ).get_external_origin_id()
         )
         cron_jobs = instance.scheduler.get_all_cron_jobs()
         assert len(cron_jobs) == 1
 
         # Try stopping second schedule again
         instance.stop_schedule_and_update_storage_state(
-            external_repo.get_external_schedule("no_config_pipeline_daily_schedule").get_origin_id()
+            external_repo.get_external_schedule(
+                "no_config_pipeline_daily_schedule"
+            ).get_external_origin_id()
         )
         cron_jobs = instance.scheduler.get_all_cron_jobs()
         assert len(cron_jobs) == 1
@@ -368,15 +372,17 @@ def test_start_and_stop_schedule_cron_tab(
         instance.stop_schedule_and_update_storage_state(
             external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
-            ).get_origin_id()
+            ).get_external_origin_id()
         )
         instance.stop_schedule_and_update_storage_state(
-            external_repo.get_external_schedule("no_config_pipeline_daily_schedule").get_origin_id()
+            external_repo.get_external_schedule(
+                "no_config_pipeline_daily_schedule"
+            ).get_external_origin_id()
         )
         instance.stop_schedule_and_update_storage_state(
             external_repo.get_external_schedule(
                 "default_config_pipeline_every_min_schedule"
-            ).get_origin_id()
+            ).get_external_origin_id()
         )
 
         cron_jobs = instance.scheduler.get_all_cron_jobs()
@@ -411,7 +417,7 @@ def test_script_execution(
 
                 cron_job_name = external_repo.get_external_schedule(
                     "no_config_pipeline_every_min_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
 
                 batch_v1beta1_api = kubernetes.client.BatchV1beta1Api()
                 cron_job = batch_v1beta1_api.read_namespaced_cron_job(
@@ -469,13 +475,13 @@ def test_start_schedule_fails(
                 external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
             )
 
-        schedule = instance.get_schedule_state(
+        schedule = instance.get_job_state(
             external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
-            ).get_origin_id()
+            ).get_external_origin_id()
         )
 
-        assert schedule.status == ScheduleStatus.STOPPED
+        assert schedule.status == JobStatus.STOPPED
 
 
 @mark_scheduler
@@ -526,7 +532,7 @@ def test_start_schedule_manual_delete_debug(
         instance.scheduler._end_cron_job(  # pylint: disable=protected-access
             external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
-            ).get_origin_id(),
+            ).get_external_origin_id(),
         )
 
         # Check debug command
@@ -580,7 +586,7 @@ def test_stop_schedule_fails(
         external_schedule = external_repo.get_external_schedule(
             "no_config_pipeline_every_min_schedule"
         )
-        schedule_origin_id = external_schedule.get_origin_id()
+        schedule_origin_id = external_schedule.get_external_origin_id()
 
         def raises(*args, **kwargs):
             raise Exception("Patch")
@@ -595,9 +601,9 @@ def test_stop_schedule_fails(
         with pytest.raises(Exception, match="Patch"):
             instance.stop_schedule_and_update_storage_state(schedule_origin_id)
 
-        schedule = instance.get_schedule_state(schedule_origin_id)
+        schedule = instance.get_job_state(schedule_origin_id)
 
-        assert schedule.status == ScheduleStatus.RUNNING
+        assert schedule.status == JobStatus.RUNNING
 
 
 @mark_scheduler
@@ -628,7 +634,7 @@ def test_stop_schedule_unsuccessful(
             instance.stop_schedule_and_update_storage_state(
                 external_repo.get_external_schedule(
                     "no_config_pipeline_every_min_schedule"
-                ).get_origin_id()
+                ).get_external_origin_id()
             )
 
 
@@ -651,7 +657,7 @@ def test_wipe(
         instance.wipe_all_schedules()
 
         # Check schedules are wiped
-        assert instance.all_stored_schedule_state() == []
+        assert instance.all_stored_job_state(job_type=JobType.SCHEDULE) == []
 
 
 @mark_scheduler
@@ -698,7 +704,7 @@ def test_reconcile_failure_when_deleting_schedule_def(
         # Initialize scheduler
         instance.reconcile_scheduler_state(external_repo)
 
-        assert len(instance.all_stored_schedule_state()) == 3
+        assert len(instance.all_stored_job_state(job_type=JobType.SCHEDULE)) == 3
 
         def failed_end_job(*_):
             raise DagsterSchedulerError("Failed to stop")
