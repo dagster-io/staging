@@ -1,4 +1,4 @@
-from dagster.core.scheduler.scheduler import ScheduleStatus
+from dagster.core.scheduler.job import JobStatus
 from dagster_graphql.test.utils import (
     execute_dagster_graphql,
     infer_repository_selector,
@@ -248,7 +248,7 @@ def test_get_schedule_states_for_repository_after_reconcile(graphql_context):
     assert len(results) == len(external_repository.get_external_schedules())
 
     for schedule_state in results:
-        assert schedule_state["status"] == ScheduleStatus.STOPPED.value
+        assert schedule_state["status"] == JobStatus.STOPPED.value
 
 
 def test_get_schedule_states_for_repository_after_reconcile_using_mutation(graphql_context):
@@ -280,7 +280,7 @@ def test_get_schedule_states_for_repository_after_reconcile_using_mutation(graph
     assert len(results) == len(external_repository.get_external_schedules())
 
     for schedule_state in results:
-        assert schedule_state["status"] == ScheduleStatus.STOPPED.value
+        assert schedule_state["status"] == JobStatus.STOPPED.value
 
 
 def test_get_schedule_states_for_repository_with_removed_schedule_definitions(graphql_context):
@@ -319,10 +319,7 @@ def test_start_and_stop_schedule(graphql_context):
     start_result = execute_dagster_graphql(
         graphql_context, START_SCHEDULES_QUERY, variables={"scheduleSelector": schedule_selector},
     )
-    assert (
-        start_result.data["startSchedule"]["scheduleState"]["status"]
-        == ScheduleStatus.RUNNING.value
-    )
+    assert start_result.data["startSchedule"]["scheduleState"]["status"] == JobStatus.RUNNING.value
 
     schedule_origin_id = start_result.data["startSchedule"]["scheduleState"]["scheduleOriginId"]
 
@@ -332,7 +329,7 @@ def test_start_and_stop_schedule(graphql_context):
     )
     assert (
         stop_result.data["stopRunningSchedule"]["scheduleState"]["status"]
-        == ScheduleStatus.STOPPED.value
+        == JobStatus.STOPPED.value
     )
 
 

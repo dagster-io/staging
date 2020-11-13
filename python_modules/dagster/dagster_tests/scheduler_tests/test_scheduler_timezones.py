@@ -1,6 +1,6 @@
 import pendulum
 import pytest
-from dagster.core.scheduler import ScheduleTickStatus
+from dagster.core.scheduler.job import JobTickStatus
 from dagster.scheduler.scheduler import get_default_scheduler_logger, launch_scheduled_runs
 from dagster.utils.partitions import DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE
 
@@ -26,19 +26,19 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
 
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
 
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
             launch_scheduled_runs(
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
             captured = capfd.readouterr()
@@ -56,7 +56,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             )
 
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
             expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Central").in_tz(
@@ -67,7 +67,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
                 ticks[0],
                 external_schedule,
                 expected_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
 
@@ -95,9 +95,9 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 @pytest.mark.parametrize("external_repo_context", repos())
@@ -116,27 +116,27 @@ def test_differing_timezones(external_repo_context):
                 "daily_eastern_time_schedule"
             )
 
-            schedule_origin = external_schedule.get_origin()
-            eastern_origin = external_eastern_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
+            eastern_origin = external_eastern_schedule.get_external_origin()
 
             instance.start_schedule_and_update_storage_state(external_schedule)
             instance.start_schedule_and_update_storage_state(external_eastern_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
-            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 0
 
             launch_scheduled_runs(
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
-            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 0
 
         # Past midnight eastern time, the eastern timezone schedule will run, but not the central timezone
@@ -147,7 +147,7 @@ def test_differing_timezones(external_repo_context):
             )
 
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 1
 
             expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Eastern").in_tz(
@@ -158,11 +158,11 @@ def test_differing_timezones(external_repo_context):
                 ticks[0],
                 external_eastern_schedule,
                 expected_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
 
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
             wait_for_all_runs_to_start(instance)
@@ -181,10 +181,10 @@ def test_differing_timezones(external_repo_context):
             )
 
             assert instance.get_runs_count() == 2
-            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 1
 
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
             expected_datetime = pendulum.create(year=2019, month=2, day=28, tz="US/Central").in_tz(
@@ -195,7 +195,7 @@ def test_differing_timezones(external_repo_context):
                 ticks[0],
                 external_schedule,
                 expected_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
 
@@ -211,13 +211,13 @@ def test_differing_timezones(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 2
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
-            ticks = instance.get_schedule_ticks(eastern_origin.get_id())
+            ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 # Verify that a schedule that runs in US/Central late enough in the day that it executes on
@@ -234,18 +234,18 @@ def test_different_days_in_different_timezones(external_repo_context):
         with pendulum.test(freeze_datetime):
             # Runs every day at 11PM (CST)
             external_schedule = external_repo.get_external_schedule("daily_late_schedule")
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
             launch_scheduled_runs(
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(seconds=2)
@@ -255,7 +255,7 @@ def test_different_days_in_different_timezones(external_repo_context):
             )
 
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
             expected_datetime = pendulum.create(
@@ -266,7 +266,7 @@ def test_different_days_in_different_timezones(external_repo_context):
                 ticks[0],
                 external_schedule,
                 expected_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
 
@@ -282,9 +282,9 @@ def test_different_days_in_different_timezones(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 @pytest.mark.parametrize("external_repo_context", repos())
@@ -299,11 +299,11 @@ def test_hourly_dst_spring_forward(external_repo_context):
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("hourly_central_time_schedule")
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(hours=2)
@@ -318,7 +318,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
             wait_for_all_runs_to_start(instance)
 
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
             expected_datetimes_utc = [
@@ -332,7 +332,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
                     ticks[i],
                     external_schedule,
                     expected_datetimes_utc[i],
-                    ScheduleTickStatus.SUCCESS,
+                    JobTickStatus.SUCCESS,
                     instance.get_runs()[i].run_id,
                 )
 
@@ -348,7 +348,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
 
@@ -366,11 +366,11 @@ def test_hourly_dst_fall_back(external_repo_context):
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("hourly_central_time_schedule")
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(hours=4)
@@ -385,7 +385,7 @@ def test_hourly_dst_fall_back(external_repo_context):
             wait_for_all_runs_to_start(instance)
 
             assert instance.get_runs_count() == 4
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 4
 
             expected_datetimes_utc = [
@@ -412,7 +412,7 @@ def test_hourly_dst_fall_back(external_repo_context):
                     ticks[i],
                     external_schedule,
                     expected_datetimes_utc[i],
-                    ScheduleTickStatus.SUCCESS,
+                    JobTickStatus.SUCCESS,
                     instance.get_runs()[i].run_id,
                 )
 
@@ -428,7 +428,7 @@ def test_hourly_dst_fall_back(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 4
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 4
 
 
@@ -444,11 +444,11 @@ def test_daily_dst_spring_forward(external_repo_context):
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(days=2)
@@ -461,7 +461,7 @@ def test_daily_dst_spring_forward(external_repo_context):
             wait_for_all_runs_to_start(instance)
 
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
             # UTC time changed by one hour after the transition, still running daily at the same
@@ -483,7 +483,7 @@ def test_daily_dst_spring_forward(external_repo_context):
                     ticks[i],
                     external_schedule,
                     expected_datetimes_utc[i],
-                    ScheduleTickStatus.SUCCESS,
+                    JobTickStatus.SUCCESS,
                     instance.get_runs()[i].run_id,
                 )
 
@@ -498,7 +498,7 @@ def test_daily_dst_spring_forward(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
 
@@ -514,11 +514,11 @@ def test_daily_dst_fall_back(external_repo_context):
 
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("daily_central_time_schedule")
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(days=2)
@@ -531,7 +531,7 @@ def test_daily_dst_fall_back(external_repo_context):
             wait_for_all_runs_to_start(instance)
 
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
             # UTC time changed by one hour after the transition, still running daily at the same
@@ -553,7 +553,7 @@ def test_daily_dst_fall_back(external_repo_context):
                     ticks[i],
                     external_schedule,
                     expected_datetimes_utc[i],
-                    ScheduleTickStatus.SUCCESS,
+                    JobTickStatus.SUCCESS,
                     instance.get_runs()[i].run_id,
                 )
 
@@ -568,7 +568,7 @@ def test_daily_dst_fall_back(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
 
@@ -587,11 +587,11 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
             external_schedule = external_repo.get_external_schedule(
                 "daily_dst_transition_schedule_skipped_time"
             )
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(days=3)
@@ -604,7 +604,7 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
             wait_for_all_runs_to_start(instance)
 
             assert instance.get_runs_count() == 2
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 2
 
             # skipped 3/10 since 2:30AM never happened
@@ -623,7 +623,7 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
                     ticks[i],
                     external_schedule,
                     expected_datetimes_utc[i],
-                    ScheduleTickStatus.SUCCESS,
+                    JobTickStatus.SUCCESS,
                     instance.get_runs()[i].run_id,
                 )
 
@@ -638,7 +638,7 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 2
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 2
 
 
@@ -656,11 +656,11 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
             external_schedule = external_repo.get_external_schedule(
                 "daily_dst_transition_schedule_doubled_time"
             )
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(days=3)
@@ -673,7 +673,7 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
             wait_for_all_runs_to_start(instance)
 
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
             expected_datetimes_utc = [
@@ -693,7 +693,7 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
                     ticks[i],
                     external_schedule,
                     expected_datetimes_utc[i],
-                    ScheduleTickStatus.SUCCESS,
+                    JobTickStatus.SUCCESS,
                     instance.get_runs()[i].run_id,
                 )
 
@@ -708,5 +708,5 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3

@@ -306,7 +306,7 @@ class PipelineRun(
 
     @staticmethod
     def tags_for_schedule(schedule):
-        return {SCHEDULE_NAME_TAG: schedule.name}
+        return {SCHEDULE_NAME_TAG: schedule.job_name}
 
     @staticmethod
     def tags_for_backfill_id(backfill_id):
