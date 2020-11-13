@@ -1,5 +1,6 @@
 import yaml
 from dagster import check
+from dagster.core.definitions.job import JobType
 from dagster.core.host_representation import (
     ExternalSchedule,
     ExternalScheduleExecutionData,
@@ -83,7 +84,7 @@ def get_schedule_states_or_error(
             graphene_info.schema.type_named("ScheduleState")(
                 graphene_info, schedule_state=schedule_state
             )
-            for schedule_state in instance.all_stored_schedule_state()
+            for schedule_state in instance.all_stored_job_state(job_type=JobType.SCHEDULE)
         ]
         return graphene_info.schema.type_named("ScheduleStates")(results=results)
 
@@ -96,8 +97,8 @@ def get_schedule_states_or_error(
         graphene_info.schema.type_named("ScheduleState")(
             graphene_info, schedule_state=schedule_state
         )
-        for schedule_state in instance.all_stored_schedule_state(
-            repository_origin_id=repository_origin_id
+        for schedule_state in instance.all_stored_job_state(
+            repository_origin_id=repository_origin_id, job_type=JobType.SCHEDULE
         )
     ]
 

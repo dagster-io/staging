@@ -155,7 +155,4 @@ def test_sensor_test(gen_sensor_args):
             result = runner.invoke(sensor_test_command, cli_args + ["foo_sensor"],)
 
             assert result.exit_code == 0
-            assert (
-                result.output
-                == "Sensor returning run parameters for 1 run(s):\n\n[{'foo': 'FOO'}]\n"
-            )
+            assert result.output == "Sensor returning run parameters for 1 run(s):\n\nfoo: FOO\n\n"
