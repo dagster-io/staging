@@ -345,6 +345,7 @@ def _schedule_tick_state(instance, stream, tick_data):
     help="Internal param used by dagster when it automatically spawns gRPC servers to communicate "
     "the success or failure of the server launching. Can be ignored by users.",
 )
+@click.option("--fixed-server-id", type=click.STRING, required=False, help="[Test Only]")
 def grpc_command(
     port=None,
     socket=None,
@@ -354,6 +355,7 @@ def grpc_command(
     heartbeat_timeout=30,
     lazy_load_user_code=False,
     ipc_output_file=None,
+    fixed_server_id=None,
     **kwargs
 ):
     if seven.IS_WINDOWS and port is None:
@@ -394,6 +396,7 @@ def grpc_command(
         heartbeat_timeout=heartbeat_timeout,
         lazy_load_user_code=lazy_load_user_code,
         ipc_output_file=ipc_output_file,
+        fixed_server_id=fixed_server_id,
     )
 
     server.serve()
