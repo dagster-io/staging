@@ -39,6 +39,7 @@ type Repository {
   usedSolid(name: String!): UsedSolid
   origin: RepositoryOrigin!
   partitionSets: [PartitionSet!]!
+  scheduleDefinitions: [ScheduleDefinition!]!
 }
 
 type RepositoryLocation {
@@ -440,6 +441,8 @@ type ScheduleDefinition {
   scheduleState: ScheduleState
   runConfigOrError: ScheduleRunConfigOrError
   partitionSet: PartitionSet
+  repository: Repository!
+  originId: String
 }
 
 type ScheduleState {

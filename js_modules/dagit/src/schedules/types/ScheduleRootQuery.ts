@@ -141,6 +141,7 @@ export interface ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition 
   pipelineName: string;
   solidSelection: (string | null)[] | null;
   mode: string;
+  originId: string | null;
   partitionSet: ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_partitionSet | null;
   scheduleState: ScheduleRootQuery_scheduleDefinitionOrError_ScheduleDefinition_scheduleState | null;
 }

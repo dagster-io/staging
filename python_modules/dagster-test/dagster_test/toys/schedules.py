@@ -150,7 +150,7 @@ def get_toys_schedules():
         longitudinal_schedule(),
         materialization_schedule(),
         ScheduleDefinition(
-            name="many_events_every_min",
+            name="many_events_every_morn",
             cron_schedule="* * * * *",
             pipeline_name="many_events",
             run_config_fn=lambda _: {"storage": {"filesystem": {}}},

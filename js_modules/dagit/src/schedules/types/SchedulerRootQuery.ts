@@ -10,6 +10,175 @@ import { ScheduleTickStatus, PipelineRunStatus, ScheduleStatus } from "./../../t
 // GraphQL query operation: SchedulerRootQuery
 // ====================================================
 
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_partitionSet {
+  __typename: "PartitionSet";
+  name: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata {
+  __typename: "CodePointerMetadata";
+  key: string;
+  value: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer {
+  __typename: "CodePointer";
+  metadata: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata[];
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin {
+  __typename: "PythonRepositoryOrigin";
+  codePointer: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer;
+  executablePath: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_GrpcRepositoryOrigin {
+  __typename: "GrpcRepositoryOrigin";
+  grpcUrl: string;
+}
+
+export type SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin = SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_PythonRepositoryOrigin | SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin_GrpcRepositoryOrigin;
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData_run {
+  __typename: "PipelineRun";
+  pipelineName: string;
+  status: PipelineRunStatus;
+  runId: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData {
+  __typename: "ScheduleTickSuccessData";
+  run: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData_run | null;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error_cause | null;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData {
+  __typename: "ScheduleTickFailureData";
+  error: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData_error;
+}
+
+export type SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData = SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickSuccessData | SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData_ScheduleTickFailureData;
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks {
+  __typename: "ScheduleTick";
+  tickId: string;
+  status: ScheduleTickStatus;
+  timestamp: number;
+  tickSpecificData: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks_tickSpecificData | null;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_runs_tags {
+  __typename: "PipelineTag";
+  key: string;
+  value: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_runs {
+  __typename: "PipelineRun";
+  runId: string;
+  tags: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_runs_tags[];
+  pipelineName: string;
+  status: PipelineRunStatus;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState {
+  __typename: "ScheduleState";
+  id: string;
+  scheduleOriginId: string;
+  repositoryOrigin: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_repositoryOrigin;
+  repositoryOriginId: string;
+  scheduleName: string;
+  cronSchedule: string;
+  runningScheduleCount: number;
+  ticks: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_ticks[];
+  runsCount: number;
+  runs: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState_runs[];
+  ticksCount: number;
+  status: ScheduleStatus;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions {
+  __typename: "ScheduleDefinition";
+  name: string;
+  cronSchedule: string;
+  pipelineName: string;
+  solidSelection: (string | null)[] | null;
+  mode: string;
+  originId: string | null;
+  partitionSet: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_partitionSet | null;
+  scheduleState: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions_scheduleState | null;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer_metadata {
+  __typename: "CodePointerMetadata";
+  key: string;
+  value: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer {
+  __typename: "CodePointer";
+  metadata: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer_metadata[];
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin {
+  __typename: "PythonRepositoryOrigin";
+  codePointer: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin_codePointer;
+  executablePath: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_GrpcRepositoryOrigin {
+  __typename: "GrpcRepositoryOrigin";
+  grpcUrl: string;
+}
+
+export type SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin = SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_PythonRepositoryOrigin | SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin_GrpcRepositoryOrigin;
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_location {
+  __typename: "RepositoryLocation";
+  name: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes {
+  __typename: "Repository";
+  name: string;
+  id: string;
+  scheduleDefinitions: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions[];
+  origin: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin;
+  location: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_location;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection {
+  __typename: "RepositoryConnection";
+  nodes: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes[];
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_PythonError_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_PythonError {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: SchedulerRootQuery_repositoriesOrError_PythonError_cause | null;
+}
+
+export type SchedulerRootQuery_repositoriesOrError = SchedulerRootQuery_repositoriesOrError_RepositoryConnection | SchedulerRootQuery_repositoriesOrError_PythonError;
+
 export interface SchedulerRootQuery_scheduler_SchedulerNotDefinedError {
   __typename: "SchedulerNotDefinedError";
   message: string;
@@ -154,6 +323,7 @@ export interface SchedulerRootQuery_scheduleStatesOrError_PythonError {
 export type SchedulerRootQuery_scheduleStatesOrError = SchedulerRootQuery_scheduleStatesOrError_RepositoryNotFoundError | SchedulerRootQuery_scheduleStatesOrError_ScheduleStates | SchedulerRootQuery_scheduleStatesOrError_PythonError;
 
 export interface SchedulerRootQuery {
+  repositoriesOrError: SchedulerRootQuery_repositoriesOrError;
   scheduler: SchedulerRootQuery_scheduler;
   scheduleStatesOrError: SchedulerRootQuery_scheduleStatesOrError;
 }

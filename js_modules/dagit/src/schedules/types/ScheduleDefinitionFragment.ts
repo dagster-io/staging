@@ -116,6 +116,7 @@ export interface ScheduleDefinitionFragment {
   pipelineName: string;
   solidSelection: (string | null)[] | null;
   mode: string;
+  originId: string | null;
   partitionSet: ScheduleDefinitionFragment_partitionSet | null;
   scheduleState: ScheduleDefinitionFragment_scheduleState | null;
 }
