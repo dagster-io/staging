@@ -1,6 +1,6 @@
 from dagster import check
 from dagster.core.origin import RepositoryGrpcServerOrigin
-from dagster.core.scheduler import ScheduleState
+from dagster.core.scheduler.job import JobState
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster_graphql import dauphin
 from dagster_graphql.schema.errors import (
@@ -37,8 +37,8 @@ class DauphinScheduleState(dauphin.ObjectType):
 
     schedule_origin_id = dauphin.NonNull(dauphin.String)
     schedule_name = dauphin.NonNull(dauphin.String)
-    cron_schedule = dauphin.NonNull(dauphin.String)
     status = dauphin.NonNull("ScheduleStatus")
+    cron_schedule = dauphin.NonNull(dauphin.String)
 
     runs = dauphin.Field(dauphin.non_null_list("PipelineRun"), limit=dauphin.Int())
     runs_count = dauphin.NonNull(dauphin.Int)
@@ -52,14 +52,14 @@ class DauphinScheduleState(dauphin.ObjectType):
     id = dauphin.NonNull(dauphin.ID)
 
     def __init__(self, _graphene_info, schedule_state):
-        self._schedule_state = check.inst_param(schedule_state, "schedule", ScheduleState)
+        self._schedule_state = check.inst_param(schedule_state, "schedule_state", JobState)
         self._external_schedule_origin_id = self._schedule_state.schedule_origin_id
 
         super(DauphinScheduleState, self).__init__(
-            schedule_origin_id=schedule_state.schedule_origin_id,
-            schedule_name=schedule_state.name,
-            cron_schedule=schedule_state.cron_schedule,
+            schedule_origin_id=schedule_state.job_origin_id,
+            schedule_name=schedule_state.job_name,
             status=schedule_state.status,
+            cron_schedule=schedule_state.job_specific_data.cron_schedule,
         )
 
     def resolve_id(self, _graphene_info):

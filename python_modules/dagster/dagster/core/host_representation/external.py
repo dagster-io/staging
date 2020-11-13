@@ -397,12 +397,6 @@ class ExternalSchedule:
     def get_external_origin_id(self):
         return self.get_external_origin().get_id()
 
-    def get_origin(self):
-        return self._handle.get_origin()
-
-    def get_origin_id(self):
-        return self.get_origin().get_id()
-
 
 class ExternalSensor:
     def __init__(self, external_job_data, handle):

@@ -1,7 +1,7 @@
 from dagster import check
 from dagster.core.host_representation import ExternalSchedule, ScheduleSelector
 from dagster.core.host_representation.selector import RepositorySelector
-from dagster.core.scheduler import ScheduleState, ScheduleTickStatus
+from dagster.core.scheduler.job import JobTickStatus
 from dagster.core.scheduler.scheduler import ScheduleTickStatsSnapshot
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
 from dagster_graphql import dauphin
@@ -47,7 +47,7 @@ class DauphinSchedulerOrError(dauphin.Union):
         types = ("Scheduler", DauphinSchedulerNotDefinedError, "PythonError")
 
 
-DauphinScheduleTickStatus = dauphin.Enum.from_enum(ScheduleTickStatus)
+DauphinJobTickStatus = dauphin.Enum.from_enum(JobTickStatus)
 
 
 class DauphinScheduleTick(dauphin.ObjectType):
@@ -55,7 +55,7 @@ class DauphinScheduleTick(dauphin.ObjectType):
         name = "ScheduleTick"
 
     tick_id = dauphin.NonNull(dauphin.String)
-    status = dauphin.NonNull("ScheduleTickStatus")
+    status = dauphin.NonNull("JobTickStatus")
     timestamp = dauphin.NonNull(dauphin.Float)
     tick_specific_data = dauphin.Field("ScheduleTickSpecificData")
 
