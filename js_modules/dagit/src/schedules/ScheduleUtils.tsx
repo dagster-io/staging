@@ -67,6 +67,18 @@ export const SCHEDULE_STATE_FRAGMENT = gql`
   ${PythonErrorInfo.fragments.PythonErrorFragment}
 `;
 
+export const REPOSITORY_SCHEDULES_FRAGMENT = gql`
+  fragment RepositorySchedulesFragment on Repository {
+    name
+    id
+    scheduleDefinitions {
+      ...ScheduleDefinitionFragment
+    }
+    ...RepositoryInfoFragment
+  }
+  ${RepositoryInformationFragment}
+`;
+
 export const SCHEDULE_DEFINITION_FRAGMENT = gql`
   fragment ScheduleDefinitionFragment on ScheduleDefinition {
     name
@@ -84,34 +96,31 @@ export const SCHEDULE_DEFINITION_FRAGMENT = gql`
   ${SCHEDULE_STATE_FRAGMENT}
 `;
 
+export const SCHEDULE_STATES_FRAGMENT = gql`
+  fragment ScheduleStatesFragment on ScheduleStates {
+    results {
+      ...ScheduleStateFragment
+    }
+  }
+  ${SCHEDULE_STATE_FRAGMENT}
+`;
+
 export const SCHEDULES_ROOT_QUERY = gql`
   query SchedulesRootQuery($repositorySelector: RepositorySelector!) {
     repositoryOrError(repositorySelector: $repositorySelector) {
       __typename
       ... on Repository {
-        name
-        id
-        ...RepositoryInfoFragment
+        ...RepositorySchedulesFragment
       }
       ...PythonErrorFragment
     }
     scheduler {
       ...SchedulerFragment
     }
-    scheduleDefinitionsOrError(repositorySelector: $repositorySelector) {
-      ... on ScheduleDefinitions {
-        results {
-          ...ScheduleDefinitionFragment
-        }
-      }
-      ...PythonErrorFragment
-    }
     scheduleStatesOrError(repositorySelector: $repositorySelector, withNoScheduleDefinition: true) {
       __typename
       ... on ScheduleStates {
-        results {
-          ...ScheduleStateFragment
-        }
+        ...ScheduleStatesFragment
       }
       ...PythonErrorFragment
     }
@@ -120,7 +129,8 @@ export const SCHEDULES_ROOT_QUERY = gql`
   ${SCHEDULE_DEFINITION_FRAGMENT}
   ${SCHEDULER_FRAGMENT}
   ${PythonErrorInfo.fragments.PythonErrorFragment}
-  ${RepositoryInformationFragment}
+  ${REPOSITORY_SCHEDULES_FRAGMENT}
+  ${SCHEDULE_STATES_FRAGMENT}
 `;
 
 export const SchedulerTimezoneNote: React.FC<{
