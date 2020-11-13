@@ -5,7 +5,7 @@ from dagster import check
 from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
 from dagster.core.errors import DagsterAddressIOError, DagsterObjectStoreError
 from dagster.core.execution.context.system import SystemExecutionContext
-from dagster.core.execution.plan.inputs import FromAddress, FromMultipleSources, FromStepOutput
+from dagster.core.execution.plan.inputs import FromMultipleSources, FromStepOutput
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 from dagster.utils.backcompat import experimental
@@ -51,8 +51,6 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
                 return False
 
             return not self.has_intermediate(context, source.step_output_handle)
-        elif isinstance(source, FromAddress):
-            return not self.has_intermediate_at_address(source.address)
         elif isinstance(source, FromMultipleSources):
             # only report as uncovered if all are missing from a multi-dep input
             return all(

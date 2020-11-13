@@ -57,27 +57,6 @@ class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource
         return super(FromDefaultValue, cls).__new__(cls, value)
 
 
-class FromAddress(namedtuple("_FromAddress", "address step_output_handle"), StepInputSource):
-    def __new__(cls, address, step_output_handle):
-        from .objects import StepOutputHandle
-
-        return super(FromAddress, cls).__new__(
-            cls,
-            check.str_param(address, "address"),
-            step_output_handle=check.inst_param(
-                step_output_handle, "step_output_handle", StepOutputHandle
-            ),
-        )
-
-    @property
-    def step_dependency_keys(self):
-        return {self.step_output_handle.step_key}
-
-    @property
-    def step_dependency_handles(self):
-        return [self.step_output_handle]
-
-
 class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInputSource):
     """This step input is fans-in multiple sources in to a single input. The input will receive a list."""
 

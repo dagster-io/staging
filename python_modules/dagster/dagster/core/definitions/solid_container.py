@@ -6,13 +6,7 @@ from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterTypeKind
 
-from .dependency import (
-    DependencyStructure,
-    IDependencyDefinition,
-    MultiDependencyDefinition,
-    Solid,
-    SolidInvocation,
-)
+from .dependency import DependencyStructure, IDependencyDefinition, Solid, SolidInvocation
 
 
 class IContainSolids(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
@@ -169,10 +163,6 @@ def create_execution_structure(solid_defs, dependencies_dict, graph_definition):
         alias_to_name[alias] = solid_key.name
         aliased_dependencies_dict[alias] = input_dep_dict
 
-        for dependency in input_dep_dict.values():
-            for dep in dependency.get_definitions():
-                name_to_aliases[dep.solid].add(dep.solid)
-
     pipeline_solid_dict = _build_pipeline_solid_dict(
         solid_defs, name_to_aliases, alias_to_solid_instance, graph_definition
     )
@@ -214,7 +204,7 @@ def _build_pipeline_solid_dict(
 def _validate_dependencies(dependencies, solid_dict, alias_to_name):
     for from_solid, dep_by_input in dependencies.items():
         for from_input, dep_def in dep_by_input.items():
-            for dep in dep_def.get_definitions():
+            for dep in dep_def.get_solid_dependencies():
 
                 if from_solid == dep.solid:
                     raise DagsterInvalidDefinitionError(
@@ -266,15 +256,13 @@ def _validate_dependencies(dependencies, solid_dict, alias_to_name):
                 input_def = solid_dict[from_solid].definition.input_def_named(from_input)
                 output_def = solid_dict[dep.solid].definition.output_def_named(dep.output)
 
-                if (
-                    isinstance(dep_def, MultiDependencyDefinition)
-                    and not input_def.dagster_type.supports_fan_in
-                ):
-                    raise DagsterInvalidDefinitionError(
-                        'Invalid dependencies: for solid "{dep.solid}" input "{input_def.name}", the '
-                        'DagsterType "{input_def.dagster_type.display_name}" does not support fanning in '
-                        "(MultiDependencyDefinition). Use the List type, since fanning in will result in a list."
-                    )
+                if dep_def.is_multi:
+                    if not input_def.dagster_type.supports_fan_in:
+                        raise DagsterInvalidDefinitionError(
+                            f'Invalid dependencies: for solid "{dep.solid}" input "{input_def.name}", the '
+                            f'DagsterType "{input_def.dagster_type.display_name}" does not support fanning in '
+                            "(MultiDependencyDefinition). Use the List type, since fanning in will result in a list."
+                        )
 
                 _validate_input_output_pair(input_def, output_def, from_solid, dep)
 

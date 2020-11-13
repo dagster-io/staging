@@ -232,8 +232,8 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
     assert (
         memoized_execution_plan.step_dict["versioned_solid_takes_input.compute"]
         .step_input_dict["intput"]
-        .source.address
-        == "some_address"
+        .source.step_output_handle
+        == expected_handle
     )
 
 

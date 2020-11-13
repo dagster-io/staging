@@ -10,6 +10,7 @@ from dagster.core.definitions import (
     SolidHandle,
     SolidOutputHandle,
 )
+from dagster.core.definitions.composition import MappedInputPlaceholder
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
 from dagster.core.execution.context.system import AssetStoreContext
@@ -22,7 +23,6 @@ from dagster.core.utils import toposort
 
 from .compute import create_compute_step
 from .inputs import (
-    FromAddress,
     FromConfig,
     FromDefaultValue,
     FromMultipleSources,
@@ -145,7 +145,7 @@ class _PlanBuilder:
             # Create and add execution plan steps for solid inputs
             step_inputs = []
             for input_name, input_def in solid.definition.input_dict.items():
-                step_input = get_step_input(
+                step_input_source = get_step_input_source(
                     self,
                     solid,
                     input_name,
@@ -155,13 +155,19 @@ class _PlanBuilder:
                     parent_step_inputs,
                 )
 
-                # If an input with dagster_type "Nothing" doesnt have a value
+                # If an input with dagster_type "Nothing" doesn't have a value
                 # we don't create a StepInput
-                if step_input is None:
+                if step_input_source is None:
                     continue
 
-                check.inst_param(step_input, "step_input", StepInput)
-                step_inputs.append(step_input)
+                check.inst_param(step_input_source, "step_input_source", StepInputSource)
+                step_inputs.append(
+                    StepInput(
+                        name=input_name,
+                        dagster_type=input_def.dagster_type,
+                        source=step_input_source,
+                    )
+                )
 
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
@@ -206,7 +212,7 @@ class _PlanBuilder:
                 )
 
 
-def get_step_input(
+def get_step_input_source(
     plan_builder, solid, input_name, input_def, dependency_structure, handle, parent_step_inputs
 ):
     check.inst_param(plan_builder, "plan_builder", _PlanBuilder)
@@ -219,49 +225,40 @@ def get_step_input(
 
     solid_config = plan_builder.environment_config.solids.get(str(handle))
     if solid_config and input_name in solid_config.inputs:
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromConfig(solid_config.inputs[input_name]),
-        )
+        return FromConfig(solid_config.inputs[input_name])
 
     input_handle = solid.input_handle(input_name)
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromStepOutput(plan_builder.get_output_handle(solid_output_handle)),
-        )
+        return FromStepOutput(plan_builder.get_output_handle(solid_output_handle))
 
     if dependency_structure.has_multi_deps(input_handle):
-        solid_output_handles = dependency_structure.get_multi_deps(input_handle)
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromMultipleSources(
-                [
-                    FromStepOutput(plan_builder.get_output_handle(solid_output_handle))
-                    for solid_output_handle in solid_output_handles
-                ]
-            ),
-        )
+        sources = []
+        for idx, handle_or_placeholder in enumerate(
+            dependency_structure.get_multi_deps(input_handle)
+        ):
+            if handle_or_placeholder is MappedInputPlaceholder:
+                parent_name = solid.container_mapped_input(input_name, idx).definition.name
+                parent_inputs = {step_input.name: step_input for step_input in parent_step_inputs}
+                parent_input = parent_inputs[parent_name]
+                sources.append(parent_input.source)
+            else:
+                sources.append(
+                    FromStepOutput(plan_builder.get_output_handle(handle_or_placeholder))
+                )
 
-    if solid.container_maps_input(input_name):
-        parent_name = solid.container_mapped_input(input_name).definition.name
+        return FromMultipleSources(sources)
+
+    if solid.container_maps_input(input_name, fan_in_index=None):
+        parent_name = solid.container_mapped_input(input_name, fan_in_index=None).definition.name
         parent_inputs = {step_input.name: step_input for step_input in parent_step_inputs}
         if parent_name in parent_inputs:
             parent_input = parent_inputs[parent_name]
-            return StepInput(
-                name=input_name, dagster_type=input_def.dagster_type, source=parent_input.source,
-            )
+            return parent_input.source
+        # else fall through to Nothing case or raise
 
     if solid.definition.input_has_default(input_name):
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromDefaultValue(solid.definition.default_value_for_input(input_name)),
-        )
+        return FromDefaultValue(solid.definition.default_value_for_input(input_name))
 
     # At this point we have an input that is not hooked up to
     # the output of another solid or provided via environment config.
@@ -394,62 +391,6 @@ class ExecutionPlan(
             step_keys_to_execute,
         )
 
-    def build_memoized_plan(self, step_keys_to_execute, addresses):
-        """Using cached outputs from previous runs, create a new execution plan.
-
-        For steps where values have been cached, addresses are provided so that at runtime, those
-        steps do not need to re-execute.
-
-        Args:
-            step_keys_to_execute (List[String]): A list of execution step keys to actually run in this
-                execution plan.
-            addresses: (Dict[(str, StepOutputHandle), str]): A dictionary mapping pipeline name and
-                step output handle to an "address", which the intermediate storage can use to
-                retrieve the value for this step output.
-        Returns:
-            ExecutionPlan: An execution plan where addresses have been provided to steps such that
-                the intermediate storage layer can retrieve the addresses instead of searching for
-                the output from within the current run.
-        """
-        check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
-        check.dict_param(addresses, "addresses")
-        pipeline_name = self.pipeline_def.name
-        memoized_plan_step_dict = self.step_dict.copy()
-        for step_key in step_keys_to_execute:
-            step = memoized_plan_step_dict[step_key]
-
-            # update step input source to address loads where applicable
-            updated_step_inputs = []
-            for step_input in step.step_inputs:
-                updated_step_inputs.append(
-                    StepInput(
-                        step_input.name,
-                        step_input.dagster_type,
-                        _updated_step_input_source(step_input.source, pipeline_name, addresses),
-                    )
-                )
-
-            memoized_step = ExecutionStep(
-                pipeline_name=step.pipeline_name,
-                key_suffix=step.key_suffix,
-                step_inputs=updated_step_inputs,
-                step_outputs=step.step_outputs,
-                compute_fn=step.compute_fn,
-                kind=step.kind,
-                solid_handle=step.solid_handle,
-                solid=step.solid,
-                logging_tags=step.logging_tags,
-            )
-            memoized_plan_step_dict[step_key] = memoized_step
-
-        return ExecutionPlan(
-            self.pipeline,
-            memoized_plan_step_dict,
-            self.deps,
-            self.artifacts_persisted,
-            step_keys_to_execute,
-        )
-
     def construct_asset_store_context(self, step_output_handle, asset_store_handle):
         from dagster.core.storage.asset_store import AssetStoreHandle
 
@@ -530,28 +471,3 @@ def check_asset_store_intermediate_storage(mode_def, environment_config):
                 intermediate_storage_name=intermediate_storage_def.name
             )
         )
-
-
-def _updated_step_input_source(source, pipeline_name, addresses):
-    check.inst_param(source, "source", StepInputSource)
-    check.str_param(pipeline_name, "pipeline_name")
-    check.dict_param(addresses, "addresses")
-
-    # If a fan-in, recurse
-    if isinstance(source, FromMultipleSources):
-        return FromMultipleSources(
-            [
-                _updated_step_input_source(inner_source, pipeline_name, addresses)
-                for inner_source in source.sources
-            ]
-        )
-    # If its from a step output that we have the address for, replace it with an address load
-    elif (
-        isinstance(source, FromStepOutput)
-        and (pipeline_name, source.step_output_handle) in addresses
-    ):
-        return FromAddress(
-            addresses[(pipeline_name, source.step_output_handle)], source.step_output_handle
-        )
-    else:
-        return source

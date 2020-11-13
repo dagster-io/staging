@@ -3,7 +3,6 @@ import hashlib
 from dagster import check
 from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.execution.plan.inputs import (
-    FromAddress,
     FromConfig,
     FromDefaultValue,
     FromMultipleSources,
@@ -57,9 +56,6 @@ def _resolve_step_input_versions(step, step_versions):
                 ]
             )
         elif isinstance(input_source, FromStepOutput):
-            return _resolve_output_version(input_source.step_output_handle)
-        elif isinstance(input_source, FromAddress):
-            # seems like this should use address but that makes test_memoized_dev_loop fail
             return _resolve_output_version(input_source.step_output_handle)
         elif isinstance(input_source, FromConfig):
             return dagster_type.loader.compute_loaded_input_version(input_source.config_data)

@@ -26,7 +26,6 @@ from dagster.core.errors import (
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemStepExecutionContext
 from dagster.core.execution.plan.inputs import (
-    FromAddress,
     FromConfig,
     FromDefaultValue,
     FromMultipleSources,
@@ -541,18 +540,6 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
             return step_context.intermediate_storage.get_intermediate(
                 context=step_context, step_output_handle=source_handle, dagster_type=dagster_type,
             )
-    elif isinstance(source, FromAddress):
-        if check_for_missing and not step_context.intermediate_storage.has_intermediate_at_address(
-            source.address
-        ):
-            return _MISSING_SIGIL
-
-        return step_context.intermediate_storage.get_intermediate_from_address(
-            step_context,
-            dagster_type=dagster_type,
-            step_output_handle=source.step_output_handle,  # do we really needs this?
-            address=source.address,
-        )
     elif isinstance(source, FromConfig):
         with user_code_error_boundary(
             DagsterTypeLoadingError,
