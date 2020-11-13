@@ -127,16 +127,6 @@ def test_collect_one():
     assert execute_pipeline(multi_one).success
 
 
-def test_bad_dsl():
-
-    with pytest.raises(DagsterInvalidDefinitionError, match="list containing invalid types"):
-
-        @composite_solid
-        def _composed_collect(str_in, none_in):
-            num = emit_num()
-            collect([num, str_in, none_in])
-
-
 def test_nothing_deps():
 
     with pytest.raises(

@@ -226,12 +226,17 @@ class GraphDefinition(NodeDefinition):
                 return mapping
         return None
 
-    def mapped_input(self, solid_name, input_name):
+    def mapped_input(self, solid_name, input_name, fan_in_index):
         check.str_param(solid_name, "solid_name")
         check.str_param(input_name, "input_name")
+        check.opt_int_param(fan_in_index, "fan_in_index")
 
         for mapping in self._input_mappings:
-            if mapping.solid_name == solid_name and mapping.input_name == input_name:
+            if (
+                mapping.solid_name == solid_name
+                and mapping.input_name == input_name
+                and mapping.fan_in_index == fan_in_index
+            ):
                 return mapping
         return None
 
@@ -373,16 +378,26 @@ def _validate_in_mappings(input_mappings, solid_dict, name, class_name):
                         name=name, mapping=mapping, class_name=class_name
                     )
                 )
-
             target_input = target_solid.input_def_named(mapping.input_name)
-            if target_input.dagster_type != mapping.definition.dagster_type:
+            if mapping.fan_in_index is None:
+                target_type = target_input.dagster_type
+                fan_in_msg = ""
+            else:
+                target_type = target_input.dagster_type.get_inner_type_for_fan_in()
+                fan_in_msg = " (index {} of fan-in)".format(mapping.fan_in_index)
+
+            if target_type != mapping.definition.dagster_type:
                 raise DagsterInvalidDefinitionError(
                     "In {class_name} '{name}' input "
                     "'{mapping.definition.name}' of type {mapping.definition.dagster_type.display_name} maps to "
-                    "{mapping.solid_name}.{mapping.input_name} of different type "
-                    "{target_input.dagster_type.display_name}. InputMapping source and "
+                    "{mapping.solid_name}.{mapping.input_name}{fan_in_msg} of different type "
+                    "{target_type.display_name}. InputMapping source and "
                     "destination must have the same type.".format(
-                        mapping=mapping, name=name, target_input=target_input, class_name=class_name
+                        mapping=mapping,
+                        name=name,
+                        target_type=target_type,
+                        class_name=class_name,
+                        fan_in_msg=fan_in_msg,
                     )
                 )
 
