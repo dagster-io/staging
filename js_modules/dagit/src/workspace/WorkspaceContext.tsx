@@ -252,14 +252,6 @@ export const usePipelineSelector = (pipelineName: string, solidSelection?: strin
   };
 };
 
-export const useScheduleSelector = (scheduleName: string) => {
-  const repositorySelector = useRepositorySelector();
-  return {
-    ...repositorySelector,
-    scheduleName,
-  };
-};
-
 export const optionToRepoAddress = (option: DagsterRepoOption) => {
   return {
     name: option.repository.name,
