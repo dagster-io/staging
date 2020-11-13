@@ -85,7 +85,12 @@ def get_schedule_states_or_error(
             for repository in repository_location.get_repositories().values()
             for schedule in repository.get_external_schedules()
         ]
-        return _get_schedule_states(graphene_info, stored_schedule_states, external_schedules)
+        return _get_schedule_states(
+            graphene_info,
+            stored_schedule_states,
+            external_schedules,
+            with_no_schedule_definition_filter,
+        )
 
     location = graphene_info.context.get_repository_location(repository_selector.location_name)
     repository = location.get_repository(repository_selector.repository_name)

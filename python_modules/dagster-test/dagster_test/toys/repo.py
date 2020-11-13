@@ -29,3 +29,20 @@ def toys_repository():
         branch_pipeline,
         unreliable_pipeline,
     ] + get_toys_schedules()
+
+
+@repository
+def boys_repository():
+    return [
+        composition,
+        error_monster,
+        hammer_pipeline,
+        fan_in_fan_out_pipeline,
+        log_spew,
+        longitudinal_pipeline,
+        many_events,
+        sleepy_pipeline,
+        retry_pipeline,
+        branch_pipeline,
+        unreliable_pipeline,
+    ] + get_toys_schedules()

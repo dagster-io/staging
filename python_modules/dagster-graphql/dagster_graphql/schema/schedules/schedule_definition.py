@@ -43,8 +43,18 @@ class DauphinScheduleDefinition(dauphin.ObjectType):
     runConfigOrError = dauphin.Field("ScheduleRunConfigOrError")
     partition_set = dauphin.Field("PartitionSet")
 
+    repository = dauphin.NonNull("Repository")
+
     def resolve_runConfigOrError(self, graphene_info):
         return get_schedule_config(graphene_info, self._external_schedule)
+
+    def resolve_repository(self, graphene_info):
+        location = graphene_info.context.get_repository_location(
+            self._external_schedule.handle.location_name
+        )
+        return graphene_info.schema.type_named("Repository")(
+            location.get_repository(self._external_schedule.handle.repository_name), location,
+        )
 
     def resolve_partition_set(self, graphene_info):
         if self._external_schedule.partition_set_name is None:
