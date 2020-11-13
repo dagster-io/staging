@@ -141,11 +141,11 @@ class Solid:
     def tags(self):
         return self.definition.tags.updated_with(self._additional_tags)
 
-    def container_maps_input(self, input_name):
-        return self.graph_definition.mapped_input(self.name, input_name) is not None
+    def container_maps_input(self, input_name, fan_in_index):
+        return self.graph_definition.mapped_input(self.name, input_name, fan_in_index) is not None
 
-    def container_mapped_input(self, input_name):
-        return self.graph_definition.mapped_input(self.name, input_name)
+    def container_mapped_input(self, input_name, fan_in_index):
+        return self.graph_definition.mapped_input(self.name, input_name, fan_in_index)
 
     @property
     def hook_defs(self):
@@ -382,10 +382,15 @@ def _create_handle_dict(solid_dict, dep_dict):
         from_solid = solid_dict[solid_name]
         for input_name, dep_def in input_dict.items():
             if dep_def.is_multi():
-                handle_dict[from_solid.input_handle(input_name)] = [
-                    solid_dict[dep.solid].output_handle(dep.output)
-                    for dep in dep_def.get_definitions()
-                ]
+                handles = []
+                for inner_dep in dep_def.get_dependencies_and_mappings():
+                    if isinstance(inner_dep, DependencyDefinition):
+                        handles.append(solid_dict[inner_dep.solid].output_handle(inner_dep.output))
+                    else:
+                        handles.append(None)  # bad sigil
+
+                handle_dict[from_solid.input_handle(input_name)] = handles
+
             else:
                 handle_dict[from_solid.input_handle(input_name)] = solid_dict[
                     dep_def.solid
@@ -415,15 +420,16 @@ class DependencyStructure:
 
         for input_handle, output_handle_or_list in self._handle_dict.items():
             output_handle_list = (
-                output_handle_or_list
+                [x for x in output_handle_or_list if x]  # bad sigil effect
                 if isinstance(output_handle_or_list, list)
                 else [output_handle_or_list]
             )
             self._solid_input_index[input_handle.solid.name][input_handle] = output_handle_list
             for output_handle in output_handle_list:
-                self._solid_output_index[output_handle.solid.name][output_handle].append(
-                    input_handle
-                )
+                if output_handle:  # bad sigil effect
+                    self._solid_output_index[output_handle.solid.name][output_handle].append(
+                        input_handle
+                    )
 
     def all_upstream_outputs_from_solid(self, solid_name):
         check.str_param(solid_name, "solid_name")
@@ -433,6 +439,7 @@ class DependencyStructure:
             output_handle
             for output_handle_list in self._solid_input_index[solid_name].values()
             for output_handle in output_handle_list
+            if output_handle  # bad sigil effect
         ]
 
     def input_to_upstream_outputs_for_solid(self, solid_name):
@@ -517,7 +524,7 @@ class DependencyStructure:
 
 class IDependencyDefinition(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
     @abstractmethod
-    def get_definitions(self):
+    def get_solid_dependencies(self):
         pass
 
     @abstractmethod
@@ -571,7 +578,7 @@ class DependencyDefinition(
             check.opt_str_param(description, "description"),
         )
 
-    def get_definitions(self):
+    def get_solid_dependencies(self):
         return [self]
 
     def is_multi(self):
@@ -624,21 +631,38 @@ class MultiDependencyDefinition(
     """
 
     def __new__(cls, dependencies):
-        deps = check.list_param(dependencies, "dependencies", of_type=DependencyDefinition)
+        from .composition import InputMappingNode
+
+        deps = check.list_param(
+            dependencies, "dependencies", of_type=(DependencyDefinition, InputMappingNode)
+        )
         seen = {}
         for dep in deps:
-            key = dep.solid + ":" + dep.output
-            if key in seen:
-                raise DagsterInvalidDefinitionError(
-                    'Duplicate dependencies on solid "{dep.solid}" output "{dep.output}" '
-                    "used in the same MultiDependencyDefinition.".format(dep=dep)
-                )
+            if isinstance(dep, DependencyDefinition):
+                key = dep.solid + ":" + dep.output
+                if key in seen:
+                    raise DagsterInvalidDefinitionError(
+                        'Duplicate dependencies on solid "{dep.solid}" output "{dep.output}" '
+                        "used in the same MultiDependencyDefinition.".format(dep=dep)
+                    )
+            else:
+                key = dep.input_def.name
+                if key in seen:
+                    raise DagsterInvalidDefinitionError(
+                        'Duplicate input mappings from "{key}" used in the same MultiDependencyDefinition'.format(
+                            key=key
+                        )
+                    )
+
             seen[key] = True
 
         return super(MultiDependencyDefinition, cls).__new__(cls, deps)
 
-    def get_definitions(self):
-        return self.dependencies
+    def get_solid_dependencies(self):
+        return [dep for dep in self.dependencies if isinstance(dep, DependencyDefinition)]
 
     def is_multi(self):
         return True
+
+    def get_dependencies_and_mappings(self):
+        return self.dependencies

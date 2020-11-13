@@ -16,6 +16,8 @@ from dagster import (
     pipeline,
     solid,
 )
+from dagster.core.definitions.composition import InputMappingNode
+from dagster.core.definitions.solid import CompositeSolidDefinition
 
 
 def test_simple_values():
@@ -127,14 +129,38 @@ def test_collect_one():
     assert execute_pipeline(multi_one).success
 
 
-def test_bad_dsl():
+def test_fan_in_manual():
+    @composite_solid
+    def dsl_composite(str_in, none_in):
+        num = emit_num()
+        collect([num, str_in, none_in])
 
-    with pytest.raises(DagsterInvalidDefinitionError, match="list containing invalid types"):
+    str_in = InputDefinition("str_in")
+    none_in = InputDefinition("none_in")
 
-        @composite_solid
-        def _composed_collect(str_in, none_in):
-            num = emit_num()
-            collect([num, str_in, none_in])
+    manual_solid = CompositeSolidDefinition(
+        name="manual_composite",
+        solid_defs=[emit_num, collect],
+        input_mappings=[
+            str_in.mapping_to("collect", "stuff", 1),
+            none_in.mapping_to("collect", "stuff", 2),
+        ],
+        dependencies={
+            "collect": {
+                "stuff": MultiDependencyDefinition(
+                    [
+                        DependencyDefinition("emit_num"),
+                        InputMappingNode(str_in),
+                        InputMappingNode(none_in),
+                    ]
+                )
+            }
+        },
+    )
+
+    # these should be "the same" - not sure best way to test, this is for diff comms anyway
+    assert dsl_composite
+    assert manual_solid
 
 
 def test_nothing_deps():
