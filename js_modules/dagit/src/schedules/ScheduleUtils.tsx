@@ -91,20 +91,15 @@ export const SCHEDULES_ROOT_QUERY = gql`
       ... on Repository {
         name
         id
+        scheduleDefinitions {
+          ...ScheduleDefinitionFragment
+        }
         ...RepositoryInfoFragment
       }
       ...PythonErrorFragment
     }
     scheduler {
       ...SchedulerFragment
-    }
-    scheduleDefinitionsOrError(repositorySelector: $repositorySelector) {
-      ... on ScheduleDefinitions {
-        results {
-          ...ScheduleDefinitionFragment
-        }
-      }
-      ...PythonErrorFragment
     }
     scheduleStatesOrError(repositorySelector: $repositorySelector, withNoScheduleDefinition: true) {
       __typename
@@ -121,6 +116,7 @@ export const SCHEDULES_ROOT_QUERY = gql`
   ${SCHEDULER_FRAGMENT}
   ${PythonErrorInfo.fragments.PythonErrorFragment}
   ${RepositoryInformationFragment}
+  ${SCHEDULE_STATE_FRAGMENT}
 `;
 
 export const SchedulerTimezoneNote: React.FC<{
