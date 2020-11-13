@@ -46,40 +46,6 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
     def is_persistent(self):
         pass
 
-    def all_inputs_covered(self, context, step):
-        return len(self.get_missing_input_sources(context, step)) == 0
-
-    def is_input_source_missing(self, context, source):
-        if isinstance(source, FromStepOutput):
-            if context.using_asset_store(source.step_output_handle):
-                # skip when the source output has asset store configured
-                return False
-
-            return not self.has_intermediate(context, source.step_output_handle)
-        elif isinstance(source, FromMultipleSources):
-            # only report as uncovered if all are missing from a multi-dep input
-            return all(
-                self.is_input_source_missing(context, inner_source)
-                for inner_source in source.sources
-            )
-        elif isinstance(source, (FromConfig, FromDefaultValue)):
-            pass  # value is sourced directly
-        else:
-            check.failed(f"Unhandled step input source: {source}")
-
-        return False
-
-    def get_missing_input_sources(self, context, step):
-        from dagster.core.execution.plan.objects import ExecutionStep
-
-        check.inst_param(step, "step", ExecutionStep)
-        missing_sources = []
-        for step_input in step.step_inputs:
-            if self.is_input_source_missing(context, step_input.source):
-                missing_sources.append(step_input.source)
-
-        return missing_sources
-
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
     def __init__(self, object_store, root_for_run_id, run_id, type_storage_plugin_registry):

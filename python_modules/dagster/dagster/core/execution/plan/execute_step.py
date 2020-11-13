@@ -247,7 +247,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
-    for input_name, input_value in _input_values_from_intermediate_storage(step_context):
+    for input_name, input_value in _load_input_values(step_context):
         if isinstance(input_value, ObjectStoreOperation):
             yield DagsterEvent.object_store_operation(
                 step_context, ObjectStoreOperation.serializable(input_value, value_name=input_name)
@@ -477,7 +477,7 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
     )
 
 
-def _input_values_from_intermediate_storage(step_context):
+def _load_input_values(step_context):
     step = step_context.step
 
     for step_input in step.step_inputs:

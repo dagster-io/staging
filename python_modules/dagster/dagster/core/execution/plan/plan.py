@@ -10,6 +10,7 @@ from dagster.core.definitions import (
     SolidHandle,
     SolidOutputHandle,
 )
+from dagster.core.definitions.composition import MappedInputPlaceholder
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
 from dagster.core.execution.context.system import AssetStoreContext
@@ -22,7 +23,14 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
 from .compute import create_compute_step
-from .inputs import FromConfig, FromDefaultValue, FromMultipleSources, FromStepOutput, StepInput
+from .inputs import (
+    FromConfig,
+    FromDefaultValue,
+    FromMultipleSources,
+    FromStepOutput,
+    StepInput,
+    StepInputSource,
+)
 from .objects import ExecutionStep, StepOutputHandle
 
 
@@ -135,7 +143,7 @@ class _PlanBuilder:
             # Create and add execution plan steps for solid inputs
             step_inputs = []
             for input_name, input_def in solid.definition.input_dict.items():
-                step_input = get_step_input(
+                step_input_source = get_step_input_source(
                     self,
                     solid,
                     input_name,
@@ -145,13 +153,19 @@ class _PlanBuilder:
                     parent_step_inputs,
                 )
 
-                # If an input with dagster_type "Nothing" doesnt have a value
+                # If an input with dagster_type "Nothing" doesn't have a value
                 # we don't create a StepInput
-                if step_input is None:
+                if step_input_source is None:
                     continue
 
-                check.inst_param(step_input, "step_input", StepInput)
-                step_inputs.append(step_input)
+                check.inst_param(step_input_source, "step_input_source", StepInputSource)
+                step_inputs.append(
+                    StepInput(
+                        name=input_name,
+                        dagster_type=input_def.dagster_type,
+                        source=step_input_source,
+                    )
+                )
 
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
@@ -196,7 +210,7 @@ class _PlanBuilder:
                 )
 
 
-def get_step_input(
+def get_step_input_source(
     plan_builder, solid, input_name, input_def, dependency_structure, handle, parent_step_inputs
 ):
     check.inst_param(plan_builder, "plan_builder", _PlanBuilder)
@@ -209,61 +223,50 @@ def get_step_input(
 
     solid_config = plan_builder.environment_config.solids.get(str(handle))
     if solid_config and input_name in solid_config.inputs:
-        return StepInput(
-            name=input_name,
+        return FromConfig(
+            solid_config.inputs[input_name],
             dagster_type=input_def.dagster_type,
-            source=FromConfig(
-                solid_config.inputs[input_name],
-                dagster_type=input_def.dagster_type,
-                input_name=input_name,
-            ),
+            input_name=input_name,
         )
 
     input_handle = solid.input_handle(input_name)
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
-        return StepInput(
-            name=input_name,
+        return FromStepOutput(
+            step_output_handle=plan_builder.get_output_handle(solid_output_handle),
             dagster_type=input_def.dagster_type,
-            source=FromStepOutput(
-                step_output_handle=plan_builder.get_output_handle(solid_output_handle),
-                dagster_type=input_def.dagster_type,
-                check_for_missing=False,
-            ),
         )
 
     if dependency_structure.has_multi_deps(input_handle):
-        solid_output_handles = dependency_structure.get_multi_deps(input_handle)
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromMultipleSources(
-                [
+        sources = []
+        for idx, handle_or_placeholder in enumerate(
+            dependency_structure.get_multi_deps(input_handle)
+        ):
+            if handle_or_placeholder is MappedInputPlaceholder:
+                parent_name = solid.container_mapped_fan_in_input(input_name, idx).definition.name
+                parent_inputs = {step_input.name: step_input for step_input in parent_step_inputs}
+                parent_input = parent_inputs[parent_name]
+                sources.append(parent_input.source)
+            else:
+                sources.append(
                     FromStepOutput(
-                        step_output_handle=plan_builder.get_output_handle(solid_output_handle),
+                        step_output_handle=plan_builder.get_output_handle(handle_or_placeholder),
                         dagster_type=input_def.dagster_type.get_inner_type_for_fan_in(),
-                        check_for_missing=True,
                     )
-                    for solid_output_handle in solid_output_handles
-                ]
-            ),
-        )
+                )
+
+        return FromMultipleSources(sources)
 
     if solid.container_maps_input(input_name):
         parent_name = solid.container_mapped_input(input_name).definition.name
         parent_inputs = {step_input.name: step_input for step_input in parent_step_inputs}
         if parent_name in parent_inputs:
             parent_input = parent_inputs[parent_name]
-            return StepInput(
-                name=input_name, dagster_type=input_def.dagster_type, source=parent_input.source,
-            )
+            return parent_input.source
+        # else fall through to Nothing case or raise
 
     if solid.definition.input_has_default(input_name):
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromDefaultValue(solid.definition.default_value_for_input(input_name)),
-        )
+        return FromDefaultValue(solid.definition.default_value_for_input(input_name))
 
     # At this point we have an input that is not hooked up to
     # the output of another solid or provided via environment config.

@@ -20,10 +20,6 @@ def join_and_hash(*args):
         return hashlib.sha1(unhashed.encode("utf-8")).hexdigest()
 
 
-class _MISSING_ITEM_SENTINEL:
-    """Marker object for noting a missing item to be filtered from a fan-in input"""
-
-
 class MultipleStepOutputsListWrapper(list):
     pass
 
@@ -55,6 +51,10 @@ class StepInputSource(ABC):
     def load_input_object(self, step_context):
         raise NotImplementedError()
 
+    @abstractmethod
+    def can_load_input_object(self, step_context):
+        raise NotImplementedError()
+
     def required_resource_keys(self):
         return set()
 
@@ -65,12 +65,11 @@ class StepInputSource(ABC):
 
 
 class FromStepOutput(
-    namedtuple("_FromStepOutput", "step_output_handle dagster_type check_for_missing"),
-    StepInputSource,
+    namedtuple("_FromStepOutput", "step_output_handle dagster_type"), StepInputSource,
 ):
     """This step input source is the output of a previous step"""
 
-    def __new__(cls, step_output_handle, dagster_type, check_for_missing):
+    def __new__(cls, step_output_handle, dagster_type):
         from .objects import StepOutputHandle
 
         return super(FromStepOutput, cls).__new__(
@@ -79,7 +78,6 @@ class FromStepOutput(
                 step_output_handle, "step_output_handle", StepOutputHandle
             ),
             dagster_type=dagster_type,
-            check_for_missing=check_for_missing,
         )
 
     @property
@@ -90,16 +88,21 @@ class FromStepOutput(
     def step_output_handle_dependencies(self):
         return [self.step_output_handle]
 
+    def can_load_input_object(self, step_context):
+        source_handle = self.step_output_handle
+        if step_context.using_asset_store(source_handle):
+            # asset store does not have a has check so assume present
+            return True
+
+        return step_context.intermediate_storage.has_intermediate(
+            context=step_context, step_output_handle=source_handle,
+        )
+
     def load_input_object(self, step_context):
         source_handle = self.step_output_handle
         if step_context.using_asset_store(source_handle):
             return _get_addressable_asset(step_context, source_handle)
         else:
-            if self.check_for_missing and not step_context.intermediate_storage.has_intermediate(
-                context=step_context, step_output_handle=source_handle,
-            ):
-                return _MISSING_ITEM_SENTINEL
-
             return step_context.intermediate_storage.get_intermediate(
                 context=step_context,
                 step_output_handle=source_handle,
@@ -140,6 +143,9 @@ class FromConfig(namedtuple("_FromConfig", "config_data dagster_type input_name"
             cls, config_data=config_data, dagster_type=dagster_type, input_name=input_name
         )
 
+    def can_load_input_object(self, step_context):
+        return True
+
     def load_input_object(self, step_context):
         with user_code_error_boundary(
             DagsterTypeLoadingError,
@@ -165,6 +171,9 @@ class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource
         cls, value,
     ):
         return super(FromDefaultValue, cls).__new__(cls, value)
+
+    def can_load_input_object(self, step_context):
+        return True
 
     def load_input_object(self, step_context):
         return self.value
@@ -201,12 +210,16 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
 
         return handles
 
+    def can_load_input_object(self, step_context):
+        return any([source.can_load_input_object(step_context) for source in self.sources])
+
     def load_input_object(self, step_context):
         values = []
         for inner_source in self.sources:
-            value = inner_source.load_input_object(step_context)
-            if value is not _MISSING_ITEM_SENTINEL:
-                values.append(value)
+            # perform a can_load check since some upstream steps may have skipped, and
+            # we allow fan-in to continue in their absence
+            if inner_source.can_load_input_object(step_context):
+                values.append(inner_source.load_input_object(step_context))
 
         # When we're using an object store-backed intermediate store, we wrap the
         # ObjectStoreOperation[] representing the fan-in values in a MultipleStepOutputsListWrapper
