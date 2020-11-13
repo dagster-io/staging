@@ -940,7 +940,7 @@ def define_schedules():
 
     @daily_schedule(
         pipeline_name="no_config_pipeline",
-        start_date=today_at_midnight() - datetime.timedelta(days=1),
+        start_date=today_at_midnight("US/Central") - datetime.timedelta(days=1),
         execution_timezone="US/Central",
     )
     def timezone_schedule(_date):
