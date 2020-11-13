@@ -90,7 +90,7 @@ class InputDefinition:
         check.invariant(self.has_default_value, "Can only fetch default_value if has_default_value")
         return self._default_value
 
-    def mapping_to(self, solid_name, input_name):
+    def mapping_to(self, solid_name, input_name, fan_in_index=None):
         """Create an input mapping to an input of a child solid.
 
         In a CompositeSolidDefinition, you can use this helper function to construct
@@ -99,6 +99,7 @@ class InputDefinition:
         Args:
             solid_name (str): The name of the child solid to which to map this input.
             input_name (str): The name of the child solid' input to which to map this input.
+            fan_in_index (Optional[int]): The index in to a fanned in input, else None
 
         Examples:
 
@@ -108,10 +109,10 @@ class InputDefinition:
                     'child_solid', 'int_input'
                 )
         """
-        return InputMapping(self, solid_name, input_name)
+        return InputMapping(self, solid_name, input_name, fan_in_index)
 
 
-class InputMapping(namedtuple("_InputMapping", "definition solid_name input_name")):
+class InputMapping(namedtuple("_InputMapping", "definition solid_name input_name fan_in_index")):
     """Defines an input mapping for a composite solid.
 
     Args:
@@ -120,10 +121,11 @@ class InputMapping(namedtuple("_InputMapping", "definition solid_name input_name
         input_name (str): The name of the input to the child solid onto which to map the input.
     """
 
-    def __new__(cls, definition, solid_name, input_name):
+    def __new__(cls, definition, solid_name, input_name, fan_in_index):
         return super(InputMapping, cls).__new__(
             cls,
             check.inst_param(definition, "definition", InputDefinition),
             check.str_param(solid_name, "solid_name"),
             check.str_param(input_name, "input_name"),
+            check.opt_int_param(fan_in_index, "fan_in_index"),
         )

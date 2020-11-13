@@ -186,7 +186,7 @@ def get_inputs_field(solid, handle, dependency_structure):
             # If this input is not satisfied by a dependency you must
             # provide it via config
             if not dependency_structure.has_deps(inp_handle) and not solid.container_maps_input(
-                name
+                name, fan_in_index=None
             ):
 
                 inputs_field_fields[name] = Field(
