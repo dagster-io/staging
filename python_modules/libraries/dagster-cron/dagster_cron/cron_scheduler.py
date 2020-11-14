@@ -2,12 +2,11 @@ import io
 import os
 import shutil
 import stat
-import sys
 
 import six
 from crontab import CronTab
 from dagster import DagsterInstance, check, utils
-from dagster.core.host_representation import ExternalSchedule
+from dagster.core.host_representation import ExternalSchedule, RepositoryLocationHandle
 from dagster.core.scheduler import DagsterSchedulerError, Scheduler
 from dagster.serdes import ConfigurableClass
 
@@ -53,7 +52,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
 
         # If the cron job already exists, remove it. This prevents duplicate entries.
         # Then, add a new cron job to the cron tab.
-        if self.running_schedule_count(instance, external_schedule.get_external_origin_id()) > 0:
+        if self.running_schedule_count(instance, schedule_origin_id) > 0:
             self._end_cron_job(instance, schedule_origin_id)
 
         self._start_cron_job(instance, external_schedule)
@@ -75,7 +74,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
                 "There are {running_schedule_count} jobs running for the schedule."
                 "To resolve, run `dagster schedule up`, or edit the cron tab to "
                 "remove duplicate schedules".format(
-                    schedule_name=external_schedule.name,
+                    schedule_name=external_schedule.job_name,
                     running_schedule_count=running_schedule_count,
                 )
             )
@@ -95,7 +94,7 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
                 "Attempted to remove existing cron job for schedule "
                 "{schedule_name}, but failed. "
                 "There are still {running_schedule_count} jobs running for the schedule.".format(
-                    schedule_name=schedule.name, running_schedule_count=running_schedule_count
+                    schedule_name=schedule.job_name, running_schedule_count=running_schedule_count
                 )
             )
 
@@ -190,15 +189,22 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
 
     def _write_bash_script_to_file(self, instance, external_schedule):
         # Get path to store bash script
-        schedule_origin_id = external_schedule.get_external_origin_id()
+        schedule_origin = external_schedule.get_external_origin()
+        schedule_origin_id = schedule_origin.get_id()
         script_file = self._get_bash_script_file_path(instance, schedule_origin_id)
+
+        external_repository_origin = schedule_origin.external_repository_origin
+        location_handle = RepositoryLocationHandle.create_from_repository_location_origin(
+            external_repository_origin.repository_location_origin
+        )
+        repository_python_origin = location_handle.get_repository_python_origin(
+            external_repository_origin.repository_name
+        )
 
         # Get path to store schedule attempt logs
         logs_directory = self._get_or_create_logs_directory(instance, schedule_origin_id)
         schedule_log_file_name = "{}_{}.result".format("${RUN_DATE}", schedule_origin_id)
         schedule_log_file_path = os.path.join(logs_directory, schedule_log_file_name)
-
-        local_target = external_schedule.get_external_origin()
 
         # Environment information needed for execution
         dagster_home = os.getenv("DAGSTER_HOME")
@@ -213,9 +219,9 @@ class SystemCronScheduler(Scheduler, ConfigurableClass):
 
             {python_exe} -m dagster api launch_scheduled_execution --schedule_name {schedule_name} {repo_cli_args} "{result_file}"
         """.format(
-            python_exe=sys.executable,
+            python_exe=repository_python_origin.executable_path,
             schedule_name=external_schedule.name,
-            repo_cli_args=local_target.get_repo_cli_args(),
+            repo_cli_args=external_repository_origin.get_cli_args(),
             result_file=schedule_log_file_path,
             dagster_home=dagster_home,
             env_vars="\n".join(

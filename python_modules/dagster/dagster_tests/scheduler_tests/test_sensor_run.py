@@ -20,7 +20,6 @@ from dagster.core.test_utils import instance_for_test
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.daemon import get_default_daemon_logger
 from dagster.scheduler.sensor import execute_sensor_iteration
-from dagster.utils import merge_dicts
 
 
 @solid
