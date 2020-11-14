@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { ScheduleTickStatus, PipelineRunStatus, ScheduleStatus } from "./../../types/globalTypes";
+import { JobTickStatus, PipelineRunStatus, ScheduleStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: SchedulerRootQuery
@@ -98,7 +98,7 @@ export type SchedulerRootQuery_scheduleStatesOrError_ScheduleStates_results_tick
 export interface SchedulerRootQuery_scheduleStatesOrError_ScheduleStates_results_ticks {
   __typename: "ScheduleTick";
   tickId: string;
-  status: ScheduleTickStatus;
+  status: JobTickStatus;
   timestamp: number;
   tickSpecificData: SchedulerRootQuery_scheduleStatesOrError_ScheduleStates_results_ticks_tickSpecificData | null;
 }

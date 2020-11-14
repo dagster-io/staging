@@ -53,6 +53,7 @@ export type RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes
 export interface RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes {
   __typename: "Repository";
   id: string;
+  externalId: string;
   name: string;
   pipelines: RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_pipelines[];
   partitionSets: RootRepositoriesQuery_repositoriesOrError_RepositoryConnection_nodes_partitionSets[];

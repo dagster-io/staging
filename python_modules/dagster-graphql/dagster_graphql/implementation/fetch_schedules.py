@@ -1,5 +1,6 @@
 import yaml
 from dagster import check
+from dagster.core.definitions.job import JobType
 from dagster.core.host_representation import (
     ExternalSchedule,
     ExternalScheduleExecutionData,
@@ -83,28 +84,28 @@ def get_schedule_states_or_error(
             graphene_info.schema.type_named("ScheduleState")(
                 graphene_info, schedule_state=schedule_state
             )
-            for schedule_state in instance.all_stored_schedule_state()
+            for schedule_state in instance.all_stored_job_state(job_type=JobType.SCHEDULE)
         ]
         return graphene_info.schema.type_named("ScheduleStates")(results=results)
 
     location = graphene_info.context.get_repository_location(repository_selector.location_name)
     repository = location.get_repository(repository_selector.repository_name)
-    repository_origin_id = repository.get_origin().get_id()
+    repository_origin_id = repository.get_external_origin_id()
     instance = graphene_info.context.instance
 
     results = [
         graphene_info.schema.type_named("ScheduleState")(
             graphene_info, schedule_state=schedule_state
         )
-        for schedule_state in instance.all_stored_schedule_state(
-            repository_origin_id=repository_origin_id
+        for schedule_state in instance.all_stored_job_state(
+            repository_origin_id=repository_origin_id, job_type=JobType.SCHEDULE
         )
     ]
 
     if with_no_schedule_definition_filter:
         external_schedules = repository.get_external_schedules()
         external_schedule_origin_ids = set(
-            external_schedule.get_origin_id() for external_schedule in external_schedules
+            external_schedule.get_external_origin_id() for external_schedule in external_schedules
         )
 
         # Filter for all schedule states for which there are no matching external schedules with the

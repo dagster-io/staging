@@ -10,11 +10,13 @@ from dagster import DagsterEventType, daily_schedule, hourly_schedule, pipeline,
 from dagster.core.definitions.reconstructable import ReconstructableRepository
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import (
+    ExternalRepositoryOrigin,
+    InProcessRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
     RepositoryLocation,
     RepositoryLocationHandle,
 )
-from dagster.core.scheduler import ScheduleState, ScheduleStatus, ScheduleTickStatus
+from dagster.core.scheduler.job import JobState, JobStatus, JobTickStatus, JobType, ScheduleJobData
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
 from dagster.core.storage.tags import PARTITION_NAME_TAG, SCHEDULED_EXECUTION_TIME_TAG
 from dagster.core.test_utils import instance_for_test
@@ -254,10 +256,9 @@ def validate_tick(
     expected_run_id,
     expected_error=None,
 ):
-    tick_data = tick.schedule_tick_data
-    assert tick_data.schedule_origin_id == external_schedule.get_origin_id()
-    assert tick_data.schedule_name == external_schedule.name
-    assert tick_data.cron_schedule == external_schedule.cron_schedule
+    tick_data = tick.job_tick_data
+    assert tick_data.job_origin_id == external_schedule.get_external_origin_id()
+    assert tick_data.job_name == external_schedule.name
     assert tick_data.timestamp == expected_datetime.timestamp()
     assert tick_data.status == expected_status
     assert tick_data.run_id == expected_run_id
@@ -311,12 +312,12 @@ def test_simple_schedule(external_repo_context, capfd):
         with pendulum.test(freeze_datetime):
             external_schedule = external_repo.get_external_schedule("simple_schedule")
 
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
 
             instance.start_schedule_and_update_storage_state(external_schedule)
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
             # launch_scheduled_runs does nothing before the first tick
@@ -324,7 +325,7 @@ def test_simple_schedule(external_repo_context, capfd):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
             captured = capfd.readouterr()
@@ -343,7 +344,7 @@ def test_simple_schedule(external_repo_context, capfd):
             )
 
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
             expected_datetime = pendulum.datetime(year=2019, month=2, day=28)
@@ -352,7 +353,7 @@ def test_simple_schedule(external_repo_context, capfd):
                 ticks[0],
                 external_schedule,
                 expected_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
 
@@ -380,9 +381,9 @@ def test_simple_schedule(external_repo_context, capfd):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
         # Verify advancing in time but not going past a tick doesn't add any new runs
         freeze_datetime = freeze_datetime.add(seconds=2)
@@ -391,9 +392,9 @@ def test_simple_schedule(external_repo_context, capfd):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
         freeze_datetime = freeze_datetime.add(days=2)
         with pendulum.test(freeze_datetime):
@@ -404,9 +405,9 @@ def test_simple_schedule(external_repo_context, capfd):
                 instance, get_default_scheduler_logger(), pendulum.now("UTC"),
             )
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
-            assert len([tick for tick in ticks if tick.status == ScheduleTickStatus.SUCCESS]) == 3
+            assert len([tick for tick in ticks if tick.status == JobTickStatus.SUCCESS]) == 3
 
             runs_by_partition = {run.tags[PARTITION_NAME_TAG]: run for run in instance.get_runs()}
 
@@ -430,7 +431,7 @@ def test_simple_schedule(external_repo_context, capfd):
             # Check idempotence again
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
             assert instance.get_runs_count() == 3
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
 
 
@@ -438,12 +439,12 @@ def test_simple_schedule(external_repo_context, capfd):
 def test_no_started_schedules(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("simple_schedule")
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
 
         launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
         assert instance.get_runs_count() == 0
 
-        ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+        ticks = instance.get_job_ticks(schedule_origin.get_id())
         assert len(ticks) == 0
 
         captured = capfd.readouterr()
@@ -455,7 +456,7 @@ def test_no_started_schedules(external_repo_context, capfd):
 def test_schedule_without_timezone(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("daily_schedule_without_timezone")
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(year=2019, month=2, day=27, hour=0, minute=0, second=0)
 
         with pendulum.test(initial_datetime):
@@ -466,7 +467,7 @@ def test_schedule_without_timezone(external_repo_context, capfd):
 
             assert instance.get_runs_count() == 0
 
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
 
             assert len(ticks) == 0
 
@@ -481,7 +482,7 @@ def test_schedule_without_timezone(external_repo_context, capfd):
         with pendulum.test(initial_datetime):
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
 
@@ -489,7 +490,7 @@ def test_schedule_without_timezone(external_repo_context, capfd):
 def test_bad_env_fn(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("bad_env_fn_schedule")
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(year=2019, month=2, day=27, hour=0, minute=0, second=0)
         with pendulum.test(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
@@ -497,14 +498,14 @@ def test_bad_env_fn(external_repo_context, capfd):
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
             validate_tick(
                 ticks[0],
                 external_schedule,
                 initial_datetime,
-                ScheduleTickStatus.FAILURE,
+                JobTickStatus.FAILURE,
                 None,
                 "Error occurred during the execution of run_config_fn for "
                 "schedule bad_env_fn_schedule",
@@ -524,7 +525,7 @@ def test_bad_env_fn(external_repo_context, capfd):
 def test_bad_should_execute(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("bad_should_execute_schedule")
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(
             year=2019, month=2, day=27, hour=0, minute=0, second=0,
         )
@@ -534,14 +535,14 @@ def test_bad_should_execute(external_repo_context, capfd):
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
 
             validate_tick(
                 ticks[0],
                 external_schedule,
                 initial_datetime,
-                ScheduleTickStatus.FAILURE,
+                JobTickStatus.FAILURE,
                 None,
                 "Error occurred during the execution of should_execute for "
                 "schedule bad_should_execute_schedule",
@@ -564,7 +565,7 @@ def test_bad_should_execute(external_repo_context, capfd):
 def test_skip(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("skip_schedule")
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(
             year=2019, month=2, day=27, hour=0, minute=0, second=0,
         ).in_tz("US/Central")
@@ -574,10 +575,10 @@ def test_skip(external_repo_context, capfd):
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
 
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
             validate_tick(
-                ticks[0], external_schedule, initial_datetime, ScheduleTickStatus.SKIPPED, None,
+                ticks[0], external_schedule, initial_datetime, JobTickStatus.SKIPPED, None,
             )
 
             captured = capfd.readouterr()
@@ -594,7 +595,7 @@ def test_skip(external_repo_context, capfd):
 def test_wrong_config(external_repo_context, capfd):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("wrong_config_schedule")
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(year=2019, month=2, day=27, hour=0, minute=0, second=0)
         with pendulum.test(initial_datetime):
             instance.start_schedule_and_update_storage_state(external_schedule)
@@ -614,14 +615,10 @@ def test_wrong_config(external_repo_context, capfd):
                 expected_success=False,
             )
 
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
             validate_tick(
-                ticks[0],
-                external_schedule,
-                initial_datetime,
-                ScheduleTickStatus.SUCCESS,
-                run.run_id,
+                ticks[0], external_schedule, initial_datetime, JobTickStatus.SUCCESS, run.run_id,
             )
 
             run_logs = instance.all_logs(run.run_id)
@@ -650,8 +647,9 @@ def test_wrong_config(external_repo_context, capfd):
 def _get_unloadable_schedule_origin():
     working_directory = os.path.dirname(__file__)
     recon_repo = ReconstructableRepository.for_file(__file__, "doesnt_exist", working_directory)
-    schedule = recon_repo.get_reconstructable_schedule("also_doesnt_exist")
-    return schedule.get_origin()
+    return ExternalRepositoryOrigin(
+        InProcessRepositoryLocationOrigin(recon_repo), "fake_repository"
+    ).get_schedule_origin("doesnt_exist")
 
 
 @pytest.mark.parametrize("external_repo_context", repos())
@@ -662,8 +660,8 @@ def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
             "bad_should_execute_schedule_on_odd_days"
         )
 
-        good_origin = good_schedule.get_origin()
-        bad_origin = bad_schedule.get_origin()
+        good_origin = good_schedule.get_external_origin()
+        bad_origin = bad_schedule.get_external_origin()
         unloadable_origin = _get_unloadable_schedule_origin()
         initial_datetime = pendulum.datetime(
             year=2019, month=2, day=27, hour=0, minute=0, second=0,
@@ -672,13 +670,13 @@ def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
             instance.start_schedule_and_update_storage_state(good_schedule)
             instance.start_schedule_and_update_storage_state(bad_schedule)
 
-            unloadable_schedule_state = ScheduleState(
+            unloadable_schedule_state = JobState(
                 unloadable_origin,
-                ScheduleStatus.RUNNING,
-                "0 0 * * *",
-                pendulum.now("UTC").timestamp(),
+                JobType.SCHEDULE,
+                JobStatus.RUNNING,
+                ScheduleJobData("0 0 * * *", pendulum.now("UTC").timestamp()),
             )
-            instance.add_schedule_state(unloadable_schedule_state)
+            instance.add_job_state(unloadable_schedule_state)
 
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
 
@@ -690,31 +688,31 @@ def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
                 partition_time=pendulum.datetime(2019, 2, 26),
             )
 
-            good_ticks = instance.get_schedule_ticks(good_origin.get_id())
+            good_ticks = instance.get_job_ticks(good_origin.get_id())
             assert len(good_ticks) == 1
             validate_tick(
                 good_ticks[0],
                 good_schedule,
                 initial_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
 
-            bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
+            bad_ticks = instance.get_job_ticks(bad_origin.get_id())
             assert len(bad_ticks) == 1
 
-            assert bad_ticks[0].status == ScheduleTickStatus.FAILURE
+            assert bad_ticks[0].status == JobTickStatus.FAILURE
 
             assert (
                 "Error occurred during the execution of should_execute "
                 "for schedule bad_should_execute_schedule" in bad_ticks[0].error.message
             )
 
-            unloadable_ticks = instance.get_schedule_ticks(unloadable_origin.get_id())
+            unloadable_ticks = instance.get_job_ticks(unloadable_origin.get_id())
             assert len(unloadable_ticks) == 0
 
             captured = capfd.readouterr()
-            assert "Scheduler failed for also_doesnt_exist" in captured.out
+            assert "Scheduler failed for doesnt_exist" in captured.out
             assert "doesnt_exist not found at module scope" in captured.out
 
         initial_datetime = initial_datetime.add(days=1)
@@ -735,13 +733,13 @@ def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
                 partition_time=pendulum.datetime(2019, 2, 27),
             )
 
-            good_ticks = instance.get_schedule_ticks(good_origin.get_id())
+            good_ticks = instance.get_job_ticks(good_origin.get_id())
             assert len(good_ticks) == 2
             validate_tick(
                 good_ticks[0],
                 good_schedule,
                 new_now,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 good_schedule_runs[0].run_id,
             )
 
@@ -755,21 +753,21 @@ def test_bad_schedules_mixed_with_good_schedule(external_repo_context, capfd):
                 partition_time=pendulum.datetime(2019, 2, 27),
             )
 
-            bad_ticks = instance.get_schedule_ticks(bad_origin.get_id())
+            bad_ticks = instance.get_job_ticks(bad_origin.get_id())
             assert len(bad_ticks) == 2
             validate_tick(
                 bad_ticks[0],
                 bad_schedule,
                 new_now,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 bad_schedule_runs[0].run_id,
             )
 
-            unloadable_ticks = instance.get_schedule_ticks(unloadable_origin.get_id())
+            unloadable_ticks = instance.get_job_ticks(unloadable_origin.get_id())
             assert len(unloadable_ticks) == 0
 
             captured = capfd.readouterr()
-            assert "Scheduler failed for also_doesnt_exist" in captured.out
+            assert "Scheduler failed for doesnt_exist" in captured.out
             assert "doesnt_exist not found at module scope" in captured.out
 
 
@@ -778,7 +776,7 @@ def test_run_scheduled_on_time_boundary(external_repo_context):
     with instance_with_schedules(external_repo_context) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("simple_schedule")
 
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(
             year=2019, month=2, day=27, hour=0, minute=0, second=0,
         )
@@ -789,9 +787,9 @@ def test_run_scheduled_on_time_boundary(external_repo_context):
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
 
             assert instance.get_runs_count() == 1
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 def test_bad_load(capfd):
@@ -801,10 +799,13 @@ def test_bad_load(capfd):
             year=2019, month=2, day=27, hour=23, minute=59, second=59,
         )
         with pendulum.test(initial_datetime):
-            schedule_state = ScheduleState(
-                fake_origin, ScheduleStatus.RUNNING, "0 0 * * *", pendulum.now("UTC").timestamp(),
+            schedule_state = JobState(
+                fake_origin,
+                JobType.SCHEDULE,
+                JobStatus.RUNNING,
+                ScheduleJobData("0 0 * * *", pendulum.now("UTC").timestamp(),),
             )
-            instance.add_schedule_state(schedule_state)
+            instance.add_job_state(schedule_state)
 
         initial_datetime = initial_datetime.add(seconds=1)
         with pendulum.test(initial_datetime):
@@ -812,19 +813,19 @@ def test_bad_load(capfd):
 
             assert instance.get_runs_count() == 0
 
-            ticks = instance.get_schedule_ticks(fake_origin.get_id())
+            ticks = instance.get_job_ticks(fake_origin.get_id())
 
             assert len(ticks) == 0
 
             captured = capfd.readouterr()
-            assert "Scheduler failed for also_doesnt_exist" in captured.out
+            assert "Scheduler failed for doesnt_exist" in captured.out
             assert "doesnt_exist not found at module scope" in captured.out
 
         initial_datetime = initial_datetime.add(days=1)
         with pendulum.test(initial_datetime):
             launch_scheduled_runs(instance, get_default_scheduler_logger(), pendulum.now("UTC"))
             assert instance.get_runs_count() == 0
-            ticks = instance.get_schedule_ticks(fake_origin.get_id())
+            ticks = instance.get_job_ticks(fake_origin.get_id())
             assert len(ticks) == 0
 
 
@@ -847,13 +848,13 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context, capf
             )
 
             assert instance.get_runs_count() == 2
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_job_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
-            hourly_ticks = instance.get_schedule_ticks(external_hourly_schedule.get_origin_id())
+            hourly_ticks = instance.get_job_ticks(external_hourly_schedule.get_external_origin_id())
             assert len(hourly_ticks) == 1
-            assert hourly_ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert hourly_ticks[0].status == JobTickStatus.SUCCESS
 
             captured = capfd.readouterr()
 
@@ -876,16 +877,13 @@ def test_multiple_schedules_on_different_time_ranges(external_repo_context, capf
 
             assert instance.get_runs_count() == 3
 
-            ticks = instance.get_schedule_ticks(external_schedule.get_origin_id())
+            ticks = instance.get_job_ticks(external_schedule.get_external_origin_id())
             assert len(ticks) == 1
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
-            hourly_ticks = instance.get_schedule_ticks(external_hourly_schedule.get_origin_id())
+            hourly_ticks = instance.get_job_ticks(external_hourly_schedule.get_external_origin_id())
             assert len(hourly_ticks) == 2
-            assert (
-                len([tick for tick in hourly_ticks if tick.status == ScheduleTickStatus.SUCCESS])
-                == 2
-            )
+            assert len([tick for tick in hourly_ticks if tick.status == JobTickStatus.SUCCESS]) == 2
 
             captured = capfd.readouterr()
             assert (
@@ -910,7 +908,7 @@ def test_launch_failure(external_repo_context, capfd):
     ) as (instance, external_repo):
         external_schedule = external_repo.get_external_schedule("simple_schedule")
 
-        schedule_origin = external_schedule.get_origin()
+        schedule_origin = external_schedule.get_external_origin()
         initial_datetime = pendulum.datetime(
             year=2019, month=2, day=27, hour=0, minute=0, second=0,
         ).in_tz("US/Central")
@@ -931,14 +929,10 @@ def test_launch_failure(external_repo_context, capfd):
                 expected_success=False,
             )
 
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
             validate_tick(
-                ticks[0],
-                external_schedule,
-                initial_datetime,
-                ScheduleTickStatus.SUCCESS,
-                run.run_id,
+                ticks[0], external_schedule, initial_datetime, JobTickStatus.SUCCESS, run.run_id,
             )
 
             captured = capfd.readouterr()
@@ -960,7 +954,7 @@ def test_max_catchup_runs(capfd):
     with instance_with_schedules(default_repo) as (instance, external_repo):
         with pendulum.test(initial_datetime):
             external_schedule = external_repo.get_external_schedule("simple_schedule")
-            schedule_origin = external_schedule.get_origin()
+            schedule_origin = external_schedule.get_external_origin()
             instance.start_schedule_and_update_storage_state(external_schedule)
 
         initial_datetime = initial_datetime.add(days=5)
@@ -971,7 +965,7 @@ def test_max_catchup_runs(capfd):
             )
 
             assert instance.get_runs_count() == 2
-            ticks = instance.get_schedule_ticks(schedule_origin.get_id())
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 2
 
             first_datetime = pendulum.datetime(year=2019, month=3, day=4)
@@ -982,7 +976,7 @@ def test_max_catchup_runs(capfd):
                 ticks[0],
                 external_schedule,
                 first_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[0].run_id,
             )
             validate_run_started(
@@ -997,7 +991,7 @@ def test_max_catchup_runs(capfd):
                 ticks[1],
                 external_schedule,
                 second_datetime,
-                ScheduleTickStatus.SUCCESS,
+                JobTickStatus.SUCCESS,
                 instance.get_runs()[1].run_id,
             )
 
