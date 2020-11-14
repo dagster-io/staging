@@ -415,3 +415,24 @@ class AssetStoreContext:
     @property
     def output_name(self):
         return self._step_output_handle.output_name
+
+    def get_keys(self):
+        """Utility method to get a collection of keys that as a whole represent a unique step output.
+
+        Returns:
+            Tuple[str, ...]: A tuple of keys, i.e. run id, step key, and output name
+        """
+        # resolve run_id as it's part of the file path
+        if (
+            # this is re-execution
+            self.pipeline_run.parent_run_id
+            # only part of the pipeline is being re-executed
+            and self.pipeline_run.step_keys_to_execute
+            # this step is not being executed
+            and self.step_key not in self.pipeline_run.step_keys_to_execute
+        ):
+            run_id = self.pipeline_run.parent_run_id
+        else:
+            run_id = self.run_id
+
+        return (run_id, self.step_key, self.output_name)
