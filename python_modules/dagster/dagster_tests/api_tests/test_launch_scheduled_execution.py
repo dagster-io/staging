@@ -14,11 +14,11 @@ from dagster.core.host_representation import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler import (
-    ScheduleTickStatus,
     ScheduledExecutionFailed,
     ScheduledExecutionSkipped,
     ScheduledExecutionSuccess,
 )
+from dagster.core.scheduler.job import JobTickStatus
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.telemetry import get_dir_from_dagster_home
 from dagster.core.test_utils import instance_for_test, today_at_midnight
@@ -144,7 +144,7 @@ def test_launch_successful_execution(schedule_origin_context):
             assert run is not None
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 @pytest.mark.parametrize(
@@ -184,7 +184,7 @@ def test_bad_env_fn(schedule_origin_context):
             assert not result.run_id
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.FAILURE
+            assert ticks[0].status == JobTickStatus.FAILURE
             assert (
                 "Error occurred during the execution of run_config_fn for schedule bad_env_fn_schedule"
                 in ticks[0].error.message
@@ -205,7 +205,7 @@ def test_bad_should_execute(schedule_origin_context):
             assert not result.run_id
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.FAILURE
+            assert ticks[0].status == JobTickStatus.FAILURE
             assert (
                 "Error occurred during the execution of should_execute for schedule bad_should_execute_schedule"
                 in ticks[0].error.message
@@ -221,7 +221,7 @@ def test_skip(schedule_origin_context):
             assert isinstance(result, ScheduledExecutionSkipped)
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.SKIPPED
+            assert ticks[0].status == JobTickStatus.SKIPPED
 
 
 @pytest.mark.parametrize("schedule_origin_context", [python_schedule_origin, grpc_schedule_origin])
@@ -237,7 +237,7 @@ def test_wrong_config(schedule_origin_context):
             assert run.is_failure
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 def test_bad_load():
@@ -267,7 +267,7 @@ def test_bad_load():
         assert "doesnt_exist not found at module scope in file" in result.errors[0].to_string()
 
         ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-        assert ticks[0].status == ScheduleTickStatus.FAILURE
+        assert ticks[0].status == JobTickStatus.FAILURE
         assert "doesnt_exist not found at module scope in file" in ticks[0].error.message
 
 
@@ -279,7 +279,7 @@ def test_bad_load_grpc():
             assert "Could not find schedule named doesnt_exist" in result.errors[0].to_string()
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.FAILURE
+            assert ticks[0].status == JobTickStatus.FAILURE
             assert "Could not find schedule named doesnt_exist" in ticks[0].error.message
 
 
@@ -301,7 +301,7 @@ def test_grpc_server_down():
         assert "failed to connect to all addresses" in result.errors[0].to_string()
 
         ticks = instance.get_schedule_ticks(down_grpc_schedule_origin.get_id())
-        assert ticks[0].status == ScheduleTickStatus.FAILURE
+        assert ticks[0].status == JobTickStatus.FAILURE
         assert "failed to connect to all addresses" in ticks[0].error.message
 
 
@@ -324,7 +324,7 @@ def test_launch_failure(schedule_origin_context):
             assert run.status == PipelineRunStatus.FAILURE
 
             ticks = instance.get_schedule_ticks(schedule_origin.get_id())
-            assert ticks[0].status == ScheduleTickStatus.SUCCESS
+            assert ticks[0].status == JobTickStatus.SUCCESS
 
 
 def test_origin_ids_stable():

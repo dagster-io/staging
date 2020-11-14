@@ -32,6 +32,7 @@ class DauphinRepository(dauphin.ObjectType):
         super(DauphinRepository, self).__init__(name=repository.name)
 
     id = dauphin.NonNull(dauphin.ID)
+    external_id = dauphin.NonNull(dauphin.String)
     name = dauphin.NonNull(dauphin.String)
     location = dauphin.NonNull("RepositoryLocation")
     pipelines = dauphin.non_null_list("Pipeline")
@@ -42,6 +43,9 @@ class DauphinRepository(dauphin.ObjectType):
     scheduleDefinitions = dauphin.non_null_list("ScheduleDefinition")
 
     def resolve_id(self, _graphene_info):
+        return self._repository.get_external_origin_id()
+
+    def resolve_external_id(self, _graphene_info):
         return self._repository.get_external_origin_id()
 
     def resolve_origin(self, graphene_info):

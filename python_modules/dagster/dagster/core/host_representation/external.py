@@ -2,8 +2,8 @@ import warnings
 from collections import OrderedDict
 
 from dagster import check
-from dagster.core.origin import PipelinePythonOrigin
 from dagster.core.definitions.job import JobType
+from dagster.core.origin import PipelinePythonOrigin
 from dagster.core.snap import ExecutionPlanSnapshot
 from dagster.core.utils import toposort
 
@@ -410,13 +410,13 @@ class ExternalSchedule:
     # when there is no row in the schedule DB (for example, when
     # the schedule is first created in code)
     def get_default_schedule_state(self):
-        from dagster.core.scheduler import ScheduleState, ScheduleStatus
+        from dagster.core.scheduler.job import JobState, JobStatus, ScheduleJobData
 
-        return ScheduleState(
+        return JobState(
             self.get_external_origin(),
-            ScheduleStatus.STOPPED,
-            self.cron_schedule,
-            start_timestamp=None,
+            JobType.SCHEDULE,
+            JobStatus.STOPPED,
+            ScheduleJobData(self.cron_schedule, start_timestamp=None),
         )
 
 
