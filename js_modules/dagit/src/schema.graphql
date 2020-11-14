@@ -32,6 +32,7 @@ type RepositoryConnection {
 
 type Repository {
   id: ID!
+  externalId: String!
   name: String!
   location: RepositoryLocation!
   pipelines: [Pipeline!]!
@@ -483,12 +484,12 @@ enum ScheduleStatus {
 
 type ScheduleTick {
   tickId: String!
-  status: ScheduleTickStatus!
+  status: JobTickStatus!
   timestamp: Float!
   tickSpecificData: ScheduleTickSpecificData
 }
 
-enum ScheduleTickStatus {
+enum JobTickStatus {
   STARTED
   SKIPPED
   SUCCESS
