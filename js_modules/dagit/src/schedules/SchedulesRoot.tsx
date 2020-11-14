@@ -1,24 +1,11 @@
 import {useQuery} from '@apollo/client';
-import {
-  Callout,
-  Card,
-  Code,
-  Colors,
-  IBreadcrumbProps,
-  Intent,
-  NonIdealState,
-  PopoverInteractionKind,
-  Tooltip,
-} from '@blueprintjs/core';
+import {Callout, Card, Code, Colors, Intent, NonIdealState} from '@blueprintjs/core';
 import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 
-import {Header, ScrollContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
-import {RepositoryInformation} from 'src/RepositoryInformation';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
-import {TopNav} from 'src/nav/TopNav';
 import {ReconcileButton} from 'src/schedules/ReconcileButton';
 import {ScheduleRow, ScheduleStateRow} from 'src/schedules/ScheduleRow';
 import {SCHEDULES_ROOT_QUERY, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
@@ -100,84 +87,79 @@ export const SchedulesRoot: React.FC<Props> = (props) => {
     partialRefetch: true,
   });
 
-  const breadcrumbs: IBreadcrumbProps[] = [{icon: 'time', text: 'Schedules'}];
-
   return (
-    <ScrollContainer>
-      <TopNav breadcrumbs={breadcrumbs} />
-      <Loading queryResult={queryResult} allowStaleData={true}>
-        {(result) => {
-          const {
-            scheduler,
-            repositoryOrError,
-            scheduleDefinitionsOrError,
-            scheduleStatesOrError: scheduleStatesWithoutDefinitionsOrError,
-          } = result;
-          let staleReconcileSection = null;
-          let scheduleDefinitionsSection = null;
+    <Loading queryResult={queryResult} allowStaleData={true}>
+      {(result) => {
+        const {
+          scheduler,
+          repositoryOrError,
+          scheduleDefinitionsOrError,
+          scheduleStatesOrError: scheduleStatesWithoutDefinitionsOrError,
+        } = result;
+        let staleReconcileSection = null;
+        let scheduleDefinitionsSection = null;
 
-          if (scheduleDefinitionsOrError.__typename === 'PythonError') {
-            scheduleDefinitionsSection = <PythonErrorInfo error={scheduleDefinitionsOrError} />;
-          } else if (repositoryOrError.__typename === 'PythonError') {
-            scheduleDefinitionsSection = <PythonErrorInfo error={repositoryOrError} />;
-          } else if (repositoryOrError.__typename === 'RepositoryNotFoundError') {
-            // Should not be possible, the schedule definitions call will error out
-          } else if (scheduleDefinitionsOrError.__typename === 'ScheduleDefinitions') {
-            const scheduleDefinitions = scheduleDefinitionsOrError.results;
-            const scheduleDefinitionsWithState = scheduleDefinitions.filter((s) => s.scheduleState);
-            const scheduleDefinitionsWithoutState = scheduleDefinitions.filter(
-              (s) => !s.scheduleState,
+        if (scheduleDefinitionsOrError.__typename === 'PythonError') {
+          scheduleDefinitionsSection = <PythonErrorInfo error={scheduleDefinitionsOrError} />;
+        } else if (repositoryOrError.__typename === 'PythonError') {
+          scheduleDefinitionsSection = <PythonErrorInfo error={repositoryOrError} />;
+        } else if (repositoryOrError.__typename === 'RepositoryNotFoundError') {
+          // Should not be possible, the schedule definitions call will error out
+        } else if (scheduleDefinitionsOrError.__typename === 'ScheduleDefinitions') {
+          const scheduleDefinitions = scheduleDefinitionsOrError.results;
+          const scheduleDefinitionsWithState = scheduleDefinitions.filter((s) => s.scheduleState);
+          const scheduleDefinitionsWithoutState = scheduleDefinitions.filter(
+            (s) => !s.scheduleState,
+          );
+
+          if (!scheduleDefinitions.length) {
+            scheduleDefinitionsSection = (
+              <NonIdealState
+                icon={IconNames.ERROR}
+                title="No Schedules Found"
+                description={
+                  <p>
+                    This repository does not have any schedules defined. Visit the{' '}
+                    <a href="https://docs.dagster.io/overview/scheduling-partitions/schedules">
+                      scheduler documentation
+                    </a>{' '}
+                    for more information about scheduling pipeline runs in Dagster. .
+                  </p>
+                }
+              />
             );
-
-            if (!scheduleDefinitions.length) {
-              scheduleDefinitionsSection = (
-                <NonIdealState
-                  icon={IconNames.ERROR}
-                  title="No Schedules Found"
-                  description={
-                    <p>
-                      This repository does not have any schedules defined. Visit the{' '}
-                      <a href="https://docs.dagster.io/overview/scheduling-partitions/schedules">
-                        scheduler documentation
-                      </a>{' '}
-                      for more information about scheduling pipeline runs in Dagster. .
-                    </p>
-                  }
-                />
-              );
-            } else {
-              scheduleDefinitionsSection = (
-                <ScheduleTable
-                  schedules={scheduleDefinitionsWithState}
-                  repository={repositoryOrError}
-                  scheduler={scheduler}
-                />
-              );
-            }
-
-            if (scheduleStatesWithoutDefinitionsOrError.__typename === 'ScheduleStates') {
-              const scheduleStatesWithoutDefinitions =
-                scheduleStatesWithoutDefinitionsOrError.results;
-              staleReconcileSection = (
-                <GetStaleReconcileSection
-                  repoAddress={repoAddress}
-                  scheduleDefinitionsWithoutState={scheduleDefinitionsWithoutState}
-                  scheduleStatesWithoutDefinitions={scheduleStatesWithoutDefinitions}
-                />
-              );
-            }
+          } else {
+            scheduleDefinitionsSection = (
+              <ScheduleTable
+                schedules={scheduleDefinitionsWithState}
+                repository={repositoryOrError}
+                scheduler={scheduler}
+              />
+            );
           }
 
-          return (
-            <div style={{padding: '16px'}}>
-              <SchedulerInfo schedulerOrError={scheduler} errorsOnly={true} />
-              {staleReconcileSection}
-              {scheduleDefinitionsSection}
-            </div>
-          );
-        }}
-      </Loading>
-    </ScrollContainer>
+          if (scheduleStatesWithoutDefinitionsOrError.__typename === 'ScheduleStates') {
+            const scheduleStatesWithoutDefinitions =
+              scheduleStatesWithoutDefinitionsOrError.results;
+            staleReconcileSection = (
+              <GetStaleReconcileSection
+                repoAddress={repoAddress}
+                scheduleDefinitionsWithoutState={scheduleDefinitionsWithoutState}
+                scheduleStatesWithoutDefinitions={scheduleStatesWithoutDefinitions}
+              />
+            );
+          }
+        }
+
+        return (
+          <>
+            <SchedulerInfo schedulerOrError={scheduler} errorsOnly={true} />
+            {staleReconcileSection}
+            {scheduleDefinitionsSection}
+          </>
+        );
+      }}
+    </Loading>
   );
 };
 
@@ -200,29 +182,7 @@ const ScheduleTable: React.FunctionComponent<ScheduleTableProps> = (props) => {
 
   return (
     <div>
-      <div style={{display: 'flex'}}>
-        <Header>Schedules</Header>
-        <div style={{flex: 1}} />
-        <SchedulerTimezoneNote schedulerOrError={scheduler} />
-      </div>
-      <div>
-        {`${schedules.length} loaded from `}
-        <Tooltip
-          interactionKind={PopoverInteractionKind.HOVER}
-          content={
-            <pre>
-              <RepositoryInformation repository={repository} />
-              <div style={{fontSize: 11}}>
-                <span style={{marginRight: 5}}>id:</span>
-                <span style={{opacity: 0.5}}>{repository.id}</span>
-              </div>
-            </pre>
-          }
-        >
-          <Code>{repository.name}</Code>
-        </Tooltip>
-      </div>
-
+      <SchedulerTimezoneNote schedulerOrError={scheduler} />
       {schedules.length > 0 && (
         <Table striped style={{width: '100%'}}>
           <thead>
