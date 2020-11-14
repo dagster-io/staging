@@ -5,6 +5,9 @@ import '@blueprintjs/table/lib/css/table.css';
 
 import 'src/fonts/fonts.css';
 
+import {Colors} from '@blueprintjs/core';
+import {FontFamily} from 'src/ui/styles';
+
 import * as React from 'react';
 import {MemoryRouter} from 'react-router-dom';
 
@@ -16,7 +19,8 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body, input, textarea, button, select {
-    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Open Sans,Helvetica Neue,Icons16,sans-serif;
+    color: ${Colors.DARK_GRAY4};
+    font-family: ${FontFamily.default};
   }
 
   body ul, body li {

@@ -7,6 +7,7 @@ import 'src/fonts/fonts.css';
 
 import {ApolloClient, ApolloLink, ApolloProvider} from '@apollo/client';
 import {WebSocketLink} from '@apollo/client/link/ws';
+import {Colors} from '@blueprintjs/core';
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import {createGlobalStyle} from 'styled-components/macro';
@@ -45,12 +46,12 @@ const GlobalStyle = createGlobalStyle`
   }
 
   body {
-    font-family: ${FontFamily.default};
     margin: 0;
     padding: 0;
   }
 
-  button, input, select, textarea {
+  body, button, input, select, textarea {
+    color: ${Colors.DARK_GRAY4};
     font-family: ${FontFamily.default};
   }
 
