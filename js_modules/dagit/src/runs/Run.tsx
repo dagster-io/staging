@@ -40,11 +40,6 @@ interface RunProps {
   run?: RunFragment;
 }
 
-interface RunState {
-  logsFilter: LogFilter;
-  selection: StepSelection;
-}
-
 export const Run = (props: RunProps) => {
   const {client, run, runId} = props;
   const [logsFilter, setLogsFilter] = React.useState<LogFilter>(() =>
@@ -246,6 +241,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
                 selection={selection}
                 onClickStep={onClickStep}
                 onSetSelection={onSetSelection}
+                focusedTime={logsFilter.focusedTime}
               />
             ) : (
               <NonIdealState icon={IconNames.ERROR} title="Unable to build execution plan" />
@@ -263,6 +259,7 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
                 metadata={metadata}
               />
               <LogsScrollingTable
+                focusedTime={logsFilter.focusedTime}
                 filteredNodes={hasTextFilter && hideNonMatches ? textMatchNodes : filteredNodes}
                 textMatchNodes={textMatchNodes}
                 loading={logsLoading}
