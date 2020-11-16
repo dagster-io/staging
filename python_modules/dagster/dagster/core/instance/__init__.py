@@ -333,7 +333,16 @@ class DagsterInstance:
         if self._ref:
             return self._ref
 
-        check.failed("Can not produce an instance reference for {t}".format(t=self))
+        check.failed(
+            "Attempted to prepare an ineligible DagsterInstance ({inst_type}) for cross process communication."
+            "{dagster_home_msg}".format(
+                inst_type=self._instance_type,
+                dagster_home_msg="\nDAGSTER_HOME environment variable is not set, set it to directory on "
+                "filesystem for dagster to use for storage and cross process coordination."
+                if os.getenv("DAGSTER_HOME") is None
+                else "",
+            )
+        )
 
     @property
     def root_directory(self):
