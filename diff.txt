@@ -1,0 +1,431 @@
+diff --git a/python_modules/dagster-graphql/dagster_graphql/implementation/resume_retry.py b/python_modules/dagster-graphql/dagster_graphql/implementation/resume_retry.py
+index e6e3b06cd..ffa2b1857 100644
+--- a/python_modules/dagster-graphql/dagster_graphql/implementation/resume_retry.py
++++ b/python_modules/dagster-graphql/dagster_graphql/implementation/resume_retry.py
+@@ -85,11 +85,17 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
+                 to_retry_unresolved.add(unresolved_step_key)
+                 continue
+ 
+-        step_deps = execution_deps[unresolved_step_key]
+-        if step_deps.intersection(to_retry_unresolved):  # meep this needs to handlaksdfljsdf
++        upstream_deps = execution_deps[unresolved_step_key]
++        if upstream_deps.intersection(to_retry_unresolved):  # meep this needs to handlaksdfljsdf
+             # this step is downstream of a step we are about to retry
+             to_retry.add(unresolved_step_key)
+-
++    print('to_retry is ', to_retry)
++    # got {'multiply_by_two[1].compute', 'multiply_inputs[2].compute'}
++    # there needs to be a way to "pass down" the resolution dependencies
++    # one option is for the "resolve" step to look for other steps to execution to lump in
++    # how is this compatible with intermediate checking? what happens if the user wants to select a subset before intermediates exist
++    # should be {'multiply_by_two[1].compute', 'multiply_inputs[2].compute', 'multiply_by_two[2].compute'}?
++    # or {'multiply_by_two[1].compute', 'multiply_by_two[?].compute', 'multiply_inputs[2].compute'}
+     return list(to_retry)
+ 
+ 
+diff --git a/python_modules/dagster-graphql/dagster_graphql_tests/graphql/setup.py b/python_modules/dagster-graphql/dagster_graphql_tests/graphql/setup.py
+index cfc413f8b..9a40bb30c 100644
+--- a/python_modules/dagster-graphql/dagster_graphql_tests/graphql/setup.py
++++ b/python_modules/dagster-graphql/dagster_graphql_tests/graphql/setup.py
+@@ -1039,7 +1039,11 @@ def after_failure(_):
+ 
+ 
+ @solid
+-def multiply_by_two(context, y):
++def multiply_by_two(context, y, should_fail):
++    current_run = context.instance.get_run_by_id(context.run_id)
++    if should_fail:
++        if y == 10 and current_run.parent_run_id is None:
++            raise Exception()
+     context.log.info("multiply_by_two is returning " + str(y * 2))
+     return y * 2
+ 
+diff --git a/python_modules/dagster-graphql/dagster_graphql_tests/graphql/test_mappable_pipeline.py b/python_modules/dagster-graphql/dagster_graphql_tests/graphql/test_mappable_pipeline.py
+index 8fd667f06..7b63e6c33 100644
+--- a/python_modules/dagster-graphql/dagster_graphql_tests/graphql/test_mappable_pipeline.py
++++ b/python_modules/dagster-graphql/dagster_graphql_tests/graphql/test_mappable_pipeline.py
+@@ -26,7 +26,10 @@ def test_start_pipeline_execution(graphql_context):
+             "executionParams": {
+                 "selector": selector,
+                 "runConfigData": {
+-                    "solids": {"multiply_inputs": {"inputs": {"should_fail": {"value": True}}}},
++                    "solids": {
++                        "multiply_inputs": {"inputs": {"should_fail": {"value": True}}},
++                        "multiply_by_two": {"inputs": {"should_fail": {"value": False}}},
++                    },
+                     "storage": {"filesystem": {}},
+                 },
+                 "mode": "default",
+@@ -60,7 +63,10 @@ def test_start_pipeline_execution(graphql_context):
+                 "mode": "default",
+                 "selector": selector,
+                 "runConfigData": {
+-                    "solids": {"multiply_inputs": {"inputs": {"should_fail": {"value": True}}}},
++                    "solids": {
++                        "multiply_inputs": {"inputs": {"should_fail": {"value": True}}},
++                        "multiply_by_two": {"inputs": {"should_fail": {"value": False}}},
++                    },
+                     "storage": {"filesystem": {}},
+                     # "execution": {"multiprocess": {}},
+                 },
+@@ -86,3 +92,84 @@ def test_start_pipeline_execution(graphql_context):
+     assert step_did_not_run(logs, "multiply_by_two[0].compute")
+     assert step_did_not_run(logs, "multiply_by_two[1].compute")
+     assert step_did_succeed(logs, "multiply_by_two[2].compute")
++
++
++def test_start_pipeline_execution_2(graphql_context):
++    selector = infer_pipeline_selector(graphql_context, "mappable_pipeline")
++    result = execute_dagster_graphql_and_finish_runs(
++        graphql_context,
++        LAUNCH_PIPELINE_EXECUTION_MUTATION,
++        variables={
++            "executionParams": {
++                "selector": selector,
++                "runConfigData": {
++                    "solids": {
++                        "multiply_inputs": {"inputs": {"should_fail": {"value": True}}},
++                        "multiply_by_two": {"inputs": {"should_fail": {"value": True}}},
++                    },
++                    "storage": {"filesystem": {}},
++                },
++                "mode": "default",
++            }
++        },
++    )
++
++    assert not result.errors
++    assert result.data
++    assert result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
++    assert result.data["launchPipelineExecution"]["run"]["pipeline"]["name"] == "mappable_pipeline"
++
++    parent_run_id = result.data["launchPipelineExecution"]["run"]["runId"]
++
++    logs = get_all_logs_for_finished_run_via_subscription(graphql_context, parent_run_id)[
++        "pipelineRunLogs"
++    ]["messages"]
++
++    assert step_did_succeed(logs, "emit.compute")
++
++    assert step_did_succeed(logs, "multiply_inputs[0].compute")
++    assert step_did_succeed(logs, "multiply_inputs[1].compute")
++    assert step_did_fail(logs, "multiply_inputs[2].compute")
++
++    assert step_did_succeed(logs, "multiply_by_two[0].compute")
++    assert step_did_fail(logs, "multiply_by_two[1].compute")
++    # assert step_did_not_run_in_records(multiply_by_two[1].compute)
++
++    retry_one = execute_dagster_graphql_and_finish_runs(
++        graphql_context,
++        LAUNCH_PIPELINE_REEXECUTION_MUTATION,
++        variables={
++            "executionParams": {
++                "mode": "default",
++                "selector": selector,
++                "runConfigData": {
++                    "solids": {
++                        "multiply_inputs": {"inputs": {"should_fail": {"value": True}}},
++                        "multiply_by_two": {"inputs": {"should_fail": {"value": True}}},
++                    },
++                    "storage": {"filesystem": {}},
++                    # "execution": {"multiprocess": {}},
++                },
++                "executionMetadata": {
++                    "rootRunId": parent_run_id,
++                    "parentRunId": parent_run_id,
++                    "tags": [{"key": RESUME_RETRY_TAG, "value": "true"}],
++                },
++            }
++        },
++    )
++    print('retry_one.data', retry_one.data)
++    run_id = retry_one.data["launchPipelineReexecution"]["run"]["runId"]
++
++    logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
++        "pipelineRunLogs"
++    ]["messages"]
++
++    assert step_did_not_run(logs, "emit.compute")
++    assert step_did_not_run(logs, "multiply_inputs[0].compute")
++    assert step_did_not_run(logs, "multiply_inputs[1].compute")
++    assert step_did_succeed(logs, "multiply_inputs[2].compute")
++
++    assert step_did_not_run(logs, "multiply_by_two[0].compute")
++    assert step_did_succeed(logs, "multiply_by_two[1].compute")
++    assert step_did_succeed(logs, "multiply_by_two[2].compute")
+diff --git a/python_modules/dagster/dagster/core/execution/plan/active.py b/python_modules/dagster/dagster/core/execution/plan/active.py
+index 0de4f4c9a..2c07bb1c1 100644
+--- a/python_modules/dagster/dagster/core/execution/plan/active.py
++++ b/python_modules/dagster/dagster/core/execution/plan/active.py
+@@ -28,9 +28,9 @@ def __init__(self, execution_plan, retries, sort_key_fn=None):
+ 
+         # All steps to be executed start out here in _pending
+         self._pending = self._plan.execution_deps()
+-
++        print('self._pending is ', self._pending)
+         # Keep track of mappable outputs that we've seen so we can resolve their downstream steps
+-        self._mappable_outputs = defaultdict(list)
++        self._mappable_outputs = execution_plan.mappable_outputs  # defaultdict(list)
+ 
+         # Copy the step dict so we can modify
+         self._step_dict = dict(self._plan.step_dict)
+@@ -132,6 +132,7 @@ def _update(self):
+                         self._pending[step.key] = set()
+                         for step_input in step.step_inputs:
+                             self._pending[step.key].update(step_input.dependency_keys)
++                print('new self._pending is ', self._pending)
+                 unresolved_to_clear.append(step_key)
+ 
+         for key in unresolved_to_clear:
+@@ -227,6 +228,8 @@ def get_steps_to_execute(self, limit=None):
+         steps = sorted(
+             [self.get_step_by_key(key) for key in self._executable], key=self._sort_key_fn
+         )
++        print('self._executable should be > 0', self._executable)
++        print('self._pending', self._pending)
+ 
+         if limit:
+             steps = steps[:limit]
+diff --git a/python_modules/dagster/dagster/core/execution/plan/objects.py b/python_modules/dagster/dagster/core/execution/plan/objects.py
+index 3282945d0..035a0388a 100644
+--- a/python_modules/dagster/dagster/core/execution/plan/objects.py
++++ b/python_modules/dagster/dagster/core/execution/plan/objects.py
+@@ -401,6 +401,7 @@ def resolve(self, mappable_outputs, unresolved=None):
+         # for those that are mappable, "resolve" those step inputs
+         # for those that are not mappable, just pass in those step inputs
+         execution_steps = []
++        print('resolving object with outputs: ', mappable_outputs[mappable_source_step])
+         for output in mappable_outputs[mappable_source_step]:
+             resolved_step_inputs = []
+             step_input = self.step_inputs
+@@ -425,10 +426,12 @@ def resolve(self, mappable_outputs, unresolved=None):
+             execution_steps.append(resolved_step)
+ 
+         # resolve requirements for downstream steps so they can execute
++        # this is bad because it mutates state, should return instead
+         if unresolved:
+             for _, requirements in unresolved.items():
+                 if self.key in requirements:
+                     requirements.remove(self.key)
+                     requirements.update(resolved_requirements)
+ 
++        print('returning resolved execution_steps: ', execution_steps)
+         return execution_steps
+diff --git a/python_modules/dagster/dagster/core/execution/plan/plan.py b/python_modules/dagster/dagster/core/execution/plan/plan.py
+index 4bc8eace6..404bfd197 100644
+--- a/python_modules/dagster/dagster/core/execution/plan/plan.py
++++ b/python_modules/dagster/dagster/core/execution/plan/plan.py
+@@ -298,7 +298,8 @@ def get_step_input(
+ 
+ class ExecutionPlan(
+     namedtuple(
+-        "_ExecutionPlan", "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute",
++        "_ExecutionPlan",
++        "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute mappable_outputs",
+     )
+ ):
+     def __new__(
+@@ -327,6 +328,9 @@ def __new__(
+                     missing_steps.append(step_key)
+                     continue
+ 
++                # i think we need to change the logic here -- if A_M-> B_M (where _M denotes mappable)
++                # and step_keys_to_execute contains A_M_0 and B_M_1, then we need to resolve A_M but NOT B_M
++
+                 # multi proc hack -- child process doesnt have the parent's updated step_dict
+                 unresolved_step = step_dict[unresolved_key]
+                 for step_input in unresolved_step.step_inputs:
+@@ -336,10 +340,25 @@ def __new__(
+                             output_name=source_handle.output_name,
+                             mappable_key=m.group(2),
+                         )
++                        # mappable_outputs probably need to be passed into active plan??
+                         mappable_outputs[source_handle.step_key].append(resolved_handle)
+-                resolved_steps = unresolved_step.resolve(mappable_outputs)
+-                for resolved_step in resolved_steps:
+-                    step_dict[resolved_step.key] = resolved_step
++                        print(
++                            'appending resolved handle {} to mappable_outputs at key {}'.format(
++                                resolved_handle, source_handle.step_key
++                            )
++                        )
++
++                # check if any steps upstream of unresolved_step are in step_keys_to_execute. if none,
++                # then resolve
++                # print('resolving step', unresolved_step.key)
++                # hack to test out theory:
++                if unresolved_step.key != "multiply_by_two[?].compute":
++                    print('resolving step', unresolved_step.key)
++                    resolved_steps = unresolved_step.resolve(mappable_outputs)
++                    for resolved_step in resolved_steps:
++                        step_dict[resolved_step.key] = resolved_step
++                else:
++                    step_dict[step_key] = unresolved_step
+ 
+         # missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
+         if missing_steps:
+@@ -364,6 +383,7 @@ def __new__(
+             step_keys_to_execute=check.list_param(
+                 step_keys_to_execute, "step_keys_to_execute", of_type=str
+             ),
++            mappable_outputs=mappable_outputs,
+         )
+ 
+     @property
+@@ -421,6 +441,7 @@ def execution_deps(self):
+ 
+         for key in self.step_keys_to_execute:
+             step = self.step_dict[key]
++            print('step is', step)
+             if not isinstance(step, UnresolvedExecutionStep):
+                 deps[key] = set()
+                 step = self.step_dict[key]
+@@ -428,18 +449,35 @@ def execution_deps(self):
+                     deps[step.key].update(
+                         step_input.dependency_keys.intersection(self.step_keys_to_execute)
+                     )
++        print('halfway point: deps is ', deps)
+         #  do a second pass for "resolved" mappable dependencies ie echo[0].compute. if their
+         # upstream is not in deps, then add; else, do not add
+         for key in self.step_keys_to_execute:
+-
++            # hack to test theory
++            print('key ', key)
++            if key == 'multiply_by_two[1].compute':
++                print('skipping key ', key)
++                continue
+             _, mappable_key, _ = deconstruct_step_key(key, None)
+             if mappable_key and mappable_key != "?":
+-                deps[key] = set()
+-                step = self.step_dict[key]
+-                for step_input in step.step_inputs:
+-                    deps[step.key].update(
+-                        step_input.dependency_keys.intersection(self.step_keys_to_execute)
+-                    )
++                print('adding key ', key, ' to deps')
++                deps[key] = set()  # i think this is all it does?
++                # deps[key] = set()
++                # step = self.step_dict[key]
++                # print('on step ', key)
++                # for step_input in step.step_inputs:
++                #     deps[step.key].update(
++                #         step_input.dependency_keys.intersection(self.step_keys_to_execute)
++                #     )
++                #     print(
++                #         'update with ',
++                #         step_input.dependency_keys.intersection(self.step_keys_to_execute),
++                #     )
++        # maybe should return OrderedDict([('multiply_inputs[?].compute', set()), ('multiply_by_two[1].compute', set())])
++        # ???????walfjslkjf
++
++        # OrderedDict([('multiply_inputs[2].compute', set()), ('multiply_by_two[1].compute', set())])
++        print('returning execution_deps', deps)
+         return deps
+ 
+     # handles required for resolution
+@@ -448,25 +486,30 @@ def execution_deps(self):
+     # this needs to handle updating requirements when executing a step subset
+     def resolution_deps(self):
+         deps = OrderedDict()
+-
+         resolved_steps_to_execute = defaultdict(set)
+         for key in self.step_keys_to_execute:
+             resolved_step_key, _, unresolved_step_key = deconstruct_step_key(key, None)
+             resolved_steps_to_execute[unresolved_step_key].add(resolved_step_key)
++        print('resolved_steps_to_execute', resolved_steps_to_execute)
+ 
+         for key in self.step_keys_to_execute:
+             step = self.step_dict[key]
+ 
+             if isinstance(step, UnresolvedExecutionStep):
+                 upstream = set([])
++                print('processing step key: ', key)
+                 for handle in step.get_mappable_upstream():
++                    print('processing handle: ', handle)
+                     if handle.step_key in resolved_steps_to_execute:
++                        print('update with: ', resolved_steps_to_execute.get(handle.step_key))
+                         upstream.update(resolved_steps_to_execute.get(handle.step_key))
+                     else:
++                        print('add handle.step_key: ', handle.step_key)  # is this ever used?
+                         upstream.add(handle.step_key)
+                     # set([handle.step_key for handle in handles])
+                 deps[step.key] = upstream
+-
++        # OrderedDict([('multiply_by_two[?].compute', {'multiply_inputs[2].compute'})])
++        print('resolution_deps', deps)
+         return deps
+ 
+     def build_subset_plan(self, step_keys_to_execute):
+diff --git a/python_modules/dagster/dagster_tests/core_tests/execution_tests/test_mappable.py b/python_modules/dagster/dagster_tests/core_tests/execution_tests/test_mappable.py
+index 50016de43..1087de77f 100644
+--- a/python_modules/dagster/dagster_tests/core_tests/execution_tests/test_mappable.py
++++ b/python_modules/dagster/dagster_tests/core_tests/execution_tests/test_mappable.py
+@@ -129,3 +129,68 @@ def test_reexec_from_parent_3():
+             instance=instance,
+         )
+         assert reexec_result.success
++
++
++def test_reexec_from_parent_3():
++    with seven.TemporaryDirectory() as tmp_dir:
++        instance = DagsterInstance.local_temp(tmp_dir)
++        parent_result = execute_pipeline(
++            mappable_pipeline, run_config={"storage": {"filesystem": {}}}, instance=instance
++        )
++        parent_run_id = parent_result.run_id
++
++        reexec_result = reexecute_pipeline(
++            pipeline=mappable_pipeline,
++            parent_run_id=parent_run_id,
++            run_config={"storage": {"filesystem": {}},},
++            # step_selection=['multiply_inputs[?].compute'], <- not supported, this needs to know all fan outs of previous step, should just run previous step
++            step_selection=[
++                "multiply_inputs[0].compute",
++                "multiply_by_two[0].compute",
++                "multiply_by_two[1].compute",
++            ],
++            instance=instance,
++        )
++        assert reexec_result.success
++
++
++def test_reexec_from_parent_4():
++    with seven.TemporaryDirectory() as tmp_dir:
++        instance = DagsterInstance.local_temp(tmp_dir)
++        parent_result = execute_pipeline(
++            mappable_pipeline, run_config={"storage": {"filesystem": {}}}, instance=instance
++        )
++        parent_run_id = parent_result.run_id
++
++        reexec_result = reexecute_pipeline(
++            pipeline=mappable_pipeline,
++            parent_run_id=parent_run_id,
++            run_config={"storage": {"filesystem": {}},},
++            # step_selection=['multiply_inputs[?].compute'], <- not supported, this needs to know all fan outs of previous step, should just run previous step
++            step_selection=[
++                # "multiply_inputs[0].compute",
++                "multiply_by_two[0].compute",
++                "multiply_by_two[1].compute",
++            ],
++            instance=instance,
++        )
++        assert reexec_result.success
++
++
++def test_reexec_from_parent_5():
++    with seven.TemporaryDirectory() as tmp_dir:
++        instance = DagsterInstance.local_temp(tmp_dir)
++        parent_result = execute_pipeline(
++            mappable_pipeline, run_config={"storage": {"filesystem": {}}}, instance=instance
++        )
++        parent_run_id = parent_result.run_id
++
++        reexec_result = reexecute_pipeline(
++            pipeline=mappable_pipeline,
++            parent_run_id=parent_run_id,
++            run_config={"storage": {"filesystem": {}},},
++            # step_selection=['multiply_inputs[?].compute'], <- not supported, this needs to know all fan outs of previous step, should just run previous step
++            step_selection=["multiply_inputs[0].compute", "multiply_inputs[1].compute",],
++            instance=instance,
++        )
++        assert reexec_result.success
