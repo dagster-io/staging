@@ -288,7 +288,9 @@ class SystemStepExecutionContext(SystemExecutionContext):
         return HookContext(self._execution_context_data, self.log, hook_def, self.step)
 
     def for_asset_store(self, step_output_handle, asset_store_handle):
-        return AssetStoreContext(self.pipeline_run, step_output_handle, asset_store_handle)
+        return AssetStoreContext(
+            step_output_handle, asset_store_handle, self.execution_plan, self.pipeline_run
+        )
 
     def get_asset_store(self, asset_store_key):
         from dagster.core.storage.asset_store import AssetStore
@@ -389,31 +391,49 @@ class AssetStoreContext:
 
     Attributes:
         pipeline_run (PipelineRun): This run of the pipeline.
-        run_id (str): The id for this run of the pipeline.
+        source_run_id (str): The id of the run which generates the output.
         step_key (str): The step_key for a compute step.
         output_name (str): The name of the output. (default: 'result').
         asset_metadata ([Dict[str, Any]]): A dict of the metadata that is used for the asset store
             to store or retrieve the data object.
     """
 
-    def __init__(self, pipeline_run, step_output_handle, asset_store_handle):
+    def __init__(self, step_output_handle, asset_store_handle, execution_plan, pipeline_run=None):
         from dagster.core.storage.asset_store import AssetStoreHandle
+        from dagster.core.execution.plan.plan import ExecutionPlan
 
-        self._pipeline_run = check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
         self._step_output_handle = check.inst_param(
             step_output_handle, "step_output_handle", StepOutputHandle
         )
         self._asset_store_handle = check.inst_param(
             asset_store_handle, "asset_store_handle", AssetStoreHandle
         )
+        self._execution_plan = check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
+        self._pipeline_run = check.opt_inst_param(pipeline_run, "pipeline_run", PipelineRun)
 
     @property
     def pipeline_run(self):
+        if self._pipeline_run is None:
+            raise DagsterInvariantViolationError(
+                "The run of the pipeline has not been created while you are trying to access "
+                "the `pipeline_run` via `AssetStoreContext`."
+            )
         return self._pipeline_run
 
     @property
-    def run_id(self):
-        return self._pipeline_run.run_id
+    def source_run_id(self):
+        # determine if the step is skipped
+        if (
+            # this is re-execution
+            self.pipeline_run.parent_run_id
+            # only part of the pipeline is being re-executed
+            and self.pipeline_run.step_keys_to_execute
+            # this step is not being executed
+            and self.step_key not in self.pipeline_run.step_keys_to_execute
+        ):
+            return self.pipeline_run.parent_run_id
+
+        return self.pipeline_run.run_id
 
     @property
     def step_key(self):
@@ -433,7 +453,7 @@ class AssetStoreContext:
 
         The unique identifier collection consists of
 
-        - ``run_id``: the id for the run which generates the output.
+        - ``source_run_id``: the id of the run which generates the output.
             Note: This method also handles the re-execution memoization logic. If the step that
             generates the output is skipped in the re-execution, the ``run_id`` will be the id
             of its parent run.
@@ -443,17 +463,4 @@ class AssetStoreContext:
         Returns:
             List[str, ...]: A list of identifiers, i.e. run id, step key, and output name
         """
-        # resolve run_id as it's part of the file path
-        if (
-            # this is re-execution
-            self.pipeline_run.parent_run_id
-            # only part of the pipeline is being re-executed
-            and self.pipeline_run.step_keys_to_execute
-            # this step is not being executed
-            and self.step_key not in self.pipeline_run.step_keys_to_execute
-        ):
-            run_id = self.pipeline_run.parent_run_id
-        else:
-            run_id = self.run_id
-
-        return (run_id, self.step_key, self.output_name)
+        return [self.source_run_id, self.step_key, self.output_name]
