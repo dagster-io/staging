@@ -925,7 +925,12 @@ def open_server_process(
 
 
 def open_server_process_on_dynamic_port(
-    max_retries=10, loadable_target_origin=None, max_workers=1, lazy_load_user_code=False
+    max_retries=10,
+    loadable_target_origin=None,
+    max_workers=1,
+    heartbeat=False,
+    heartbeat_timeout=30,
+    lazy_load_user_code=False,
 ):
     server_process = None
     retries = 0
@@ -937,6 +942,8 @@ def open_server_process_on_dynamic_port(
                 socket=None,
                 loadable_target_origin=loadable_target_origin,
                 max_workers=max_workers,
+                heartbeat=heartbeat,
+                heartbeat_timeout=heartbeat_timeout,
                 lazy_load_user_code=lazy_load_user_code,
             )
         except CouldNotBindGrpcServerToAddress:
@@ -990,6 +997,8 @@ class GrpcServerProcess(object):
                 max_retries=max_retries,
                 loadable_target_origin=loadable_target_origin,
                 max_workers=max_workers,
+                heartbeat=heartbeat,
+                heartbeat_timeout=heartbeat_timeout,
                 lazy_load_user_code=lazy_load_user_code,
             )
         else:
