@@ -47,3 +47,7 @@ SnapshotsTable = db.Table(
     db.Column("snapshot_body", db.LargeBinary, nullable=False),
     db.Column("snapshot_type", db.String(63), nullable=False),
 )
+
+DaemonHeartbeatsTable = db.Table(
+    "daemon_heartbeats", RunStorageSqlMetadata, db.Column("timestamp", db.DateTime, nullable=False),
+)
