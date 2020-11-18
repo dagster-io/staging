@@ -116,6 +116,54 @@ class IConfigMappable(six.with_metaclass(ABCMeta)):
         return wrapped_config_mapping_fn
 
 
+class ConfiguredMixin(IConfigMappable):
+    def __init__(self, _configured_config_mapping_fn, *args, is_nameless=False, **kwargs):
+        self.__configured_config_mapping_fn = check.opt_callable_param(
+            _configured_config_mapping_fn, "config_mapping_fn"
+        )
+        self._is_nameless = is_nameless
+        super(ConfiguredMixin, self).__init__(*args, **kwargs)
+
+    @property
+    def _configured_config_mapping_fn(self):
+        return self.__configured_config_mapping_fn
+
+    @abstractproperty
+    def config_schema(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def copy_for_configured(
+        self, wrapped_config_mapping_fn, config_schema, kwargs, original_config_or_config_fn,
+    ):
+        raise NotImplementedError()
+
+    def configured(self, config_or_config_fn, config_schema=None, **kwargs):
+        """
+        Wraps this object in an object of the same type that provides configuration to the inner
+        object.
+
+        Args:
+            config_or_config_fn (Union[Any, Callable[[Any], Any]]): Either (1) Run configuration
+                that fully satisfies this object's config schema or (2) A function that accepts run
+                configuration and returns run configuration that fully satisfies this object's
+                config schema.  In the latter case, config_schema must be specified.  When
+                passing a function, it's easiest to use :py:func:`configured`.
+            config_schema (ConfigSchema): If config_or_config_fn is a function, the config schema
+                that its input must satisfy.
+            name (Optional[str]): Name of the storage mode. If not specified, inherits the name
+                of the storage mode being configured.
+
+        Returns (ConfiguredMixin): A configured version of this object.
+        """
+        wrapped_config_mapping_fn = self._get_wrapped_config_mapping_fn(
+            config_or_config_fn, config_schema
+        )
+        return self.copy_for_configured(
+            wrapped_config_mapping_fn, config_schema, kwargs, config_or_config_fn
+        )
+
+
 def _check_configurable_param(configurable):
     from dagster.core.definitions.composition import CallableNode
 
