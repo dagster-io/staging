@@ -162,26 +162,27 @@ def test_fixed_server_id():
 
 
 def test_detect_server_restart():
+    for _ in range(50):
+        # Create first server and query ID
+        port, server_process = create_server_process()
+        try:
+            api_client = DagsterGrpcClient(port=port)
+            server_id_one = api_client.get_server_id()
+            assert server_id_one
+        finally:
+            interrupt_ipc_subprocess_pid(server_process.pid)
 
-    # Create first server and query ID
-    port, server_process = create_server_process()
-    try:
-        api_client = DagsterGrpcClient(port=port)
-        server_id_one = api_client.get_server_id()
-        assert server_id_one
-    finally:
-        interrupt_ipc_subprocess_pid(server_process.pid)
+        seven.wait_for_process(server_process, timeout=5)
+        with pytest.raises(grpc._channel._InactiveRpcError):  # pylint: disable=protected-access
+            api_client.get_server_id()
 
-    with pytest.raises(grpc._channel._InactiveRpcError):  # pylint: disable=protected-access
-        api_client.get_server_id()
+        # Create second server and query ID
+        port, server_process = create_server_process()
+        try:
+            api_client = DagsterGrpcClient(port=port)
+            server_id_two = api_client.get_server_id()
+            assert server_id_two
+        finally:
+            interrupt_ipc_subprocess_pid(server_process.pid)
 
-    # Create second server and query ID
-    port, server_process = create_server_process()
-    try:
-        api_client = DagsterGrpcClient(port=port)
-        server_id_two = api_client.get_server_id()
-        assert server_id_two
-    finally:
-        interrupt_ipc_subprocess_pid(server_process.pid)
-
-    assert server_id_one != server_id_two
+        assert server_id_one != server_id_two
