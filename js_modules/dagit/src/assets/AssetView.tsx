@@ -23,6 +23,8 @@ interface AssetKey {
   path: string[];
 }
 
+export const LABEL_STEP_EXECUTION_TIME = 'Step Execution Time';
+
 export const AssetView: React.FunctionComponent<{assetKey: AssetKey}> = ({assetKey}) => {
   const assetPath = assetKey.path.join(' \u203A ');
   useDocumentTitle(`Asset: ${assetPath}`);
@@ -171,6 +173,11 @@ export const ASSET_QUERY = gql`
           materializationEvent {
             runId
             timestamp
+            stepKey
+            stepStats {
+              endTime
+              startTime
+            }
             materialization {
               label
               description
@@ -212,12 +219,14 @@ export interface AssetNumericHistoricalData {
  * Assumes that the data is pre-sorted in ascending partition order if using xAxis = partition.
  */
 function extractNumericData(
-  data: AssetQuery_assetOrError_Asset_assetMaterializations[],
+  assetMaterializations: AssetQuery_assetOrError_Asset_assetMaterializations[],
   xAxis: 'time' | 'partition',
 ) {
   const series: AssetNumericHistoricalData = {};
+
+  // Build a set of the numeric metadata entry labels (note they may be sparsely emitted)
   const numericMetadataLabels = uniq(
-    flatMap(data, (e) =>
+    flatMap(assetMaterializations, (e) =>
       e.materializationEvent.materialization.metadataEntries
         .filter(
           (k) =>
@@ -249,10 +258,10 @@ function extractNumericData(
     });
   };
 
-  for (let idx = 0; idx < data.length; idx += 1) {
-    const {partition, materializationEvent} = data[idx];
+  for (const {partition, materializationEvent} of assetMaterializations) {
     const x = xAxis === 'partition' ? partition || '' : Number(materializationEvent.timestamp);
 
+    // Add an entry for every numeric metadata label
     for (const label of numericMetadataLabels) {
       const entry = materializationEvent.materialization.metadataEntries.find(
         (l) => l.label === label,
@@ -271,6 +280,10 @@ function extractNumericData(
 
       append(label, {x, y});
     }
+
+    // Add step execution time as a custom dataset
+    const {startTime, endTime} = materializationEvent.stepStats || {};
+    append(LABEL_STEP_EXECUTION_TIME, {x, y: endTime && startTime ? endTime - startTime : NaN});
   }
 
   for (const serie of Object.values(series)) {

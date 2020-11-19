@@ -73,8 +73,11 @@ const AssetMaterializationRow: React.FunctionComponent<{
           pipelineName={run.pipelineName}
         />
       </td>
-      <td style={{fontFamily: FontFamily.monospace}}>
-        <Link style={{marginRight: 5}} to={`/instance/runs/${run.runId}?timestamp=${timestamp}`}>
+      <td>
+        <Link
+          style={{marginRight: 5, fontFamily: FontFamily.monospace}}
+          to={`/instance/runs/${run.runId}?timestamp=${timestamp}`}
+        >
           {titleForRun(run)}
         </Link>
         <RunStatusTagWithStats status={run.status} runId={run.runId} />

@@ -5,7 +5,8 @@ import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
 import {Timestamp} from 'src/TimeComponents';
-import {AssetNumericHistoricalData} from 'src/assets/AssetView';
+import {formatElapsedTime} from 'src/Util';
+import {AssetNumericHistoricalData, LABEL_STEP_EXECUTION_TIME} from 'src/assets/AssetView';
 import {Sparkline} from 'src/assets/Sparkline';
 import {
   AssetQuery_assetOrError_Asset_assetMaterializations,
@@ -43,6 +44,8 @@ function xForAssetMaterialization(
 ) {
   return xAxis === 'time' ? Number(am.materializationEvent.timestamp) : am.partition;
 }
+
+const EMPTY_CELL_DASH = <span style={{opacity: 0.3}}> - </span>;
 
 export const AssetMaterializationMatrix: React.FunctionComponent<AssetMaterializationMatrixProps> = ({
   materializations,
@@ -86,52 +89,25 @@ export const AssetMaterializationMatrix: React.FunctionComponent<AssetMaterializ
       <div style={{position: 'relative', display: 'flex', border: `1px solid ${Colors.GRAY5}`}}>
         <GridFloatingContainer floating={true} style={{width: 300}}>
           <GridColumn disabled style={{width: 300, overflow: 'hidden'}}>
-            <LeftLabel style={{paddingLeft: 6, color: Colors.GRAY2}}>Run</LeftLabel>
-            {isPartitioned && (
-              <LeftLabel style={{paddingLeft: 6, color: Colors.GRAY2}}>Partition</LeftLabel>
-            )}
-            <LeftLabel
-              style={{
-                paddingLeft: 6,
-                color: Colors.GRAY2,
-                borderBottom: `1px solid ${Colors.LIGHT_GRAY1}`,
-              }}
-            >
-              Timestamp
-            </LeftLabel>
-            {metadataLabels.map((label) => (
-              <LeftLabel
+            <HeaderRowLabel>Run</HeaderRowLabel>
+            {isPartitioned && <HeaderRowLabel>Partition</HeaderRowLabel>}
+            <HeaderRowLabel>Timestamp</HeaderRowLabel>
+            {[...metadataLabels, LABEL_STEP_EXECUTION_TIME].map((label, idx) => (
+              <MetadataRowLabel
+                bordered={idx === 0 || label === LABEL_STEP_EXECUTION_TIME}
                 key={label}
+                label={label}
                 hovered={label === hoveredLabel}
-                data-tooltip={label}
-                style={{display: 'flex'}}
-              >
-                <div style={{width: 149}}>
-                  <Button
-                    minimal
-                    small
-                    disabled={!graphDataByMetadataLabel[label]}
-                    onClick={() =>
-                      setGraphedLabels(
-                        graphedLabels.includes(label)
-                          ? graphedLabels.filter((l) => l !== label)
-                          : [...graphedLabels, label],
-                      )
-                    }
-                    icon={
-                      graphDataByMetadataLabel[label]
-                        ? graphedLabels.includes(label)
-                          ? 'eye-open'
-                          : 'eye-off'
-                        : 'blank'
-                    }
-                  />
-                  {label}
-                </div>
-                {graphDataByMetadataLabel[label] && (
-                  <Sparkline data={graphDataByMetadataLabel[label]} width={150} height={23} />
-                )}
-              </LeftLabel>
+                graphData={graphDataByMetadataLabel[label]}
+                graphEnabled={graphedLabels.includes(label)}
+                onToggleGraphEnabled={() =>
+                  setGraphedLabels(
+                    graphedLabels.includes(label)
+                      ? graphedLabels.filter((l) => l !== label)
+                      : [...graphedLabels, label],
+                  )
+                }
+              />
             ))}
           </GridColumn>
         </GridFloatingContainer>
@@ -143,9 +119,11 @@ export const AssetMaterializationMatrix: React.FunctionComponent<AssetMaterializ
               height: 80,
             }}
           >
-            {visible.map((assetMaterialization, idx) => {
+            {visible.map((assetMaterialization, visibleIdx) => {
               const {materializationEvent, partition} = assetMaterialization;
               const x = xForAssetMaterialization(assetMaterialization, xAxis);
+              const {startTime, endTime} = materializationEvent.stepStats || {};
+
               const runId =
                 assetMaterialization.runOrError.__typename === 'PipelineRun'
                   ? assetMaterialization.runOrError.runId
@@ -159,8 +137,8 @@ export const AssetMaterializationMatrix: React.FunctionComponent<AssetMaterializ
                   style={{
                     width: COL_WIDTH,
                     position: 'absolute',
-                    zIndex: visible.length - idx,
-                    left: (idx + visibleRangeStart) * COL_WIDTH,
+                    zIndex: visible.length - visibleIdx,
+                    left: (visibleIdx + visibleRangeStart) * COL_WIDTH,
                   }}
                 >
                   <div className={`cell`} style={{fontFamily: FontFamily.monospace}}>
@@ -188,14 +166,20 @@ export const AssetMaterializationMatrix: React.FunctionComponent<AssetMaterializ
                         onMouseEnter={() => setHoveredLabel(label)}
                         onMouseLeave={() => setHoveredLabel('')}
                       >
-                        {entry ? (
-                          <MetadataEntry entry={entry} />
-                        ) : (
-                          <span style={{opacity: 0.3}}> - </span>
-                        )}
+                        {entry ? <MetadataEntry entry={entry} /> : EMPTY_CELL_DASH}
                       </div>
                     );
                   })}
+                  <div
+                    className={`cell`}
+                    style={{borderTop: `1px solid ${Colors.LIGHT_GRAY1}`}}
+                    onMouseEnter={() => setHoveredLabel(LABEL_STEP_EXECUTION_TIME)}
+                    onMouseLeave={() => setHoveredLabel('')}
+                  >
+                    {endTime && startTime
+                      ? formatElapsedTime((endTime - startTime) * 1000)
+                      : EMPTY_CELL_DASH}
+                  </div>
                 </GridColumn>
               );
             })}
@@ -206,6 +190,39 @@ export const AssetMaterializationMatrix: React.FunctionComponent<AssetMaterializ
     </PartitionRunMatrixContainer>
   );
 };
+
+const HeaderRowLabel = styled(LeftLabel)`
+  padding-left: 6px;
+  color: ${Colors.GRAY2};
+`;
+
+const MetadataRowLabel: React.FunctionComponent<{
+  bordered?: boolean;
+  label: string;
+  hovered: boolean;
+  graphEnabled: boolean;
+  graphData?: AssetNumericHistoricalData[0];
+  onToggleGraphEnabled: () => void;
+}> = ({bordered, label, hovered, graphEnabled, graphData, onToggleGraphEnabled}) => (
+  <LeftLabel
+    key={label}
+    hovered={hovered}
+    data-tooltip={label}
+    style={{display: 'flex', borderTop: bordered ? `1px solid ${Colors.LIGHT_GRAY1}` : ''}}
+  >
+    <div style={{width: 149, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+      <Button
+        minimal
+        small
+        disabled={!graphData}
+        onClick={onToggleGraphEnabled}
+        icon={graphData ? (graphEnabled ? 'eye-open' : 'eye-off') : 'blank'}
+      />
+      {label}
+    </div>
+    {graphData && <Sparkline data={graphData} width={150} height={23} />}
+  </LeftLabel>
+);
 
 const plaintextFor = (
   entry:

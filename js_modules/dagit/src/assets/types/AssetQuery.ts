@@ -33,6 +33,12 @@ export interface AssetQuery_assetOrError_Asset_assetMaterializations_runOrError_
 
 export type AssetQuery_assetOrError_Asset_assetMaterializations_runOrError = AssetQuery_assetOrError_Asset_assetMaterializations_runOrError_PipelineRunNotFoundError | AssetQuery_assetOrError_Asset_assetMaterializations_runOrError_PipelineRun;
 
+export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_stepStats {
+  __typename: "PipelineRunStepStats";
+  endTime: number | null;
+  startTime: number | null;
+}
+
 export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_materialization_metadataEntries_EventPathMetadataEntry {
   __typename: "EventPathMetadataEntry";
   label: string;
@@ -103,6 +109,8 @@ export interface AssetQuery_assetOrError_Asset_assetMaterializations_materializa
   __typename: "StepMaterializationEvent";
   runId: string;
   timestamp: string;
+  stepKey: string | null;
+  stepStats: AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_stepStats;
   materialization: AssetQuery_assetOrError_Asset_assetMaterializations_materializationEvent_materialization;
 }
 
