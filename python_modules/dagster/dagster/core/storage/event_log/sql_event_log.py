@@ -299,7 +299,7 @@ class SqlEventLogStorage(EventLogStorage):
                 )
                 if event.dagster_event.event_type == DagsterEventType.STEP_RESTARTED:
                     by_step_key[event.step_key]["attempts"] = (
-                        by_step_key[event.step_key].get("attempts") + 1
+                        by_step_key[event.step_key].get("attempts", 0) + 1
                     )
                 elif event.dagster_event.event_type == DagsterEventType.STEP_MATERIALIZATION:
                     materializations[event.step_key].append(
