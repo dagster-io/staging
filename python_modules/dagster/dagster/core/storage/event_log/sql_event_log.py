@@ -221,7 +221,6 @@ class SqlEventLogStorage(EventLogStorage):
             DagsterEventType.STEP_SUCCESS.value,
             DagsterEventType.STEP_SKIPPED.value,
             DagsterEventType.STEP_FAILURE.value,
-            DagsterEventType.STEP_RESTARTED.value,
         ]
 
         by_step_query = (
@@ -289,6 +288,11 @@ class SqlEventLogStorage(EventLogStorage):
             .order_by(SqlEventLogStorageTable.c.id.asc())
         )
 
+        if step_keys:
+            raw_event_query = raw_event_query.where(
+                SqlEventLogStorageTable.c.step_key.in_(step_keys)
+            )
+
         with self.connect(run_id) as conn:
             results = conn.execute(raw_event_query).fetchall()
 
@@ -299,7 +303,10 @@ class SqlEventLogStorage(EventLogStorage):
                 )
                 if event.dagster_event.event_type == DagsterEventType.STEP_RESTARTED:
                     by_step_key[event.step_key]["attempts"] = (
-                        by_step_key[event.step_key].get("attempts") + 1
+                        # On step started, we set the attempts count to 1. We should never see
+                        # a step restarted event without a step started event, but this
+                        # default is here just in case.
+                        by_step_key[event.step_key].get("attempts", 1) + 1
                     )
                 elif event.dagster_event.event_type == DagsterEventType.STEP_MATERIALIZATION:
                     materializations[event.step_key].append(
