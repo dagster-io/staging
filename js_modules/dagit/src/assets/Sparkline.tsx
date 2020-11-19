@@ -29,6 +29,8 @@ export const Sparkline: React.FunctionComponent<{
     ctx.beginPath();
     ctx.strokeStyle = Colors.BLUE3;
     ctx.lineWidth = 3;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
     let penUp = true;
     for (let ii = 0; ii < data.values.length; ii++) {
       const v = data.values[ii];
@@ -49,5 +51,13 @@ export const Sparkline: React.FunctionComponent<{
     ctx.stroke();
   }, [ref, data]);
 
-  return <canvas ref={ref} style={{width: width, height: height}} />;
+  // Note: canvas `width` attribute is @2x the CSS width to force retina rendering on all displays
+  return (
+    <canvas
+      ref={ref}
+      width={width * 2}
+      height={height * 2}
+      style={{width: width, height: height}}
+    />
+  );
 };
