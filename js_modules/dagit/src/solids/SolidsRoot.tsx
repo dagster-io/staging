@@ -147,13 +147,13 @@ const SolidsRootWithData: React.FC<Props & {usedSolids: Solid[]}> = (props) => {
   const selected = usedSolids.find((s) => s.definition.name === name);
 
   const onSearch = (search: TokenizingFieldValue[]) => {
-    history.push({
+    history.replace({
       search: `?${querystring.stringify({q: stringFromValue(search)})}`,
     });
   };
 
   const onClickSolid = (defName: string) => {
-    history.push(
+    history.replace(
       workspacePathFromAddress(repoAddress, `/solids/${defName}?${querystring.stringify({q})}`),
     );
   };

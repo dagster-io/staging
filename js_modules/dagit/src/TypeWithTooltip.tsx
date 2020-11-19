@@ -3,6 +3,9 @@ import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
+import {useActiveRepo} from 'src/workspace/WorkspaceContext';
+import {workspacePathFromAddress} from 'src/workspace/workspacePath';
+
 interface ITypeWithTooltipProps {
   type: {
     name: string | null;
@@ -11,33 +14,33 @@ interface ITypeWithTooltipProps {
   };
 }
 
-export class TypeWithTooltip extends React.Component<ITypeWithTooltipProps> {
-  static fragments = {
-    DagsterTypeWithTooltipFragment: gql`
-      fragment DagsterTypeWithTooltipFragment on DagsterType {
-        name
-        displayName
-        description
-      }
-    `,
-  };
+export const TypeWithTooltip = (props: ITypeWithTooltipProps) => {
+  const activeRepo = useActiveRepo();
+  const {name, displayName} = props.type;
 
-  render() {
-    const {name, displayName} = this.props.type;
-
-    // TODO: link to most inner type
-    if (name) {
-      const search = `?typeExplorer=${displayName}`;
-      return (
-        <Link to={{search}}>
-          <TypeName>{displayName}</TypeName>
-        </Link>
-      );
-    } else {
-      return <TypeName>{displayName}</TypeName>;
-    }
+  // TODO: link to most inner type
+  if (name && activeRepo) {
+    return (
+      <Link
+        to={workspacePathFromAddress(activeRepo.address, `/solids?typeExplorer=${displayName}`)}
+      >
+        <TypeName>{displayName}</TypeName>
+      </Link>
+    );
   }
-}
+
+  return <TypeName>{displayName}</TypeName>;
+};
+
+TypeWithTooltip.fragments = {
+  DagsterTypeWithTooltipFragment: gql`
+    fragment DagsterTypeWithTooltipFragment on DagsterType {
+      name
+      displayName
+      description
+    }
+  `,
+};
 
 export const TypeName = styled.code`
   background: #d6ecff;
