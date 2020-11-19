@@ -172,6 +172,7 @@ def test_detect_server_restart():
     finally:
         interrupt_ipc_subprocess_pid(server_process.pid)
 
+    seven.wait_for_process(server_process, timeout=5)
     with pytest.raises(grpc._channel._InactiveRpcError):  # pylint: disable=protected-access
         api_client.get_server_id()
 
