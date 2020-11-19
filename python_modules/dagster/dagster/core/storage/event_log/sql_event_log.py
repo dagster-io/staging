@@ -221,7 +221,6 @@ class SqlEventLogStorage(EventLogStorage):
             DagsterEventType.STEP_SUCCESS.value,
             DagsterEventType.STEP_SKIPPED.value,
             DagsterEventType.STEP_FAILURE.value,
-            DagsterEventType.STEP_RESTARTED.value,
         ]
 
         by_step_query = (
@@ -288,6 +287,11 @@ class SqlEventLogStorage(EventLogStorage):
             )
             .order_by(SqlEventLogStorageTable.c.id.asc())
         )
+
+        if step_keys:
+            raw_event_query = raw_event_query.where(
+                SqlEventLogStorageTable.c.step_key.in_(step_keys)
+            )
 
         with self.connect(run_id) as conn:
             results = conn.execute(raw_event_query).fetchall()
