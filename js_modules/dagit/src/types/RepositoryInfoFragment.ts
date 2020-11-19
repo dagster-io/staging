@@ -8,21 +8,14 @@
 // GraphQL fragment: RepositoryInfoFragment
 // ====================================================
 
-export interface RepositoryInfoFragment_origin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface RepositoryInfoFragment_origin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: RepositoryInfoFragment_origin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface RepositoryInfoFragment_origin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: RepositoryInfoFragment_origin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface RepositoryInfoFragment_origin_GrpcRepositoryOrigin {

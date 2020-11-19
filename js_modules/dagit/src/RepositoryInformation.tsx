@@ -7,13 +7,12 @@ import {RepositoryOriginFragment} from 'src/types/RepositoryOriginFragment';
 export const RepositoryInformationFragment = gql`
   fragment RepositoryOriginFragment on RepositoryOrigin {
     ... on PythonRepositoryOrigin {
-      codePointer {
-        metadata {
-          key
-          value
-        }
-      }
       executablePath
+      pythonFile
+      moduleName
+      workingDirectory
+      attribute
+      packageName
     }
     ... on GrpcRepositoryOrigin {
       grpcUrl
@@ -39,12 +38,30 @@ export const RepositoryOriginInformation: React.FunctionComponent<{
   if (origin.__typename === 'PythonRepositoryOrigin') {
     return (
       <>
-        {origin.codePointer.metadata.map((metadata, idx) => (
-          <div key={idx}>
-            <span style={{marginRight: 5}}>{metadata.key}:</span>
-            <span style={{opacity: 0.5}}>{metadata.value}</span>
-          </div>
-        ))}
+        {origin.pythonFile ? (
+          <>
+            <span style={{marginRight: 5}}>python file:</span>
+            <span style={{opacity: 0.5}}>{origin.pythonFile}</span>
+          </>
+        ) : null}
+        {origin.moduleName ? (
+          <>
+            <span style={{marginRight: 5}}>python module:</span>
+            <span style={{opacity: 0.5}}>{origin.moduleName}</span>
+          </>
+        ) : null}
+        {origin.packageName ? (
+          <>
+            <span style={{marginRight: 5}}>python package:</span>
+            <span style={{opacity: 0.5}}>{origin.packageName}</span>
+          </>
+        ) : null}
+        {origin.attribute ? (
+          <>
+            <span style={{marginRight: 5}}>attribute:</span>
+            <span style={{opacity: 0.5}}>{origin.attribute}</span>
+          </>
+        ) : null}
         {dagitExecutablePath && dagitExecutablePath === origin.executablePath ? null : (
           <div>
             <span style={{marginRight: 5}}>executable:</span>
