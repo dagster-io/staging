@@ -217,10 +217,7 @@ const ConfigButtons: React.FC<ConfigButtonProps> = (props) => {
         border={{side: 'horizontal', width: 1, color: Colors.LIGHT_GRAY1}}
         padding={{horizontal: 8, vertical: 4}}
       >
-        <HighlightedCodeBlock
-          value={runConfigYaml || 'Unable to resolve config'}
-          languages={['yaml']}
-        />
+        <HighlightedCodeBlock value={runConfigYaml || 'Unable to resolve config'} language="yaml" />
       </Box>
     );
   };

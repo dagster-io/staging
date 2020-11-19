@@ -346,7 +346,7 @@ export const ScheduleRow: React.FC<{
                           body: (
                             <HighlightedCodeBlock
                               value={runConfigYaml || 'Unable to resolve config'}
-                              languages={['yaml']}
+                              language="yaml"
                             />
                           ),
                         });
