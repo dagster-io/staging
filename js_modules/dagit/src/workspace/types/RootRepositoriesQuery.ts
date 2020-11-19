@@ -20,21 +20,14 @@ export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLoca
   pipelineName: string;
 }
 
-export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_origin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_origin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_origin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_origin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_origin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface RootRepositoriesQuery_repositoryLocationsOrError_RepositoryLocationConnection_nodes_RepositoryLocation_repositories_origin_GrpcRepositoryOrigin {

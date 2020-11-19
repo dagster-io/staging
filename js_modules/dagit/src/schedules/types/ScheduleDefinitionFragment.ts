@@ -15,21 +15,14 @@ export interface ScheduleDefinitionFragment_partitionSet {
   name: string;
 }
 
-export interface ScheduleDefinitionFragment_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata {
-  __typename: "CodePointerMetadata";
-  key: string;
-  value: string;
-}
-
-export interface ScheduleDefinitionFragment_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer {
-  __typename: "CodePointer";
-  metadata: ScheduleDefinitionFragment_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer_metadata[];
-}
-
 export interface ScheduleDefinitionFragment_scheduleState_repositoryOrigin_PythonRepositoryOrigin {
   __typename: "PythonRepositoryOrigin";
-  codePointer: ScheduleDefinitionFragment_scheduleState_repositoryOrigin_PythonRepositoryOrigin_codePointer;
   executablePath: string;
+  pythonFile: string | null;
+  moduleName: string | null;
+  workingDirectory: string | null;
+  attribute: string | null;
+  packageName: string | null;
 }
 
 export interface ScheduleDefinitionFragment_scheduleState_repositoryOrigin_GrpcRepositoryOrigin {
