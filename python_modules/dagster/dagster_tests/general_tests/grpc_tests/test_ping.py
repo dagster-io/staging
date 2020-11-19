@@ -172,6 +172,8 @@ def test_detect_server_restart():
     finally:
         interrupt_ipc_subprocess_pid(server_process.pid)
 
+    server_process.wait()
+
     with pytest.raises(grpc._channel._InactiveRpcError):  # pylint: disable=protected-access
         api_client.get_server_id()
 
