@@ -5,7 +5,6 @@ import pytest
 from dagster import DagsterInvariantViolationError
 from dagster.core.host_representation import (
     ExternalRepositoryOrigin,
-    GrpcServerRepositoryLocationOrigin,
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
 )
 from dagster.core.scheduler.job import (
