@@ -785,7 +785,8 @@ class TestAThing(
 
 
 ReadonlyGraphQLContextTestMatrix = make_graphql_context_test_suite(
-    context_variants=GraphQLContextVariant.all_readonly_variants()
+    # context_variants=GraphQLContextVariant.all_readonly_variants()
+    context_variants=[GraphQLContextVariant.sqlite_with_default_run_launcher_in_process_env(),]
 )
 
 ExecutingGraphQLContextTestMatrix = make_graphql_context_test_suite(
