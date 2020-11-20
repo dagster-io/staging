@@ -612,6 +612,19 @@ class DauphinScheduleDefinitionNotFoundError(dauphin.ObjectType):
         )
 
 
+class DauphinJobDefinitionNotFoundError(dauphin.ObjectType):
+    class Meta:
+        name = "JobNotFoundError"
+        interfaces = (DauphinError,)
+
+    job_name = dauphin.NonNull(dauphin.String)
+
+    def __init__(self, job_name):
+        super(DauphinJobDefinitionNotFoundError, self).__init__()
+        self.job_name = check.str_param(job_name, "job_name")
+        self.message = f"Job {job_name} is not present in the currently loaded repository."
+
+
 class DauphinScheduleStateNotFoundError(dauphin.ObjectType):
     class Meta:
         name = "ScheduleStateNotFoundError"

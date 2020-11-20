@@ -4,7 +4,7 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { JobTickStatus, PipelineRunStatus, ScheduleStatus } from "./../../types/globalTypes";
+import { JobTickStatus, PipelineRunStatus, ScheduleStatus, JobStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: SchedulerRootQuery
@@ -131,6 +131,45 @@ export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nod
   name: string;
 }
 
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_runs {
+  __typename: "PipelineRun";
+  runId: string;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_ticks_error_cause {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_ticks_error {
+  __typename: "PythonError";
+  message: string;
+  stack: string[];
+  cause: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_ticks_error_cause | null;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_ticks {
+  __typename: "JobTick";
+  status: JobTickStatus;
+  timestamp: number;
+  runId: string | null;
+  error: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_ticks_error | null;
+  executionKey: string | null;
+}
+
+export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions {
+  __typename: "SensorDefinition";
+  name: string;
+  pipelineName: string;
+  solidSelection: (string | null)[] | null;
+  mode: string;
+  status: JobStatus;
+  runs: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_runs[];
+  runsCount: number;
+  ticks: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions_ticks[];
+}
+
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes {
   __typename: "Repository";
   id: string;
@@ -138,6 +177,7 @@ export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nod
   scheduleDefinitions: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_scheduleDefinitions[];
   origin: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_origin;
   location: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_location;
+  sensorDefinitions: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_sensorDefinitions[];
 }
 
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection {

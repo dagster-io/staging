@@ -9,6 +9,8 @@ type Query {
   scheduleDefinitionOrError(scheduleSelector: ScheduleSelector!): ScheduleDefinitionOrError!
   scheduleDefinitionsOrError(repositorySelector: RepositorySelector!): ScheduleDefinitionsOrError!
   scheduleStatesOrError(repositorySelector: RepositorySelector, withNoScheduleDefinition: Boolean): ScheduleStatesOrError!
+  jobDefinitionOrError(jobSelector: JobSelector!): JobDefinitionOrError!
+  jobDefinitionsOrError(repositorySelector: RepositorySelector!, jobType: JobType): JobDefinitionsOrError!
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
@@ -41,6 +43,7 @@ type Repository {
   origin: RepositoryOrigin!
   partitionSets: [PartitionSet!]!
   scheduleDefinitions: [ScheduleDefinition!]!
+  sensorDefinitions: [SensorDefinition!]!
 }
 
 type RepositoryLocation {
@@ -581,6 +584,32 @@ type SolidInvocationSite {
   solidHandle: SolidHandle!
 }
 
+type SensorDefinition {
+  id: ID!
+  name: String!
+  pipelineName: String!
+  solidSelection: [String]
+  mode: String!
+  status: JobStatus!
+  runs(limit: Int): [PipelineRun!]!
+  runsCount: Int!
+  ticks(limit: Int): [JobTick!]!
+}
+
+enum JobStatus {
+  RUNNING
+  STOPPED
+}
+
+type JobTick {
+  status: JobTickStatus!
+  timestamp: Float!
+  runId: String
+  error: PythonError
+  executionKey: String
+  run: PipelineRun
+}
+
 union RepositoryOrError = PythonError | Repository | RepositoryNotFoundError
 
 type RepositoryNotFoundError implements Error {
@@ -680,6 +709,32 @@ union ScheduleStatesOrError = ScheduleStates | RepositoryNotFoundError | PythonE
 
 type ScheduleStates {
   results: [ScheduleState!]!
+}
+
+union JobDefinitionOrError = ScheduleDefinition | SensorDefinition | JobNotFoundError | PythonError
+
+type JobNotFoundError implements Error {
+  message: String!
+  jobName: String!
+}
+
+input JobSelector {
+  repositoryName: String!
+  repositoryLocationName: String!
+  jobName: String!
+}
+
+union JobDefinitionsOrError = JobDefinitions | RepositoryNotFoundError | PythonError
+
+type JobDefinitions {
+  results: [JobDefinition!]!
+}
+
+union JobDefinition = ScheduleDefinition | SensorDefinition
+
+enum JobType {
+  SCHEDULE
+  SENSOR
 }
 
 union PartitionSetsOrError = PartitionSets | PipelineNotFoundError | PythonError
