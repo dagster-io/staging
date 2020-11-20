@@ -21,7 +21,16 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
 from .compute import create_compute_step
-from .objects import ExecutionStep, StepInput, StepInputSourceType, StepOutputHandle
+from .inputs import (
+    FromAddress,
+    FromConfig,
+    FromDefaultValue,
+    FromMultipleSources,
+    FromStepOutput,
+    StepInput,
+    StepInputSource,
+)
+from .objects import ExecutionStep, StepOutputHandle
 
 
 class _PlanBuilder:
@@ -213,8 +222,7 @@ def get_step_input(
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source_type=StepInputSourceType.CONFIG,
-            config_data=solid_config.inputs[input_name],
+            source=FromConfig(solid_config.inputs[input_name]),
         )
 
     input_handle = solid.input_handle(input_name)
@@ -223,8 +231,7 @@ def get_step_input(
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source_type=StepInputSourceType.SINGLE_OUTPUT,
-            source_handles=[plan_builder.get_output_handle(solid_output_handle)],
+            source=FromStepOutput(plan_builder.get_output_handle(solid_output_handle)),
         )
 
     if dependency_structure.has_multi_deps(input_handle):
@@ -232,11 +239,12 @@ def get_step_input(
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source_type=StepInputSourceType.MULTIPLE_OUTPUTS,
-            source_handles=[
-                plan_builder.get_output_handle(solid_output_handle)
-                for solid_output_handle in solid_output_handles
-            ],
+            source=FromMultipleSources(
+                [
+                    FromStepOutput(plan_builder.get_output_handle(solid_output_handle))
+                    for solid_output_handle in solid_output_handles
+                ]
+            ),
         )
 
     if solid.container_maps_input(input_name):
@@ -245,19 +253,14 @@ def get_step_input(
         if parent_name in parent_inputs:
             parent_input = parent_inputs[parent_name]
             return StepInput(
-                name=input_name,
-                dagster_type=input_def.dagster_type,
-                source_type=parent_input.source_type,
-                source_handles=parent_input.source_handles,
-                config_data=parent_input.config_data,
+                name=input_name, dagster_type=input_def.dagster_type, source=parent_input.source,
             )
 
     if solid.definition.input_has_default(input_name):
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source_type=StepInputSourceType.DEFAULT_VALUE,
-            config_data=solid.definition.default_value_for_input(input_name),
+            source=FromDefaultValue(solid.definition.default_value_for_input(input_name)),
         )
 
     # At this point we have an input that is not hooked up to
@@ -413,31 +416,23 @@ class ExecutionPlan(
         pipeline_name = self.pipeline_def.name
         memoized_plan_step_dict = self.step_dict.copy()
         for step_key in step_keys_to_execute:
-            step_inputs = []
             step = memoized_plan_step_dict[step_key]
+
+            # update step input source to address loads where applicable
+            updated_step_inputs = []
             for step_input in step.step_inputs:
-                if step_input.is_from_output:
-                    address_dict = {
-                        source_handle: addresses[(pipeline_name, source_handle)]
-                        for source_handle in step_input.source_handles
-                        if (pipeline_name, source_handle) in addresses
-                    }
-                    reconstructed_step_input = StepInput(
+                updated_step_inputs.append(
+                    StepInput(
                         step_input.name,
-                        dagster_type=step_input.dagster_type,
-                        source_type=step_input.source_type,
-                        source_handles=step_input.source_handles,
-                        config_data=None,
-                        addresses=address_dict,
+                        step_input.dagster_type,
+                        _updated_step_input_source(step_input.source, pipeline_name, addresses),
                     )
-                    step_inputs.append(reconstructed_step_input)
-                else:
-                    step_inputs.append(step_input)
+                )
 
             memoized_step = ExecutionStep(
                 pipeline_name=step.pipeline_name,
                 key_suffix=step.key_suffix,
-                step_inputs=step_inputs,
+                step_inputs=updated_step_inputs,
                 step_outputs=step.step_outputs,
                 compute_fn=step.compute_fn,
                 kind=step.kind,
@@ -535,3 +530,28 @@ def check_asset_store_intermediate_storage(mode_def, environment_config):
                 intermediate_storage_name=intermediate_storage_def.name
             )
         )
+
+
+def _updated_step_input_source(source, pipeline_name, addresses):
+    check.inst_param(source, "source", StepInputSource)
+    check.str_param(pipeline_name, "pipeline_name")
+    check.dict_param(addresses, "addresses")
+
+    # If a fan-in, recurse
+    if isinstance(source, FromMultipleSources):
+        return FromMultipleSources(
+            [
+                _updated_step_input_source(inner_source, pipeline_name, addresses)
+                for inner_source in source.sources
+            ]
+        )
+    # If its from a step output that we have the address for, replace it with an address load
+    elif (
+        isinstance(source, FromStepOutput)
+        and (pipeline_name, source.step_output_handle) in addresses
+    ):
+        return FromAddress(
+            addresses[(pipeline_name, source.step_output_handle)], source.step_output_handle
+        )
+    else:
+        return source
