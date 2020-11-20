@@ -1,21 +1,23 @@
 const puppeteer = require("puppeteer");
 const { toMatchImageSnapshot } = require("jest-image-snapshot");
 const { spawn } = require("child_process");
-const sleep = require("system-sleep");
+const sleep = require("await-sleep");
 
 expect.extend({ toMatchImageSnapshot });
 
 const screenshotPath = (pathFragment) =>
-  __dirname + "/next/public/assets/images/tutorial/" + pathFragment;
+  __dirname + "/next/public/assets/images/tutorial/" + pathFragment; // existing img
 
-const runDagit = async (args, port) => {
+const runDagit = async (args, port, dir, subdir) => {
   const dagitArgs = args.concat(["-p", port || 3000]);
 
   dagit = spawn("dagit", dagitArgs, {
-    cwd: "../examples/docs_snippets/docs_snippets/intro_tutorial/",
-  });
+    // cwd: "../examples/docs_snippets/docs_snippets/intro_tutorial/basics/e01_first_pipeline/"
+    cwd: `../examples/docs_snippets/docs_snippets/intro_tutorial/${dir}/${subdir}/`,
+  }); // this path doesn't fit all tests below; need an arg to specify final path
 
   console.log(`Running: "dagit ${dagitArgs.join(" ")}" on pid ${dagit.pid}`);
+
   dagit.stdout.on("data", (data) => {
     console.log(`dagit stdout: ${data}`);
   });
@@ -33,14 +35,16 @@ const runDagit = async (args, port) => {
   });
 
   await sleep(5000);
+
   return port;
 };
 
 const tearDownDagit = async (ps) => {
   dagit.removeAllListeners("close");
   dagit.kill();
-  console.log(`stopped dagit`);
+
   await sleep(5000);
+
   return;
 };
 
@@ -56,8 +60,8 @@ describe("for hello_solid, hello_pipeline, and execute_pipeline", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f hello_cereal.py -n hello_cereal_pipeline
-    dagit = await runDagit(["-f", "hello_cereal.py", "-a", "hello_cereal_pipeline"], 3000);
+    // dagit -f hello_cereal.py -a hello_cereal_pipeline
+    dagit = await runDagit(["-f", "hello_cereal.py", "-a", "hello_cereal_pipeline"], 3000, "basics", "e01_first_pipeline");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -65,7 +69,7 @@ describe("for hello_solid, hello_pipeline, and execute_pipeline", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -87,14 +91,14 @@ describe("for hello_solid, hello_pipeline, and execute_pipeline", () => {
       waitUntil: "networkidle2",
     });
     const image = await page.screenshot({
-      path: screenshotPath("/hello_cereal_figure_one.png"),
+      path: screenshotPath("/hello_cereal_figure_one.png"), // existing img
     });
     expect(image).toMatchImageSnapshot(setConfig("hello_cereal_figure_one"));
     return;
   });
 
   it("renders the playground for the hello cereal pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/hello_cereal_pipeline", {
+    await page.goto("http://127.0.0.1:3000/pipeline/hello_cereal_pipeline", {
       waitUntil: "networkidle2",
     });
 
@@ -106,21 +110,20 @@ describe("for hello_solid, hello_pipeline, and execute_pipeline", () => {
   });
 
   it("renders the executed playground view for the hello cereal pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/hello_cereal_pipeline", {
+    await page.goto("http://127.0.0.1:3000/pipeline/hello_cereal_pipeline/playground", {
       waitUntil: "networkidle2",
     });
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]' // Fixed
     );
-
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
         try {
           const pages = await browser.pages();
           let newTab = pages[pages.length - 1];
           await newTab.setViewport({ width: 1680, height: 946 });
-
+          console.log("I arrived at new tab");
           await newTab.reload({ waitUntil: "networkidle0" });
           await newTab.waitFor("//span[contains(., 'Process for pipeline exited')]", {
             timeout: 0,
@@ -135,7 +138,6 @@ describe("for hello_solid, hello_pipeline, and execute_pipeline", () => {
         }
       });
     });
-
     await executeButton.click();
     await done;
     return;
@@ -148,8 +150,8 @@ describe("for the serial pipeline in hello_dag", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f serial_pipeline.py -n serial_pipeline
-    dagit = await runDagit(["-f", "serial_pipeline.py", "-a", "serial_pipeline"], 3000);
+    // dagit -f serial_pipeline.py -a serial_pipeline
+    dagit = await runDagit(["-f", "serial_pipeline.py", "-a", "serial_pipeline"], 3000, "basics", "e03_pipelines");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -157,7 +159,7 @@ describe("for the serial pipeline in hello_dag", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -192,8 +194,8 @@ describe("for the complex pipeline in hello_dag", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f complex_pipeline.py -n complex_pipeline
-    dagit = await runDagit(["-f", "complex_pipeline.py", "-a", "complex_pipeline"], 3000);
+    // dagit -f complex_pipeline.py -a complex_pipeline
+    dagit = await runDagit(["-f", "complex_pipeline.py", "-a", "complex_pipeline"], 3000, "basics", "e03_pipelines");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -201,7 +203,7 @@ describe("for the complex pipeline in hello_dag", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -237,9 +239,9 @@ describe("for the config editor in inputs", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f inputs.py -n inputs_pipeline
-    dagit = await runDagit(["-f", "inputs.py", "-a", "inputs_pipeline"], 3000);
-    browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
+    // dagit -f inputs.py -a inputs_pipeline
+    dagit = await runDagit(["-f", "inputs.py", "-a", "inputs_pipeline"], 3000, "basics", "e02_solids");
+    browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"]});
     done();
   });
 
@@ -247,7 +249,7 @@ describe("for the config editor in inputs", () => {
     await tearDownDagit(dagit);
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     done();
   });
 
@@ -264,14 +266,14 @@ describe("for the config editor in inputs", () => {
   });
 
   it("renders the playground view for the inputs pipeline with a hover error", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/inputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/inputs_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
-    await page.waitForSelector(".CodeMirror-lint-marker-error", {
+    await page.waitForSelector('div[class="RunPreview__Item-sc-5v37v5-4 kxuKOr"]', {
       timeout: 0,
     });
-    await page.hover(".CodeMirror-lint-marker-error");
+    await page.hover('div[class="RunPreview__Item-sc-5v37v5-4 kxuKOr"]');
     await sleep(50);
     const image = await page.screenshot({
       path: screenshotPath("/inputs_figure_one.png"),
@@ -281,7 +283,7 @@ describe("for the config editor in inputs", () => {
   });
 
   it("renders the playground view for the inputs pipeline with typeahead", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/inputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/inputs_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -298,7 +300,7 @@ describe("for the config editor in inputs", () => {
   });
 
   it("renders the playground view for the inputs pipeline with valid config", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/inputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/inputs_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(1000);
@@ -306,12 +308,12 @@ describe("for the config editor in inputs", () => {
     await page.type(
       ".CodeMirror textarea",
       "solids:\n" +
-        "  read_csv:\n" +
-        "  inputs:\n" +
-        "    csv_path:\n" +
-        '      value: "cereal.csv"'
+      "  read_csv:\n" +
+      "  inputs:\n" +
+      "    csv_path:\n" +
+      '      value: "cereal.csv"'
     );
-    await page.waitForSelector('button[title="Start execution in a subprocess"]');
+    await page.waitForSelector('button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]');
     const image = await page.screenshot({
       path: screenshotPath("/inputs_figure_three.png"),
     });
@@ -326,8 +328,8 @@ describe("for the untyped pipeline in typed_inputs", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f inputs.py -n inputs_pipeline
-    dagit = await runDagit(["-f", "inputs.py", "-a", "inputs_pipeline"], 3000);
+    // dagit -f inputs.py -a inputs_pipeline
+    dagit = await runDagit(["-f", "inputs.py", "-a", "inputs_pipeline"], 3000, "basics", "e02_solids");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -335,7 +337,7 @@ describe("for the untyped pipeline in typed_inputs", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -368,7 +370,7 @@ describe("for the untyped pipeline in typed_inputs", () => {
   });
 
   it("renders the playground view for the inputs pipeline with a runtime error due to bad config", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/inputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/inputs_pipeline/playground", {
       waitUntil: "networkidle2",
     });
     await sleep(500);
@@ -379,7 +381,7 @@ describe("for the untyped pipeline in typed_inputs", () => {
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
 
     let done = new Promise((resolve, reject) => {
@@ -405,7 +407,7 @@ describe("for the untyped pipeline in typed_inputs", () => {
   });
 
   it("renders an error detail for the inputs pipeline with a runtime error due to bad config", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/inputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/inputs_pipeline/playground", {
       waitUntil: "networkidle2",
     });
     // this is because localStorage has the stale config!!
@@ -421,7 +423,7 @@ describe("for the untyped pipeline in typed_inputs", () => {
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
 
     let done = new Promise((resolve, reject) => {
@@ -457,16 +459,16 @@ describe("for the typed pipeline in typed_inputs", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f inputs_typed.py -n inputs_pipeline
-    dagit = await runDagit(["-f", "inputs_typed.py", "-a", "inputs_pipeline"], 3000);
-    browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
+    // dagit -f inputs_typed.py -a inputs_pipeline
+    dagit = await runDagit(["-f", "inputs_typed.py", "-a", "inputs_pipeline"], 3000, "basics", "e04_quality");
+    browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"]});
     done();
   });
 
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -484,7 +486,7 @@ describe("for the typed pipeline in typed_inputs", () => {
   });
 
   it("renders the playground view for the inputs pipeline with an error due to bad config", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/inputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/inputs_pipeline/playground", {
       waitUntil: "networkidle2",
     });
     await sleep(500);
@@ -511,8 +513,8 @@ describe("for the config pipeline in config", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f config.py -n config_pipeline
-    dagit = await runDagit(["-f", "config.py", "-a", "config_pipeline"], 3000);
+    // dagit -f config.py -a config_pipeline
+    dagit = await runDagit(["-f", "config.py", "-a", "config_pipeline"], 3000, "basics", "e02_solids");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -520,7 +522,7 @@ describe("for the config pipeline in config", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -538,19 +540,19 @@ describe("for the config pipeline in config", () => {
   });
 
   it("renders the playground view with the mini schema", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/config_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/config_pipeline/playground", {
       waitUntil: "networkidle2",
     });
     await sleep(500);
     await page.type(
       ".CodeMirror textarea",
-      "solids:\n" + "  read_csv:\n" + "  inputs:\n" + "  csv_path:\n" + "  value: 2343\n"
+      "solids:\n" + "  read_csv:\n" + "  inputs:\n" + "  csv_path:\n" + '  value: "cereal.csv"\n'
     );
     await page.focus(".CodeMirror textarea");
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press("Backspace");
     }
-    await page.type(".CodeMirror textarea", "    config:\n" + '  delimiter: ";"');
+    await page.type(".CodeMirror textarea", "    config:\n" + '  reverse: True');
     await sleep(500);
     const image = await page.screenshot({
       path: screenshotPath("/config_figure_one.png"),
@@ -580,8 +582,8 @@ describe("for the custom types pipeline in types", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f custom_types.py -n custom_type_pipeline
-    dagit = await runDagit(["-f", "custom_types.py", "-a", "custom_type_pipeline"], 3000);
+    // dagit -f custom_types.py -a custom_type_pipeline
+    dagit = await runDagit(["-f", "custom_types.py", "-a", "custom_type_pipeline"], 3000, "basics", "e04_quality");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -589,7 +591,7 @@ describe("for the custom types pipeline in types", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -628,8 +630,8 @@ describe("for the custom types pipeline in metadata", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f custom_types.py -n custom_type_pipeline
-    dagit = await runDagit(["-f", "custom_types_4.py", "-a", "custom_type_pipeline"], 3000);
+    // dagit -f custom_types.py -a custom_type_pipeline
+    dagit = await runDagit(["-f", "custom_types_4.py", "-a", "custom_type_pipeline"], 3000, "basics", "e04_quality");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -637,7 +639,7 @@ describe("for the custom types pipeline in metadata", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -655,7 +657,7 @@ describe("for the custom types pipeline in metadata", () => {
   });
 
   it("renders a pipeline run with the sort_by_calories.compute metadata", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/custom_type_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/custom_type_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(1000);
@@ -663,14 +665,14 @@ describe("for the custom types pipeline in metadata", () => {
     await page.type(
       ".CodeMirror textarea",
       "solids:\n" +
-        "  sort_by_calories:\n" +
-        "  inputs:\n" +
-        "  cereals:\n" +
-        '  csv: "cereal.csv"\n'
+      "  sort_by_calories:\n" +
+      "  inputs:\n" +
+      "    cereals\n" +
+      '      csv_path: "cereal.csv"'
     );
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
 
     let done = new Promise((resolve, reject) => {
@@ -704,8 +706,8 @@ describe("for the multiple outputs pipeline in multiple_outputs", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f custom_types.py -n custom_type_pipeline
-    dagit = await runDagit(["-f", "multiple_outputs.py", "-a", "multiple_outputs_pipeline"], 3000);
+    // dagit -f custom_types.py -a custom_type_pipeline
+    dagit = await runDagit(["-f", "multiple_outputs.py", "-a", "multiple_outputs_pipeline"], 3000, "basics", "e02_solids");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -713,7 +715,7 @@ describe("for the multiple outputs pipeline in multiple_outputs", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -768,7 +770,7 @@ describe("for the multiple outputs pipeline in multiple_outputs", () => {
   });
 
   it("renders execution results with cold cereal processing disabled", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/multiple_outputs_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/multiple_outputs_pipeline/playground", {
       waitUntil: "networkidle0",
     });
 
@@ -793,7 +795,7 @@ describe("for the multiple outputs pipeline in multiple_outputs", () => {
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -825,8 +827,8 @@ describe("for the multiple outputs pipeline in reusable", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f reusable_solids.py -n reusable_solids_pipeline
-    dagit = await runDagit(["-f", "reusable_solids.py", "-a", "reusable_solids_pipeline"], 3000);
+    // dagit -f reusable_solids.py -a reusable_solids_pipeline
+    dagit = await runDagit(["-f", "reusable_solids.py", "-a", "reusable_solids_pipeline"], 3000, "advanced", "solids");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -834,7 +836,7 @@ describe("for the multiple outputs pipeline in reusable", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -884,8 +886,8 @@ describe("for the composition pipeline in composite_solids", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f composite_solids.py -n composite_solids_pipeline
-    dagit = await runDagit(["-f", "composite_solids.py", "-a", "composite_solids_pipeline"], 3000);
+    // dagit -f composite_solids.py -a composite_solids_pipeline
+    dagit = await runDagit(["-f", "composite_solids.py", "-a", "composite_solids_pipeline"], 3000, "advanced", "solids");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -893,7 +895,7 @@ describe("for the composition pipeline in composite_solids", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -948,7 +950,7 @@ describe("for the composition pipeline in composite_solids", () => {
   });
 
   it("renders execution results for the composite solids pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/composite_solids_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/composite_solids_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -975,12 +977,12 @@ describe("for the composition pipeline in composite_solids", () => {
     await page.type(
       ".CodeMirror textarea",
       "solids:\n" +
-        "  load_cereals:\n" +
-        "  solids:\n" +
-        "  read_cereals:\n" +
-        "  inputs:\n" +
-        "  csv_path:\n" +
-        '  value: "cereal.csv"\n'
+      "  load_cereals:\n" +
+      "  solids:\n" +
+      "  read_cereals:\n" +
+      "  inputs:\n" +
+      "  csv_path:\n" +
+      '  value: "cereal.csv"\n'
     );
     await page.focus(".CodeMirror textarea");
     for (let i = 0; i < 3; i++) {
@@ -1001,7 +1003,7 @@ describe("for the composition pipeline in composite_solids", () => {
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1027,22 +1029,22 @@ describe("for the composition pipeline in composite_solids", () => {
   });
 });
 
-describe("for the materialization pipeline in materializations and intermediates", () => {
+describe("for the materialization pipeline in materializations", () => {
   let browser;
   let page;
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f materializations.py -n materialization_pipeline
-    dagit = await runDagit(["-f", "materializations.py", "-a", "materialization_pipeline"], 3000);
+    // dagit -f materializations.py -a materialization_pipeline
+    dagit = await runDagit(["-f", "materializations.py", "-a", "materialization_pipeline"], 3000, "advanced", "materializations");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
-
+  
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -1060,7 +1062,7 @@ describe("for the materialization pipeline in materializations and intermediates
   });
 
   it("renders execution results for the materializations pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/materialization_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1079,7 +1081,7 @@ describe("for the materialization pipeline in materializations and intermediates
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1105,7 +1107,7 @@ describe("for the materialization pipeline in materializations and intermediates
   });
 
   it("renders execution results for the materializations pipeline with intermediates enabled", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/materialization_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1129,7 +1131,7 @@ describe("for the materialization pipeline in materializations and intermediates
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1153,9 +1155,42 @@ describe("for the materialization pipeline in materializations and intermediates
     await executeButton.click();
     await done;
   });
+});
 
-  it("renders execution results for the materializations pipeline with reexecution (intermediates enabled)", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
+describe("for the reexecution pipeline in intermediates", () => {
+  let browser;
+  let page;
+  let dagit;
+
+  beforeAll(async (done) => {
+    // dagit -f reexecution.py -a reexecution_pipeline
+    dagit = await runDagit(["-f", "reexecution.py", "-a", "reexecution_pipeline"], 3000, "advanced", "intermediates");
+    browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
+    done();
+  });
+
+  afterAll(async (done) => {
+    try {
+      await browser.close();
+    } catch { }
+    await tearDownDagit(dagit);
+    done();
+  });
+
+  beforeEach(async (done) => {
+    let existingPage;
+    for (existingPage of await browser.pages()) {
+      await existingPage.close();
+    }
+    browser.removeAllListeners("targetcreated");
+    page = await browser.newPage();
+    await page.setViewport({ width: 1680, height: 946 });
+    page.on("console", (msg) => console.log("PAGE LOG:", msg.text()));
+    done();
+  });
+
+  it("renders the highlighted selected step subset for the reexecution pipeline with the Re-execute(sort_by_calories.compute) button", async () => {
+    await page.goto("http://127.0.0.1:3000/pipeline/reexecution_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1179,7 +1214,7 @@ describe("for the materialization pipeline in materializations and intermediates
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1190,7 +1225,11 @@ describe("for the materialization pipeline in materializations and intermediates
           await newTab.setViewport({ width: 1680, height: 946 });
           await newTab.waitFor(3000);
 
-          await page.$x('//div[@title="read_csv.compute"]');
+          await page.$x('//div[@title="sort_by_calories.compute"]');
+          const [substep] = await newTab.$x(
+            '//div//div[text()="sort_by_calories.compute"]'
+          );
+          await substep.click();
 
           const image = await newTab.screenshot({
             path: screenshotPath("/reexecution.png"),
@@ -1207,8 +1246,8 @@ describe("for the materialization pipeline in materializations and intermediates
     await done;
   });
 
-  it("renders reexecution results for the materializations pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
+  it("renders reexecution results for the reexecution pipeline", async () => {
+    await page.goto("http://127.0.0.1:3000/pipeline/reexecution_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1222,7 +1261,7 @@ describe("for the materialization pipeline in materializations and intermediates
 
     await page.type(
       ".CodeMirror textarea",
-      "solids:\n" + "  read_csv:\n" + "  inputs:\n" + "  csv_path:\n" + '  value: "cereal.csv"\n'
+      "solids:\n" + "  read_csv:\n" + "  inputs:\n" + "  csv_path:\n" + '  value: "../../cereal.csv"\n'
     );
     await page.focus(".CodeMirror textarea");
     for (let i = 0; i < 4; i++) {
@@ -1232,7 +1271,7 @@ describe("for the materialization pipeline in materializations and intermediates
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1243,19 +1282,20 @@ describe("for the materialization pipeline in materializations and intermediates
           await newTab.setViewport({ width: 1680, height: 946 });
           await newTab.waitFor(3000);
 
-          await newTab.evaluate(() => {
-            document.querySelector('div[title="read_csv.compute"]').click();
-          });
+          const [substep] = await newTab.$x(
+            '//div//div[text()="sort_by_calories.compute"]'
+          );
+          await substep.click();
           await sleep(50);
 
           browser.removeAllListeners("targetcreated");
 
           const [reexecuteReadCsvButton] = await newTab.$x(
-            '//button//span[text()="Re-execute read_csv"]'
+            '//button//span[text()="Re-execute (sort_by_calories.compute)"]'
           );
 
           await reexecuteReadCsvButton.click();
-          await newTab.waitFor(3000);
+          await newTab.waitFor(5000);
           const image = await newTab.screenshot({
             path: screenshotPath("/reexecution_results.png"),
           });
@@ -1272,8 +1312,8 @@ describe("for the materialization pipeline in materializations and intermediates
     await done;
   });
 
-  it("renders the config editor error for the materializations pipeline with pickle input but no subset", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
+  it("renders the config editor error for the reexecution pipeline with pickle input but no subset", async () => {
+    await page.goto("http://127.0.0.1:3000/pipeline/reexecution_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1288,11 +1328,11 @@ describe("for the materialization pipeline in materializations and intermediates
     await page.type(
       ".CodeMirror textarea",
       "solids:\n" +
-        "  sort_by_calories:\n" +
-        "  inputs:\n" +
-        "  cereals:\n" +
-        "  pickle:\n" +
-        '  path: "/dagster_home/storage/2584d954-a30f-4be6-bbfc-c919e4bee84b/intermediates/read_csv.compute/result"\n'
+      "  sort_by_calories:\n" +
+      "  inputs:\n" +
+      "  cereals:\n" +
+      "  pickle:\n" +
+      '  path: "/dagster_home/storage/2584d954-a30f-4be6-bbfc-c919e4bee84b/intermediates/read_csv.compute/result"\n'
     );
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("Backspace");
@@ -1309,8 +1349,8 @@ describe("for the materialization pipeline in materializations and intermediates
     return;
   });
 
-  it("renders the subset selector for the materializations pipeline with pickle input", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
+  it("renders the subset selector for the reexecution pipeline with pickle input", async () => {
+    await page.goto("http://127.0.0.1:3000/pipeline/reexecution_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1325,81 +1365,28 @@ describe("for the materialization pipeline in materializations and intermediates
     await page.type(
       ".CodeMirror textarea",
       "solids:\n" +
-        "  sort_by_calories:\n" +
-        "  inputs:\n" +
-        "  cereals:\n" +
-        "  pickle:\n" +
-        '  path: "/dagster_home/storage/2584d954-a30f-4be6-bbfc-c919e4bee84b/intermediates/read_csv.compute/result"\n'
+      "  sort_by_calories:\n" +
+      "  inputs:\n" +
+      "  cereals:\n" +
+      "  - pickle:\n" +
+      '    path: "/dagster_home/storage/2584d954-a30f-4be6-bbfc-c919e4bee84b/intermediates/read_csv.compute/result"\n'
     );
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press("Backspace");
-    }
-    await page.type(".CodeMirror textarea", "storage:\n" + "  filesystem:\n");
-    await page.keyboard.press("Backspace");
-    await sleep(500);
 
     await page.waitForSelector(".CodeMirror-lint-mark-error");
 
-    await page.click("button[title=solid-subset-selector]");
+    await page.click("input[title=graph-query-input]");
     await sleep(100);
     await page.keyboard.press("Backspace");
     await page.type("input[title=graph-query-input]", "sort_by_calories");
-    await page.click("input[title=graph-query-input]");
+    await page.click(".CodeMirror textarea");
     await page.keyboard.press(" ");
+    await page.click("input[title=graph-query-input]");
 
-    await sleep(100);
+    await sleep(5000);
     const image = await page.screenshot({
       path: screenshotPath("/subset_selection.png"),
     });
     expect(image).toMatchImageSnapshot(setConfig("subset_selection"));
-    return;
-  });
-
-  it("renders the playground for the materializations pipeline with pickle input and a solid subset selected", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/materialization_pipeline/", {
-      waitUntil: "networkidle0",
-    });
-    await sleep(500);
-
-    // this is because localStorage has the stale config!!
-    await page.evaluate(() => {
-      window.localStorage.clear();
-    });
-    await page.reload({ waitUntil: "networkidle0" });
-    await sleep(500);
-
-    await page.type(
-      ".CodeMirror textarea",
-      "solids:\n" +
-        "  sort_by_calories:\n" +
-        "  inputs:\n" +
-        "  cereals:\n" +
-        "  pickle:\n" +
-        '  path: "/dagster_home/storage/2584d954-a30f-4be6-bbfc-c919e4bee84b/intermediates/read_csv.compute/result"\n'
-    );
-    for (let i = 0; i < 5; i++) {
-      await page.keyboard.press("Backspace");
-    }
-    await page.type(".CodeMirror textarea", "storage:\n" + "  filesystem:\n");
-    await page.keyboard.press("Backspace");
-
-    await sleep(500);
-
-    await page.waitForSelector(".CodeMirror-lint-mark-error");
-
-    await page.click("button[title=solid-subset-selector]");
-    await sleep(100);
-    await page.keyboard.press("Backspace");
-    await page.type("input[title=graph-query-input]", "sort_by_calories");
-    await page.click("input[title=graph-query-input]");
-    await page.keyboard.press(" ");
-    await page.click('button[title="Apply solid query"]');
-    await sleep(50);
-    await page.waitForSelector('div[title="sort_by_calories.compute"]');
-    const image = await page.screenshot({
-      path: screenshotPath("/subset_config.png"),
-    });
-    expect(image).toMatchImageSnapshot(setConfig("subset_config"));
     return;
   });
 });
@@ -1410,10 +1397,12 @@ describe("for the output materialization pipeline in materializations", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f output_materialization.py -n output_materialization_pipeline
+    // dagit -f output_materialization.py -a output_materialization_pipeline
     dagit = await runDagit(
       ["-f", "output_materialization.py", "-a", "output_materialization_pipeline"],
-      3000
+      3000,
+      "advanced",
+      "materializations"
     );
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
@@ -1422,7 +1411,7 @@ describe("for the output materialization pipeline in materializations", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -1440,7 +1429,7 @@ describe("for the output materialization pipeline in materializations", () => {
   });
 
   it("renders execution results for the output materialization pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/output_materialization_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/output_materialization_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1455,10 +1444,10 @@ describe("for the output materialization pipeline in materializations", () => {
     await page.type(
       ".CodeMirror textarea",
       "solids:\n" +
-        "  sort_by_calories:\n" +
-        "  inputs:\n" +
-        "  cereals:\n" +
-        '  csv: "cereal.csv"\n'
+      "  sort_by_calories:\n" +
+      "  inputs:\n" +
+      "  cereals:\n" +
+      '  csv_path: "cereal.csv"\n'
     );
     await page.focus(".CodeMirror textarea");
     for (let i = 0; i < 2; i++) {
@@ -1467,15 +1456,22 @@ describe("for the output materialization pipeline in materializations", () => {
     await page.type(
       ".CodeMirror textarea",
       "outputs:\n" +
-        "  - result:\n" +
-        "    csv:\n" +
-        '  path: "sorted_cereals.csv"\n' +
-        'sep: ";"\n'
+      "  - result:\n" +
+      "    csv:\n" +
+      '  path: "output/cereal_out.csv"\n' +
+      'sep: ";"\n'
+    );
+    await page.focus(".CodeMirror textarea");
+    await page.keyboard.press("Backspace");
+    await page.type(
+      ".CodeMirror textarea",
+      "json:\n" +
+      '  path: "output/cereal_out.json"'
     );
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1507,10 +1503,12 @@ describe("for the serialization strategy pipeline in intermediates", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f serialization_strategy.py -n serialization_strategy_pipeline
+    // dagit -f serialization_strategy.py -a serialization_strategy_pipeline
     dagit = await runDagit(
       ["-f", "serialization_strategy.py", "-a", "serialization_strategy_pipeline"],
-      3000
+      3000,
+      "advanced",
+      "intermediates"
     );
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
@@ -1519,7 +1517,7 @@ describe("for the serialization strategy pipeline in intermediates", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -1537,7 +1535,7 @@ describe("for the serialization strategy pipeline in intermediates", () => {
   });
 
   it("renders execution results for the serialization strategy pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/serialization_strategy_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/serialization_strategy_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1561,7 +1559,7 @@ describe("for the serialization strategy pipeline in intermediates", () => {
     await sleep(500);
 
     const executeButton = await page.waitForSelector(
-      'button[title="Start execution in a subprocess"]'
+      'button[type="button"][class="bp3-button LaunchButton__ButtonContainer-sc-1xskux0-0 cAxScV"]'
     );
     let done = new Promise((resolve, reject) => {
       browser.on("targetcreated", async () => {
@@ -1593,8 +1591,8 @@ describe("for the modes pipeline in modes", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f modes.py -n serialization_strategy_pipeline
-    dagit = await runDagit(["-f", "modes.py", "-a", "modes_pipeline"], 3000);
+    // dagit -f modes.py -a serialization_strategy_pipeline
+    dagit = await runDagit(["-f", "modes.py", "-a", "modes_pipeline"], 3000, "advanced", "pipelines");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -1602,7 +1600,7 @@ describe("for the modes pipeline in modes", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -1620,7 +1618,7 @@ describe("for the modes pipeline in modes", () => {
   });
 
   it("renders the mode selector for the modes pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/modes_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/modes_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1648,8 +1646,9 @@ describe("for the presets pipeline in presets", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f modes.py -n serialization_strategy_pipeline
-    dagit = await runDagit(["-f", "presets.py", "-a", "presets_pipeline"], 3000);
+    // dagit -f modes.py -a serialization_strategy_pipeline
+    dagit = await runDagit(["-f", "presets.py", "-a", "presets_pipeline"], 3000, "advanced", "pipelines"
+    );
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -1657,7 +1656,7 @@ describe("for the presets pipeline in presets", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -1675,7 +1674,7 @@ describe("for the presets pipeline in presets", () => {
   });
 
   it("renders the presets selector for the presets pipeline", async () => {
-    await page.goto("http://127.0.0.1:3000/playground/presets_pipeline/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/presets_pipeline/playground", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1715,8 +1714,8 @@ describe("for the repo", () => {
   let dagit;
 
   beforeAll(async (done) => {
-    // dagit -f modes.py -n serialization_strategy_pipeline
-    dagit = await runDagit(["-f", "repos.py", "-a", "define_repo"], 3000);
+    // dagit -f repos.py
+    dagit = await runDagit(["-f", "repos.py"], 3000, "advanced", "repositories");
     browser = await puppeteer.launch({ args: ["--disable-dev-shm-usage"] });
     done();
   });
@@ -1724,7 +1723,7 @@ describe("for the repo", () => {
   afterAll(async (done) => {
     try {
       await browser.close();
-    } catch {}
+    } catch { }
     await tearDownDagit(dagit);
     done();
   });
@@ -1742,7 +1741,7 @@ describe("for the repo", () => {
   });
 
   it("renders the pipeline selector ", async () => {
-    await page.goto("http://127.0.0.1:3005/pipeline/complex_pipeline:/", {
+    await page.goto("http://127.0.0.1:3000/pipeline/complex_pipeline/", {
       waitUntil: "networkidle0",
     });
     await sleep(500);
@@ -1754,7 +1753,7 @@ describe("for the repo", () => {
     await page.reload({ waitUntil: "networkidle0" });
     await sleep(500);
 
-    await page.click("button[id='playground-select-pipeline']");
+    await page.click('input[type="text"][placeholder="Search pipelines..."]');
     await sleep(50);
 
     const image = await page.screenshot({
