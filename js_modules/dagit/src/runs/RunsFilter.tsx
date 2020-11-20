@@ -175,7 +175,7 @@ export const RunsFilter: React.FunctionComponent<RunsFilterProps> = ({
     }
 
     // Can only have one filter value for pipeline, status, or id
-    const limitedTokens = new Set<string>(['id', 'pipeline', 'status', 'snapshotId']);
+    const limitedTokens = new Set<string>(['id', 'pipeline', 'snapshotId']);
     const presentLimitedTokens = tokens.filter((token) => limitedTokens.has(token));
 
     return suggestionProviders.filter((provider) => !presentLimitedTokens.includes(provider.token));
