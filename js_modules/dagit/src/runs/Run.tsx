@@ -32,7 +32,7 @@ import {
   RunPipelineRunEventFragment,
   RunPipelineRunEventFragment_ExecutionStepFailureEvent,
 } from 'src/runs/types/RunPipelineRunEventFragment';
-import {useActiveRepo} from 'src/workspace/WorkspaceContext';
+import {useRepositoryForRun} from 'src/workspace/useRepositoryForRun';
 
 interface RunProps {
   client: ApolloClient<any>;
@@ -153,18 +153,19 @@ const RunWithData: React.FunctionComponent<RunWithDataProps> = ({
     LaunchPipelineReexecution,
     LaunchPipelineReexecutionVariables
   >(LAUNCH_PIPELINE_REEXECUTION_MUTATION);
-  const activeRepo = useActiveRepo();
+  const repo = useRepositoryForRun(run);
   const splitPanelContainer = React.createRef<SplitPanelContainer>();
 
   const onLaunch = async (style: ReExecutionStyle) => {
-    if (!run || run.pipeline.__typename === 'UnknownPipeline' || !activeRepo) {
+    if (!run || run.pipeline.__typename === 'UnknownPipeline' || !repo) {
       return;
     }
+
     const variables = getReexecutionVariables({
       run,
       style,
-      repositoryLocationName: activeRepo.address.location,
-      repositoryName: activeRepo.address.name,
+      repositoryLocationName: repo.repositoryLocation.name,
+      repositoryName: repo.repository.name,
     });
     const result = await launchPipelineReexecution({variables});
     handleLaunchResult(run.pipeline.name, result, {openInNewWindow: false});
