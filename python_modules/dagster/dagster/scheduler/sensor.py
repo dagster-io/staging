@@ -190,7 +190,7 @@ def _evaluate_sensor(
         return
 
     assert isinstance(sensor_runtime_data, ExternalSensorExecutionData)
-    if not sensor_runtime_data.run_params:
+    if not sensor_runtime_data.run_requests:
         if sensor_runtime_data.skip_message:
             context.logger.info(
                 f"Sensor returned false for {external_sensor.name}, skipping: "
@@ -212,22 +212,22 @@ def _evaluate_sensor(
         subset_pipeline_result.external_pipeline_data, external_repo.handle,
     )
 
-    for run_params in sensor_runtime_data.run_params:
-        if run_params.execution_key and instance.has_job_tick(
+    for run_request in sensor_runtime_data.run_requests:
+        if run_request.execution_key and instance.has_job_tick(
             external_sensor.get_external_origin_id(),
-            run_params.execution_key,
+            run_request.execution_key,
             [JobTickStatus.SUCCESS],
         ):
             context.logger.info(
                 "Found existing run for sensor {sensor_name} with execution_key `{execution_key}`, skipping.".format(
-                    sensor_name=external_sensor.name, execution_key=run_params.execution_key
+                    sensor_name=external_sensor.name, execution_key=run_request.execution_key
                 )
             )
-            context.add_state(JobTickStatus.SKIPPED, execution_key=run_params.execution_key)
+            context.add_state(JobTickStatus.SKIPPED, execution_key=run_request.execution_key)
             continue
 
         run = _get_or_create_sensor_run(
-            context, instance, repo_location, external_sensor, external_pipeline, run_params
+            context, instance, repo_location, external_sensor, external_pipeline, run_request
         )
 
         if not run:
@@ -262,24 +262,24 @@ def _evaluate_sensor(
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_LAUNCHED")
 
         context.add_state(
-            JobTickStatus.SUCCESS, run_id=run.run_id, execution_key=run_params.execution_key,
+            JobTickStatus.SUCCESS, run_id=run.run_id, execution_key=run_request.execution_key,
         )
 
 
 def _get_or_create_sensor_run(
-    context, instance, repo_location, external_sensor, external_pipeline, run_params
+    context, instance, repo_location, external_sensor, external_pipeline, run_request
 ):
 
-    if not run_params.execution_key:
+    if not run_request.execution_key:
         return _create_sensor_run(
-            context, instance, repo_location, external_sensor, external_pipeline, run_params
+            context, instance, repo_location, external_sensor, external_pipeline, run_request
         )
 
     existing_runs = instance.get_runs(
         PipelineRunsFilter(
             tags=merge_dicts(
                 PipelineRun.tags_for_sensor(external_sensor),
-                {EXECUTION_KEY_TAG: run_params.execution_key},
+                {EXECUTION_KEY_TAG: run_request.execution_key},
             )
         )
     )
@@ -296,7 +296,7 @@ def _get_or_create_sensor_run(
                 f"Run {run.run_id} already completed for this execution of {external_sensor.name}"
             )
             context.add_state(
-                JobTickStatus.SUCCESS, run_id=run.run_id, execution_key=run_params.execution_key,
+                JobTickStatus.SUCCESS, run_id=run.run_id, execution_key=run_request.execution_key,
             )
 
             return None
@@ -309,19 +309,19 @@ def _get_or_create_sensor_run(
     context.logger.info(f"Creating new run for {external_sensor.name}")
 
     return _create_sensor_run(
-        context, instance, repo_location, external_sensor, external_pipeline, run_params
+        context, instance, repo_location, external_sensor, external_pipeline, run_request
     )
 
 
 def _create_sensor_run(
-    context, instance, repo_location, external_sensor, external_pipeline, run_params
+    context, instance, repo_location, external_sensor, external_pipeline, run_request
 ):
     execution_plan_errors = []
     execution_plan_snapshot = None
     try:
         external_execution_plan = repo_location.get_external_execution_plan(
             external_pipeline,
-            run_params.run_config,
+            run_request.run_config,
             external_sensor.mode,
             step_keys_to_execute=None,
         )
@@ -334,15 +334,15 @@ def _create_sensor_run(
     pipeline_tags = external_pipeline.tags or {}
     check_tags(pipeline_tags, "pipeline_tags")
     tags = merge_dicts(
-        merge_dicts(pipeline_tags, run_params.tags), PipelineRun.tags_for_sensor(external_sensor)
+        merge_dicts(pipeline_tags, run_request.tags), PipelineRun.tags_for_sensor(external_sensor)
     )
-    if run_params.execution_key:
-        tags[EXECUTION_KEY_TAG] = run_params.execution_key
+    if run_request.execution_key:
+        tags[EXECUTION_KEY_TAG] = run_request.execution_key
 
     run = instance.create_run(
         pipeline_name=external_sensor.pipeline_name,
         run_id=None,
-        run_config=run_params.run_config,
+        run_config=run_request.run_config,
         mode=external_sensor.mode,
         solids_to_execute=external_pipeline.solids_to_execute,
         step_keys_to_execute=None,

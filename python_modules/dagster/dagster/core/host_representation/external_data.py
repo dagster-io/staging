@@ -18,7 +18,7 @@ from dagster.core.definitions import (
     ScheduleDefinition,
 )
 from dagster.core.definitions.partition import PartitionScheduleDefinition
-from dagster.core.definitions.sensor import SensorRunParams
+from dagster.core.definitions.sensor import RunRequest
 from dagster.core.snap import PipelineSnapshot
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils.error import SerializableErrorInfo
@@ -235,13 +235,13 @@ class ExternalJobData(
 
 @whitelist_for_serdes
 class ExternalSensorExecutionData(
-    namedtuple("_ExternalSensorExecutionData", "run_params skip_message")
+    namedtuple("_ExternalSensorExecutionData", "run_requests skip_message")
 ):
-    def __new__(cls, run_params=None, skip_message=None):
-        check.opt_list_param(run_params, "run_params", SensorRunParams)
+    def __new__(cls, run_requests=None, skip_message=None):
+        check.opt_list_param(run_requests, "run_requests", RunRequest)
         check.opt_str_param(skip_message, "skip_message")
         return super(ExternalSensorExecutionData, cls).__new__(
-            cls, run_params=run_params, skip_message=skip_message,
+            cls, run_requests=run_requests, skip_message=skip_message,
         )
 
 
