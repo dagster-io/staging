@@ -795,3 +795,11 @@ ExecutingGraphQLContextTestMatrix = make_graphql_context_test_suite(
 OutOfProcessExecutingGraphQLContextTestMatrix = make_graphql_context_test_suite(
     context_variants=GraphQLContextVariant.all_out_of_process_executing_variants()
 )
+
+MultiLocationGraphQLContextTestMatrix = make_graphql_context_test_suite(
+    context_variants=[
+        GraphQLContextVariant.readonly_in_memory_instance_multi_location(),
+        GraphQLContextVariant.readonly_sqlite_instance_multi_location(),
+        GraphQLContextVariant.readonly_postgres_instance_multi_location(),
+    ]
+)
