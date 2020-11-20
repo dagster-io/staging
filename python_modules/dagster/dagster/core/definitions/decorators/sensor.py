@@ -1,7 +1,7 @@
 import inspect
 
 from dagster import check
-from dagster.core.definitions.sensor import SensorDefinition, SensorRunParams, SensorSkipData
+from dagster.core.definitions.sensor import RunParams, RunSkippedData, SensorDefinition
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.utils.backcompat import experimental
 
@@ -13,9 +13,9 @@ def sensor(pipeline_name, name=None, solid_selection=None, mode=None):
     signature of the decorated function is more flexible than that of the evaluation_fn in the core
     API in that it may:
 
-    1. Return a `SensorSkipData` object.
-    2. Return a `SensorRunParams` object.
-    3. Yield a number of `SensorRunParams` objects.
+    1. Return a `RunSkippedData` object.
+    2. Return a `RunParams` object.
+    3. Yield a number of `RunParams` objects.
 
     Takes a :py:class:`~dagster.SensorExecutionContext`.
 
@@ -39,15 +39,15 @@ def sensor(pipeline_name, name=None, solid_selection=None, mode=None):
             if inspect.isgenerator(result):
                 for item in result:
                     yield item
-            elif isinstance(result, (SensorSkipData, SensorRunParams)):
+            elif isinstance(result, (RunSkippedData, RunParams)):
                 yield result
 
             elif result is not None:
                 raise DagsterInvariantViolationError(
                     (
                         "Error in sensor {sensor_name}: Sensor unexpectedly returned output "
-                        "{result} of type {type_}.  Should only return SensorSkipData or "
-                        "SensorRunParams objects."
+                        "{result} of type {type_}.  Should only return RunSkippedData or "
+                        "RunParams objects."
                     ).format(sensor_name=sensor_name, result=result, type_=type(result))
                 )
 

@@ -1,10 +1,6 @@
 from dagster import check
 from dagster.core.definitions.job import JobType
-from dagster.core.host_representation import (
-    PipelineSelector,
-    RepositorySelector,
-    ScheduleSelector,
-)
+from dagster.core.host_representation import PipelineSelector, RepositorySelector, ScheduleSelector
 from dagster.core.scheduler.job import JobStatus
 from graphql.execution.base import ResolveInfo
 
