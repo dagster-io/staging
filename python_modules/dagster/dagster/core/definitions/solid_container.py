@@ -6,7 +6,13 @@ from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterTypeKind
 
-from .dependency import DependencyStructure, IDependencyDefinition, Solid, SolidInvocation
+from .dependency import (
+    DependencyStructure,
+    IDependencyDefinition,
+    MultiDependencyDefinition,
+    Solid,
+    SolidInvocation,
+)
 
 
 class IContainSolids(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
@@ -259,6 +265,13 @@ def _validate_dependencies(dependencies, solid_dict, alias_to_name):
 
                 input_def = solid_dict[from_solid].definition.input_def_named(from_input)
                 output_def = solid_dict[dep.solid].definition.output_def_named(dep.output)
+
+                if dep_def.is_multi() and not input_def.dagster_type.supports_fan_in:
+                    raise DagsterInvalidDefinitionError(
+                        f'Invalid dependencies: for solid "{dep.solid}" input "{input_def.name}", the '
+                        f'DagsterType "{input_def.dagster_type.display_name}" does not support fanning in '
+                        "(MultiDependencyDefinition). Use the List type, since fanning in will result in a list."
+                    )
 
                 _validate_input_output_pair(input_def, output_def, from_solid, dep)
 
