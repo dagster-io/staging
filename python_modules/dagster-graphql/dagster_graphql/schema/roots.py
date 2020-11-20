@@ -2,8 +2,10 @@ import sys
 
 from dagster import check
 from dagster.core.definitions.events import AssetKey
+from dagster.core.definitions.job import JobType
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation import (
+    JobSelector,
     RepositorySelector,
     RepresentedPipeline,
     ScheduleSelector,
@@ -30,6 +32,10 @@ from dagster_graphql.implementation.external import (
     get_full_external_pipeline_or_raise,
 )
 from dagster_graphql.implementation.fetch_assets import get_asset, get_assets
+from dagster_graphql.implementation.fetch_jobs import (
+    get_job_definition_or_error,
+    get_job_definitions_or_error,
+)
 from dagster_graphql.implementation.fetch_partition_sets import (
     get_partition_set,
     get_partition_sets_or_error,
@@ -112,6 +118,15 @@ class DauphinQuery(dauphin.ObjectType):
         dauphin.NonNull("ScheduleStatesOrError"),
         repositorySelector=dauphin.Argument("RepositorySelector"),
         withNoScheduleDefinition=dauphin.Boolean(),
+    )
+
+    jobDefinitionOrError = dauphin.Field(
+        dauphin.NonNull("JobDefinitionOrError"), jobSelector=dauphin.NonNull("JobSelector"),
+    )
+    jobDefinitionsOrError = dauphin.Field(
+        dauphin.NonNull("JobDefinitionsOrError"),
+        repositorySelector=dauphin.NonNull("RepositorySelector"),
+        jobType=dauphin.Argument("JobType"),
     )
 
     partitionSetsOrError = dauphin.Field(
@@ -243,6 +258,18 @@ class DauphinQuery(dauphin.ObjectType):
             if kwargs.get("repositorySelector")
             else None,
             kwargs.get("withNoScheduleDefinition"),
+        )
+
+    def resolve_jobDefinitionOrError(self, graphene_info, job_selector):
+        return get_job_definition_or_error(
+            graphene_info, JobSelector.from_graphql_input(job_selector)
+        )
+
+    def resolve_jobDefinitionsOrError(self, graphene_info, **kwargs):
+        return get_job_definitions_or_error(
+            graphene_info,
+            RepositorySelector.from_graphql_input(kwargs.get("repositorySelector")),
+            JobType[kwargs.get("jobType")] if kwargs.get("jobType") else None,
         )
 
     def resolve_pipelineOrError(self, graphene_info, **kwargs):
@@ -760,6 +787,16 @@ class DauphinPipelineSelector(dauphin.InputObjectType):
     repositoryName = dauphin.NonNull(dauphin.String)
     repositoryLocationName = dauphin.NonNull(dauphin.String)
     solidSelection = dauphin.List(dauphin.NonNull(dauphin.String))
+
+
+class DauphinJobSelector(dauphin.InputObjectType):
+    class Meta:
+        name = "JobSelector"
+        description = """This type represents the fields necessary to identify a schedule."""
+
+    repositoryName = dauphin.NonNull(dauphin.String)
+    repositoryLocationName = dauphin.NonNull(dauphin.String)
+    jobName = dauphin.NonNull(dauphin.String)
 
 
 class DauphinScheduleSelector(dauphin.InputObjectType):
