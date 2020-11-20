@@ -8,7 +8,7 @@ import pytest
 from dagster import pipeline, repository, solid
 from dagster.core.definitions.decorators.sensor import sensor
 from dagster.core.definitions.job import JobType
-from dagster.core.definitions.sensor import SensorRunParams, SensorSkipData
+from dagster.core.definitions.sensor import RunRequest, SkipReason
 from dagster.core.host_representation import (
     ManagedGrpcPythonEnvRepositoryLocationOrigin,
     RepositoryLocation,
@@ -35,19 +35,19 @@ def the_pipeline():
 @sensor(pipeline_name="the_pipeline")
 def simple_sensor(context):
     if not context.last_completion_time or not int(context.last_completion_time) % 2:
-        return SensorSkipData()
+        return SkipReason()
 
-    return SensorRunParams(run_config={}, tags={})
+    return RunRequest(run_config={}, tags={})
 
 
 @sensor(pipeline_name="the_pipeline")
 def always_on_sensor(_context):
-    return SensorRunParams(run_config={}, tags={})
+    return RunRequest(run_config={}, tags={})
 
 
 @sensor(pipeline_name="the_pipeline")
 def execution_key_sensor(_context):
-    return SensorRunParams(run_config={}, tags={}, execution_key="only_once")
+    return RunRequest(run_config={}, tags={}, execution_key="only_once")
 
 
 @sensor(pipeline_name="the_pipeline")
