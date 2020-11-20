@@ -27,7 +27,7 @@ export interface DagsterRepoOption {
   repository: Repository;
 }
 
-const LAST_REPO_KEY = 'dagit.last-repo';
+export const LAST_REPO_KEY = 'dagit.last-repo';
 
 type WorkspaceState = {
   error: RepositoryError | null;
@@ -100,7 +100,9 @@ export const isRepositoryOptionEqual = (a: DagsterRepoOption, b: DagsterRepoOpti
  * is the repo currently active in your session.
  */
 const useLocalStorageState = (options: DagsterRepoOption[]) => {
-  const [repoKey, setRepoKey] = React.useState<string | null>(null);
+  const [repoKey, setRepoKey] = React.useState<string | null>(() =>
+    window.localStorage.getItem(LAST_REPO_KEY),
+  );
 
   const setRepo = (next: DagsterRepoOption) => {
     const key = getRepositoryOptionHash(next);
