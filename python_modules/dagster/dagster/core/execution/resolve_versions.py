@@ -2,7 +2,14 @@ import hashlib
 
 from dagster import check
 from dagster.core.definitions.mode import ModeDefinition
+from dagster.core.execution.plan.inputs import (
+    FromConfig,
+    FromDefaultValue,
+    FromMultipleSources,
+    FromStepOutput,
+)
 from dagster.core.system_config.objects import EnvironmentConfig
+from dagster.core.types.dagster_type import DagsterTypeKind
 
 
 def _resolve_step_input_versions(step, step_versions):
@@ -41,20 +48,39 @@ def _resolve_step_input_versions(step, step_versions):
                 step_versions[step_output_handle.step_key], step_output_handle.output_name
             )
 
-    input_versions = {}
-    for input_name, step_input in step.step_input_dict.items():
-        if step_input.is_from_output:
-            output_handle_versions = [
-                _resolve_output_version(source_handle)
-                for source_handle in step_input.source_handles
-            ]
-            version = join_and_hash(*output_handle_versions)
+    def _resolve_source_version(input_source, dagster_type):
+        if isinstance(input_source, FromMultipleSources):
+            if (
+                dagster_type.kind == DagsterTypeKind.LIST
+                or dagster_type.kind == DagsterTypeKind.NULLABLE
+            ):
+                inner_dagster_type = dagster_type.inner_type
+            else:  # This is the case where the fan-in is typed Any
+                inner_dagster_type = dagster_type
+
+            return join_and_hash(
+                *[
+                    _resolve_source_version(inner_source, inner_dagster_type)
+                    for inner_source in input_source.sources
+                ]
+            )
+        elif isinstance(input_source, FromStepOutput):
+            return _resolve_output_version(input_source.step_output_handle)
+        elif isinstance(input_source, FromConfig):
+            return dagster_type.loader.compute_loaded_input_version(input_source.config_data)
+        elif isinstance(input_source, FromDefaultValue):
+            # this is probably wrong
+            return None
         else:
-            version = step_input.dagster_type.loader.compute_loaded_input_version(
-                step_input.config_data
+            check.failed(
+                "Unhandled step input source type for version calculation: {}".format(input_source)
             )
 
-        input_versions[input_name] = version
+    input_versions = {}
+    for input_name, step_input in step.step_input_dict.items():
+        input_versions[input_name] = _resolve_source_version(
+            step_input.source, step_input.dagster_type
+        )
 
     return input_versions
 
