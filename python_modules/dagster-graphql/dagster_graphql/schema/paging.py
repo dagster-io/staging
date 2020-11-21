@@ -2,12 +2,12 @@ from dagster_graphql import dauphin
 
 
 class DauphinCursor(dauphin.Int, dauphin.Scalar):
-    class Meta(object):
+    class Meta:
         name = "Cursor"
 
 
 class DauphinPageInfo(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "PageInfo"
 
     lastCursor = dauphin.Field("Cursor")

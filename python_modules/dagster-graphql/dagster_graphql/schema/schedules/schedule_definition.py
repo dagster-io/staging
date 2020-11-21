@@ -10,26 +10,26 @@ from dagster_graphql.schema.errors import (
 
 
 class DapuphinScheduleDefinitionOrError(dauphin.Union):
-    class Meta(object):
+    class Meta:
         name = "ScheduleDefinitionOrError"
         types = ("ScheduleDefinition", DauphinScheduleDefinitionNotFoundError, DauphinPythonError)
 
 
 class DauphinScheduleDefinitions(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "ScheduleDefinitions"
 
     results = dauphin.non_null_list("ScheduleDefinition")
 
 
 class DauphinScheduleDefintionsOrError(dauphin.Union):
-    class Meta(object):
+    class Meta:
         name = "ScheduleDefinitionsOrError"
         types = (DauphinScheduleDefinitions, DauphinRepositoryNotFoundError, DauphinPythonError)
 
 
 class DauphinScheduleDefinition(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "ScheduleDefinition"
 
     id = dauphin.NonNull(dauphin.ID)
@@ -95,13 +95,13 @@ class DauphinScheduleDefinition(dauphin.ObjectType):
 
 
 class DauphinScheduleRunConfig(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "ScheduleRunConfig"
 
     yaml = dauphin.NonNull(dauphin.String)
 
 
 class DauphinScheduleRunConfigOrError(dauphin.Union):
-    class Meta(object):
+    class Meta:
         name = "ScheduleRunConfigOrError"
         types = (DauphinScheduleRunConfig, DauphinPythonError)
