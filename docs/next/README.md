@@ -1,107 +1,30 @@
-# Instructions:
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
-In the parent directory (`/docs`), run:
+## Getting Started
 
-```
-make buildnext
-```
+First, run the development server:
 
-Then, in this directory, run:
-
-```
+```bash
+npm run dev
+# or
 yarn dev
 ```
 
-The site should be live at https://localhost:3000
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-# Editing Docs
+You can start editing the page by modifying `pages/index.js`. The page auto-updates as you edit the file.
 
-All documentation pages live under `src/pages`. The path on the filesystem for an MDX file corresponds to the URL path. For example, the file `/pages/deploying/aws.mdx` can be viewed at `localhost:3000/deploying/aws`
+## Learn More
 
-The API documentation is still authored in the Sphinx project.
+To learn more about Next.js, take a look at the following resources:
 
-# New Syntax
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-Instead of RST, the docs are not written in MDX, which is just Markdown that can have inline React components.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
 
-## Links to API Docs
+## Deploy on Vercel
 
-Previously:
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/import?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-```
-:py:func:`@composite_solid <dagster.composite_solid>`
-```
-
-Now:
-
-```
-<PyObject module="dagster" object="composite_solid" displayText="@composite_solid" />
-```
-
-## Inline Code:
-
-Previously:
-
-```
-.. code-block:: console
-
-   $ dagit -f config.py -n config_pipeline
-```
-
-Now:
-
-<pre>
-```bash
-$ dagit -f config.py -n config_pipeline
-```
-</pre>
-
-## Literal includes:
-
-Previously:
-
-```
-.. literalinclude:: ../../../examples/docs_snippets/docs_snippets/intro_tutorial/materializations.py
-   :lines: 23-56
-   :linenos:
-   :lineno-start: 23
-   :emphasize-lines: 24-33, 35
-   :caption: materializations.py
-   :language: python
-```
-
-Now:
-
-<pre>
-```python literalinclude showLines startLine=23 emphasize-lines=24-33,35 caption=materializations.py
-file:/intro_tutorial/materializations.py
-lines:23-56
-```
-</pre>
-
-Or, you can use Python comment markers (instead of line numbers) which will prevent future changes from causing line numbers to drift and messing up the rendering of existing literal includes.
-
-<pre>
-```python literalinclude caption=materalizations.py
-file:/intro_tutorial/materializations.py
-startAfter:start_materialization_solids_marker_0
-endBefore:end_materialization_solids_marker_0
-```
-</pre>
-
-Python comment markers would live in your code like this:
-
-```python
-# materializations.py
-
-
-excluded_int = 1
-
-# start_materialization_solids_marker_0
-def included_func():
-   return 1
-# end_materialization_solids_marker_0
-
-excluded_bool = True
-
-```
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
