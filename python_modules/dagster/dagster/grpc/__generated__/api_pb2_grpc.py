@@ -13,7 +13,7 @@ import grpc
 from . import api_pb2 as api__pb2
 
 
-class DagsterApiStub(object):
+class DagsterApiStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -124,7 +124,7 @@ class DagsterApiStub(object):
         )
 
 
-class DagsterApiServicer(object):
+class DagsterApiServicer:
     """Missing associated documentation comment in .proto file."""
 
     def Ping(self, request, context):
@@ -356,7 +356,7 @@ def add_DagsterApiServicer_to_server(servicer, server):
 
 
 # This class is part of an EXPERIMENTAL API.
-class DagsterApi(object):
+class DagsterApi:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
