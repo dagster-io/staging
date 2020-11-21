@@ -15,7 +15,7 @@ from dagster_graphql.schema.errors import DauphinPythonError
 
 
 class DauphinRepository(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "Repository"
 
     def __init__(self, repository, repository_location):
@@ -83,7 +83,7 @@ class DauphinRepository(dauphin.ObjectType):
 
 
 class DauphinPythonRepositoryOrigin(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "PythonRepositoryOrigin"
 
     executable_path = dauphin.NonNull(dauphin.String)
@@ -116,7 +116,7 @@ class DauphinPythonRepositoryOrigin(dauphin.ObjectType):
 
 
 class DauphinRepositoryMetadata(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "RepositoryMetadata"
 
     key = dauphin.NonNull(dauphin.String)
@@ -124,7 +124,7 @@ class DauphinRepositoryMetadata(dauphin.ObjectType):
 
 
 class DauphinGrpcRepositoryOrigin(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "GrpcRepositoryOrigin"
 
     grpc_url = dauphin.NonNull(dauphin.String)
@@ -142,19 +142,19 @@ class DauphinGrpcRepositoryOrigin(dauphin.ObjectType):
 
 
 class DauphinRepositoryOrigin(dauphin.Union):
-    class Meta(object):
+    class Meta:
         name = "RepositoryOrigin"
         types = ("PythonRepositoryOrigin", "GrpcRepositoryOrigin")
 
 
 class DauphinRepositoryLocationOrLoadFailure(dauphin.Union):
-    class Meta(object):
+    class Meta:
         name = "RepositoryLocationOrLoadFailure"
         types = ("RepositoryLocation", "RepositoryLocationLoadFailure")
 
 
 class DauphinRepositoryLocation(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "RepositoryLocation"
 
     id = dauphin.NonNull(dauphin.ID)
@@ -190,7 +190,7 @@ class DauphinRepositoryLocation(dauphin.ObjectType):
 
 
 class DauphinRepositoryLocationLoadFailure(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "RepositoryLocationLoadFailure"
 
     id = dauphin.NonNull(dauphin.ID)
@@ -209,14 +209,14 @@ class DauphinRepositoryLocationLoadFailure(dauphin.ObjectType):
 
 
 class DauphinRepositoryConnection(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "RepositoryConnection"
 
     nodes = dauphin.non_null_list("Repository")
 
 
 class DauphinRepositoryLocationConnection(dauphin.ObjectType):
-    class Meta(object):
+    class Meta:
         name = "RepositoryLocationConnection"
 
     nodes = dauphin.non_null_list("RepositoryLocationOrLoadFailure")

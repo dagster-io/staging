@@ -40,7 +40,7 @@ class ScheduleExecutionContext(
         )
 
 
-class ScheduleDefinition(object):
+class ScheduleDefinition:
     """Define a schedule that targets a pipeline
 
     Args:

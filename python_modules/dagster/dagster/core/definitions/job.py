@@ -26,7 +26,7 @@ class JobContext(namedtuple("JobContext", "instance")):
         )
 
 
-class JobDefinition(object):
+class JobDefinition:
     """Define a job, a named set of pipeline execution parameters that can be dynamically
     configured at runtime.
 
