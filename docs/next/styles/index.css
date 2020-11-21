@@ -1,0 +1,18 @@
+/* purgecss start ignore */
+@tailwind base;
+@tailwind components;
+
+dl.exception {
+  @apply bg-gray-100 my-2;
+}
+
+dl.exception dt {
+  @apply bg-gray-200 px-2;
+}
+
+dl.exception dd {
+  @apply px-2;
+}
+
+/* purgecss end ignore */
+@tailwind utilities;

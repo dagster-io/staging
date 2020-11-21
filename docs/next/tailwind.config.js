@@ -1,17 +1,15 @@
-// tailwind.config.js
-const defaultTheme = require('tailwindcss/defaultTheme');
-
 module.exports = {
+  purge: ["./components/**/*.{js,ts,jsx,tsx}", "./pages/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
-      fontFamily: {
-        sans: ['Inter var', ...defaultTheme.fontFamily.sans],
+      colors: {
+        "accent-1": "#333",
       },
     },
   },
-  plugins: [
-    require('@tailwindcss/ui')({
-      layout: 'sidebar',
-    }),
-  ],
+  variants: {
+    extend: {},
+  },
+  plugins: [require("@tailwindcss/typography")],
 };
