@@ -109,7 +109,7 @@ class SystemStorageDefinition(ConfiguredMixin):
         )
 
 
-class SystemStorageData(object):
+class SystemStorageData:
     """Represents an instance of system storage.
 
     Attributes:
@@ -155,7 +155,7 @@ def system_storage(required_resource_keys, name=None, is_persistent=True, config
     )
 
 
-class _SystemStorageDecoratorCallable(object):
+class _SystemStorageDecoratorCallable:
     def __init__(
         self, name=None, is_persistent=True, config_schema=None, required_resource_keys=None
     ):
