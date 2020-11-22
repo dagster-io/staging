@@ -36,7 +36,7 @@ def define_resource_dictionary_cls(resource_defs):
     fields = {}
     for resource_name, resource_def in resource_defs.items():
         if resource_def.config_schema:
-            fields[resource_name] = Field(Shape({"config": resource_def.config_schema}))
+            fields[resource_name] = Field(Shape({"config": resource_def.config_schema.as_field()}))
 
     return Shape(fields=fields)
 
@@ -94,7 +94,11 @@ def define_logger_dictionary_cls(creation_data):
 
     for logger_name, logger_definition in creation_data.logger_defs.items():
         fields[logger_name] = Field(
-            Shape(remove_none_entries({"config": logger_definition.config_schema}),),
+            Shape(
+                {"config": logger_definition.config_schema.as_field()}
+                if logger_definition.config_schema
+                else {}
+            ),
             is_required=False,
         )
 
@@ -169,7 +173,9 @@ def define_storage_config_cls(mode_definition):
     for storage_def in mode_definition.system_storage_defs:
         fields[storage_def.name] = Field(
             Shape(
-                fields={"config": storage_def.config_schema} if storage_def.config_schema else {},
+                fields={"config": storage_def.config_schema.as_field()}
+                if storage_def.config_schema
+                else {},
             )
         )
 
@@ -184,7 +190,7 @@ def define_intermediate_storage_config_cls(mode_definition):
     for intermediate_storage_def in mode_definition.intermediate_storage_defs:
         fields[intermediate_storage_def.name] = Field(
             Shape(
-                fields={"config": intermediate_storage_def.config_schema}
+                fields={"config": intermediate_storage_def.config_schema.as_field()}
                 if intermediate_storage_def.config_schema
                 else {},
             )
@@ -201,7 +207,9 @@ def define_executor_config_cls(mode_definition):
     for executor_def in mode_definition.executor_defs:
         fields[executor_def.name] = Field(
             Shape(
-                fields={"config": executor_def.config_schema} if executor_def.config_schema else {},
+                fields={"config": executor_def.config_schema.as_field()}
+                if executor_def.config_schema
+                else {},
             )
         )
 
@@ -271,16 +279,19 @@ def solid_config_field(fields, ignored):
 
 
 def construct_leaf_solid_config(solid, handle, dependency_structure, config_schema, ignored):
+    from dagster.config.config_schema import ConfigSchema
+
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
+    check.opt_inst_param(config_schema, "config_schema", ConfigSchema)
     check.bool_param(ignored, "ignored")
 
     return solid_config_field(
         {
             "inputs": get_inputs_field(solid, handle, dependency_structure),
             "outputs": get_outputs_field(solid, handle),
-            "config": config_schema,
+            "config": config_schema.as_field() if config_schema else None,
         },
         ignored=ignored,
     )

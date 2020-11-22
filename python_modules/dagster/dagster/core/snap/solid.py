@@ -91,7 +91,9 @@ def build_composite_solid_def_snap(comp_solid_def):
         description=comp_solid_def.description,
         tags=comp_solid_def.tags,
         required_resource_keys=sorted(list(comp_solid_def.required_resource_keys)),
-        config_field_snap=snap_from_field("config", comp_solid_def.config_mapping.config_schema)
+        config_field_snap=snap_from_field(
+            "config", comp_solid_def.config_mapping.config_schema.as_field()
+        )
         if comp_solid_def.config_mapping
         else None,
         dep_structure_snapshot=build_dep_structure_snapshot_from_icontains_solids(comp_solid_def),
@@ -109,7 +111,7 @@ def build_core_solid_def_snap(solid_def):
         description=solid_def.description,
         tags=solid_def.tags,
         required_resource_keys=sorted(list(solid_def.required_resource_keys)),
-        config_field_snap=snap_from_field("config", solid_def.config_schema)
+        config_field_snap=snap_from_field("config", solid_def.config_schema.as_field())
         if solid_def.config_schema
         else None,
     )

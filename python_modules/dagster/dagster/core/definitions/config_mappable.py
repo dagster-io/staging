@@ -103,7 +103,9 @@ class ConfiguredMixin(ABC):
                     "config": config_fn(validated_and_resolved_config.get("config", {}))
                 }
             # Validate mapped_config against the inner resource's config_schema (on self).
-            config_evr = process_config({"config": self.config_schema or {}}, mapped_config)
+            config_evr = process_config(
+                {"config": self.config_schema.as_field() or {}}, mapped_config
+            )
             if config_evr.success:
                 return self.apply_config_mapping(config_evr.value)  # Recursive step
             else:
