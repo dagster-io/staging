@@ -142,18 +142,33 @@ class SolidDefinition(NodeDefinition):
         config_schema,
         original_config_or_config_fn,
     ):
+        from dagster.config.config_schema import MappedConfigSchema, ConfigSchema
+
+        def _wrap(value):
+            return {"config": original_config_or_config_fn(value.get("config", {}))}
+
         return SolidDefinition(
             name=self._name_for_configured_node(name, original_config_or_config_fn),
             input_defs=self.input_defs,
             compute_fn=self.compute_fn,
             output_defs=self.output_defs,
-            config_schema=config_schema,
+            config_schema=MappedConfigSchema(
+                # outer_schema=config_schema,
+                outer_schema={"config": config_schema.as_field() or {}},
+                # inner_schema=self.config_schema.as_field(),
+                inner_schema={"config": self.config_schema.as_field() or {}},
+                # inner_schema={"config": self.config_schema.as_field() or {}}
+                # if isinstance(self.config_schema, ConfigSchema)
+                # else self.config_schema,
+                # resolvable_config=wrapped_config_mapping_fn,
+                resolvable_config=_wrap,
+            ),
             description=description or self.description,
             tags=self.tags,
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
-            _configured_config_mapping_fn=wrapped_config_mapping_fn,
+            # _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
 

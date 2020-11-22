@@ -19,6 +19,10 @@ class ConfiguredMixin(ABC):
         self._is_nameless = is_nameless
         super(ConfiguredMixin, self).__init__(*args, **kwargs)
 
+    @property
+    def has_config_schema(self):
+        return self.config_schema and self.config_schema.as_field()
+
     @abstractproperty
     def config_schema(self):
         raise NotImplementedError()
@@ -58,6 +62,15 @@ class ConfiguredMixin(ABC):
         # If there is no __configured_config_mapping_fn, this is the innermost resource (base case),
         # so we aren't responsible for validating against anything farther down. Returns an EVR for
         # type consistency with wrapped_config_mapping_fn.
+        from dagster.config.validate import process_mappable_schema
+        from dagster.config.config_schema import MappedConfigSchema
+
+        if isinstance(self.config_schema, MappedConfigSchema):
+            print(f"ABOUT TO CALL process_mappable_schema on {config}")
+            evr = process_mappable_schema(self.config_schema, config)
+            print(f"GOT {evr.value}")
+            return evr
+
         return (
             self._configured_config_mapping_fn(config)
             if self._configured_config_mapping_fn
@@ -103,7 +116,9 @@ class ConfiguredMixin(ABC):
                     "config": config_fn(validated_and_resolved_config.get("config", {}))
                 }
             # Validate mapped_config against the inner resource's config_schema (on self).
-            config_evr = process_config({"config": self.config_schema or {}}, mapped_config)
+            config_evr = process_config(
+                {"config": self.config_schema.as_field() or {}}, mapped_config
+            )
             if config_evr.success:
                 return self.apply_config_mapping(config_evr.value)  # Recursive step
             else:

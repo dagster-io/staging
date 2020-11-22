@@ -157,6 +157,7 @@ def _get_mapped_solids_dict(composite, graph_def, current_stack, current_solid_c
 
     # apply @configured config mapping to the composite's incoming config before we get to the
     # composite's own config mapping process
+    print(f"ABOUT TO CALL apply_config_mapping with {current_solid_config}")
     config_mapped_solid_config = graph_def.apply_config_mapping(current_solid_config)
     if not config_mapped_solid_config.success:
         raise DagsterInvalidConfigError(

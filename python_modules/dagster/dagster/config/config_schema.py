@@ -1,63 +1,96 @@
-class ConfigSchema:
+from dagster import check
+
+
+class IConfigSchema:
+    pass
+
+
+class ConfigSchema(IConfigSchema):
     """This is a placeholder type. Any time that it appears in documentation, it means that any of
     the following types are acceptable:
 
     #. A Python scalar type that resolves to a Dagster config type
-       (:py:class:`~python:int`, :py:class:`~python:float`, :py:class:`~python:bool`,
-       or :py:class:`~python:str`). For example:
+        (:py:class:`~python:int`, :py:class:`~python:float`, :py:class:`~python:bool`,
+        or :py:class:`~python:str`). For example:
 
-       * ``@solid(config_schema=int)``
-       * ``@solid(config_schema=str)``
+        * ``@solid(config_schema=int)``
+        * ``@solid(config_schema=str)``
 
     #. A built-in python collection (:py:class:`~python:list`, or :py:class:`~python:dict`).
-       :py:class:`~python:list` is exactly equivalent to :py:class:`~dagster.Array` [
-       :py:class:`~dagster.Any` ] and :py:class:`~python:dict` is equivalent to
-       :py:class:`~dagster.Permissive`. For example:
+        :py:class:`~python:list` is exactly equivalent to :py:class:`~dagster.Array` [
+        :py:class:`~dagster.Any` ] and :py:class:`~python:dict` is equivalent to
+        :py:class:`~dagster.Permissive`. For example:
 
-       * ``@solid(config_schema=list)``
-       * ``@solid(config_schema=dict)``
+        * ``@solid(config_schema=list)``
+        * ``@solid(config_schema=dict)``
 
     #. A Dagster config type:
 
-       * :py:data:`~dagster.Any`
-       * :py:class:`~dagster.Array`
-       * :py:data:`~dagster.Bool`
-       * :py:data:`~dagster.Enum`
-       * :py:data:`~dagster.Float`
-       * :py:data:`~dagster.Int`
-       * :py:data:`~dagster.IntSource`
-       * :py:data:`~dagster.Noneable`
-       * :py:class:`~dagster.Permissive`
-       * :py:class:`~dagster.ScalarUnion`
-       * :py:class:`~dagster.Selector`
-       * :py:class:`~dagster.Shape`
-       * :py:data:`~dagster.String`
-       * :py:data:`~dagster.StringSource`
+        * :py:data:`~dagster.Any`
+        * :py:class:`~dagster.Array`
+        * :py:data:`~dagster.Bool`
+        * :py:data:`~dagster.Enum`
+        * :py:data:`~dagster.Float`
+        * :py:data:`~dagster.Int`
+        * :py:data:`~dagster.IntSource`
+        * :py:data:`~dagster.Noneable`
+        * :py:class:`~dagster.Permissive`
+        * :py:class:`~dagster.ScalarUnion`
+        * :py:class:`~dagster.Selector`
+        * :py:class:`~dagster.Shape`
+        * :py:data:`~dagster.String`
+        * :py:data:`~dagster.StringSource`
 
 
     #. A bare python dictionary, which will be automatically wrapped in
-       :py:class:`~dagster.Shape`. Values of the dictionary are resolved recursively
-       according to the same rules. For example:
+        :py:class:`~dagster.Shape`. Values of the dictionary are resolved recursively
+        according to the same rules. For example:
 
-       * ``{'some_config': str}`` is equivalent to ``Shape({'some_config: str})``.
+        * ``{'some_config': str}`` is equivalent to ``Shape({'some_config: str})``.
 
-       * ``{'some_config1': {'some_config2': str}}`` is equivalent to
-            ``Shape({'some_config1: Shape({'some_config2: str})})``.
+        * ``{'some_config1': {'some_config2': str}}`` is equivalent to
+             ``Shape({'some_config1: Shape({'some_config2: str})})``.
 
     #. A bare python list of length one, whose single element will be wrapped in a
-       :py:class:`~dagster.Array` is resolved recursively according to the same
-       rules. For example:
+        :py:class:`~dagster.Array` is resolved recursively according to the same
+        rules. For example:
 
-       * ``[str]`` is equivalent to ``Array[str]``.
+        * ``[str]`` is equivalent to ``Array[str]``.
 
-       * ``[[str]]`` is equivalent to ``Array[Array[str]]``.
+        * ``[[str]]`` is equivalent to ``Array[Array[str]]``.
 
-       * ``[{'some_config': str}]`` is equivalent to ``Array(Shape({'some_config: str}))``.
+        * ``[{'some_config': str}]`` is equivalent to ``Array(Shape({'some_config: str}))``.
 
     #. An instance of :py:class:`~dagster.Field`.
     """
 
-    def __init__(self):
-        raise NotImplementedError(
-            "ConfigSchema is a placeholder type and should not be instantiated."
-        )
+    def __init__(self, config_field):
+        from .field import Field
+
+        self._config_field = check.inst_param(config_field, "config_field", Field)
+
+    def as_field(self):
+        return self._config_field
+
+    @property
+    def config_type(self):
+        return self._config_field.config_type
+
+
+def _process_resolvable_config(resolvable_config):
+    if callable(resolvable_config):
+        return resolvable_config
+
+    return lambda _: resolvable_config
+
+
+class MappedConfigSchema(IConfigSchema):
+    def __init__(self, outer_schema, inner_schema, resolvable_config):
+        from .field_utils import check_user_facing_opt_config_param
+
+        self.outer_schema = check_user_facing_opt_config_param(outer_schema, "outer_schema")
+        self.inner_schema = check_user_facing_opt_config_param(inner_schema, "inner_schema")
+        self.config_fn = check.is_callable(_process_resolvable_config(resolvable_config))
+
+    def as_field(self):
+        return self.outer_schema.as_field() if self.outer_schema else None

@@ -41,8 +41,14 @@ INFER_OPTIONAL_COMPOSITE_FIELD = __InferOptionalCompositeFieldSentinel
 
 def check_user_facing_opt_config_param(potential_field, param_name):
     check.str_param(param_name, "param_name")
+    from .config_schema import IConfigSchema, ConfigSchema
 
-    return None if potential_field is None else convert_potential_field(potential_field)
+    if isinstance(potential_field, IConfigSchema):
+        return potential_field
+
+    return (
+        None if potential_field is None else ConfigSchema(convert_potential_field(potential_field))
+    )
 
 
 class _ConfigHasFields(ConfigType):

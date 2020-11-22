@@ -334,3 +334,48 @@ def process_config(config_type, config_dict):
         return validate_evr
 
     return post_process_config(config_type, validate_evr.value)
+
+
+def process_mappable_schema(config_schema, config_dict):
+    from .config_schema import IConfigSchema, ConfigSchema, MappedConfigSchema
+
+    check.inst_param(config_schema, "config_schema", IConfigSchema)
+
+    if isinstance(config_schema, ConfigSchema):
+        return process_config(config_schema.config_type, config_dict)
+
+    elif isinstance(config_schema, MappedConfigSchema):
+        # if not config_schema.outer_schema:
+        #     check.invariant(
+        #         not config_dict, "No config should be provided if there is not outer schema"
+        #     )
+
+        print("**********")
+        print(f"Outer fields: {list(config_schema.outer_schema.config_type.fields.keys())}")
+        print(f"Inner fields: {list(config_schema.inner_schema.config_type.fields.keys())}")
+        print("**********")
+
+        evr = (
+            process_config(config_schema.outer_schema.config_type, config_dict)
+            if config_schema.outer_schema
+            else EvaluateValueResult.for_value({})
+        )
+
+        # If there is an error, halt descent and bubble up error
+        if not evr.success:
+            return evr
+
+        new_config_dict = _invoke_user_provided_config_fn(config_schema.config_fn, evr.value)
+
+        return process_mappable_schema(config_schema.inner_schema, new_config_dict)
+    else:
+        check.failed("Unknown type")
+
+
+def _invoke_user_provided_config_fn(config_fn, config_value):
+    from dagster.core.errors import DagsterConfigMappingFunctionError, user_code_error_boundary
+
+    with user_code_error_boundary(
+        DagsterConfigMappingFunctionError, lambda: "Error during user-provided config fn."
+    ):
+        return config_fn(config_value)
