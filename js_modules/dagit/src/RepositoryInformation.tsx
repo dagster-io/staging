@@ -2,9 +2,9 @@ import {gql} from '@apollo/client';
 import * as React from 'react';
 
 import {RepositoryInfoFragment} from 'src/types/RepositoryInfoFragment';
-import {RepositoryOriginFragment} from 'src/types/RepositoryOriginFragment';
+import {RepositoryOriginFragment as RepositoryOriginFragmentType} from 'src/types/RepositoryOriginFragment';
 
-export const RepositoryInformationFragment = gql`
+export const RepositoryOriginFragment = gql`
   fragment RepositoryOriginFragment on RepositoryOrigin {
     ... on PythonRepositoryOrigin {
       executablePath
@@ -17,6 +17,9 @@ export const RepositoryInformationFragment = gql`
       grpcUrl
     }
   }
+`;
+
+export const RepositoryInformationFragment = gql`
   fragment RepositoryInfoFragment on Repository {
     id
     name
@@ -28,10 +31,11 @@ export const RepositoryInformationFragment = gql`
       name
     }
   }
+  ${RepositoryOriginFragment}
 `;
 
-export const RepositoryOriginInformation: React.FunctionComponent<{
-  origin: RepositoryOriginFragment;
+export const RepositoryOriginInformation: React.FC<{
+  origin: RepositoryOriginFragmentType;
   dagitExecutablePath?: string;
 }> = ({origin, dagitExecutablePath}) => {
   if (origin.__typename === 'PythonRepositoryOrigin') {

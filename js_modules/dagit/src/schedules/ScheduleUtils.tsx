@@ -3,7 +3,7 @@ import {Colors} from '@blueprintjs/core';
 import React from 'react';
 
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
-import {RepositoryInformationFragment} from 'src/RepositoryInformation';
+import {RepositoryInformationFragment, RepositoryOriginFragment} from 'src/RepositoryInformation';
 import {SCHEDULER_FRAGMENT} from 'src/schedules/SchedulerInfo';
 import {SchedulerFragment} from 'src/schedules/types/SchedulerFragment';
 
@@ -56,7 +56,7 @@ export const SCHEDULE_STATE_FRAGMENT = gql`
   }
 
   ${PythonErrorInfo.fragments.PythonErrorFragment}
-  ${RepositoryInformationFragment}
+  ${RepositoryOriginFragment}
 `;
 
 export const REPOSITORY_SCHEDULES_FRAGMENT = gql`
