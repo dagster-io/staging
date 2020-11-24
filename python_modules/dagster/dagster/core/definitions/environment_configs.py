@@ -6,6 +6,7 @@ from dagster.config.field import check_opt_field_param
 from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.storage.asset_store import AssetStoreDefinition
 from dagster.core.storage.system_storage import (
     default_intermediate_storage_defs,
     default_system_storage_defs,
@@ -148,6 +149,7 @@ def define_environment_cls(creation_data):
                         solids=creation_data.solids,
                         ignored_solids=creation_data.ignored_solids,
                         dependency_structure=creation_data.dependency_structure,
+                        resource_defs=creation_data.mode_definition.resource_defs,
                     )
                 ),
                 "storage": storage_field,
@@ -221,6 +223,25 @@ def get_outputs_field(solid, handle):
     return Field(Array(output_entry_dict), is_required=False)
 
 
+def get_store_outputs_field(solid, handle, resource_defs):
+    check.inst_param(solid, "solid", Solid)
+    check.inst_param(handle, "handle", SolidHandle)
+
+    store_outputs_field_fields = {}
+    for name, out in solid.definition.output_dict.items():
+        asset_store_def = resource_defs[out.asset_store_key]
+        if (
+            isinstance(asset_store_def, AssetStoreDefinition)
+            and asset_store_def.output_config_schema
+        ):
+            store_outputs_field_fields[name] = asset_store_def.output_config_schema
+
+    if not store_outputs_field_fields:
+        return None
+
+    return Field(Shape(store_outputs_field_fields))
+
+
 def solid_config_field(fields, ignored):
     if ignored:
         return Field(
@@ -233,7 +254,9 @@ def solid_config_field(fields, ignored):
         return Field(Shape(remove_none_entries(fields)))
 
 
-def construct_leaf_solid_config(solid, handle, dependency_structure, config_schema, ignored):
+def construct_leaf_solid_config(
+    solid, handle, dependency_structure, config_schema, resource_defs, ignored
+):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
@@ -243,13 +266,14 @@ def construct_leaf_solid_config(solid, handle, dependency_structure, config_sche
         {
             "inputs": get_inputs_field(solid, handle, dependency_structure),
             "outputs": get_outputs_field(solid, handle),
+            "store_outputs": get_store_outputs_field(solid, handle, resource_defs),
             "config": config_schema,
         },
         ignored=ignored,
     )
 
 
-def define_isolid_field(solid, handle, dependency_structure, ignored):
+def define_isolid_field(solid, handle, dependency_structure, resource_defs, ignored):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
 
@@ -265,7 +289,12 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
 
     if isinstance(solid.definition, SolidDefinition):
         return construct_leaf_solid_config(
-            solid, handle, dependency_structure, solid.definition.config_schema, ignored,
+            solid,
+            handle,
+            dependency_structure,
+            solid.definition.config_schema,
+            resource_defs,
+            ignored,
         )
 
     graph_def = check.inst(solid.definition, GraphDefinition)
@@ -279,6 +308,7 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
             dependency_structure,
             # ...and in both cases, the correct schema for 'config' key is exposed by this property:
             graph_def.config_schema,
+            resource_defs,
             ignored,
         )
         # This case omits a 'solids' key, thus if a composite solid is `configured` or has a field
@@ -288,12 +318,14 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
             {
                 "inputs": get_inputs_field(solid, handle, dependency_structure),
                 "outputs": get_outputs_field(solid, handle),
+                "store_outputs": get_store_outputs_field(solid, handle, resource_defs),
                 "solids": Field(
                     define_solid_dictionary_cls(
                         solids=graph_def.solids,
                         ignored_solids=None,
                         dependency_structure=graph_def.dependency_structure,
                         parent_handle=handle,
+                        resource_defs=resource_defs,
                     )
                 ),
             },
@@ -302,7 +334,7 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
 
 
 def define_solid_dictionary_cls(
-    solids, ignored_solids, dependency_structure, parent_handle=None,
+    solids, ignored_solids, dependency_structure, resource_defs, parent_handle=None,
 ):
     check.list_param(solids, "solids", of_type=Solid)
     ignored_solids = check.opt_list_param(ignored_solids, "ignored_solids", of_type=Solid)
@@ -313,13 +345,21 @@ def define_solid_dictionary_cls(
     for solid in solids:
         if solid.definition.has_config_entry:
             fields[solid.name] = define_isolid_field(
-                solid, SolidHandle(solid.name, parent_handle), dependency_structure, ignored=False
+                solid,
+                SolidHandle(solid.name, parent_handle),
+                dependency_structure,
+                resource_defs,
+                ignored=False,
             )
 
     for solid in ignored_solids:
         if solid.definition.has_config_entry:
             fields[solid.name] = define_isolid_field(
-                solid, SolidHandle(solid.name, parent_handle), dependency_structure, ignored=True
+                solid,
+                SolidHandle(solid.name, parent_handle),
+                dependency_structure,
+                resource_defs,
+                ignored=True,
             )
 
     return Shape(fields)
