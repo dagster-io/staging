@@ -8,6 +8,7 @@ from dagster.core.events.log import EventRecord
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
+from dagster.core.storage.asset_store import mem_asset_store
 
 
 def validate_reexecution_memoization(pipeline_context, execution_plan):
@@ -28,6 +29,12 @@ def validate_reexecution_memoization(pipeline_context, execution_plan):
 
     # exclude full pipeline re-execution
     if len(execution_plan.step_keys_to_execute) == len(execution_plan.steps):
+        return
+
+    # exclude the case where "asset_store" is configured
+    # pylint: disable=comparison-with-callable
+    asset_store = pipeline_context.mode_def.resource_defs.get("asset_store")
+    if asset_store and asset_store != mem_asset_store:
         return
 
     if not pipeline_context.intermediate_storage.is_persistent:
