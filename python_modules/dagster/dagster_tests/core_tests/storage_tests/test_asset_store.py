@@ -21,6 +21,7 @@ from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.asset_store import (
     AssetStore,
     AssetStoreHandle,
+    asset_store,
     custom_path_fs_asset_store,
     fs_asset_store,
     mem_asset_store,
@@ -307,3 +308,31 @@ def test_fan_in():
             solid1(input1=[input_solid1(), input_solid2()])
 
         execute_pipeline(my_pipeline)
+
+
+def test_asset_store_with_config():
+    @solid
+    def my_solid(_):
+        pass
+
+    class MyAssetStore(AssetStore):
+        def get_asset(self, context):
+            assert context.output_config["some_config"] == "some_value"
+            return 1
+
+        def set_asset(self, context, obj):
+            assert context.output_config["some_config"] == "some_value"
+
+    @asset_store(output_config_schema={"some_config": str})
+    def configurable_asset_store(_):
+        return MyAssetStore()
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"asset_store": configurable_asset_store})])
+    def my_pipeline():
+        my_solid()
+
+    run_config = {
+        "solids": {"my_solid": {"store_outputs": {"result": {"some_config": "some_value"}}}}
+    }
+    result = execute_pipeline(my_pipeline, run_config=run_config)
+    assert result.output_for_solid("my_solid") == 1
