@@ -1,7 +1,11 @@
 from dagster import check
-from dagster.config.field_utils import check_user_facing_opt_config_param
+# from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.utils.backcompat import experimental_arg_warning
 
+from .definition_config_schema import (
+    MappedDefinitionConfigSchema,
+    convert_user_facing_definition_schema,
+)
 from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition
@@ -45,8 +49,6 @@ class SolidDefinition(NodeDefinition):
         version (Optional[str]): (Experimental) The version of the solid's compute_fn. Two solids should have
             the same version if and only if they deterministically produce the same outputs when
             provided the same inputs.
-        _configured_config_mapping_fn: This argument is for internal use only. Users should not
-            specify this field. To preconfigure a resource, use the :py:func:`configured` API.
 
 
     Examples:
@@ -75,15 +77,11 @@ class SolidDefinition(NodeDefinition):
         required_resource_keys=None,
         positional_inputs=None,
         version=None,
-        _configured_config_mapping_fn=None,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
-        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self._config_schema = convert_user_facing_definition_schema(config_schema)
         self._required_resource_keys = frozenset(
             check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
-        )
-        self.__configured_config_mapping_fn = check.opt_callable_param(
-            _configured_config_mapping_fn, "config_mapping_fn"
         )
         self._version = check.opt_str_param(version, "version")
         if version:
@@ -96,7 +94,6 @@ class SolidDefinition(NodeDefinition):
             description=description,
             tags=check.opt_dict_param(tags, "tags", key_type=str),
             positional_inputs=positional_inputs,
-            _configured_config_mapping_fn=_configured_config_mapping_fn,
         )
 
     @property
@@ -135,25 +132,21 @@ class SolidDefinition(NodeDefinition):
         return self.input_def_named(input_name).default_value
 
     def copy_for_configured(
-        self,
-        name,
-        description,
-        wrapped_config_mapping_fn,
-        config_schema,
-        original_config_or_config_fn,
+        self, name, description, wrapped_config_mapping_fn, config_schema, resolvable_config,
     ):
         return SolidDefinition(
-            name=self._name_for_configured_node(name, original_config_or_config_fn),
+            name=self._name_for_configured_node(name, resolvable_config),
             input_defs=self.input_defs,
             compute_fn=self.compute_fn,
             output_defs=self.output_defs,
-            config_schema=config_schema,
+            config_schema=MappedDefinitionConfigSchema.for_configured_definition(
+                self, config_schema, resolvable_config,
+            ),
             description=description or self.description,
             tags=self.tags,
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
-            _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
 
@@ -223,8 +216,6 @@ class CompositeSolidDefinition(GraphDefinition):
         description=None,
         tags=None,
         positional_inputs=None,
-        _configured_config_mapping_fn=None,
-        _configured_config_schema=None,
     ):
         super(CompositeSolidDefinition, self).__init__(
             name=name,
@@ -236,8 +227,6 @@ class CompositeSolidDefinition(GraphDefinition):
             input_mappings=input_mappings,
             output_mappings=output_mappings,
             config_mapping=config_mapping,
-            _configured_config_mapping_fn=_configured_config_mapping_fn,
-            _configured_config_schema=_configured_config_schema,
         )
 
     def all_dagster_types(self):
@@ -252,17 +241,23 @@ class CompositeSolidDefinition(GraphDefinition):
         new_description,
         new_configured_config_schema,
         new_configured_config_mapping_fn,
+        resolvable_config,
     ):
+        from .config import ConfigMapping
+
         return CompositeSolidDefinition(
             name=new_name,
             solid_defs=self._node_defs,
             input_mappings=self.input_mappings,
             output_mappings=self.output_mappings,
-            config_mapping=self.config_mapping,
+            config_mapping=ConfigMapping(
+                self._config_mapping.config_fn,
+                config_schema=MappedDefinitionConfigSchema.for_configured_definition(
+                    self, new_configured_config_schema, resolvable_config
+                ),
+            ),
             dependencies=self.dependencies,
             description=new_description,
             tags=self.tags,
             positional_inputs=self.positional_inputs,
-            _configured_config_schema=new_configured_config_schema,
-            _configured_config_mapping_fn=new_configured_config_mapping_fn,
         )

@@ -1,7 +1,9 @@
 from dagster import check
-from dagster.config.field_utils import check_user_facing_opt_config_param
+# from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.config_mappable import ConfiguredMixin
+
+from .definition_config_schema import convert_user_facing_definition_schema
 
 
 class LoggerDefinition(ConfiguredMixin):
@@ -25,7 +27,7 @@ class LoggerDefinition(ConfiguredMixin):
         self, logger_fn, config_schema=None, description=None, _configured_config_mapping_fn=None,
     ):
         self._logger_fn = check.callable_param(logger_fn, "logger_fn")
-        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self._config_schema = convert_user_facing_definition_schema(config_schema)
         self._description = check.opt_str_param(description, "description")
         self.__configured_config_mapping_fn = check.opt_callable_param(
             _configured_config_mapping_fn, "config_mapping_fn"

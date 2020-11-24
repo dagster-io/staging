@@ -1,11 +1,15 @@
 from functools import update_wrapper
 
 from dagster import check
-from dagster.config.field_utils import check_user_facing_opt_config_param
+# from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.core.definitions.config_mappable import ConfiguredMixin
 from dagster.core.storage.file_manager import FileManager
 from dagster.core.storage.intermediate_storage import IntermediateStorage
 
+from .definition_config_schema import (
+    MappedDefinitionConfigSchema,
+    convert_user_facing_definition_schema,
+)
 from .utils import check_valid_name
 
 
@@ -55,7 +59,8 @@ class SystemStorageDefinition(ConfiguredMixin):
     ):
         self._name = check_valid_name(name)
         self._is_persistent = check.bool_param(is_persistent, "is_persistent")
-        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        # self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self._config_schema = convert_user_facing_definition_schema(config_schema)
         self._system_storage_creation_fn = check.opt_callable_param(
             system_storage_creation_fn, "system_storage_creation_fn"
         )
@@ -91,15 +96,19 @@ class SystemStorageDefinition(ConfiguredMixin):
     def required_resource_keys(self):
         return self._required_resource_keys
 
-    def copy_for_configured(self, name, description, wrapped_config_mapping_fn, config_schema, _):
+    def copy_for_configured(
+        self, name, description, wrapped_config_mapping_fn, config_schema, resolvable_config
+    ):
         return SystemStorageDefinition(
             name=name or self.name,
             is_persistent=self.is_persistent,
             required_resource_keys=self.required_resource_keys,
-            config_schema=config_schema,
+            config_schema=MappedDefinitionConfigSchema.for_configured_definition(
+                self, config_schema, resolvable_config
+            ),
             system_storage_creation_fn=self.system_storage_creation_fn,
             description=description or self.description,
-            _configured_config_mapping_fn=wrapped_config_mapping_fn,
+            # _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
 
