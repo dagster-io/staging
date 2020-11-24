@@ -14,6 +14,7 @@ from dagster.core.types.dagster_type import ALL_RUNTIME_BUILTINS, construct_dags
 from dagster.utils import check, ensure_single_item
 
 from .config_mappable import ConfiguredMixin
+from .definition_config_schema import IDefinitionConfigSchema
 from .dependency import DependencyStructure, Solid, SolidHandle, SolidInputHandle
 from .graph import GraphDefinition
 from .logger import LoggerDefinition
@@ -58,12 +59,23 @@ def define_solid_config_cls(config_schema, inputs_field, outputs_field):
     )
 
 
-def def_config_field(configurable_def, is_required=None):
-    check.inst_param(configurable_def, "configurable_def", ConfiguredMixin)
+def def_config_field(defn, is_required=None):
     return Field(
-        Shape({"config": configurable_def.config_schema} if configurable_def.config_schema else {}),
+        Shape(
+            {"config": defn.config_schema.as_field()}
+            if defn.config_schema and defn.config_schema.as_field()
+            else {}
+        ),
         is_required=is_required,
     )
+
+
+# def def_config_field(configurable_def, is_required=None):
+#     check.inst_param(configurable_def, "configurable_def", ConfiguredMixin)
+#     return Field(
+#         Shape({"config": configurable_def.config_schema} if configurable_def.config_schema else {}),
+#         is_required=is_required,
+#     )
 
 
 class EnvironmentClassCreationData(
@@ -234,16 +246,18 @@ def solid_config_field(fields, ignored):
 
 
 def construct_leaf_solid_config(solid, handle, dependency_structure, config_schema, ignored):
+
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
+    check.opt_inst_param(config_schema, "config_schema", IDefinitionConfigSchema)
     check.bool_param(ignored, "ignored")
 
     return solid_config_field(
         {
             "inputs": get_inputs_field(solid, handle, dependency_structure),
             "outputs": get_outputs_field(solid, handle),
-            "config": config_schema,
+            "config": config_schema.as_field() if config_schema else None,
         },
         ignored=ignored,
     )
@@ -329,8 +343,8 @@ def iterate_node_def_config_types(node_def):
     check.inst_param(node_def, "node_def", NodeDefinition)
 
     if isinstance(node_def, SolidDefinition):
-        if node_def.config_schema:
-            yield from iterate_config_types(node_def.config_schema.config_type)
+        if node_def.has_config_field:
+            yield from iterate_config_types(node_def.config_field.config_type)
     elif isinstance(node_def, GraphDefinition):
         for solid in node_def.solids:
             yield from iterate_node_def_config_types(solid.definition)

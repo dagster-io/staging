@@ -13,6 +13,8 @@ from dagster.core.types.dagster_type import DagsterTypeKind, construct_dagster_t
 from dagster.core.utils import str_format_set
 from dagster.utils.backcompat import experimental_arg_warning
 
+from .config import ConfigMapping
+from .definition_config_schema import MappedDefinitionConfigSchema
 from .dependency import (
     DependencyDefinition,
     MultiDependencyDefinition,
@@ -240,7 +242,9 @@ class PipelineDefinition(GraphDefinition):
         new_description,
         new_configured_config_schema,
         new_configured_config_mapping_fn,
+        resolvable_config,
     ):
+
         return PipelineDefinition(
             solid_defs=self._solid_defs,
             name=new_name,
@@ -251,7 +255,13 @@ class PipelineDefinition(GraphDefinition):
             hook_defs=self.hook_defs,
             input_mappings=self._input_mappings,
             output_mappings=self._output_mappings,
-            config_mapping=self._config_mapping,
+            # config_mapping=self._config_mapping,
+            config_mapping=ConfigMapping(
+                self._config_mapping.config_fn,
+                config_schema=MappedDefinitionConfigSchema.for_configured_definition(
+                    self, new_configured_config_mapping_fn, resolvable_config
+                ),
+            ),
             positional_inputs=self.positional_inputs,
             _parent_pipeline_def=self._parent_pipeline_def,
             _configured_config_schema=new_configured_config_schema,

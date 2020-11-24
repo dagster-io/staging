@@ -312,12 +312,7 @@ class GraphDefinition(NodeDefinition):
             return self.config_mapping.config_schema
 
     def copy_for_configured(
-        self,
-        name,
-        description,
-        wrapped_config_mapping_fn,
-        config_schema,
-        original_config_or_config_fn,
+        self, name, description, wrapped_config_mapping_fn, config_schema, resolvable_config,
     ):
         if not self.has_config_mapping:
             raise DagsterInvalidDefinitionError(
@@ -327,10 +322,11 @@ class GraphDefinition(NodeDefinition):
             )
 
         return self.construct_configured_graph_copy(
-            new_name=self._name_for_configured_node(name, original_config_or_config_fn),
+            new_name=self._name_for_configured_node(name, resolvable_config),
             new_description=description or self.description,
             new_configured_config_schema=config_schema,
             new_configured_config_mapping_fn=wrapped_config_mapping_fn,
+            resolvable_config=resolvable_config,
         )
 
     def construct_configured_graph_copy(
@@ -339,6 +335,7 @@ class GraphDefinition(NodeDefinition):
         new_description,
         new_configured_config_schema,
         new_configured_config_mapping_fn,
+        resolvable_config,
     ):
         raise NotImplementedError()
 
