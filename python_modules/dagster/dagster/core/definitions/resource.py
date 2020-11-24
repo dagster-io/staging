@@ -2,13 +2,17 @@ from collections import namedtuple
 from functools import update_wrapper
 
 from dagster import check, seven
-from dagster.config.field_utils import check_user_facing_opt_config_param
+# from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.config_mappable import ConfiguredMixin
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterUnknownResourceError
 from dagster.utils.backcompat import experimental_arg_warning
 
 from ..decorator_utils import split_function_parameters, validate_decorated_fn_positionals
+from .definition_config_schema import (
+    MappedDefinitionConfigSchema,
+    convert_user_facing_definition_schema,
+)
 
 
 class ResourceDefinition(ConfiguredMixin):
@@ -61,7 +65,8 @@ class ResourceDefinition(ConfiguredMixin):
             )
 
         self._resource_fn = check.opt_callable_param(resource_fn, "resource_fn")
-        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        # self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self._config_schema = convert_user_facing_definition_schema(config_schema)
         self._description = check.opt_str_param(description, "description")
         self._version = check.opt_str_param(version, "version")
         if version:
@@ -133,19 +138,23 @@ class ResourceDefinition(ConfiguredMixin):
             description=description,
         )
 
-    def copy_for_configured(self, name, description, wrapped_config_mapping_fn, config_schema, _):
+    def copy_for_configured(
+        self, name, description, wrapped_config_mapping_fn, config_schema, resolvable_config
+    ):
         check.invariant(name is None, "ResourceDefintions do not have names")
         return ResourceDefinition(
-            config_schema=config_schema,
+            config_schema=MappedDefinitionConfigSchema.for_configured_definition(
+                self, config_schema, resolvable_config
+            ),
             description=description or self.description,
             resource_fn=self.resource_fn,
-            _configured_config_mapping_fn=wrapped_config_mapping_fn,
+            # _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
 
 class _ResourceDecoratorCallable:
     def __init__(self, config_schema=None, description=None, version=None):
-        self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self.config_schema = config_schema  # checked by underlying definition
         self.description = check.opt_str_param(description, "description")
         self.version = check.opt_str_param(version, "version")
 

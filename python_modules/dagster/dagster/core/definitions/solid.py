@@ -1,7 +1,8 @@
 from dagster import check
-from dagster.config.field_utils import check_user_facing_opt_config_param
+# from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.utils.backcompat import experimental_arg_warning
 
+from .definition_config_schema import convert_user_facing_definition_schema
 from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition
@@ -78,7 +79,8 @@ class SolidDefinition(NodeDefinition):
         _configured_config_mapping_fn=None,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
-        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        # self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self._config_schema = convert_user_facing_definition_schema(config_schema)
         self._required_resource_keys = frozenset(
             check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
         )
@@ -142,18 +144,27 @@ class SolidDefinition(NodeDefinition):
         config_schema,
         original_config_or_config_fn,
     ):
+        from .definition_config_schema import MappedDefinitionConfigSchema
+
         return SolidDefinition(
             name=self._name_for_configured_node(name, original_config_or_config_fn),
             input_defs=self.input_defs,
             compute_fn=self.compute_fn,
             output_defs=self.output_defs,
-            config_schema=config_schema,
+            config_schema=MappedDefinitionConfigSchema.for_configured_definition(
+                self, config_schema, original_config_or_config_fn,
+            ),
+            #     config_schema.as_field() if config_schema else None, wrapped_config_mapping_fn
+            # ),
+            # config_schema=MappedDefinitionConfigSchema(
+            #     config_schema.as_field() if config_schema else None, wrapped_config_mapping_fn
+            # ),
             description=description or self.description,
             tags=self.tags,
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
-            _configured_config_mapping_fn=wrapped_config_mapping_fn,
+            # _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
 
