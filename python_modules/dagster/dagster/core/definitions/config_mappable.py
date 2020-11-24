@@ -2,40 +2,30 @@ from abc import ABC, abstractmethod, abstractproperty
 
 from dagster import check
 from dagster.config.evaluate_value_result import EvaluateValueResult
-from dagster.config.field_utils import check_user_facing_opt_config_param
-from dagster.config.validate import process_config
-from dagster.core.errors import (
-    DagsterConfigMappingFunctionError,
-    DagsterInvalidDefinitionError,
-    user_code_error_boundary,
+from dagster.core.errors import DagsterInvalidDefinitionError
+
+from .definition_config_schema import (
+    MappedDefinitionConfigSchema,
+    convert_user_facing_definition_schema,
 )
 
 
 class ConfiguredMixin(ABC):
-    def __init__(self, _configured_config_mapping_fn, *args, **kwargs):
-        self._configured_config_mapping_fn = check.opt_callable_param(
-            _configured_config_mapping_fn, "config_mapping_fn"
-        )
-        super(ConfiguredMixin, self).__init__(*args, **kwargs)
-
     @abstractproperty
     def config_schema(self):
         raise NotImplementedError()
 
-    @abstractmethod
-    def copy_for_configured(
-        self,
-        name,
-        description,
-        wrapped_config_mapping_fn,
-        config_schema,
-        original_config_or_config_fn,
-    ):
-        raise NotImplementedError()
+    @property
+    def has_config_field(self):
+        return self.config_schema and bool(self.config_schema.as_field())
 
     @property
-    def is_preconfigured(self):
-        return self._configured_config_mapping_fn is not None
+    def config_field(self):
+        return None if not self.config_schema else self.config_schema.as_field()
+
+    @abstractmethod
+    def copy_for_configured(self, name, description, config_schema, resolvable_config):
+        raise NotImplementedError()
 
     def apply_config_mapping(self, config):
         """
@@ -54,61 +44,14 @@ class ConfiguredMixin(ABC):
             If successful, the value is a validated and resolved configuration dictionary for the
             innermost wrapped object after applying the config mapping transformation function.
         """
-        # If there is no __configured_config_mapping_fn, this is the innermost resource (base case),
-        # so we aren't responsible for validating against anything farther down. Returns an EVR for
-        # type consistency with wrapped_config_mapping_fn.
+        # If schema is on a mapped scheam, this is the innermost resource (base case),
+        # so we aren't responsible for validating against anything farther down.
+        # Returns an EVR for type consistency with config_mapping_fn.
         return (
-            self._configured_config_mapping_fn(config)
-            if self._configured_config_mapping_fn
+            self.config_schema.config_mapping_fn(config)
+            if isinstance(self.config_schema, MappedDefinitionConfigSchema)
             else EvaluateValueResult.for_value(config)
         )
-
-    def _get_user_code_error_str_lambda(self):
-        return lambda: (
-            "The config mapping function on a `configured` {} has thrown an unexpected "
-            "error during its execution."
-        ).format(self.__class__.__name__)
-
-    def _get_wrapped_config_mapping_fn(self, config_or_config_fn, config_schema):
-        """
-        Returns a config mapping helper function that will be stored on the child `ConfigurableMixin`
-        under `_configured_config_mapping_fn`. Encapsulates the recursiveness of the `configurable`
-        pattern by returning a closure that invokes `self.apply_config_mapping` (belonging to this
-        parent object) on the mapping function or static config passed into this method.
-        """
-        # Provide either a config mapping function with noneable schema...
-        if callable(config_or_config_fn):
-            config_fn = config_or_config_fn
-        else:  # or a static config object (and no schema).
-            check.invariant(
-                config_schema is None,
-                "When non-callable config is given, config_schema must be None",
-            )
-
-            def config_fn(_):  # Stub a config mapping function from the static config object.
-                return config_or_config_fn
-
-        def wrapped_config_mapping_fn(validated_and_resolved_config):
-            """
-            Given validated and resolved configuration for this ConfigurableMixin, applies the
-            provided config mapping function, validates its output against the inner resource's
-            config_schema, and recursively invoked the `apply_config_mapping` method on the resource
-            """
-            check.dict_param(validated_and_resolved_config, "validated_and_resolved_config")
-            with user_code_error_boundary(
-                DagsterConfigMappingFunctionError, self._get_user_code_error_str_lambda()
-            ):
-                mapped_config = {
-                    "config": config_fn(validated_and_resolved_config.get("config", {}))
-                }
-            # Validate mapped_config against the inner resource's config_schema (on self).
-            config_evr = process_config({"config": self.config_schema or {}}, mapped_config)
-            if config_evr.success:
-                return self.apply_config_mapping(config_evr.value)  # Recursive step
-            else:
-                return config_evr  # Bubble up the errors
-
-        return wrapped_config_mapping_fn
 
     def configured(self, config_or_config_fn, config_schema=None, name=None, description=None):
         """
@@ -132,12 +75,12 @@ class ConfiguredMixin(ABC):
         Returns (ConfiguredMixin): A configured version of this object.
         """
 
-        wrapped_config_mapping_fn = self._get_wrapped_config_mapping_fn(
-            config_or_config_fn, config_schema
+        config_schema = convert_user_facing_definition_schema(config_schema)
+
+        new_config_schema = MappedDefinitionConfigSchema.for_configured_definition(
+            self, config_schema, config_or_config_fn
         )
-        return self.copy_for_configured(
-            name, description, wrapped_config_mapping_fn, config_schema, config_or_config_fn
-        )
+        return self.copy_for_configured(name, description, new_config_schema, config_or_config_fn)
 
     def _name_for_configured_node(self, new_name, original_config_or_config_fn):
         fn_name = (
@@ -228,7 +171,6 @@ def configured(configurable, config_schema=None, **kwargs):
             return {'bucket': config['bucket_prefix'] + 'dev'}
     """
     _check_configurable_param(configurable)
-    config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
 
     def _configured(config_or_config_fn):
         return configurable.configured(
