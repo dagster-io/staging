@@ -4,6 +4,7 @@ from dagster import check
 from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.core.definitions.config_mappable import ConfiguredMixin
 
+from .definition_config_schema import convert_user_facing_definition_schema
 from .utils import check_valid_name
 
 
@@ -22,8 +23,6 @@ class IntermediateStorageDefinition(ConfiguredMixin):
         intermediate_storage_creation_fn: (Callable[[InitIntermediateStorageContext], IntermediateStorage])
             Called to construct the storage. This function should consume the init context and emit
             a :py:class:`IntermediateStorage`.
-        _configured_config_mapping_fn: This argument is for internal use only. Users should not
-            specify this field. To preconfigure a resource, use the :py:func:`configured` API.
     """
 
     def __init__(
@@ -34,11 +33,11 @@ class IntermediateStorageDefinition(ConfiguredMixin):
         config_schema=None,
         intermediate_storage_creation_fn=None,
         description=None,
-        _configured_config_mapping_fn=None,
     ):
         self._name = check_valid_name(name)
         self._is_persistent = check.bool_param(is_persistent, "is_persistent")
-        self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self._config_schema = convert_user_facing_definition_schema(config_schema)
+        # self._config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
         self._intermediate_storage_creation_fn = check.opt_callable_param(
             intermediate_storage_creation_fn, "intermediate_storage_creation_fn"
         )
@@ -50,7 +49,6 @@ class IntermediateStorageDefinition(ConfiguredMixin):
             )
         )
         self._description = check.opt_str_param(description, "description")
-        super(IntermediateStorageDefinition, self).__init__(_configured_config_mapping_fn)
 
     @property
     def name(self):
@@ -76,7 +74,7 @@ class IntermediateStorageDefinition(ConfiguredMixin):
     def required_resource_keys(self):
         return self._required_resource_keys
 
-    def copy_for_configured(self, name, description, wrapped_config_mapping_fn, config_schema, _):
+    def copy_for_configured(self, name, description, config_schema, _):
         return IntermediateStorageDefinition(
             name=name or self.name,
             is_persistent=self.is_persistent,
@@ -84,7 +82,6 @@ class IntermediateStorageDefinition(ConfiguredMixin):
             config_schema=config_schema,
             intermediate_storage_creation_fn=self.intermediate_storage_creation_fn,
             description=description or self.description,
-            _configured_config_mapping_fn=wrapped_config_mapping_fn,
         )
 
 
