@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod, abstractproperty
 
 from dagster import check
 from dagster.config.evaluate_value_result import EvaluateValueResult
-from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.config.validate import process_config
 from dagster.core.errors import (
     DagsterConfigMappingFunctionError,
@@ -10,32 +9,60 @@ from dagster.core.errors import (
     user_code_error_boundary,
 )
 
+from .definition_config_schema import (
+    MappedDefinitionConfigSchema,
+    convert_user_facing_definition_schema,
+)
+
 
 class ConfiguredMixin(ABC):
     def __init__(self, _configured_config_mapping_fn, *args, **kwargs):
-        self._configured_config_mapping_fn = check.opt_callable_param(
+        self.__configured_config_mapping_fn = check.opt_callable_param(
             _configured_config_mapping_fn, "config_mapping_fn"
         )
+        if isinstance(self.config_schema, MappedDefinitionConfigSchema):
+            self.__configured_config_mapping_fn = self.config_schema.config_mapping_fn
         super(ConfiguredMixin, self).__init__(*args, **kwargs)
+
+    @property
+    def _configured_config_mapping_fn(self):
+        return (
+            self.config_schema.config_mapping_fn
+            if isinstance(self.config_schema, MappedDefinitionConfigSchema)
+            else None
+        )
+
+        # return (
+        #     self.config_schema.config_mapping_fn
+        #     if isinstance(self.config_schema, MappedDefinitionConfigSchema)
+        #     else self.__configured_config_mapping_fn
+        # )
 
     @abstractproperty
     def config_schema(self):
         raise NotImplementedError()
 
+    @property
+    def has_config_field(self):
+        return self.config_schema and bool(self.config_schema.as_field())
+
+    @property
+    def config_field(self):
+        return None if not self.config_schema else self.config_schema.as_field()
+
     @abstractmethod
     def copy_for_configured(
-        self,
-        name,
-        description,
-        wrapped_config_mapping_fn,
-        config_schema,
-        original_config_or_config_fn,
+        self, name, description, wrapped_config_mapping_fn, config_schema, resolvable_config
     ):
         raise NotImplementedError()
 
     @property
     def is_preconfigured(self):
-        return self._configured_config_mapping_fn is not None
+        return (
+            # isinstance(self.config_schema, MappedDefinitionConfigSchema)
+            self.__configured_config_mapping_fn
+            is not None
+        )
 
     def apply_config_mapping(self, config):
         """
@@ -102,7 +129,7 @@ class ConfiguredMixin(ABC):
                     "config": config_fn(validated_and_resolved_config.get("config", {}))
                 }
             # Validate mapped_config against the inner resource's config_schema (on self).
-            config_evr = process_config({"config": self.config_schema or {}}, mapped_config)
+            config_evr = process_config({"config": self.config_field or {}}, mapped_config)
             if config_evr.success:
                 return self.apply_config_mapping(config_evr.value)  # Recursive step
             else:
@@ -131,6 +158,8 @@ class ConfiguredMixin(ABC):
 
         Returns (ConfiguredMixin): A configured version of this object.
         """
+
+        config_schema = convert_user_facing_definition_schema(config_schema)
 
         wrapped_config_mapping_fn = self._get_wrapped_config_mapping_fn(
             config_or_config_fn, config_schema
@@ -228,7 +257,7 @@ def configured(configurable, config_schema=None, **kwargs):
             return {'bucket': config['bucket_prefix'] + 'dev'}
     """
     _check_configurable_param(configurable)
-    config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+    config_schema = convert_user_facing_definition_schema(config_schema)
 
     def _configured(config_or_config_fn):
         return configurable.configured(
