@@ -8,6 +8,7 @@ from dagster.core.events.log import EventRecord
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
+from dagster.core.storage.asset_store import mem_asset_store
 
 
 def validate_reexecution_memoization(pipeline_context, execution_plan):
@@ -30,12 +31,46 @@ def validate_reexecution_memoization(pipeline_context, execution_plan):
     if len(execution_plan.step_keys_to_execute) == len(execution_plan.steps):
         return
 
+    # exclude the case where "asset_store" is configured on the required steps
+    if _check_required_asset_store_for_execution(pipeline_context, execution_plan):
+        return
+
     if not pipeline_context.intermediate_storage.is_persistent:
         raise DagsterInvariantViolationError(
             "Cannot perform reexecution with non persistent intermediates manager `{}`.".format(
                 pipeline_context.intermediate_storage.__class__.__name__
             )
         )
+
+
+def _check_required_asset_store_for_execution(pipeline_context, execution_plan):
+    """
+    Check if the border of the current run has non-in-memory asset store.
+    """
+    check.inst_param(pipeline_context, "pipeline_context", SystemExecutionContext)
+    check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
+    parent_run_id = pipeline_context.pipeline_run.parent_run_id
+
+    if not parent_run_id:
+        return
+
+    parent_run_logs = pipeline_context.instance.all_logs(parent_run_id)
+
+    output_handles_for_current_run = output_handles_from_execution_plan(execution_plan)
+    output_handles_from_previous_run = output_handles_from_event_logs(parent_run_logs)
+    output_handles_to_check = output_handles_for_current_run.intersection(
+        output_handles_from_previous_run
+    )
+
+    for output_handle in output_handles_to_check:
+        asset_store_key = execution_plan.get_asset_store_key(output_handle)
+        asset_store = pipeline_context.mode_def.resource_defs.get(asset_store_key)
+        # pylint: disable=comparison-with-callable
+        if asset_store and asset_store != mem_asset_store:
+            continue
+        else:
+            return False
+    return True
 
 
 def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
