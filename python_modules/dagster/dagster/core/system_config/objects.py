@@ -8,13 +8,14 @@ from dagster.core.errors import DagsterInvalidConfigError
 from dagster.utils import ensure_single_item
 
 
-class SolidConfig(namedtuple("_SolidConfig", "config inputs outputs")):
-    def __new__(cls, config=None, inputs=None, outputs=None):
+class SolidConfig(namedtuple("_SolidConfig", "config inputs outputs store_outputs")):
+    def __new__(cls, config=None, inputs=None, outputs=None, store_outputs=None):
         return super(SolidConfig, cls).__new__(
             cls,
             config,
             check.opt_dict_param(inputs, "inputs", key_type=str),
             check.opt_list_param(outputs, "outputs", of_type=dict),
+            check.opt_dict_param(store_outputs, "store_outputs", key_type=str),
         )
 
     @staticmethod
@@ -25,6 +26,7 @@ class SolidConfig(namedtuple("_SolidConfig", "config inputs outputs")):
             config=config.get("config"),
             inputs=config.get("inputs") or {},
             outputs=config.get("outputs") or [],
+            store_outputs=config.get("store_outputs") or {},
         )
 
 
@@ -131,7 +133,9 @@ class EnvironmentConfig(
         config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
         config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
 
-        solid_config_dict = composite_descent(pipeline_def, config_value.get("solids", {}))
+        solid_config_dict = composite_descent(
+            pipeline_def, config_value.get("solids", {}), mode_def.resource_defs
+        )
 
         return EnvironmentConfig(
             solids=solid_config_dict,
