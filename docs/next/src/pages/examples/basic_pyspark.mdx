@@ -6,7 +6,7 @@ import { ExampleReferenceLink } from 'components/ExampleReference';
 
 Passing PySpark DataFrames between solids requires a little bit of extra care, for a couple reasons:
 * Spark has a lazy execution model, which means that PySpark won't process any data until an action like `write` or `collect` is called on a DataFrame.
-* PySpark DataFrames cannot be pickled, which means that [Asset Stores](/overview/asset-stores/asset_stores) like the `fs_asset_store` won't work for them.
+* PySpark DataFrames cannot be pickled, which means that [Asset Stores](/overview/asset-stores/asset-stores) like the `fs_asset_store` won't work for them.
 
 In this example, we've defined an Asset Store that knows how to store and retrieve PySpark DataFrames that are produced and consumed by solids.
 
