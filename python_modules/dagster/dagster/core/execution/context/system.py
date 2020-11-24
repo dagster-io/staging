@@ -307,6 +307,10 @@ class SystemStepExecutionContext(SystemExecutionContext):
         else:
             source_run_id = self.pipeline_run.run_id
 
+        # get config
+        step = self.execution_plan.get_step_by_key(step_output_handle.step_key)
+        solid_config = self.environment_config.solids.get(step.solid_handle.to_string())
+
         return AssetStoreContext(
             step_key=step_output_handle.step_key,
             output_name=step_output_handle.output_name,
@@ -314,6 +318,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             pipeline_name=self.pipeline_def.name,
             solid_def=self.solid_def,
             source_run_id=source_run_id,
+            output_config=solid_config.store_outputs.get(step_output_handle.output_name),
         )
 
     def get_asset_store(self, asset_store_key):
@@ -413,7 +418,7 @@ class HookContext(SystemExecutionContext):
 class AssetStoreContext(
     namedtuple(
         "_AssetStoreContext",
-        "step_key output_name asset_metadata pipeline_name solid_def source_run_id",
+        "step_key output_name asset_metadata pipeline_name solid_def source_run_id output_config",
     )
 ):
     """The ``context`` object available to :py:class:`AssetStore`.
@@ -426,10 +431,19 @@ class AssetStoreContext(
         pipeline_name (str): The name of the pipeline.
         solid_def (SolidDefinition): The definition of the solid that uses the asset store.
         source_run_id (Optional[str]): The id of the run which generates the output.
+        output_config (Optional[Any]): The config attached to the output that we're getting or
+            setting.
     """
 
     def __new__(
-        cls, step_key, output_name, asset_metadata, pipeline_name, solid_def, source_run_id=None
+        cls,
+        step_key,
+        output_name,
+        asset_metadata,
+        pipeline_name,
+        solid_def,
+        source_run_id=None,
+        output_config=None,
     ):
 
         return super(AssetStoreContext, cls).__new__(
@@ -440,6 +454,7 @@ class AssetStoreContext(
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
             solid_def=check.inst_param(solid_def, "solid_def", SolidDefinition),
             source_run_id=check.opt_str_param(source_run_id, "source_run_id"),
+            output_config=output_config,
         )
 
     def get_run_scoped_output_identifier(self):

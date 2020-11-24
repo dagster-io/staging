@@ -2,13 +2,16 @@ import os
 import pickle
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
+from functools import update_wrapper
 
 import six
 from dagster import check
 from dagster.config import Field
+from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.config.source import StringSource
+from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.events import AssetKey, EventMetadataEntry
-from dagster.core.definitions.resource import resource
+from dagster.core.definitions.resource import ResourceDefinition, resource
 from dagster.core.events import AssetMaterialization
 from dagster.core.execution.context.system import AssetStoreContext
 from dagster.serdes import whitelist_for_serdes
@@ -24,6 +27,72 @@ class AssetStoreHandle(namedtuple("_AssetStoreHandle", "asset_store_key asset_me
             asset_store_key=check.str_param(asset_store_key, "asset_store_key"),
             asset_metadata=check.opt_dict_param(asset_metadata, "asset_metadata", key_type=str),
         )
+
+
+class AssetStoreDefinition(ResourceDefinition):
+    def __init__(
+        self,
+        resource_fn=None,
+        config_schema=None,
+        description=None,
+        _configured_config_mapping_fn=None,
+        version=None,
+        output_config_schema=None,
+    ):
+        self._output_config_schema = output_config_schema
+        super(AssetStoreDefinition, self).__init__(
+            resource_fn=resource_fn,
+            config_schema=config_schema,
+            description=description,
+            _configured_config_mapping_fn=_configured_config_mapping_fn,
+            version=version,
+        )
+
+    @property
+    def output_config_schema(self):
+        return self._output_config_schema
+
+
+def asset_store(config_schema=None, description=None, version=None, output_config_schema=None):
+    if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
+        return _AssetStoreDecoratorCallable()(config_schema)
+
+    def _wrap(resource_fn):
+        return _AssetStoreDecoratorCallable(
+            config_schema=config_schema,
+            description=description,
+            version=version,
+            output_config_schema=output_config_schema,
+        )(resource_fn)
+
+    return _wrap
+
+
+class _AssetStoreDecoratorCallable:
+    def __init__(
+        self, config_schema=None, description=None, version=None, output_config_schema=None
+    ):
+        self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self.description = check.opt_str_param(description, "description")
+        self.version = check.opt_str_param(version, "version")
+        self.output_config_schema = check_user_facing_opt_config_param(
+            output_config_schema, "output_config_schema"
+        )
+
+    def __call__(self, fn):
+        check.callable_param(fn, "fn")
+
+        asset_store_def = AssetStoreDefinition(
+            resource_fn=fn,
+            config_schema=self.config_schema,
+            description=self.description,
+            version=self.version,
+            output_config_schema=self.output_config_schema,
+        )
+
+        update_wrapper(asset_store_def, wrapped=fn)
+
+        return asset_store_def
 
 
 class AssetStore(six.with_metaclass(ABCMeta)):
