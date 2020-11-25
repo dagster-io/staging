@@ -38,8 +38,10 @@ class AssetStoreDefinition(ResourceDefinition):
         _configured_config_mapping_fn=None,
         version=None,
         output_config_schema=None,
+        input_config_schema=None,
     ):
         self._output_config_schema = output_config_schema
+        self._input_config_schema = input_config_schema
         super(AssetStoreDefinition, self).__init__(
             resource_fn=resource_fn,
             config_schema=config_schema,
@@ -52,8 +54,18 @@ class AssetStoreDefinition(ResourceDefinition):
     def output_config_schema(self):
         return self._output_config_schema
 
+    @property
+    def input_config_schema(self):
+        return self._input_config_schema
 
-def asset_store(config_schema=None, description=None, version=None, output_config_schema=None):
+
+def asset_store(
+    config_schema=None,
+    description=None,
+    version=None,
+    output_config_schema=None,
+    input_config_schema=None,
+):
     if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
         return _AssetStoreDecoratorCallable()(config_schema)
 
@@ -63,6 +75,7 @@ def asset_store(config_schema=None, description=None, version=None, output_confi
             description=description,
             version=version,
             output_config_schema=output_config_schema,
+            input_config_schema=input_config_schema,
         )(resource_fn)
 
     return _wrap
@@ -70,13 +83,21 @@ def asset_store(config_schema=None, description=None, version=None, output_confi
 
 class _AssetStoreDecoratorCallable:
     def __init__(
-        self, config_schema=None, description=None, version=None, output_config_schema=None
+        self,
+        config_schema=None,
+        description=None,
+        version=None,
+        output_config_schema=None,
+        input_config_schema=None,
     ):
         self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
         self.description = check.opt_str_param(description, "description")
         self.version = check.opt_str_param(version, "version")
         self.output_config_schema = check_user_facing_opt_config_param(
             output_config_schema, "output_config_schema"
+        )
+        self.input_config_schema = check_user_facing_opt_config_param(
+            input_config_schema, "input_config_schema"
         )
 
     def __call__(self, fn):
@@ -88,6 +109,7 @@ class _AssetStoreDecoratorCallable:
             description=self.description,
             version=self.version,
             output_config_schema=self.output_config_schema,
+            input_config_schema=self.input_config_schema,
         )
 
         update_wrapper(asset_store_def, wrapped=fn)
@@ -136,6 +158,27 @@ class InMemoryAssetStore(AssetStore):
     def get_asset(self, context):
         keys = tuple(context.get_run_scoped_output_identifier())
         return self.values[keys]
+
+
+def loader(config_schema=None, input_config_schema=None):
+    def _wrap(loader_fn):
+        class LoaderAssetStore(AssetStore):
+            def __init__(self, config):
+                self.config = config
+
+            def set_asset(self, context, obj):
+                raise NotImplementedError()
+
+            def get_asset(self, context):
+                return loader_fn(context, self.config, context.input_config)
+
+        @asset_store(config_schema=config_schema, input_config_schema=input_config_schema)
+        def _asset_store(init_context):
+            return LoaderAssetStore(init_context.resource_config)
+
+        return _asset_store
+
+    return _wrap
 
 
 @resource

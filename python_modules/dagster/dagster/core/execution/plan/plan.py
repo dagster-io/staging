@@ -21,7 +21,14 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
 from .compute import create_compute_step
-from .inputs import FromConfig, FromDefaultValue, FromMultipleSources, FromStepOutput, StepInput
+from .inputs import (
+    FromConfig,
+    FromDefaultValue,
+    FromLoader,
+    FromMultipleSources,
+    FromStepOutput,
+    StepInput,
+)
 from .objects import ExecutionStep, StepOutputHandle
 
 
@@ -208,6 +215,14 @@ def get_step_input(
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
     check.opt_inst_param(handle, "handle", SolidHandle)
     check.opt_list_param(parent_step_inputs, "parent_step_inputs", of_type=StepInput)
+
+    input_def = solid.definition.input_def_named(input_name)
+    if input_def.loader_key:
+        return StepInput(
+            name=input_name,
+            dagster_type=input_def.dagster_type,
+            source=FromLoader(input_def.loader_key),
+        )
 
     solid_config = plan_builder.environment_config.solids.get(str(handle))
     if solid_config and input_name in solid_config.inputs:

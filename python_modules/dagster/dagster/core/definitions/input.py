@@ -59,7 +59,14 @@ class InputDefinition:
         default_value (Optional[Any]): The default value to use if no input is provided.
     """
 
-    def __init__(self, name, dagster_type=None, description=None, default_value=_NoValueSentinel):
+    def __init__(
+        self,
+        name,
+        dagster_type=None,
+        description=None,
+        default_value=_NoValueSentinel,
+        loader_key=None,
+    ):
         ""
         self._name = check_valid_name(name)
 
@@ -68,6 +75,8 @@ class InputDefinition:
         self._description = check.opt_str_param(description, "description")
 
         self._default_value = _check_default_value(self._name, self._dagster_type, default_value)
+
+        self._loader_key = check.opt_str_param(loader_key, "loader_key")
 
     @property
     def name(self):
@@ -89,6 +98,10 @@ class InputDefinition:
     def default_value(self):
         check.invariant(self.has_default_value, "Can only fetch default_value if has_default_value")
         return self._default_value
+
+    @property
+    def loader_key(self):
+        return self._loader_key
 
     def mapping_to(self, solid_name, input_name):
         """Create an input mapping to an input of a child solid.

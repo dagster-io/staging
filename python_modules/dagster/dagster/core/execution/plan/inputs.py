@@ -15,6 +15,16 @@ class StepInputSource:
         return []
 
 
+class FromLoader(namedtuple("_FromLoader", "loader_key"), StepInputSource):
+    @property
+    def step_key_dependencies(self):
+        return set()
+
+    @property
+    def step_output_handle_dependencies(self):
+        return []
+
+
 class FromStepOutput(namedtuple("_FromStepOutput", "step_output_handle"), StepInputSource):
     """This step input source is the output of a previous step"""
 

@@ -173,7 +173,7 @@ def selector_for_named_defs(named_defs):
     return Selector({named_def.name: def_config_field(named_def) for named_def in named_defs})
 
 
-def get_inputs_field(solid, handle, dependency_structure):
+def get_inputs_field(solid, handle, dependency_structure, resource_defs):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
@@ -183,7 +183,11 @@ def get_inputs_field(solid, handle, dependency_structure):
 
     inputs_field_fields = {}
     for name, inp in solid.definition.input_dict.items():
-        if inp.dagster_type.loader:
+        if inp.loader_key:
+            input_config_schema = resource_defs[inp.loader_key].input_config_schema
+            if input_config_schema:
+                inputs_field_fields[name] = input_config_schema
+        elif inp.dagster_type.loader:
             inp_handle = SolidInputHandle(solid, inp)
             # If this input is not satisfied by a dependency you must
             # provide it via config
@@ -193,7 +197,10 @@ def get_inputs_field(solid, handle, dependency_structure):
 
                 inputs_field_fields[name] = Field(
                     inp.dagster_type.loader.schema_type,
-                    is_required=(not solid.definition.input_has_default(name)),
+                    is_required=(
+                        not solid.definition.input_has_default(name)
+                        and not solid.definition.input_def_named(name).loader_key
+                    ),
                 )
 
     if not inputs_field_fields:
@@ -264,7 +271,7 @@ def construct_leaf_solid_config(
 
     return solid_config_field(
         {
-            "inputs": get_inputs_field(solid, handle, dependency_structure),
+            "inputs": get_inputs_field(solid, handle, dependency_structure, resource_defs),
             "outputs": get_outputs_field(solid, handle),
             "store_outputs": get_store_outputs_field(solid, handle, resource_defs),
             "config": config_schema,
@@ -316,7 +323,7 @@ def define_isolid_field(solid, handle, dependency_structure, resource_defs, igno
     else:
         return solid_config_field(
             {
-                "inputs": get_inputs_field(solid, handle, dependency_structure),
+                "inputs": get_inputs_field(solid, handle, dependency_structure, resource_defs),
                 "outputs": get_outputs_field(solid, handle),
                 "store_outputs": get_store_outputs_field(solid, handle, resource_defs),
                 "solids": Field(
