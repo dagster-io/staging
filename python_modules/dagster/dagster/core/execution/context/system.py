@@ -288,7 +288,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
     def for_hook(self, hook_def):
         return HookContext(self._execution_context_data, self.log, hook_def, self.step)
 
-    def for_asset_store(self, step_output_handle, asset_store_handle):
+    def for_asset_store(self, step_output_handle, asset_store_handle, input_name=None):
         from dagster.core.storage.asset_store import AssetStoreHandle
 
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
@@ -319,6 +319,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             solid_def=self.solid_def,
             source_run_id=source_run_id,
             output_config=solid_config.store_outputs.get(step_output_handle.output_name),
+            input_config=solid_config.inputs.get(input_name) if input_name else None,
         )
 
     def get_asset_store(self, asset_store_key):
@@ -415,10 +416,15 @@ class HookContext(SystemExecutionContext):
         return solid_config.config if solid_config else None
 
 
+class LoadInputContext(namedtuple("_LoadInputContext", "input_name, input_config")):
+    pass
+
+
 class AssetStoreContext(
     namedtuple(
         "_AssetStoreContext",
-        "step_key output_name asset_metadata pipeline_name solid_def source_run_id output_config",
+        "step_key output_name asset_metadata pipeline_name solid_def source_run_id output_config "
+        "input_config",
     )
 ):
     """The ``context`` object available to :py:class:`AssetStore`.
@@ -433,6 +439,7 @@ class AssetStoreContext(
         source_run_id (Optional[str]): The id of the run which generates the output.
         output_config (Optional[Any]): The config attached to the output that we're getting or
             setting.
+        input_config (Optional[Any]): The config attached to the input that we're getting.
     """
 
     def __new__(
@@ -444,6 +451,7 @@ class AssetStoreContext(
         solid_def,
         source_run_id=None,
         output_config=None,
+        input_config=None,
     ):
 
         return super(AssetStoreContext, cls).__new__(
@@ -455,6 +463,7 @@ class AssetStoreContext(
             solid_def=check.inst_param(solid_def, "solid_def", SolidDefinition),
             source_run_id=check.opt_str_param(source_run_id, "source_run_id"),
             output_config=output_config,
+            input_config=input_config,
         )
 
     def get_run_scoped_output_identifier(self):

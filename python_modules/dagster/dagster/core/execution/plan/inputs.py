@@ -15,12 +15,22 @@ class StepInputSource:
         return []
 
 
-class FromStepOutput(namedtuple("_FromStepOutput", "step_output_handle"), StepInputSource):
+class FromLoader(namedtuple("_FromLoader", "manager_key"), StepInputSource):
+    @property
+    def step_key_dependencies(self):
+        return set()
+
+    @property
+    def step_output_handle_dependencies(self):
+        return []
+
+
+class FromStepOutput(
+    namedtuple("_FromStepOutput", "step_output_handle manager_key"), StepInputSource
+):
     """This step input source is the output of a previous step"""
 
-    def __new__(
-        cls, step_output_handle,
-    ):
+    def __new__(cls, step_output_handle, manager_key):
         from .objects import StepOutputHandle
 
         return super(FromStepOutput, cls).__new__(
@@ -28,6 +38,7 @@ class FromStepOutput(namedtuple("_FromStepOutput", "step_output_handle"), StepIn
             step_output_handle=check.inst_param(
                 step_output_handle, "step_output_handle", StepOutputHandle
             ),
+            manager_key=check.opt_str_param(manager_key, "manager_key"),
         )
 
     @property

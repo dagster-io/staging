@@ -5,6 +5,7 @@ from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.execution.plan.inputs import (
     FromConfig,
     FromDefaultValue,
+    FromLoader,
     FromMultipleSources,
     FromStepOutput,
 )
@@ -61,6 +62,8 @@ def _resolve_step_input_versions(step, step_versions):
             return dagster_type.loader.compute_loaded_input_version(input_source.config_data)
         elif isinstance(input_source, FromDefaultValue):
             return join_and_hash(repr(input_source.value))
+        elif isinstance(input_source, FromLoader):
+            return None
         else:
             check.failed(
                 "Unhandled step input source type for version calculation: {}".format(input_source)
