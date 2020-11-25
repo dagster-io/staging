@@ -266,7 +266,11 @@ function extractNumericData(
   };
 
   for (const {partition, materializationEvent} of assetMaterializations) {
-    const x = xAxis === 'partition' ? partition || '' : Number(materializationEvent.timestamp);
+    const x = xAxis === 'partition' ? partition : Number(materializationEvent.timestamp);
+    if (x === null) {
+      // exclude materializations where partition = null from partitioned graphs
+      continue;
+    }
 
     // Add an entry for every numeric metadata label
     for (const label of numericMetadataLabels) {
