@@ -27,6 +27,10 @@ mutation($runId: String!) {
     ... on PipelineRunNotFoundError {
       runId
     }
+    ... on PythonError {
+      message
+      stack
+    }
   }
 }
 """
@@ -56,6 +60,8 @@ class TestRunVariantTermination(
             assert result.data
 
             # just test existence
+            print(result)
+            # print(result.data)
             assert (
                 result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
             )
@@ -70,7 +76,7 @@ class TestRunVariantTermination(
             result = execute_dagster_graphql(
                 graphql_context, RUN_CANCELLATION_QUERY, variables={"runId": run_id}
             )
-
+            print(result)
             assert (
                 result.data["terminatePipelineExecution"]["__typename"]
                 == "TerminatePipelineExecutionSuccess"
@@ -103,6 +109,7 @@ class TestRunVariantTermination(
             assert result.data
 
             # just test existence
+            print(result)
             assert (
                 result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
             )
@@ -128,6 +135,7 @@ class TestRunVariantTermination(
                 graphql_context, RUN_CANCELLATION_QUERY, variables={"runId": run_id}
             )
 
+            print(result)
             assert (
                 result.data["terminatePipelineExecution"]["__typename"]
                 == "TerminatePipelineExecutionSuccess"
@@ -155,6 +163,6 @@ class TestRunVariantTermination(
             == "TerminatePipelineExecutionFailure"
         )
         assert (
-            "is not in a started state. Current status is SUCCESS"
+            "is not in a started or queued state. Current status is SUCCESS"
             in result.data["terminatePipelineExecution"]["message"]
         )
