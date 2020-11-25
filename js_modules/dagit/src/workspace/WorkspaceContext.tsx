@@ -39,7 +39,6 @@ type WorkspaceState = {
     address: RepoAddress;
     path: string;
   };
-  refetch: () => Promise<ApolloQueryResult<RootRepositoriesQuery>>;
   repoPath: string | null;
 };
 
@@ -183,7 +182,7 @@ const useWorkspaceState = () => {
   const match = useRouteMatch<{repoPath: string}>(['/workspace/:repoPath']);
   const repoPath: string | null = match?.params?.repoPath || null;
 
-  const {data, loading, refetch} = useQuery<RootRepositoriesQuery>(ROOT_REPOSITORIES_QUERY, {
+  const {data, loading} = useQuery<RootRepositoriesQuery>(ROOT_REPOSITORIES_QUERY, {
     fetchPolicy: 'cache-and-network',
   });
 
@@ -261,7 +260,6 @@ const useWorkspaceState = () => {
     locations,
     allRepos: options,
     activeRepo,
-    refetch,
     repoPath,
   };
 };
