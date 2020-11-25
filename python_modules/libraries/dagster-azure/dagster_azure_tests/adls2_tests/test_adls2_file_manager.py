@@ -143,13 +143,16 @@ def create_adls2_key(run_id, step_key, output_name):
 def test_depends_on_adls2_resource_file_manager(storage_account, file_system):
     bar_bytes = "bar".encode()
 
-    @solid(output_defs=[OutputDefinition(ADLS2FileHandle)])
+    @solid(output_defs=[OutputDefinition(ADLS2FileHandle)], required_resource_keys={"file_manager"})
     def emit_file(context):
-        return context.file_manager.write_data(bar_bytes)
+        return context.resources.file_manager.write_data(bar_bytes)
 
-    @solid(input_defs=[InputDefinition("file_handle", ADLS2FileHandle)])
+    @solid(
+        input_defs=[InputDefinition("file_handle", ADLS2FileHandle)],
+        required_resource_keys={"file_manager"},
+    )
     def accept_file(context, file_handle):
-        local_path = context.file_manager.copy_handle_to_local_temp(file_handle)
+        local_path = context.resources.file_manager.copy_handle_to_local_temp(file_handle)
         assert isinstance(local_path, str)
         assert open(local_path, "rb").read() == bar_bytes
 
@@ -159,7 +162,10 @@ def test_depends_on_adls2_resource_file_manager(storage_account, file_system):
         mode_defs=[
             ModeDefinition(
                 system_storage_defs=adls2_plus_default_storage_defs,
-                resource_defs={"adls2": ResourceDefinition.hardcoded_resource(adls2_fake_resource)},
+                resource_defs={
+                    "adls2": ResourceDefinition.hardcoded_resource(adls2_fake_resource),
+                    "file_manager": adls2_file_manager,
+                },
             )
         ]
     )
