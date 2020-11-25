@@ -83,7 +83,40 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
         return pipeline_run
 
     def can_cancel_run(self, run_id):
-        raise NotImplementedError()
+        run = self._instance.get_run_by_id(run_id)
+        if not run:
+            return False
+        if run.status == PipelineRunStatus.QUEUED:
+            return True
+        else:
+            return self._instance.run_launcher.can_terminate(run_id)
 
     def cancel_run(self, run_id):
-        raise NotImplementedError()
+        run = self._instance.get_run_by_id(run_id)
+        if not run:
+            return False
+        # NOTE: possible race condition if the dequeuer acts on this run at the same time
+        if run.status == PipelineRunStatus.QUEUED:
+            self._instance.report_engine_event(
+                message="Cancelling pipeline from the queue.", pipeline_run=run, cls=self.__class__,
+            )
+
+            cancelled_event = DagsterEvent(
+                event_type_value=DagsterEventType.PIPELINE_FAILURE.value,
+                pipeline_name=run.pipeline_name,
+            )
+            event_record = DagsterEventRecord(
+                message="",
+                user_message="",
+                level=logging.INFO,
+                pipeline_name=run.pipeline_name,
+                run_id=run.run_id,
+                error_info=None,
+                timestamp=time.time(),
+                dagster_event=cancelled_event,
+            )
+            self._instance.handle_new_event(event_record)
+
+            return True
+        else:
+            return self._instance.run_launcher.terminate(run_id)
