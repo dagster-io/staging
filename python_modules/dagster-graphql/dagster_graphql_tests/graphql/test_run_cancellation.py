@@ -155,6 +155,6 @@ class TestRunVariantTermination(
             == "TerminatePipelineExecutionFailure"
         )
         assert (
-            "is not in a started state. Current status is SUCCESS"
+            "is not in a started or queued state. Current status is SUCCESS"
             in result.data["terminatePipelineExecution"]["message"]
         )
