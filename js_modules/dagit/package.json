@@ -32,6 +32,8 @@
     "lodash": "^4.17.15",
     "lru-cache": "^5.1.1",
     "moment-timezone": "^0.5.31",
+    "patch-package": "^6.2.2",
+    "postinstall-postinstall": "^2.1.0",
     "query-string": "^6.8.3",
     "react": "^16.11.0",
     "react-chartjs-2": "^2.9.0",
@@ -129,7 +131,8 @@
     "watch-types": "apollo codegen:generate --includes \"./src/**/*.tsx\" --target typescript types --localSchemaFile ./src/schema.graphql  --globalTypesFile ./src/types/globalTypes.ts --watch",
     "storybook": "start-storybook -p 6006 -s public",
     "build-storybook": "build-storybook -s public",
-    "analyze": "source-map-explorer 'build/static/js/*.js'"
+    "analyze": "source-map-explorer 'build/static/js/*.js'",
+    "postinstall": "patch-package"
   },
   "jest": {
     "collectCoverageFrom": [
