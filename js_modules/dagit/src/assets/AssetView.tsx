@@ -1,5 +1,5 @@
 import {gql, useQuery} from '@apollo/client';
-import {Button, Tab, Tabs, ButtonGroup} from '@blueprintjs/core';
+import {Button, Tab, Tabs, ButtonGroup, Colors} from '@blueprintjs/core';
 import {uniq, flatMap} from 'lodash';
 import * as React from 'react';
 import styled from 'styled-components';
@@ -143,6 +143,12 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
               />
             ))}
           </div>
+          {xAxis === 'partition' && (
+            <div style={{color: Colors.GRAY3, fontSize: '0.85rem'}}>
+              When graphing values by partition, the highest data point for each materialized event
+              label is displayed.
+            </div>
+          )}
         </>
       )}
     </Container>
