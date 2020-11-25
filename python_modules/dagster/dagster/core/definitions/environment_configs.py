@@ -131,12 +131,11 @@ def define_environment_cls(creation_data):
         storage_names=[dfn.name for dfn in creation_data.mode_definition.intermediate_storage_defs],
         defaults=set([storage.name for storage in default_intermediate_storage_defs]),
     )
+
+    # TODO: remove "storage" entry in run_config as part of system storage removal
+    # tracking https://github.com/dagster-io/dagster/issues/3280
     if not (intermediate_storage_field.is_required or intermediate_storage_field.default_provided):
-        storage_field = define_storage_field(
-            selector_for_named_defs(creation_data.mode_definition.system_storage_defs),
-            storage_names=[dfn.name for dfn in creation_data.mode_definition.system_storage_defs],
-            defaults=set([storage.name for storage in default_system_storage_defs]),
-        )
+        storage_field = intermediate_storage_field
     else:
         storage_field = None
 
