@@ -166,7 +166,7 @@ export const ASSET_QUERY = gql`
         key {
           path
         }
-        assetMaterializations(limit: 100) {
+        assetMaterializations(limit: 200) {
           partition
           runOrError {
             ... on PipelineRun {
