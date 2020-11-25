@@ -83,7 +83,11 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
         return pipeline_run
 
     def can_cancel_run(self, run_id):
-        raise NotImplementedError()
+        run = self._instance.get_run_by_id(run_id)
+        if run.status == PipelineRunStatus.QUEUED:
+            return True
+
+        return self._instance.run_launcher.can_terminate(run_id)
 
     def cancel_run(self, run_id):
         raise NotImplementedError()
