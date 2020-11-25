@@ -14,10 +14,6 @@ class StepExecutionContext:
         )
 
     @property
-    def file_manager(self):
-        return self._system_step_execution_context.file_manager
-
-    @property
     def resources(self):
         return self._system_step_execution_context.resources
 
