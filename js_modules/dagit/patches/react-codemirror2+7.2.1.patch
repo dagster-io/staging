@@ -1,0 +1,30 @@
+diff --git a/node_modules/react-codemirror2/.ts/index.js b/node_modules/react-codemirror2/.ts/index.js
+index 387650f..71f5fdb 100644
+--- a/node_modules/react-codemirror2/.ts/index.js
++++ b/node_modules/react-codemirror2/.ts/index.js
+@@ -321,8 +321,8 @@ var Controlled = (function (_super) {
+         var lastChar = doc.getLine(doc.lastLine()).length;
+         doc.replaceRange(value || '', { line: 0, ch: 0 }, { line: lastLine, ch: lastChar });
+         this.mirror.setValue(value);
+-        doc.clearHistory();
+-        this.mirror.clearHistory();
++        // doc.clearHistory();
++        // this.mirror.clearHistory();
+         this.emulating = false;
+     };
+     Controlled.prototype.resolveChange = function (value) {
+diff --git a/node_modules/react-codemirror2/index.js b/node_modules/react-codemirror2/index.js
+index d109de4..e97eb85 100644
+--- a/node_modules/react-codemirror2/index.js
++++ b/node_modules/react-codemirror2/index.js
+@@ -438,8 +438,8 @@ var Controlled = function(_super) {
+       ch: lastChar
+     });
+     this.mirror.setValue(value);
+-    doc.clearHistory();
+-    this.mirror.clearHistory();
++    // doc.clearHistory();
++    // this.mirror.clearHistory();
+     this.emulating = false;
+   };
+ 
