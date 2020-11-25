@@ -108,7 +108,7 @@ class NodeDefinition(ConfiguredMixin):
 
     @property
     def has_configurable_inputs(self):
-        return any([inp.dagster_type.loader for inp in self._input_defs])
+        return any([inp.dagster_type.loader or inp.manager_key for inp in self._input_defs])
 
     @property
     def has_configurable_outputs(self):

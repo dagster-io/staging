@@ -1,19 +1,19 @@
 import os
 import pickle
-from abc import ABCMeta, abstractmethod
+from abc import abstractmethod
 from collections import namedtuple
 from functools import update_wrapper
 
-import six
 from dagster import check
 from dagster.config import Field
 from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.config.source import StringSource
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.events import AssetKey, EventMetadataEntry
-from dagster.core.definitions.resource import ResourceDefinition, resource
+from dagster.core.definitions.resource import resource
 from dagster.core.events import AssetMaterialization
 from dagster.core.execution.context.system import AssetStoreContext
+from dagster.core.storage.input_manager import InputManager, InputManagerDefinition
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
 from dagster.utils.backcompat import experimental
@@ -29,7 +29,7 @@ class AssetStoreHandle(namedtuple("_AssetStoreHandle", "asset_store_key asset_me
         )
 
 
-class AssetStoreDefinition(ResourceDefinition):
+class AssetStoreDefinition(InputManagerDefinition):
     def __init__(
         self,
         resource_fn=None,
@@ -37,6 +37,7 @@ class AssetStoreDefinition(ResourceDefinition):
         description=None,
         _configured_config_mapping_fn=None,
         version=None,
+        input_config_schema=None,
         output_config_schema=None,
     ):
         self._output_config_schema = output_config_schema
@@ -46,6 +47,7 @@ class AssetStoreDefinition(ResourceDefinition):
             description=description,
             _configured_config_mapping_fn=_configured_config_mapping_fn,
             version=version,
+            input_config_schema=input_config_schema,
         )
 
     @property
@@ -53,49 +55,7 @@ class AssetStoreDefinition(ResourceDefinition):
         return self._output_config_schema
 
 
-def asset_store(config_schema=None, description=None, version=None, output_config_schema=None):
-    if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
-        return _AssetStoreDecoratorCallable()(config_schema)
-
-    def _wrap(resource_fn):
-        return _AssetStoreDecoratorCallable(
-            config_schema=config_schema,
-            description=description,
-            version=version,
-            output_config_schema=output_config_schema,
-        )(resource_fn)
-
-    return _wrap
-
-
-class _AssetStoreDecoratorCallable:
-    def __init__(
-        self, config_schema=None, description=None, version=None, output_config_schema=None
-    ):
-        self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
-        self.description = check.opt_str_param(description, "description")
-        self.version = check.opt_str_param(version, "version")
-        self.output_config_schema = check_user_facing_opt_config_param(
-            output_config_schema, "output_config_schema"
-        )
-
-    def __call__(self, fn):
-        check.callable_param(fn, "fn")
-
-        asset_store_def = AssetStoreDefinition(
-            resource_fn=fn,
-            config_schema=self.config_schema,
-            description=self.description,
-            version=self.version,
-            output_config_schema=self.output_config_schema,
-        )
-
-        update_wrapper(asset_store_def, wrapped=fn)
-
-        return asset_store_def
-
-
-class AssetStore(six.with_metaclass(ABCMeta)):
+class AssetStore(InputManager):
     """
     Base class for user-provided asset store.
 
@@ -113,16 +73,63 @@ class AssetStore(six.with_metaclass(ABCMeta)):
             obj (Any): The data object to be stored.
         """
 
-    @abstractmethod
-    def get_asset(self, context):
-        """The user-defined read method that loads data given its metadata.
 
-        Args:
-            context (AssetStoreContext): The context of the step output that produces this asset.
+def asset_store(
+    config_schema=None,
+    description=None,
+    version=None,
+    output_config_schema=None,
+    input_config_schema=None,
+):
+    if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
+        return _AssetStoreDecoratorCallable()(config_schema)
 
-        Returns:
-            Any: The data object.
-        """
+    def _wrap(resource_fn):
+        return _AssetStoreDecoratorCallable(
+            config_schema=config_schema,
+            description=description,
+            version=version,
+            output_config_schema=output_config_schema,
+            input_config_schema=input_config_schema,
+        )(resource_fn)
+
+    return _wrap
+
+
+class _AssetStoreDecoratorCallable:
+    def __init__(
+        self,
+        config_schema=None,
+        description=None,
+        version=None,
+        output_config_schema=None,
+        input_config_schema=None,
+    ):
+        self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self.description = check.opt_str_param(description, "description")
+        self.version = check.opt_str_param(version, "version")
+        self.output_config_schema = check_user_facing_opt_config_param(
+            output_config_schema, "output_config_schema"
+        )
+        self.input_config_schema = check_user_facing_opt_config_param(
+            input_config_schema, "input_config_schema"
+        )
+
+    def __call__(self, fn):
+        check.callable_param(fn, "fn")
+
+        asset_store_def = AssetStoreDefinition(
+            resource_fn=fn,
+            config_schema=self.config_schema,
+            description=self.description,
+            version=self.version,
+            output_config_schema=self.output_config_schema,
+            input_config_schema=self.input_config_schema,
+        )
+
+        update_wrapper(asset_store_def, wrapped=fn)
+
+        return asset_store_def
 
 
 class InMemoryAssetStore(AssetStore):
