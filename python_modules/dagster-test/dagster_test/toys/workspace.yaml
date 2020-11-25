@@ -1,2 +1,10 @@
 load_from:
   - python_module: dagster_test.toys.repo
+  - grpc_server:
+      host: localhost
+      port: 4266
+      location_name: "my_grpc_server"
+  - grpc_server:
+      host: localhost
+      port: 4267
+      location_name: "my_grpc_server_1"

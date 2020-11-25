@@ -119,7 +119,9 @@ export const WorkspaceRepositoryLocationsRoot = () => {
 
   const onReload = async (name: string) => {
     setReloading(name);
-    await refetch();
+    setTimeout(() => {
+      refetch();
+    }, 100);
     setReloading(null);
   };
 
