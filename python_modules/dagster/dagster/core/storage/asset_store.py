@@ -1,10 +1,9 @@
 import os
 import pickle
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from collections import namedtuple
 from functools import update_wrapper
 
-import six
 from dagster import check
 from dagster.config import Field
 from dagster.config.field_utils import check_user_facing_opt_config_param
@@ -29,7 +28,7 @@ class AssetStoreHandle(namedtuple("_AssetStoreHandle", "asset_store_key asset_me
         )
 
 
-class AssetStoreDefinition(ResourceDefinition):
+class LoaderDefinition(ResourceDefinition):
     def __init__(
         self,
         resource_fn=None,
@@ -37,12 +36,10 @@ class AssetStoreDefinition(ResourceDefinition):
         description=None,
         _configured_config_mapping_fn=None,
         version=None,
-        output_config_schema=None,
         input_config_schema=None,
     ):
-        self._output_config_schema = output_config_schema
         self._input_config_schema = input_config_schema
-        super(AssetStoreDefinition, self).__init__(
+        super(LoaderDefinition, self).__init__(
             resource_fn=resource_fn,
             config_schema=config_schema,
             description=description,
@@ -51,12 +48,34 @@ class AssetStoreDefinition(ResourceDefinition):
         )
 
     @property
-    def output_config_schema(self):
-        return self._output_config_schema
-
-    @property
     def input_config_schema(self):
         return self._input_config_schema
+
+
+class AssetStoreDefinition(LoaderDefinition):
+    def __init__(
+        self,
+        resource_fn=None,
+        config_schema=None,
+        description=None,
+        _configured_config_mapping_fn=None,
+        version=None,
+        input_config_schema=None,
+        output_config_schema=None,
+    ):
+        self._output_config_schema = output_config_schema
+        super(AssetStoreDefinition, self).__init__(
+            resource_fn=resource_fn,
+            config_schema=config_schema,
+            description=description,
+            _configured_config_mapping_fn=_configured_config_mapping_fn,
+            version=version,
+            input_config_schema=input_config_schema,
+        )
+
+    @property
+    def output_config_schema(self):
+        return self._output_config_schema
 
 
 def asset_store(
@@ -117,7 +136,20 @@ class _AssetStoreDecoratorCallable:
         return asset_store_def
 
 
-class AssetStore(six.with_metaclass(ABCMeta)):
+class Loader(ABC):
+    @abstractmethod
+    def get_asset(self, context):
+        """The user-defined read method that loads data given its metadata.
+
+        Args:
+            context (AssetStoreContext): The context of the step output that produces this asset.
+
+        Returns:
+            Any: The data object.
+        """
+
+
+class AssetStore(Loader):
     """
     Base class for user-provided asset store.
 
@@ -135,17 +167,6 @@ class AssetStore(six.with_metaclass(ABCMeta)):
             obj (Any): The data object to be stored.
         """
 
-    @abstractmethod
-    def get_asset(self, context):
-        """The user-defined read method that loads data given its metadata.
-
-        Args:
-            context (AssetStoreContext): The context of the step output that produces this asset.
-
-        Returns:
-            Any: The data object.
-        """
-
 
 class InMemoryAssetStore(AssetStore):
     def __init__(self):
@@ -160,25 +181,58 @@ class InMemoryAssetStore(AssetStore):
         return self.values[keys]
 
 
-def loader(config_schema=None, input_config_schema=None):
-    def _wrap(loader_fn):
-        class LoaderAssetStore(AssetStore):
-            def __init__(self, config):
-                self.config = config
+def loader(config_schema=None, description=None, input_config_schema=None, version=None):
+    if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
+        return _LoaderDecoratorCallable()(config_schema)
 
-            def set_asset(self, context, obj):
-                raise NotImplementedError()
-
-            def get_asset(self, context):
-                return loader_fn(context, self.config, context.input_config)
-
-        @asset_store(config_schema=config_schema, input_config_schema=input_config_schema)
-        def _asset_store(init_context):
-            return LoaderAssetStore(init_context.resource_config)
-
-        return _asset_store
+    def _wrap(load_fn):
+        return _LoaderDecoratorCallable(
+            config_schema=config_schema,
+            description=description,
+            version=version,
+            input_config_schema=input_config_schema,
+        )(load_fn)
 
     return _wrap
+
+
+class NoInitLoader(Loader):
+    def __init__(self, config, load_fn):
+        self._config = config
+        self._load_fn = load_fn
+
+    def get_asset(self, context):
+        return self._load_fn(context, self._config, context.input_config)
+
+
+class _LoaderDecoratorCallable:
+    def __init__(
+        self, config_schema=None, description=None, version=None, input_config_schema=None,
+    ):
+        self.config_schema = check_user_facing_opt_config_param(config_schema, "config_schema")
+        self.description = check.opt_str_param(description, "description")
+        self.version = check.opt_str_param(version, "version")
+        self.input_config_schema = check_user_facing_opt_config_param(
+            input_config_schema, "input_config_schema"
+        )
+
+    def __call__(self, load_fn):
+        check.callable_param(load_fn, "load_fn")
+
+        def _resource_fn(init_context):
+            return NoInitLoader(init_context.resource_config, load_fn)
+
+        loader_def = LoaderDefinition(
+            resource_fn=_resource_fn,
+            config_schema=self.config_schema,
+            description=self.description,
+            version=self.version,
+            input_config_schema=self.input_config_schema,
+        )
+
+        update_wrapper(loader_def, wrapped=load_fn)
+
+        return loader_def
 
 
 @resource

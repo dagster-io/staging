@@ -520,11 +520,13 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
         source_handle = source.step_output_handle
         if step_context.using_asset_store(source_handle):
             asset_store_handle = step_context.execution_plan.get_asset_store_handle(source_handle)
-            asset_store = step_context.get_asset_store(asset_store_handle.asset_store_key)
+            loader_key = source.loader_key or asset_store_handle.asset_store_key
+            loader = getattr(step_context.resources, loader_key)
+
             asset_store_context = step_context.for_asset_store(
                 source_handle, asset_store_handle, input_name
             )
-            obj = asset_store.get_asset(asset_store_context)
+            obj = loader.get_asset(asset_store_context)
 
             return AssetStoreOperation(
                 AssetStoreOperationType.GET_ASSET, source_handle, asset_store_handle, obj=obj,

@@ -25,12 +25,12 @@ class FromLoader(namedtuple("_FromLoader", "loader_key"), StepInputSource):
         return []
 
 
-class FromStepOutput(namedtuple("_FromStepOutput", "step_output_handle"), StepInputSource):
+class FromStepOutput(
+    namedtuple("_FromStepOutput", "step_output_handle loader_key"), StepInputSource
+):
     """This step input source is the output of a previous step"""
 
-    def __new__(
-        cls, step_output_handle,
-    ):
+    def __new__(cls, step_output_handle, loader_key):
         from .objects import StepOutputHandle
 
         return super(FromStepOutput, cls).__new__(
@@ -38,6 +38,7 @@ class FromStepOutput(namedtuple("_FromStepOutput", "step_output_handle"), StepIn
             step_output_handle=check.inst_param(
                 step_output_handle, "step_output_handle", StepOutputHandle
             ),
+            loader_key=check.opt_str_param(loader_key, "loader_key"),
         )
 
     @property
