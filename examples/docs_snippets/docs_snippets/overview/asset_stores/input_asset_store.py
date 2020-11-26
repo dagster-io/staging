@@ -1,3 +1,5 @@
+# pylint: disable=unused-argument
+
 import os
 
 from dagster import InputDefinition, ModeDefinition, pipeline, solid
@@ -20,7 +22,7 @@ def my_configurable_csv_loader(_context, resource_config, input_config):
 
 
 @solid(input_defs=[InputDefinition("input1", loader_key="my_loader")])
-def solid1(_, _input1):
+def solid1(_, input1):
     """Return a Pandas DataFrame"""
 
 
