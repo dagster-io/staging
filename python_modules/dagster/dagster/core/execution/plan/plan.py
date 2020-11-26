@@ -216,8 +216,10 @@ def get_step_input(
     check.opt_inst_param(handle, "handle", SolidHandle)
     check.opt_list_param(parent_step_inputs, "parent_step_inputs", of_type=StepInput)
 
+    input_handle = solid.input_handle(input_name)
+
     input_def = solid.definition.input_def_named(input_name)
-    if input_def.loader_key:
+    if input_def.loader_key and not dependency_structure.has_deps(input_handle):
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
@@ -232,13 +234,14 @@ def get_step_input(
             source=FromConfig(solid_config.inputs[input_name]),
         )
 
-    input_handle = solid.input_handle(input_name)
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source=FromStepOutput(plan_builder.get_output_handle(solid_output_handle)),
+            source=FromStepOutput(
+                plan_builder.get_output_handle(solid_output_handle), loader_key=input_def.loader_key
+            ),
         )
 
     if dependency_structure.has_multi_deps(input_handle):
@@ -248,9 +251,12 @@ def get_step_input(
             dagster_type=input_def.dagster_type,
             source=FromMultipleSources(
                 [
-                    FromStepOutput(plan_builder.get_output_handle(solid_output_handle))
+                    FromStepOutput(
+                        plan_builder.get_output_handle(solid_output_handle),
+                        loader_key=input_def.loader_key,
+                    )
                     for solid_output_handle in solid_output_handles
-                ]
+                ],
             ),
         )
 

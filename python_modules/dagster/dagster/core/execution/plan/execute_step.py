@@ -520,7 +520,11 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
         source_handle = source.step_output_handle
         if step_context.using_asset_store(source_handle):
             asset_store_handle = step_context.execution_plan.get_asset_store_handle(source_handle)
-            asset_store = step_context.get_asset_store(asset_store_handle.asset_store_key)
+            asset_store = (
+                step_context.get_asset_store(asset_store_handle.asset_store_key)
+                if not source.loader_key
+                else step_context.get_asset_store(source.loader_key)
+            )
             asset_store_context = step_context.for_asset_store(
                 source_handle, asset_store_handle, input_name
             )
