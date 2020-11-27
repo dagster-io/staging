@@ -492,6 +492,38 @@ def _generate_error_boundary_msg_for_step_input(context, input_):
     )
 
 
+# class __IntermediateNotPresentSentinel:
+#     pass
+
+
+# def _load_input_value_from_upstream(step_context, step_input, source_handle, dagster_type):
+#     if step_context.using_asset_store(source_handle):
+#         return _get_addressable_asset(step_context, source_handle)
+
+#     if source_handle in step_input.addresses:
+#         if not step_context.intermediate_storage.has_intermediate_at_address(
+#             step_input.addresses[source_handle]
+#         ):
+#             return __IntermediateNotPresentSentinel
+
+#         return step_context.intermediate_storage.get_intermediate_from_address(
+#             step_context,
+#             dagster_type=dagster_type,
+#             step_output_handle=source_handle,
+#             address=step_input.addresses[source_handle],
+#         )
+
+#     if not step_context.intermediate_storage.has_intermediate(step_context, source_handle):
+#         return __IntermediateNotPresentSentinel
+
+#     return step_context.intermediate_storage.get_intermediate(
+#         context=step_context, step_output_handle=source_handle, dagster_type=dagster_type,
+#     )
+
+
+# InputLoadOperation = (AssetStoreOperation, ObjectStoreOperation)
+
+
 def _input_values_from_intermediate_storage(step_context):
     step = step_context.step
 
@@ -542,12 +574,19 @@ def _input_values_from_intermediate_storage(step_context):
             # so we can yield the relevant object store events and unpack the values in the caller
             if all((isinstance(x, ObjectStoreOperation) for x in input_value)):
                 input_value = MultipleStepOutputsListWrapper(input_value)
+            else:
+                check.invariant(f"Violation got {input_value}")
 
         elif step_input.is_from_single_output:
             source_handle = step_input.source_handles[0]
             if step_context.using_asset_store(source_handle):
                 input_value = _get_addressable_asset(step_context, source_handle)
             elif source_handle in step_input.addresses:
+                check.invariant(
+                    step_context.intermediate_storage.has_intermediate_at_address(
+                        step_input.addresses[source_handle]
+                    )
+                )
                 input_value = step_context.intermediate_storage.get_intermediate_from_address(
                     step_context,
                     dagster_type=step_input.dagster_type,
@@ -555,6 +594,9 @@ def _input_values_from_intermediate_storage(step_context):
                     address=step_input.addresses[source_handle],
                 )
             else:
+                check.invariant(
+                    step_context.intermediate_storage.has_intermediate(step_context, source_handle)
+                )
                 input_value = step_context.intermediate_storage.get_intermediate(
                     context=step_context,
                     step_output_handle=source_handle,
