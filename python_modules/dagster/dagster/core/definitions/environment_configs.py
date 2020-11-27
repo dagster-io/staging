@@ -148,6 +148,7 @@ def define_environment_cls(creation_data):
                         solids=creation_data.solids,
                         ignored_solids=creation_data.ignored_solids,
                         dependency_structure=creation_data.dependency_structure,
+                        parent_handle=None,
                     )
                 ),
                 "storage": storage_field,
@@ -301,9 +302,7 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
         )
 
 
-def define_solid_dictionary_cls(
-    solids, ignored_solids, dependency_structure, parent_handle=None,
-):
+def define_solid_dictionary_cls(solids, ignored_solids, dependency_structure, parent_handle):
     check.list_param(solids, "solids", of_type=Solid)
     ignored_solids = check.opt_list_param(ignored_solids, "ignored_solids", of_type=Solid)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
