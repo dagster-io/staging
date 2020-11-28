@@ -4,9 +4,13 @@ from dagster import check
 from dagster.config.evaluate_value_result import EvaluateValueResult
 from dagster.config.validate import process_config
 from dagster.core.definitions.dependency import SolidHandle
-from dagster.core.definitions.environment_configs import define_solid_dictionary_cls
+from dagster.core.definitions.environment_configs import (
+    ScopedResourceSet,
+    define_solid_dictionary_cls,
+)
 from dagster.core.definitions.graph import GraphDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
+from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.errors import (
     DagsterConfigMappingFunctionError,
@@ -26,11 +30,14 @@ class SolidConfigEntry(namedtuple("_SolidConfigEntry", "handle solid_config")):
         )
 
 
-class DescentStack(namedtuple("_DescentStack", "pipeline_def handle")):
-    def __new__(cls, pipeline_def, handle):
+class DescentStack(namedtuple("_DescentStack", "pipeline_def resource_defs handle")):
+    def __new__(cls, pipeline_def, resource_defs, handle):
         return super(DescentStack, cls).__new__(
             cls,
             pipeline_def=check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition),
+            resource_defs=check.dict_param(
+                resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition
+            ),
             handle=check.opt_inst_param(handle, "handle", SolidHandle),
         )
 
@@ -52,7 +59,7 @@ class DescentStack(namedtuple("_DescentStack", "pipeline_def handle")):
         return self._replace(handle=SolidHandle(solid.name, parent=self.handle))
 
 
-def composite_descent(pipeline_def, solids_config):
+def composite_descent(pipeline_def, resource_defs, solids_config):
     """
     This function is responsible for constructing the dictionary
     of SolidConfig (indexed by handle) that will be passed into the
@@ -76,7 +83,8 @@ def composite_descent(pipeline_def, solids_config):
     return {
         handle.to_string(): solid_config
         for handle, solid_config in _composite_descent(
-            parent_stack=DescentStack(pipeline_def, None), solids_config_dict=solids_config,
+            parent_stack=DescentStack(pipeline_def, resource_defs, None),
+            solids_config_dict=solids_config,
         )
     }
 
@@ -180,6 +188,7 @@ def _get_mapped_solids_dict(composite, graph_def, current_stack, current_solid_c
         ignored_solids=None,
         dependency_structure=graph_def.dependency_structure,
         parent_handle=current_stack.handle,
+        resources=ScopedResourceSet(current_stack.resource_defs),
     )
 
     # process against that new type

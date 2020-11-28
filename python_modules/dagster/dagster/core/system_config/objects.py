@@ -131,7 +131,9 @@ class EnvironmentConfig(
         config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
         config_mapped_logger_configs = config_map_loggers(pipeline_def, config_value, mode)
 
-        solid_config_dict = composite_descent(pipeline_def, config_value.get("solids", {}))
+        solid_config_dict = composite_descent(
+            pipeline_def, mode_def.resource_defs, config_value.get("solids", {})
+        )
 
         return EnvironmentConfig(
             solids=solid_config_dict,
