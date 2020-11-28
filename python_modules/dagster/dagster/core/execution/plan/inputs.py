@@ -244,3 +244,6 @@ class StepInput(namedtuple("_StepInput", "name dagster_type source")):
     @property
     def dependency_keys(self):
         return self.source.step_key_dependencies
+
+
+AllSourceTypes = (FromStepOutput, FromMultipleSources, FromDefaultValue, FromConfig)
