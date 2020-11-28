@@ -5,7 +5,7 @@ from dagster import check
 from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOperationType
 from dagster.core.errors import DagsterAddressIOError, DagsterObjectStoreError
 from dagster.core.execution.context.system import SystemExecutionContext
-from dagster.core.execution.plan.inputs import FromMultipleSources, FromStepOutput
+from dagster.core.execution.plan.inputs import AllSourceTypes, FromMultipleSources, FromStepOutput
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 from dagster.utils.backcompat import experimental
@@ -56,6 +56,12 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
             return all(
                 self.is_input_source_missing(context, inner_source)
                 for inner_source in source.sources
+            )
+        else:
+            check.inst(
+                source,
+                AllSourceTypes,
+                "You've added a new source type. Ensure that no new behavior is needed.",
             )
 
         return False

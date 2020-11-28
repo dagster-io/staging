@@ -3,7 +3,7 @@ import time
 from dagster import check
 from dagster.core.errors import DagsterIncompleteExecutionPlanError, DagsterUnknownStepStateError
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.plan.inputs import FromMultipleSources, FromStepOutput
+from dagster.core.execution.plan.inputs import AllSourceTypes, FromMultipleSources, FromStepOutput
 from dagster.core.execution.retries import Retries
 from dagster.utils import pop_delayed_interrupts
 
@@ -128,12 +128,24 @@ class ActiveExecution:
                     if isinstance(inp.source, FromMultipleSources):
                         if any([key in self._success for key in inp.dependency_keys]):
                             should_skip = False
+                    else:
+                        check.inst(
+                            inp.source,
+                            AllSourceTypes,
+                            "If this fails you've added a new source type",
+                        )
 
                 # but no missing regular inputs
                 for inp in step.step_inputs:
                     if isinstance(inp.source, FromStepOutput):
                         if any([key not in self._success for key in inp.dependency_keys]):
                             should_skip = True
+                    else:
+                        check.inst(
+                            inp.source,
+                            AllSourceTypes,
+                            "If this fails you've added a new source type",
+                        )
 
                 if should_skip:
                     new_steps_to_skip.append(step_key)
