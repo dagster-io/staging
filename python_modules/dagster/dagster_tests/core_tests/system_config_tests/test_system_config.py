@@ -23,6 +23,7 @@ from dagster.config.validate import process_config
 from dagster.core.definitions import create_environment_type, create_run_config_schema
 from dagster.core.definitions.environment_configs import (
     EnvironmentClassCreationData,
+    ScopedResourceSet,
     define_solid_config_cls,
     define_solid_dictionary_cls,
 )
@@ -263,6 +264,7 @@ def test_solid_config_error():
         solids=pipeline_def.solids,
         ignored_solids=None,
         dependency_structure=pipeline_def.dependency_structure,
+        resources=ScopedResourceSet(pipeline_def.get_mode_definition().resource_defs),
         parent_handle=None,
     )
 

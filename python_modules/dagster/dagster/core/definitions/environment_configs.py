@@ -148,6 +148,7 @@ def define_environment_cls(creation_data):
                         solids=creation_data.solids,
                         ignored_solids=creation_data.ignored_solids,
                         dependency_structure=creation_data.dependency_structure,
+                        resources=ScopedResourceSet(creation_data.mode_definition.resource_defs),
                     )
                 ),
                 "storage": storage_field,
@@ -171,10 +172,11 @@ def selector_for_named_defs(named_defs):
     return Selector({named_def.name: def_config_field(named_def) for named_def in named_defs})
 
 
-def get_inputs_field(solid, handle, dependency_structure):
+def get_inputs_field(solid, handle, dependency_structure, resources):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
+    check.inst_param(resources, "resources", ScopedResourceSet)
 
     if not solid.definition.has_configurable_inputs:
         return None
@@ -200,9 +202,10 @@ def get_inputs_field(solid, handle, dependency_structure):
     return Field(Shape(inputs_field_fields))
 
 
-def get_outputs_field(solid, handle):
+def get_outputs_field(solid, handle, resources):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
+    check.inst_param(resources, "resources", ScopedResourceSet)
 
     solid_def = solid.definition
 
@@ -233,25 +236,42 @@ def solid_config_field(fields, ignored):
         return Field(Shape(remove_none_entries(fields)))
 
 
-def construct_leaf_solid_config(solid, handle, dependency_structure, config_schema, ignored):
+# This class might be a bit premature, but it is so that we can subset the resources
+# that are available to the particular solid and to ensure an API where we can
+# ask for contextual resources and assert that they have certain properties
+# Current the callsites are unscoped
+class ScopedResourceSet:
+    def __init__(self, resource_defs):
+        self._resource_defs = check.dict_param(
+            resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition
+        )
+
+
+def construct_leaf_solid_config(
+    solid, handle, dependency_structure, config_schema, ignored, resources
+):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
     check.bool_param(ignored, "ignored")
+    check.inst_param(resources, "resources", ScopedResourceSet)
 
     return solid_config_field(
         {
-            "inputs": get_inputs_field(solid, handle, dependency_structure),
-            "outputs": get_outputs_field(solid, handle),
+            "inputs": get_inputs_field(solid, handle, dependency_structure, resources),
+            "outputs": get_outputs_field(solid, handle, resources),
             "config": config_schema,
         },
         ignored=ignored,
     )
 
 
-def define_isolid_field(solid, handle, dependency_structure, ignored):
+def define_isolid_field(solid, handle, dependency_structure, ignored, resources):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
+    check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
+    check.bool_param(ignored, "ignored")
+    check.inst_param(resources, "resources", ScopedResourceSet)
 
     # All solids regardless of compositing status get the same inputs and outputs
     # config. The only thing the varies is on extra element of configuration
@@ -265,7 +285,7 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
 
     if isinstance(solid.definition, SolidDefinition):
         return construct_leaf_solid_config(
-            solid, handle, dependency_structure, solid.definition.config_schema, ignored,
+            solid, handle, dependency_structure, solid.definition.config_schema, ignored, resources,
         )
 
     graph_def = check.inst(solid.definition, GraphDefinition)
@@ -280,19 +300,21 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
             # ...and in both cases, the correct schema for 'config' key is exposed by this property:
             graph_def.config_schema,
             ignored,
+            resources,
         )
         # This case omits a 'solids' key, thus if a composite solid is `configured` or has a field
         # mapping, the user cannot stub any config, inputs, or outputs for inner (child) solids.
     else:
         return solid_config_field(
             {
-                "inputs": get_inputs_field(solid, handle, dependency_structure),
-                "outputs": get_outputs_field(solid, handle),
+                "inputs": get_inputs_field(solid, handle, dependency_structure, resources),
+                "outputs": get_outputs_field(solid, handle, resources),
                 "solids": Field(
                     define_solid_dictionary_cls(
                         solids=graph_def.solids,
                         ignored_solids=None,
                         dependency_structure=graph_def.dependency_structure,
+                        resources=resources,
                         parent_handle=handle,
                     )
                 ),
@@ -302,24 +324,33 @@ def define_isolid_field(solid, handle, dependency_structure, ignored):
 
 
 def define_solid_dictionary_cls(
-    solids, ignored_solids, dependency_structure, parent_handle=None,
+    solids, ignored_solids, dependency_structure, resources, parent_handle=None,
 ):
     check.list_param(solids, "solids", of_type=Solid)
     ignored_solids = check.opt_list_param(ignored_solids, "ignored_solids", of_type=Solid)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
     check.opt_inst_param(parent_handle, "parent_handle", SolidHandle)
+    check.inst_param(resources, "resources", ScopedResourceSet)
 
     fields = {}
     for solid in solids:
         if solid.definition.has_config_entry:
             fields[solid.name] = define_isolid_field(
-                solid, SolidHandle(solid.name, parent_handle), dependency_structure, ignored=False
+                solid,
+                SolidHandle(solid.name, parent_handle),
+                dependency_structure,
+                ignored=False,
+                resources=resources,
             )
 
     for solid in ignored_solids:
         if solid.definition.has_config_entry:
             fields[solid.name] = define_isolid_field(
-                solid, SolidHandle(solid.name, parent_handle), dependency_structure, ignored=True
+                solid,
+                SolidHandle(solid.name, parent_handle),
+                dependency_structure,
+                ignored=True,
+                resources=resources,
             )
 
     return Shape(fields)
