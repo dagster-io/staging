@@ -18,6 +18,10 @@ from dagster import (
 from dagster.core.system_config.composite_descent import composite_descent
 
 
+def do_composite_descent_for_test(pipeline_def, config):
+    return composite_descent(pipeline_def=pipeline_def, resource_defs={}, solids_config=config)
+
+
 def test_single_level_pipeline():
     @solid(config_schema=int)
     def return_int(context):
@@ -42,7 +46,9 @@ def test_single_solid_pipeline_composite_descent():
     def return_int_pipeline():
         return_int()
 
-    solid_config_dict = composite_descent(return_int_pipeline, {"return_int": {"config": 3}})
+    solid_config_dict = do_composite_descent_for_test(
+        return_int_pipeline, {"return_int": {"config": 3}}
+    )
 
     assert solid_config_dict["return_int"].config == 3
 
@@ -65,7 +71,7 @@ def test_single_layer_pipeline_composite_descent():
     def return_int_pipeline_passthrough():
         return_int_passthrough()
 
-    solid_config_dict = composite_descent(
+    solid_config_dict = do_composite_descent_for_test(
         return_int_pipeline_passthrough,
         {"return_int_passthrough": {"solids": {"return_int": {"config": 34}}}},
     )
@@ -95,7 +101,7 @@ def test_single_layer_pipeline_hardcoded_config_mapping():
     def return_int_hardcode_wrap_pipeline():
         return_int_hardcode_wrap()
 
-    solid_config_dict = composite_descent(return_int_hardcode_wrap_pipeline, {})
+    solid_config_dict = do_composite_descent_for_test(return_int_hardcode_wrap_pipeline, {})
 
     assert solid_config_dict["return_int_hardcode_wrap.return_int"].config == 35
 
@@ -116,7 +122,7 @@ def test_single_layer_pipeline_computed_config_mapping():
     def return_int_hardcode_wrap_pipeline():
         return_int_plus_one()
 
-    solid_config_dict = composite_descent(
+    solid_config_dict = do_composite_descent_for_test(
         return_int_hardcode_wrap_pipeline, {"return_int_plus_one": {"config": {"number": 23}}}
     )
 
@@ -160,7 +166,7 @@ def test_mix_layer_computed_mapping():
     def layered_config():
         layer_one()
 
-    solid_config_dict = composite_descent(
+    solid_config_dict = do_composite_descent_for_test(
         layered_config,
         {
             "layer_one": {
@@ -179,7 +185,7 @@ def test_mix_layer_computed_mapping():
     )
 
     with pytest.raises(DagsterInvalidConfigError) as exc_info:
-        composite_descent(
+        do_composite_descent_for_test(
             layered_config,
             {
                 "layer_one": {
@@ -239,7 +245,7 @@ def test_nested_input_via_config_mapping():
     def wrap_add_one_pipeline():
         wrap_add_one()
 
-    solid_config_dict = composite_descent(wrap_add_one_pipeline, {})
+    solid_config_dict = do_composite_descent_for_test(wrap_add_one_pipeline, {})
     assert solid_config_dict["wrap_add_one.add_one"].inputs == {"num": {"value": 2}}
 
     result = execute_pipeline(wrap_add_one_pipeline)
@@ -267,7 +273,7 @@ def test_double_nested_input_via_config_mapping():
     def wrap_pipeline_double_nested_input():
         double_wrap()
 
-    solid_handle_dict = composite_descent(
+    solid_handle_dict = do_composite_descent_for_test(
         wrap_pipeline_double_nested_input, {"double_wrap": {"inputs": {"num": {"value": 2}}}}
     )
     assert solid_handle_dict["double_wrap.wrap_solid.number"].inputs == {"num": {"value": 4}}
@@ -405,7 +411,7 @@ def test_direct_composite_descent_with_error():
         nesting_wrap_wrong_type_at_leaf.alias("layer0")()
 
     with pytest.raises(DagsterInvalidConfigError) as exc_info:
-        composite_descent(
+        do_composite_descent_for_test(
             wrap_pipeline_with_error, {"layer0": {"config": {"nesting_override": 214}}}
         )
 
