@@ -309,6 +309,7 @@ def validate_run_started(
 
     if partition_time:
         assert run.tags[PARTITION_NAME_TAG] == partition_time.strftime(partition_fmt)
+        assert run.run_config == _solid_config(partition_time)
 
     if expected_success:
         assert run.status == PipelineRunStatus.STARTED or run.status == PipelineRunStatus.SUCCESS
@@ -1096,20 +1097,19 @@ def test_multi_runs(external_repo_context, capfd):
 
             expected_datetime = pendulum.datetime(year=2019, month=2, day=28)
 
+            runs = instance.get_runs()
             validate_tick(
                 ticks[0],
                 external_schedule,
                 expected_datetime,
                 JobTickStatus.SUCCESS,
-                [run.run_id for run in instance.get_runs()],
+                [run.run_id for run in runs],
             )
+
             wait_for_all_runs_to_start(instance)
-            validate_run_started(
-                instance.get_runs()[0], execution_time=pendulum.datetime(2019, 2, 28),
-            )
-            validate_run_started(
-                instance.get_runs()[1], execution_time=pendulum.datetime(2019, 2, 28),
-            )
+            runs = instance.get_runs()
+            validate_run_started(runs[0], execution_time=pendulum.datetime(2019, 2, 28))
+            validate_run_started(runs[1], execution_time=pendulum.datetime(2019, 2, 28))
 
             captured = capfd.readouterr()
 
@@ -1117,14 +1117,39 @@ def test_multi_runs(external_repo_context, capfd):
                 captured.out
                 == f"""2019-02-27 18:00:01 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: multi_run_schedule
 2019-02-27 18:00:01 - SchedulerDaemon - INFO - Launching runs for multi_run_schedule at 2019-02-28 00:00:00+0000
-2019-02-27 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {instance.get_runs()[1].run_id} for multi_run_schedule
-2019-02-27 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {instance.get_runs()[0].run_id} for multi_run_schedule
+2019-02-27 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {runs[1].run_id} for multi_run_schedule
+2019-02-27 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {runs[0].run_id} for multi_run_schedule
 """
             )
 
-            # verify idempotence
+            # Verify idempotence
             launch_scheduled_runs(instance, logger(), pendulum.now("UTC"))
             assert instance.get_runs_count() == 2
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
             assert ticks[0].status == JobTickStatus.SUCCESS
+
+        freeze_datetime = freeze_datetime.add(days=2)
+        with pendulum.test(freeze_datetime):
+            capfd.readouterr()
+
+            # Traveling two more days in the future before running results in two new ticks
+            launch_scheduled_runs(instance, logger(), pendulum.now("UTC"))
+            assert instance.get_runs_count() == 6
+            ticks = instance.get_job_ticks(schedule_origin.get_id())
+            assert len(ticks) == 3
+            assert len([tick for tick in ticks if tick.status == JobTickStatus.SUCCESS]) == 3
+            runs = instance.get_runs()
+
+            captured = capfd.readouterr()
+
+            assert (
+                captured.out
+                == f"""2019-03-01 18:00:01 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: multi_run_schedule
+2019-03-01 18:00:01 - SchedulerDaemon - INFO - Launching runs for multi_run_schedule at the following times: 2019-03-01 00:00:00+0000, 2019-03-02 00:00:00+0000
+2019-03-01 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {runs[3].run_id} for multi_run_schedule
+2019-03-01 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {runs[2].run_id} for multi_run_schedule
+2019-03-01 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {runs[1].run_id} for multi_run_schedule
+2019-03-01 18:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {runs[0].run_id} for multi_run_schedule
+"""
+            )
