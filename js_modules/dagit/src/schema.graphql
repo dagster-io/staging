@@ -848,10 +848,16 @@ type Instance {
   runLauncher: RunLauncher
   assetsSupported: Boolean!
   executablePath: String!
+  daemonHealthList: [DaemonHealth!]!
 }
 
 type RunLauncher {
   name: String!
+}
+
+type DaemonHealth {
+  daemonType: String!
+  lastHeartbeat: Float
 }
 
 union AssetsOrError = AssetConnection | AssetsNotSupportedError | PythonError
