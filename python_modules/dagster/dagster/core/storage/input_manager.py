@@ -1,13 +1,20 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from functools import update_wrapper
 
-from dagster import check
-from dagster.config.field_utils import check_user_facing_opt_config_param
+from dagster import Field, check
+from dagster.config.field_utils import Selector, check_user_facing_opt_config_param
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.resource import ResourceDefinition
+from dagster.core.errors import DagsterInvariantViolationError
 
 
-class InputManagerDefinition(ResourceDefinition):
+class IInputManagerDefinition(ABC):
+    @abstractproperty
+    def input_config_schema(self):
+        pass
+
+
+class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
     def __init__(
         self,
         resource_fn=None,
@@ -96,3 +103,55 @@ class _InputManagerDecoratorCallable:
         update_wrapper(input_manager_def, wrapped=load_fn)
 
         return input_manager_def
+
+
+class CompositeInputManager:
+    def __init__(self, input_managers, default=None):
+        self._input_managers = input_managers
+        self._default = default
+
+    def get_asset(self, context):
+        if context.input_config:
+            input_manager_key = list(context.input_config.keys())[0]
+        elif self._default:
+            input_manager_key = self._default
+        else:
+            raise DagsterInvariantViolationError("TODO MESSAGE")
+
+        chosen_input_manager = self._input_managers[input_manager_key]
+        sub_context = context.replace_input_config(
+            (context.input_config or {}).get(input_manager_key)
+        )
+        return chosen_input_manager.get_asset(sub_context)
+
+
+def build_composite_input_manager(input_manager_defs, default=None):
+    input_config_schema = Field(
+        Selector(
+            {
+                key: manager_def.input_config_schema
+                for key, manager_def in input_manager_defs.items()
+                if manager_def.input_config_schema
+            }
+        ),
+        is_required=(default is None),
+    )
+    resource_config_schema = {
+        key: manager_def.config_schema
+        for key, manager_def in input_manager_defs.items()
+        if manager_def.config_schema
+    }
+
+    def resource_fn(init_context):
+        config = init_context.resource_config
+        input_managers = {
+            key: manager_def.resource_fn(init_context.replace_config(config.get(key)))
+            for key, manager_def in input_manager_defs.items()
+        }
+        return CompositeInputManager(input_managers, default=default)
+
+    return InputManagerDefinition(
+        resource_fn=resource_fn,
+        config_schema=resource_config_schema,
+        input_config_schema=input_config_schema,
+    )
