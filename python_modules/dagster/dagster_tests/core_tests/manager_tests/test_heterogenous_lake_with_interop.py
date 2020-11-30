@@ -4,7 +4,7 @@ data through a bunch of different stores, potentially (but not necessarily)
 controlled by different teams.
 
 There are many cases where one cannot rely on upstream solids to provide
-the information to load the input. 
+the information to load the input.
 
 1) You are using a pre-existing solid that has captured the externalities
 using output definitions and instead has just dynamically generated the
@@ -25,15 +25,15 @@ where you do not fully understand or want to modify the legacy code upstream.
 
 More concretely this example is data lake one --> dbt over snowflake --> data lake two.
 
-One could imagine this, for example, during a migration process. 
+One could imagine this, for example, during a migration process.
 """
 
 import re
 
 import pytest
-from dagster import InputDefinition as RealInputDefinition
+from dagster import InputDefinition
 from dagster import Nothing
-from dagster import OutputDefinition as RealOutputDefinition
+from dagster import OutputDefinition
 from dagster import PythonObjectDagsterType, pipeline, solid
 from dagster.core.errors import DagsterInvalidDefinitionError
 
@@ -42,18 +42,6 @@ DataLakeOneDataFrame = PythonObjectDagsterType(name="DataLakeOneDataFrame", pyth
 
 # e.g. a pandas dataframe
 DataLakeTwoDataFrame = PythonObjectDagsterType(name="DataLakeTwoDataFrame", python_type=str)
-
-
-def InputDefinition(
-    *args, manager_key=None, metadata=None, **kwargs
-):  # pylint: disable=unused-argument
-    return RealInputDefinition(*args, **kwargs)
-
-
-def OutputDefinition(
-    *args, manager_key=None, metadata=None, **kwargs
-):  # pylint: disable=unused-argument
-    return RealOutputDefinition(*args, **kwargs)
 
 
 @solid(
@@ -171,18 +159,13 @@ def test_pipeline_ctor_fails_on_nothing_dep():
     # Expected to fail because of the nothing to df connection
     # Imagine one did not have control over the dbt solid
     # and wanted to avoid have a stub solid that loaded a data frame
-    with pytest.raises(
-        DagsterInvalidDefinitionError,
-        match=re.escape("returns type Nothing (which produces no value)"),
-    ):
+    @pipeline
+    def heterogenous_lake_with_interop_with_nothing():
+        dbt_complete = fake_dbt_solid_that_returns_nothing(initial_ingest())
+        create_table_cc(dbt_complete)
+        create_table_dd(dbt_complete)
 
-        @pipeline
-        def heterogenous_lake_with_interop_with_nothing():
-            dbt_complete = fake_dbt_solid_that_returns_nothing(initial_ingest())
-            create_table_cc(dbt_complete)
-            create_table_dd(dbt_complete)
-
-        assert heterogenous_lake_with_interop_with_nothing
+    assert heterogenous_lake_with_interop_with_nothing
 
 
 # These capture a simpler case where it is a single data lake stored

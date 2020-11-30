@@ -9,9 +9,7 @@ via the config system. (There are users that already do this)
 """
 
 
-import pytest
 from dagster import Selector, execute_pipeline, execute_solid, pipeline, solid
-from dagster.core.errors import DagsterInvalidConfigError
 
 
 @solid(config_schema=[Selector({"add": int, "subtract": int})])
@@ -72,7 +70,7 @@ def test_little_pipeline():
         little_tree,
         run_config={
             "solids": {
-                "alice_op": {"inputs": {"num": 5}, "config": [{"add": 3}, {"subtract": 1},]},
+                "alice_op": {"inputs": {"num": 5}, "config": [{"add": 3}, {"subtract": 1}]},
                 "bob_op": {"inputs": {"num": 7}, "config": [{"add": 1}]},
                 "binary_operation": {"config": "add"},
             }
@@ -108,20 +106,19 @@ def test_filtering_dsl_inputs():
         )
 
     assert todo
-    with pytest.raises(DagsterInvalidConfigError):
-        execute_pipeline(
-            todo,
-            run_config={
-                "solids": {
-                    "alice_op": {"inputs": {"num": 5}},
-                    "bob_op": {"inputs": {"num": 7}},
-                    # here we hypothesize a scenario where the user wants to be able
-                    # to allow users to inject pre-defined filters (e.g filter all rows
-                    # where column is null) on inputs so that less technical users
-                    # can debug and fix things while modifying config only
-                    "preexisting_config_with_optional_input_config": {
-                        "inputs": {"left": {"operations": {"add": 1}}}
-                    },
-                }
-            },
-        )
+    execute_pipeline(
+        todo,
+        run_config={
+            "solids": {
+                "alice_op": {"inputs": {"num": 5}},
+                "bob_op": {"inputs": {"num": 7}},
+                # here we hypothesize a scenario where the user wants to be able
+                # to allow users to inject pre-defined filters (e.g filter all rows
+                # where column is null) on inputs so that less technical users
+                # can debug and fix things while modifying config only
+                "preexisting_config_with_optional_input_config": {
+                    "inputs": {"left": {"operations": {"add": 1}}}
+                },
+            }
+        },
+    )
