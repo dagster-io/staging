@@ -22,9 +22,19 @@ def run_command():
             time.sleep(0.5)
 
 
+@click.command(
+    name="health-check", help="Check for heartbeats from the daemon.",
+)
+def health_check_command():
+    with DagsterInstance.get() as instance:
+        if not DagsterDaemonController.daemon_healthy(instance):
+            sys.exit(1)
+
+
 def create_dagster_daemon_cli():
     commands = {
         "run": run_command,
+        "health-check": health_check_command,
     }
 
     @click.group(commands=commands)
