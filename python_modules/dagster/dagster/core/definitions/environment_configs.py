@@ -6,7 +6,8 @@ from dagster.config.field import check_opt_field_param
 from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
 from dagster.core.errors import DagsterInvalidDefinitionError
-from dagster.core.storage.asset_store import AssetStoreDefinition
+from dagster.core.storage.input_manager import IInputManagerDefinition
+from dagster.core.storage.output_manager import HasOutputConfigSchema
 from dagster.core.storage.system_storage import (
     default_intermediate_storage_defs,
     default_system_storage_defs,
@@ -183,25 +184,18 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
 
     inputs_field_fields = {}
     for name, inp in solid.definition.input_dict.items():
+        inp_handle = SolidInputHandle(solid, inp)
         if inp.manager_key:
-            input_config_schema = resource_defs[inp.manager_key].input_config_schema
-            if input_config_schema:
-                inputs_field_fields[name] = input_config_schema
+            input_field = get_input_manager_input_field(solid, inp, resource_defs)
+        elif dependency_structure.has_deps(inp_handle):
+            input_field = get_object_manager_input_field(
+                inp_handle, dependency_structure, resource_defs
+            )
         elif inp.dagster_type.loader:
-            inp_handle = SolidInputHandle(solid, inp)
-            # If this input is not satisfied by a dependency you must
-            # provide it via config
-            if not dependency_structure.has_deps(inp_handle) and not solid.container_maps_input(
-                name
-            ):
+            input_field = get_type_loader_input_field(solid, name, inp)
 
-                inputs_field_fields[name] = Field(
-                    inp.dagster_type.loader.schema_type,
-                    is_required=(
-                        not solid.definition.input_has_default(name)
-                        and not solid.definition.input_def_named(name).manager_key
-                    ),
-                )
+        if input_field:
+            inputs_field_fields[name] = input_field
 
     if not inputs_field_fields:
         return None
@@ -209,44 +203,96 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
     return Field(Shape(inputs_field_fields))
 
 
-def get_outputs_field(solid, handle):
+def get_object_manager_input_field(solid_input_handle, dependency_structure, resource_defs):
+    source_output_handles = dependency_structure.get_deps_list(solid_input_handle)
+    source_asset_store_keys = set(
+        handle.output_def.asset_store_key for handle in source_output_handles
+    )
+    source_input_config_schemas = [
+        resource_defs[key].input_config_schema
+        if isinstance(resource_defs[key], IInputManagerDefinition)
+        else None
+        for key in source_asset_store_keys
+    ]
+    if len(source_input_config_schemas) > 1 and any(_ for _ in source_input_config_schemas):
+        # TODO make this error more informative about how to address the problem
+        raise DagsterInvalidDefinitionError(
+            "Input is downstream from outputs with different asset store keys, and the asset stores have config schemas"
+        )
+    if source_input_config_schemas:
+        return source_input_config_schemas[0]
+
+
+def get_input_manager_input_field(solid, input_def, resource_defs):
+    if input_def.manager_key not in resource_defs:
+        raise DagsterInvalidDefinitionError(
+            f'Input "{input_def.name}" for solid "{solid.name}" requires manager_key '
+            f'"{input_def.manager_key}", but no resource has been provided. Please include a '
+            f"resource definition for that key in the resource_defs of your ModeDefinition."
+        )
+
+    if isinstance(resource_defs[input_def.manager_key], IInputManagerDefinition):
+        input_config_schema = resource_defs[input_def.manager_key].input_config_schema
+        if input_config_schema:
+            return input_config_schema
+
+    return None
+
+
+def get_type_loader_input_field(solid, input_name, input_def):
+    # If this input is not satisfied by a dependency you must
+    # provide it via config
+    if not solid.container_maps_input(input_name):
+        return Field(
+            input_def.dagster_type.loader.schema_type,
+            is_required=(
+                not solid.definition.input_has_default(input_name) and not input_def.manager_key
+            ),
+        )
+
+    return None
+
+
+def get_outputs_field(solid, handle, resource_defs):
     check.inst_param(solid, "solid", Solid)
     check.inst_param(handle, "handle", SolidHandle)
+    check.dict_param(resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition)
 
-    solid_def = solid.definition
+    output_manager_fields = {}
+    type_materializer_fields = {}
+    for name, output_def in solid.definition.output_dict.items():
+        output_manager_output_field = get_output_manager_output_field(output_def, resource_defs)
+        type_output_field = get_type_output_field(output_def)
+        if output_manager_output_field:
+            output_manager_fields[name] = output_manager_output_field
+        elif type_output_field:
+            type_materializer_fields[name] = type_output_field
 
-    if not solid_def.has_configurable_outputs:
-        return None
+    if output_manager_fields:
+        return Field(Shape(output_manager_fields))
+    elif type_materializer_fields:
+        return Field(Array(Shape(type_materializer_fields)), is_required=False)
 
-    output_dict_fields = {}
-    for name, out in solid_def.output_dict.items():
-        if out.dagster_type.materializer:
-            output_dict_fields[name] = Field(
-                out.dagster_type.materializer.schema_type, is_required=False
-            )
-
-    output_entry_dict = Shape(output_dict_fields)
-
-    return Field(Array(output_entry_dict), is_required=False)
+    return None
 
 
-def get_store_outputs_field(solid, handle, resource_defs):
-    check.inst_param(solid, "solid", Solid)
-    check.inst_param(handle, "handle", SolidHandle)
+def get_output_manager_output_field(output_def, resource_defs):
+    asset_store_def = resource_defs.get(output_def.asset_store_key)
+    if (
+        asset_store_def
+        and isinstance(asset_store_def, HasOutputConfigSchema)
+        and asset_store_def.output_config_schema
+    ):
+        return asset_store_def.output_config_schema
 
-    store_outputs_field_fields = {}
-    for name, out in solid.definition.output_dict.items():
-        asset_store_def = resource_defs[out.asset_store_key]
-        if (
-            isinstance(asset_store_def, AssetStoreDefinition)
-            and asset_store_def.output_config_schema
-        ):
-            store_outputs_field_fields[name] = asset_store_def.output_config_schema
+    return None
 
-    if not store_outputs_field_fields:
-        return None
 
-    return Field(Shape(store_outputs_field_fields))
+def get_type_output_field(output_def):
+    if output_def.dagster_type.materializer:
+        return Field(output_def.dagster_type.materializer.schema_type, is_required=False)
+
+    return None
 
 
 def solid_config_field(fields, ignored):
@@ -272,8 +318,7 @@ def construct_leaf_solid_config(
     return solid_config_field(
         {
             "inputs": get_inputs_field(solid, handle, dependency_structure, resource_defs),
-            "outputs": get_outputs_field(solid, handle),
-            "store_outputs": get_store_outputs_field(solid, handle, resource_defs),
+            "outputs": get_outputs_field(solid, handle, resource_defs),
             "config": config_schema,
         },
         ignored=ignored,
@@ -324,8 +369,7 @@ def define_isolid_field(solid, handle, dependency_structure, resource_defs, igno
         return solid_config_field(
             {
                 "inputs": get_inputs_field(solid, handle, dependency_structure, resource_defs),
-                "outputs": get_outputs_field(solid, handle),
-                "store_outputs": get_store_outputs_field(solid, handle, resource_defs),
+                "outputs": get_outputs_field(solid, handle, resource_defs),
                 "solids": Field(
                     define_solid_dictionary_cls(
                         solids=graph_def.solids,

@@ -66,6 +66,7 @@ class InputDefinition:
         description=None,
         default_value=_NoValueSentinel,
         manager_key=None,
+        metadata=None,
     ):
         ""
         self._name = check_valid_name(name)
@@ -77,6 +78,8 @@ class InputDefinition:
         self._default_value = _check_default_value(self._name, self._dagster_type, default_value)
 
         self._manager_key = check.opt_str_param(manager_key, "manager_key")
+
+        self._metadata = metadata
 
     @property
     def name(self):
@@ -102,6 +105,10 @@ class InputDefinition:
     @property
     def manager_key(self):
         return self._manager_key
+
+    @property
+    def metadata(self):
+        return self._metadata
 
     def mapping_to(self, solid_name, input_name):
         """Create an input mapping to an input of a child solid.

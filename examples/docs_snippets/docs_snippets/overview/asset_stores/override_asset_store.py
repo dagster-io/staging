@@ -40,12 +40,12 @@ def my_asset_store(_):
     return MyAssetStore()
 
 
-@input_manager()
+@input_manager
 def spark_table_loader(context, _resource_config, _input_config):
     return read_spark_from_table(name=context.output_name)
 
 
-@solid(output_defs=[OutputDefinition(asset_store_key="my_asset_store")])
+@solid(output_defs=[OutputDefinition(manager_key="my_asset_store")])
 def solid1(_):
     """Return a Pandas DataFrame"""
 

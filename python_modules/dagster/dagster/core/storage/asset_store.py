@@ -1,6 +1,5 @@
 import os
 import pickle
-from abc import abstractmethod
 from collections import namedtuple
 from functools import update_wrapper
 
@@ -10,10 +9,11 @@ from dagster.config.field_utils import check_user_facing_opt_config_param
 from dagster.config.source import StringSource
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.events import AssetKey, EventMetadataEntry
-from dagster.core.definitions.resource import resource
+from dagster.core.definitions.resource import ResourceDefinition
 from dagster.core.events import AssetMaterialization
 from dagster.core.execution.context.system import AssetStoreContext
-from dagster.core.storage.input_manager import InputManager, InputManagerDefinition
+from dagster.core.storage.input_manager import IInputManagerDefinition, InputManager
+from dagster.core.storage.output_manager import HasOutputConfigSchema, OutputManager
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
 from dagster.utils.backcompat import experimental
@@ -29,7 +29,7 @@ class AssetStoreHandle(namedtuple("_AssetStoreHandle", "asset_store_key asset_me
         )
 
 
-class AssetStoreDefinition(InputManagerDefinition):
+class AssetStoreDefinition(ResourceDefinition, IInputManagerDefinition, HasOutputConfigSchema):
     def __init__(
         self,
         resource_fn=None,
@@ -40,6 +40,7 @@ class AssetStoreDefinition(InputManagerDefinition):
         input_config_schema=None,
         output_config_schema=None,
     ):
+        self._input_config_schema = input_config_schema
         self._output_config_schema = output_config_schema
         super(AssetStoreDefinition, self).__init__(
             resource_fn=resource_fn,
@@ -47,15 +48,18 @@ class AssetStoreDefinition(InputManagerDefinition):
             description=description,
             _configured_config_mapping_fn=_configured_config_mapping_fn,
             version=version,
-            input_config_schema=input_config_schema,
         )
+
+    @property
+    def input_config_schema(self):
+        return self._input_config_schema
 
     @property
     def output_config_schema(self):
         return self._output_config_schema
 
 
-class AssetStore(InputManager):
+class AssetStore(InputManager, OutputManager):
     """
     Base class for user-provided asset store.
 
@@ -63,15 +67,6 @@ class AssetStore(InputManager):
     data object that can be tracked by the Dagster machinery and ``get_asset`` to retrieve a data
     object.
     """
-
-    @abstractmethod
-    def set_asset(self, context, obj):
-        """The user-definied write method that stores a data object.
-
-        Args:
-            context (AssetStoreContext): The context of the step output that produces this asset.
-            obj (Any): The data object to be stored.
-        """
 
 
 def asset_store(
@@ -145,7 +140,7 @@ class InMemoryAssetStore(AssetStore):
         return self.values[keys]
 
 
-@resource
+@asset_store
 def mem_asset_store(_):
     return InMemoryAssetStore()
 
@@ -195,7 +190,7 @@ class PickledObjectFilesystemAssetStore(AssetStore):
             return pickle.load(read_obj)
 
 
-@resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
+@asset_store(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
 @experimental
 def fs_asset_store(init_context):
     """Built-in filesystem asset store that stores and retrieves values using pickling.
@@ -298,7 +293,7 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
             return pickle.load(read_obj)
 
 
-@resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
+@asset_store(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
 @experimental
 def custom_path_fs_asset_store(init_context):
     """Built-in asset store that allows users to custom output file path per output definition.
@@ -330,3 +325,44 @@ def custom_path_fs_asset_store(init_context):
             sample_data()
     """
     return CustomPathPickledObjectFilesystemAssetStore(init_context.resource_config["base_dir"])
+
+
+class CombinedObjectManager(AssetStore):
+    def __init__(self, input_manager, output_manager):
+        self._input_manager = input_manager
+        self._output_manager = output_manager
+
+    def get_asset(self, context):
+        # TODO: scope down to subspace of resource config
+        return self._input_manager.get_asset(context)
+
+    def set_asset(self, context, obj):
+        # TODO: scope down to subspace of resource config
+        return self._output_manager.set_asset(context, obj)
+
+
+def build_object_manager(input_manager_def, output_manager_def):
+    # TODO: description, etc.
+    resource_config_schema = {}
+    if input_manager_def.config_schema:
+        resource_config_schema["input_manager"] = input_manager_def.config_schema
+
+    if output_manager_def.config_schema:
+        resource_config_schema["output_manager"] = output_manager_def.config_schema
+
+    def resource_fn(init_context):
+        config = init_context.resource_config
+        input_manager = input_manager_def.resource_fn(
+            init_context.replace_config(config.get("input_manager"))
+        )
+        output_manager = output_manager_def.resource_fn(
+            init_context.replace_config(config.get("output_manager"))
+        )
+        return CombinedObjectManager(input_manager, output_manager)
+
+    return AssetStoreDefinition(
+        resource_fn=resource_fn,
+        config_schema=resource_config_schema,
+        input_config_schema=input_manager_def.input_config_schema,
+        output_config_schema=output_manager_def.output_config_schema,
+    )

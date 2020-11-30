@@ -9,7 +9,17 @@ via the config system. (There are users that already do this)
 """
 
 
-from dagster import Selector, execute_pipeline, execute_solid, pipeline, solid
+from dagster import (
+    AssetStore,
+    Field,
+    ModeDefinition,
+    Selector,
+    execute_pipeline,
+    execute_solid,
+    pipeline,
+    solid,
+)
+from dagster.core.storage.asset_store import asset_store
 
 
 @solid(config_schema=[Selector({"add": int, "subtract": int})])
@@ -89,9 +99,23 @@ def test_little_pipeline():
 
 
 def test_filtering_dsl_inputs():
+    class InputMultiplyObjectManager(AssetStore):
+        def __init__(self):
+            self.values = {}
+
+        def set_asset(self, context, obj):
+            keys = tuple(context.get_run_scoped_output_identifier())
+            self.values[keys] = obj
+
+        def get_asset(self, context):
+            keys = tuple(context.get_run_scoped_output_identifier())
+            return self.values[keys] * context.input_config.get("multiplier", 1)
+
+    @asset_store(input_config_schema={"multiplier": Field(int, is_required=False)})
+    def input_multiply_object_manager(_):
+        return InputMultiplyObjectManager()
+
     @solid
-    # insert manager key here that allows for optional config on the input
-    # even if there is an upstream dep
     def preexisting_with_optional_input_config(_, left, right):
         # shut lint up
         assert left
@@ -99,7 +123,9 @@ def test_filtering_dsl_inputs():
         # imagine some computation crafted by an engineer here
         return left
 
-    @pipeline
+    @pipeline(
+        mode_defs=[ModeDefinition(resource_defs={"asset_store": input_multiply_object_manager})]
+    )
     def todo():
         preexisting_with_optional_input_config(
             unary_operation.alias("alice_op")(), unary_operation.alias("bob_op")()
@@ -110,15 +136,13 @@ def test_filtering_dsl_inputs():
         todo,
         run_config={
             "solids": {
-                "alice_op": {"inputs": {"num": 5}},
-                "bob_op": {"inputs": {"num": 7}},
+                "alice_op": {"inputs": {"num": 5}, "config": [{"add": 3}, {"subtract": 1}]},
+                "bob_op": {"inputs": {"num": 7}, "config": [{"add": 3}, {"subtract": 1}]},
                 # here we hypothesize a scenario where the user wants to be able
                 # to allow users to inject pre-defined filters (e.g filter all rows
                 # where column is null) on inputs so that less technical users
                 # can debug and fix things while modifying config only
-                "preexisting_config_with_optional_input_config": {
-                    "inputs": {"left": {"operations": {"add": 1}}}
-                },
+                "preexisting_with_optional_input_config": {"inputs": {"left": {"multiplier": 5}}},
             }
         },
     )
