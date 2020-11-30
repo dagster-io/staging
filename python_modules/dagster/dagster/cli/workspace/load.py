@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 from collections import OrderedDict
 
 import six
@@ -72,7 +73,7 @@ def _repo_location_origins_from_config(workspace_config, yaml_path):
     return location_origins
 
 
-def _location_origin_from_module_config(python_module_config, executable_path=sys.executable):
+def _location_origin_from_module_config(python_module_config, executable_path):
     module_name, attribute, location_name = _get_module_config_data(python_module_config)
     return location_origin_from_module_name(module_name, attribute, location_name, executable_path)
 
@@ -112,7 +113,7 @@ def location_origin_from_module_name(
     return _create_python_env_location_origin(loadable_target_origin, location_name)
 
 
-def _location_origin_from_package_config(python_package_config, executable_path=sys.executable):
+def _location_origin_from_package_config(python_package_config, executable_path):
     module_name, attribute, location_name = _get_package_config_data(python_package_config)
     return location_origin_from_package_name(module_name, attribute, location_name, executable_path)
 
@@ -147,10 +148,9 @@ def location_origin_from_package_name(
     return _create_python_env_location_origin(loadable_target_origin, location_name,)
 
 
-def _location_origin_from_python_file_config(
-    python_file_config, yaml_path, executable_path=sys.executable
-):
+def _location_origin_from_python_file_config(python_file_config, yaml_path, executable_path):
     check.str_param(yaml_path, "yaml_path")
+    check.str_param(executable_path, "executable_path")
 
     absolute_path, attribute, location_name, working_directory = _get_python_file_config_data(
         python_file_config, yaml_path
@@ -258,10 +258,14 @@ def _location_origin_from_location_config(location_config, yaml_path):
         return _location_origin_from_grpc_server_config(location_config["grpc_server"], yaml_path)
 
     elif "python_environment" in location_config:
+        warnings.warn(
+            "The `python_environment` key is deprecated. Use `python_file`, `python_package`, or "
+            "`python_module` with the `executable_path` attribute set if you want to load a "
+            "repository in a different python environment."
+        )
         return _location_origin_from_python_environment_config(
             location_config["python_environment"], yaml_path
         )
-
     else:
         check.not_implemented("Unsupported location config: {}".format(location_config))
 
@@ -279,14 +283,20 @@ def _location_origin_from_target_config(target_config, yaml_path):
     check.param_invariant(is_target_config(target_config), "target_config")
     check.str_param(yaml_path, "yaml_path")
 
+    executable_path = target_config.get("python_file", sys.executable)
+
     if "python_file" in target_config:
-        return _location_origin_from_python_file_config(target_config["python_file"], yaml_path)
+        return _location_origin_from_python_file_config(
+            target_config["python_file"], yaml_path, executable_path
+        )
 
     elif "python_module" in target_config:
-        return _location_origin_from_module_config(target_config["python_module"])
+        return _location_origin_from_module_config(target_config["python_module"], executable_path)
 
     elif "python_package" in target_config:
-        return _location_origin_from_package_config(target_config["python_package"])
+        return _location_origin_from_package_config(
+            target_config["python_package"], executable_path
+        )
 
     else:
         check.failed("invalid target_config")
