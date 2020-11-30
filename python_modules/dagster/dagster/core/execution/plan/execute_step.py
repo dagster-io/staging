@@ -524,7 +524,7 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
             loader = getattr(step_context.resources, manager_key)
 
             asset_store_context = step_context.for_asset_store(
-                source_handle, asset_store_handle, input_name
+                source_handle, asset_store_handle, source.config_data
             )
             obj = loader.get_asset(asset_store_context)
 
@@ -542,10 +542,7 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
             )
     elif isinstance(source, FromLoader):
         loader = getattr(step_context.resources, source.manager_key)
-        solid_config = step_context.environment_config.solids.get(
-            step_context.solid_handle.to_string()
-        )
-        load_input_context = LoadInputContext(input_name, solid_config.inputs.get(input_name))
+        load_input_context = LoadInputContext(input_name, source.config_data)
         return loader.get_asset(load_input_context)
     elif isinstance(source, FromConfig):
         with user_code_error_boundary(

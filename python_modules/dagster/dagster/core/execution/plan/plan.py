@@ -217,21 +217,15 @@ def get_step_input(
     check.opt_list_param(parent_step_inputs, "parent_step_inputs", of_type=StepInput)
 
     input_handle = solid.input_handle(input_name)
+    solid_config = plan_builder.environment_config.solids.get(str(handle))
+    input_config = solid_config.inputs.get(input_name) if solid_config else None
 
     input_def = solid.definition.input_def_named(input_name)
     if input_def.manager_key and not dependency_structure.has_deps(input_handle):
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source=FromLoader(input_def.manager_key),
-        )
-
-    solid_config = plan_builder.environment_config.solids.get(str(handle))
-    if solid_config and input_name in solid_config.inputs:
-        return StepInput(
-            name=input_name,
-            dagster_type=input_def.dagster_type,
-            source=FromConfig(solid_config.inputs[input_name]),
+            source=FromLoader(input_def.manager_key, config_data=input_config),
         )
 
     if dependency_structure.has_singular_dep(input_handle):
@@ -240,7 +234,9 @@ def get_step_input(
             name=input_name,
             dagster_type=input_def.dagster_type,
             source=FromStepOutput(
-                plan_builder.get_output_handle(solid_output_handle), manager_key=input_def.manager_key
+                plan_builder.get_output_handle(solid_output_handle),
+                manager_key=input_def.manager_key,
+                config_data=input_config,
             ),
         )
 
@@ -254,10 +250,16 @@ def get_step_input(
                     FromStepOutput(
                         plan_builder.get_output_handle(solid_output_handle),
                         manager_key=input_def.manager_key,
+                        config_data=input_config,
                     )
                     for solid_output_handle in solid_output_handles
                 ],
             ),
+        )
+
+    if solid_config and input_name in solid_config.inputs:
+        return StepInput(
+            name=input_name, dagster_type=input_def.dagster_type, source=FromConfig(input_config),
         )
 
     if solid.container_maps_input(input_name):

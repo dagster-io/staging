@@ -145,7 +145,7 @@ class InMemoryAssetStore(AssetStore):
         return self.values[keys]
 
 
-@resource
+@asset_store
 def mem_asset_store(_):
     return InMemoryAssetStore()
 
