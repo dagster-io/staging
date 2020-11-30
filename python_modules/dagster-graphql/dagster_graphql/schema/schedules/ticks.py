@@ -3,7 +3,7 @@ from dagster.core.scheduler.job import JobTickStatus
 
 def tick_specific_data_from_dagster_tick(graphene_info, tick):
     if tick.status == JobTickStatus.SUCCESS:
-        run_id = tick.run_id
+        run_id = tick.run_ids[0]
         run = None
         if graphene_info.context.instance.has_run(run_id):
             run = graphene_info.schema.type_named("PipelineRun")(
