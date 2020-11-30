@@ -13,6 +13,7 @@ import * as qs from 'query-string';
 import * as React from 'react';
 
 import {showCustomAlert} from 'src/CustomAlertProvider';
+import {useConfirmation} from 'src/CustomConfirmationProvider';
 import {SharedToaster, ROOT_SERVER_URI} from 'src/DomUtils';
 import {HighlightedCodeBlock} from 'src/HighlightedCodeBlock';
 import {REEXECUTE_PIPELINE_UNKNOWN} from 'src/runs/RunActionButtons';
@@ -25,6 +26,8 @@ import {
   getReexecutionVariables,
   handleLaunchResult,
 } from 'src/runs/RunUtils';
+import {Cancel} from 'src/runs/types/Cancel';
+import {Delete} from 'src/runs/types/Delete';
 import {PipelineEnvironmentYamlQuery} from 'src/runs/types/PipelineEnvironmentYamlQuery';
 import {RunActionMenuFragment} from 'src/runs/types/RunActionMenuFragment';
 import {RunTableRunFragment} from 'src/runs/types/RunTableRunFragment';
@@ -159,11 +162,55 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
   onChangeSelection: (runs: RunTableRunFragment[]) => void;
 }> = React.memo(({selected, onChangeSelection}) => {
   const {refetch} = React.useContext(RunsQueryRefetchContext);
-  const [cancel] = useMutation(CANCEL_MUTATION, {onCompleted: refetch});
-  const [destroy] = useMutation(DELETE_MUTATION, {onCompleted: refetch});
+  const [cancel] = useMutation<Cancel>(CANCEL_MUTATION, {onCompleted: refetch});
+  const [destroy] = useMutation<Delete>(DELETE_MUTATION, {onCompleted: refetch});
+  const confirm = useConfirmation();
 
   const cancelable = selected.filter((r) => r.canTerminate);
-  const deletable = selected.filter((r) => !r.canTerminate);
+  // const deletable = selected.filter((r) => !r.canTerminate);
+
+  const onDelete = async () => {
+    const count = selected.length;
+    await confirm({
+      title: `Confirm: Delete runs`,
+      description: `${count} ${count === 1 ? 'run' : 'runs'} will be deleted.`,
+    });
+
+    const promises = selected.map((run) => destroy({variables: {runId: run.runId}}));
+    const results = await Promise.all(promises);
+
+    const {successes, failures} = results.reduce(
+      (accum, result) => {
+        const run = result.data?.deletePipelineRun;
+        if (!run || 'message' in run) {
+          return {...accum, failures: [...accum.failures, result]};
+        }
+        return {...accum, successes: [...accum.successes, result]};
+      },
+      {successes: [], failures: []},
+    );
+
+    failures.forEach((failure) => {
+      SharedToaster.show({
+        message: failure || `Could not delete run`,
+        icon: 'error',
+        intent: Intent.DANGER,
+      });
+    });
+
+    if (successes.length) {
+      const successCount = successes.length;
+      SharedToaster.show({
+        message: `Deleted ${successCount} ${successCount === 1 ? 'run' : 'runs'}`,
+        icon: 'confirm',
+        intent: Intent.SUCCESS,
+      });
+    }
+
+    // we could remove just the runs that are deleted and leave the others, but we may
+    // need to test it for a while and see what seems natural.
+    onChangeSelection([]);
+  };
 
   return (
     <Popover
@@ -176,24 +223,21 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
             onClick={async () => {
               for (const run of cancelable) {
                 const result = await cancel({variables: {runId: run.runId}});
-                showToastFor(result.data.terminatePipelineExecution, `Run ${run.runId} cancelled.`);
+                if (result?.data) {
+                  showToastFor(
+                    result.data.terminatePipelineExecution,
+                    `Run ${run.runId} cancelled.`,
+                  );
+                }
               }
               onChangeSelection([]);
             }}
           />
           <MenuItem
             icon="trash"
-            text={`Delete ${deletable.length} ${deletable.length === 1 ? 'run' : 'runs'}`}
-            disabled={deletable.length === 0}
-            onClick={async () => {
-              for (const run of deletable) {
-                const result = await destroy({variables: {runId: run.runId}});
-                showToastFor(result.data.deletePipelineRun, `Run ${run.runId} deleted.`);
-              }
-              // we could remove just the runs that are deleted and leave the others, but we may
-              // need to test it for a while and see what seems natural.
-              onChangeSelection([]);
-            }}
+            text={`Delete ${selected.length} ${selected.length === 1 ? 'run' : 'runs'}`}
+            disabled={selected.length === 0}
+            onClick={onDelete}
           />
         </Menu>
       }
