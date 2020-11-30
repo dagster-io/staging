@@ -259,21 +259,20 @@ class _ScheduleLaunchContext:
     def __init__(self, tick, instance, stream):
         self._instance = instance
         self._tick = tick  # placeholder for the current tick
-        self._to_resolve = []
         self._stream = stream
 
-    def add_state(self, status, **kwargs):
-        self._to_resolve.append(self._tick.with_status(status=status, **kwargs))
+    def update_state(self, status, **kwargs):
+        self._tick = self._tick.with_status(status=status, **kwargs)
+
+    def add_run(self, run_id):
+        self._tick = self._tick.with_run(run_id)
 
     @property
     def stream(self):
         return self._stream
 
     def write(self):
-        to_update = self._to_resolve[0] if self._to_resolve else self._tick
-        self._instance.update_job_tick(to_update)
-        for tick in self._to_resolve[1:]:
-            self._instance.create_job_tick(tick)
+        self._instance.update_job_tick(self._tick)
 
 
 @contextmanager
@@ -284,7 +283,7 @@ def _schedule_tick_context(instance, stream, tick_data):
         yield context
     except Exception:  # pylint: disable=broad-except
         error_data = serializable_error_info_from_exc_info(sys.exc_info())
-        context.add_state(JobTickStatus.FAILURE, error=error_data)
+        context.update_state(JobTickStatus.FAILURE, error=error_data)
         stream.send(ScheduledExecutionFailed(run_id=None, errors=[error_data]))
     finally:
         context.write()
@@ -532,13 +531,13 @@ def _launch_scheduled_executions(
 
     if isinstance(schedule_execution_data, ExternalScheduleExecutionErrorData):
         error = schedule_execution_data.error
-        tick_context.add_state(JobTickStatus.FAILURE, error=error)
+        tick_context.update_state(JobTickStatus.FAILURE, error=error)
         tick_context.stream.send(ScheduledExecutionFailed(run_id=None, errors=[error]))
         return
 
     if not schedule_execution_data.run_requests:
         # Update tick to skipped state and return
-        tick_context.add_state(JobTickStatus.SKIPPED)
+        tick_context.update_state(JobTickStatus.SKIPPED)
         tick_context.stream.send(ScheduledExecutionSkipped())
         return
 
@@ -589,7 +588,8 @@ def _launch_run(
         external_pipeline_origin=external_pipeline.get_external_origin(),
     )
 
-    tick_context.add_state(JobTickStatus.SUCCESS, run_id=possibly_invalid_pipeline_run.run_id)
+    tick_context.update_state(JobTickStatus.SUCCESS)
+    tick_context.add_run(run_id=possibly_invalid_pipeline_run.run_id)
 
     # If there were errors, inject them into the event log and fail the run
     if len(errors) > 0:
