@@ -30,6 +30,7 @@ import {
   TopLabel,
   TopLabelTilted,
 } from 'src/partitions/RunMatrixUtils';
+import {LaunchPartitionBackfill} from 'src/partitions/types/LaunchPartitionBackfill';
 import {PartitionsBackfillSelectorQuery} from 'src/partitions/types/PartitionsBackfillSelectorQuery';
 import {PipelineRunStatus} from 'src/types/globalTypes';
 import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
@@ -189,6 +190,17 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
       intent: Intent.SUCCESS,
     });
     onLaunch?.(backfillId);
+  };
+
+  const onError = (data: LaunchPartitionBackfill | null | undefined) => {
+    const result = data?.launchPartitionBackfill;
+    if (result && 'message' in result) {
+      SharedToaster.show({
+        message: result.message,
+        icon: 'error',
+        intent: Intent.DANGER,
+      });
+    }
   };
 
   const {
@@ -447,6 +459,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
             fromFailure={options.fromFailure}
             tags={tags}
             onSuccess={onSuccess}
+            onError={onError}
             repoAddress={repoAddress}
           />
         </div>
@@ -462,7 +475,7 @@ const LaunchBackfillButton: React.FC<{
   fromFailure?: boolean;
   tags?: PipelineRunTag[];
   onSuccess?: (backfillId: string) => void;
-  onError?: () => void;
+  onError: (data: LaunchPartitionBackfill | null | undefined) => void;
   repoAddress: RepoAddress;
 }> = ({
   partitionSetName,
@@ -476,7 +489,7 @@ const LaunchBackfillButton: React.FC<{
 }) => {
   const repositorySelector = repoAddressToSelector(repoAddress);
   const mounted = React.useRef(true);
-  const [launchBackfill] = useMutation(LAUNCH_PARTITION_BACKFILL_MUTATION);
+  const [launchBackfill] = useMutation<LaunchPartitionBackfill>(LAUNCH_PARTITION_BACKFILL_MUTATION);
   React.useEffect(() => {
     mounted.current = true;
     return () => {
@@ -506,7 +519,7 @@ const LaunchBackfillButton: React.FC<{
     if (data && data.launchPartitionBackfill.__typename === 'PartitionBackfillSuccess') {
       onSuccess?.(data.launchPartitionBackfill.backfillId);
     } else {
-      onError?.();
+      onError?.(data);
     }
   };
 
