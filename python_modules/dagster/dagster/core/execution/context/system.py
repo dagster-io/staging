@@ -288,7 +288,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
     def for_hook(self, hook_def):
         return HookContext(self._execution_context_data, self.log, hook_def, self.step)
 
-    def for_asset_store(self, step_output_handle, asset_store_handle, input_name=None):
+    def for_asset_store(self, step_output_handle, asset_store_handle, input_config=None):
         from dagster.core.storage.asset_store import AssetStoreHandle
 
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
@@ -319,7 +319,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             solid_def=self.solid_def,
             source_run_id=source_run_id,
             output_config=solid_config.store_outputs.get(step_output_handle.output_name),
-            input_config=solid_config.inputs.get(input_name) if input_name else None,
+            input_config=input_config,
         )
 
     def get_asset_store(self, asset_store_key):
@@ -416,8 +416,9 @@ class HookContext(SystemExecutionContext):
         return solid_config.config if solid_config else None
 
 
-class LoadInputContext(namedtuple("_LoadInputContext", "input_name, input_config")):
-    pass
+class RootInputContext(namedtuple("_RootInputContext", "input_name input_config")):
+    def replace_input_config(self, input_config):
+        return RootInputContext(self.input_name, input_config)
 
 
 class AssetStoreContext(
@@ -483,3 +484,15 @@ class AssetStoreContext(
             List[str, ...]: A list of identifiers, i.e. run id, step key, and output name
         """
         return [self.source_run_id, self.step_key, self.output_name]
+
+    def replace_input_config(self, input_config):
+        return AssetStoreContext(
+            step_key=self.step_key,
+            output_name=self.output_name,
+            asset_metadata=self.asset_metadata,
+            pipeline_name=self.pipeline_name,
+            solid_def=self.solid_def,
+            source_run_id=self.source_run_id,
+            output_config=self.output_config,
+            input_config=input_config,
+        )

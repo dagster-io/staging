@@ -10,8 +10,8 @@ from dagster.core.errors import (
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.plan.inputs import (
     FromConfig,
-    FromLoader,
     FromMultipleSources,
+    FromRootLoader,
     FromStepOutput,
 )
 from dagster.core.execution.plan.plan import ExecutionPlan
@@ -244,7 +244,7 @@ def get_required_resource_keys_for_step(
                     resource_keys = resource_keys.union(
                         step_input.dagster_type.loader.required_resource_keys()
                     )
-        elif isinstance(step_input.source, FromLoader):
+        elif isinstance(step_input.source, FromRootLoader):
             resource_keys = resource_keys.union({step_input.source.manager_key})
         elif isinstance(step_input.source, FromStepOutput):
             if step_input.source.manager_key:

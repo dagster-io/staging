@@ -72,8 +72,9 @@ class ModeDefinition(
         check.opt_dict_param(
             resource_defs, "resource_defs", key_type=str, value_type=ResourceDefinition
         )
-        if resource_defs and "asset_store" in resource_defs:
+        if resource_defs and "asset_store" in resource_defs or "object_manager" in resource_defs:
             resource_defs_with_defaults = resource_defs
+            resource_defs_with_defaults["asset_store"] = resource_defs["object_manager"]
         else:
             from dagster.core.storage.asset_store import mem_asset_store
 

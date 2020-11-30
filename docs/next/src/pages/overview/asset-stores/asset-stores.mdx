@@ -46,7 +46,7 @@ endBefore:end_marker
 
 The provided `context` argument is an <PyObject module="dagster" object="AssetStoreContext" />.  The API documentation for <PyObject module="dagster" object="AssetStoreContext" /> lists all the fields that are available to `set_asset` and `get_asset` implementations.
 
-## Selecting an asset store per output
+## Selecting an AssetStore per output
 
 Not all the outputs in a pipeline should necessarily be stored the same way.  Maybe some of the outputs are Pandas DataFrames that should live in tables, and others are random Python objects that should be pickled on the filesystem.
 
@@ -77,5 +77,3 @@ file:/docs_snippets/docs_snippets/overview/asset_stores/asset_metadata.py
 startAfter:asset_store_start_marker
 endBefore:asset_store_end_marker
 ```
-
-## Loading inputs from an asset store
