@@ -17,7 +17,6 @@ import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
 import {MetadataTable} from 'src/ui/MetadataTable';
 import {Code, Heading} from 'src/ui/Text';
-import {FontFamily} from 'src/ui/styles';
 import {useScheduleSelector} from 'src/workspace/WorkspaceContext';
 import {repoAddressAsString} from 'src/workspace/repoAddressAsString';
 import {RepoAddress} from 'src/workspace/types';
@@ -88,28 +87,49 @@ export const ScheduleDetails: React.FC<{
     }
   };
 
+  const running = status === ScheduleStatus.RUNNING;
+
   return (
     <Group direction="vertical" spacing={12}>
-      <Group alignItems="center" direction="horizontal" spacing={8}>
+      <Group alignItems="center" direction="horizontal" spacing={4}>
         <Heading>{name}</Heading>
-        <Box margin={{left: 4}}>
+        <Box margin={{left: 12}}>
           <Switch
-            checked={status === ScheduleStatus.RUNNING}
+            checked={running}
             inline
             large
             disabled={toggleOffInFlight || toggleOnInFlight}
             innerLabelChecked="on"
             innerLabel="off"
             onChange={onChangeSwitch}
-            style={{margin: '4px 0 0 0'}}
+            style={{margin: '2px 0 0 0'}}
           />
         </Box>
+        {futureTicks.results.length && running ? (
+          <Group direction="horizontal" spacing={4}>
+            <div>Next tick:</div>
+            <TimestampDisplay
+              timestamp={futureTicks.results[0].timestamp}
+              timezone={executionTimezone}
+            />
+          </Group>
+        ) : null}
       </Group>
       <MetadataTable
         rows={[
           {
-            key: 'Schedule ID',
-            value: <div style={{fontFamily: FontFamily.monospace}}>{scheduleOriginId}</div>,
+            key: 'Latest tick',
+            value: latestTick ? (
+              <Group direction="horizontal" spacing={8} alignItems="center">
+                <TimestampDisplay timestamp={latestTick.timestamp} timezone={executionTimezone} />
+                <TickTag
+                  status={latestTick.status}
+                  eventSpecificData={latestTick.tickSpecificData}
+                />
+              </Group>
+            ) : (
+              'None'
+            ),
           },
           {
             key: 'Pipeline',
@@ -142,31 +162,6 @@ export const ScheduleDetails: React.FC<{
               >
                 {partitionSet.name}
               </Link>
-            ) : (
-              'None'
-            ),
-          },
-          {
-            key: 'Latest tick',
-            value: latestTick ? (
-              <Group direction="horizontal" spacing={8} alignItems="center">
-                <TimestampDisplay timestamp={latestTick.timestamp} timezone={executionTimezone} />
-                <TickTag
-                  status={latestTick.status}
-                  eventSpecificData={latestTick.tickSpecificData}
-                />
-              </Group>
-            ) : (
-              'None'
-            ),
-          },
-          {
-            key: 'Next tick',
-            value: futureTicks.results.length ? (
-              <TimestampDisplay
-                timestamp={futureTicks.results[0].timestamp}
-                timezone={executionTimezone}
-              />
             ) : (
               'None'
             ),
