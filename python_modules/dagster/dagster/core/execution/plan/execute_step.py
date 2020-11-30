@@ -24,12 +24,12 @@ from dagster.core.errors import (
     user_code_error_boundary,
 )
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.context.system import LoadInputContext, SystemStepExecutionContext
+from dagster.core.execution.context.system import RootInputContext, SystemStepExecutionContext
 from dagster.core.execution.plan.inputs import (
     FromConfig,
     FromDefaultValue,
-    FromLoader,
     FromMultipleSources,
+    FromRootLoader,
     FromStepOutput,
     StepInputSource,
 )
@@ -341,7 +341,7 @@ def _create_step_events_for_output(step_context, output):
 
 def _set_addressable_asset(step_context, step_output_handle, value):
     asset_store_handle = step_context.execution_plan.get_asset_store_handle(step_output_handle)
-    asset_store = step_context.get_asset_store(asset_store_handle.asset_store_key)
+    asset_store = getattr(step_context.resources, asset_store_handle.asset_store_key)
     asset_store_context = step_context.for_asset_store(step_output_handle, asset_store_handle)
 
     materializations = asset_store.set_asset(asset_store_context, value)
@@ -524,7 +524,7 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
             loader = getattr(step_context.resources, manager_key)
 
             asset_store_context = step_context.for_asset_store(
-                source_handle, asset_store_handle, input_name
+                source_handle, asset_store_handle, source.config_data
             )
             obj = loader.get_asset(asset_store_context)
 
@@ -540,12 +540,9 @@ def _value_for_input_source(step_context, input_name, dagster_type, source, chec
             return step_context.intermediate_storage.get_intermediate(
                 context=step_context, step_output_handle=source_handle, dagster_type=dagster_type,
             )
-    elif isinstance(source, FromLoader):
+    elif isinstance(source, FromRootLoader):
         loader = getattr(step_context.resources, source.manager_key)
-        solid_config = step_context.environment_config.solids.get(
-            step_context.solid_handle.to_string()
-        )
-        load_input_context = LoadInputContext(input_name, solid_config.inputs.get(input_name))
+        load_input_context = RootInputContext(input_name, source.config_data)
         return loader.get_asset(load_input_context)
     elif isinstance(source, FromConfig):
         with user_code_error_boundary(

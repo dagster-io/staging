@@ -10,7 +10,7 @@ def read_csv(_path):
     return 1
 
 
-@input_manager()
+@input_manager
 def my_hardcoded_csv_loader(_context, _resource_config, _input_config):
     return read_csv("hard/coded/path")
 

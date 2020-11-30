@@ -5,8 +5,8 @@ from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.execution.plan.inputs import (
     FromConfig,
     FromDefaultValue,
-    FromLoader,
     FromMultipleSources,
+    FromRootLoader,
     FromStepOutput,
 )
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -62,7 +62,7 @@ def _resolve_step_input_versions(step, step_versions):
             return dagster_type.loader.compute_loaded_input_version(input_source.config_data)
         elif isinstance(input_source, FromDefaultValue):
             return join_and_hash(repr(input_source.value))
-        elif isinstance(input_source, FromLoader):
+        elif isinstance(input_source, FromRootLoader):
             return None
         else:
             check.failed(

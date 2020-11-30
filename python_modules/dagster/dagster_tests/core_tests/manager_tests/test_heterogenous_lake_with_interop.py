@@ -31,11 +31,19 @@ One could imagine this, for example, during a migration process.
 import re
 
 import pytest
-from dagster import InputDefinition
-from dagster import Nothing
-from dagster import OutputDefinition
-from dagster import PythonObjectDagsterType, pipeline, solid
+from dagster import (
+    AssetStore,
+    InputDefinition,
+    ModeDefinition,
+    Nothing,
+    OutputDefinition,
+    PythonObjectDagsterType,
+    execute_pipeline,
+    pipeline,
+    solid,
+)
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.storage.asset_store import asset_store
 
 # e.g. a pyspark dataframe
 DataLakeOneDataFrame = PythonObjectDagsterType(name="DataLakeOneDataFrame", python_type=str)
@@ -145,7 +153,18 @@ def create_table_dd(_, df: str) -> str:
 
 
 def test_three_stage_pipeline_ctor():
-    @pipeline
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "snowflake_for_lake_two": snowflake_for_lake_two,
+                    "snowflake_for_team_two": snowflake_for_team_two,
+                    "data_lake_one": data_lake_one,
+                    "data_lake_two": data_lake_two,
+                }
+            )
+        ]
+    )
     def heterogenous_lake_with_interop():
         dbt_complete = fake_dbt_solid(initial_ingest())
         create_table_cc(dbt_complete)
@@ -153,25 +172,62 @@ def test_three_stage_pipeline_ctor():
 
     assert heterogenous_lake_with_interop
 
+    execute_pipeline(
+        heterogenous_lake_with_interop,
+        run_config={"solids": {"initial_ingest": {"inputs": {"in_path": "some_value"}}}},
+    )
+
 
 def test_pipeline_ctor_fails_on_nothing_dep():
 
-    # Expected to fail because of the nothing to df connection
-    # Imagine one did not have control over the dbt solid
-    # and wanted to avoid have a stub solid that loaded a data frame
-    @pipeline
-    def heterogenous_lake_with_interop_with_nothing():
-        dbt_complete = fake_dbt_solid_that_returns_nothing(initial_ingest())
-        create_table_cc(dbt_complete)
-        create_table_dd(dbt_complete)
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=re.escape("returns type Nothing (which produces no value)"),
+    ):
+        # Expected to fail because of the nothing to df connection
+        # Imagine one did not have control over the dbt solid
+        # and wanted to avoid have a stub solid that loaded a data frame
+        @pipeline
+        def heterogenous_lake_with_interop_with_nothing():
+            dbt_complete = fake_dbt_solid_that_returns_nothing(initial_ingest())
+            create_table_cc(dbt_complete)
+            create_table_dd(dbt_complete)
 
-    assert heterogenous_lake_with_interop_with_nothing
+        assert heterogenous_lake_with_interop_with_nothing
 
 
 # These capture a simpler case where it is a single data lake stored
 # but two different compute substrates. One wants to be able to author
 # the consume_some_table solid without modifying create_some_table or
 # the manager it references
+
+
+class DataLake(AssetStore):
+    def get_asset(self, context):
+        return "some_str"
+
+    def set_asset(self, context, obj):
+        pass
+
+
+@asset_store
+def data_lake_one(_):
+    return DataLake()
+
+
+@asset_store
+def data_lake_two(_):
+    return DataLake()
+
+
+@asset_store
+def snowflake_for_lake_two(_):
+    return DataLake()
+
+
+@asset_store
+def snowflake_for_team_two(_):
+    return DataLake()
 
 
 @solid(
@@ -202,8 +258,19 @@ def consume_some_table(_, df):
 
 
 def test_cross_the_dataframe_chasm():
-    @pipeline
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "data_lake_one": data_lake_one,
+                    "data_lake_two": data_lake_two,
+                    "snowflake_for_lake_two": snowflake_for_lake_two,
+                }
+            )
+        ]
+    )
     def chasm_cross():
         consume_some_table(create_some_table())
 
     assert chasm_cross
+    execute_pipeline(chasm_cross)
