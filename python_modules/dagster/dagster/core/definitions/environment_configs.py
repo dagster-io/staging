@@ -183,12 +183,35 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
 
     inputs_field_fields = {}
     for name, inp in solid.definition.input_dict.items():
+        inp_handle = SolidInputHandle(solid, inp)
         if inp.manager_key:
+            if inp.manager_key not in resource_defs:
+                raise DagsterInvalidDefinitionError(
+                    f'Input "{name}" for solid "{solid.name}" requires manager_key '
+                    f'"{inp.manager_key}", but no resource has been provided.  Please include a '
+                    f"resource definition for that key in the resource_defs of your ModeDefinition."
+                )
+
             input_config_schema = resource_defs[inp.manager_key].input_config_schema
             if input_config_schema:
                 inputs_field_fields[name] = input_config_schema
+        elif dependency_structure.has_deps(inp_handle):
+            source_output_handles = dependency_structure.get_deps_list(inp_handle)
+            source_asset_store_keys = set(
+                handle.output_def.asset_store_key for handle in source_output_handles
+            )
+            source_input_config_schemas = [
+                resource_defs[key].input_config_schema for key in source_asset_store_keys
+            ]
+            if len(source_input_config_schemas) > 1 and any(_ for _ in source_input_config_schemas):
+                # TODO make this error more informative about how to address
+                raise DagsterInvalidDefinitionError(
+                    "Input is downstream from outputs with different asset store keys, and the asset stores have config schemas"
+                )
+            input_config_schema = source_input_config_schemas[0]
+            if input_config_schema:
+                inputs_field_fields[name] = input_config_schema
         elif inp.dagster_type.loader:
-            inp_handle = SolidInputHandle(solid, inp)
             # If this input is not satisfied by a dependency you must
             # provide it via config
             if not dependency_structure.has_deps(inp_handle) and not solid.container_maps_input(
@@ -236,9 +259,10 @@ def get_store_outputs_field(solid, handle, resource_defs):
 
     store_outputs_field_fields = {}
     for name, out in solid.definition.output_dict.items():
-        asset_store_def = resource_defs[out.asset_store_key]
+        asset_store_def = resource_defs.get(out.asset_store_key)
         if (
-            isinstance(asset_store_def, AssetStoreDefinition)
+            asset_store_def
+            and isinstance(asset_store_def, AssetStoreDefinition)
             and asset_store_def.output_config_schema
         ):
             store_outputs_field_fields[name] = asset_store_def.output_config_schema
