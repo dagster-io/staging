@@ -7,7 +7,6 @@ from enum import Enum
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
 from dagster.serdes import Persistable, whitelist_for_persistence, whitelist_for_serdes
-from dagster.utils import 
 from dagster.utils.backcompat import experimental_arg_warning
 
 from .utils import DEFAULT_OUTPUT

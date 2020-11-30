@@ -300,6 +300,13 @@ def is_tuple(obj_tuple, of_type=None, desc=None):
     return _check_tuple_items(obj_tuple, of_type)
 
 
+def is_tuple_of_shape(obj_tuple, of_shape=None, desc=None):
+    if not isinstance(obj_tuple, tuple):
+        raise_with_traceback(_type_mismatch_error(obj_tuple, tuple, desc))
+
+    return _check_tuple_shape(obj_tuple, of_shape)
+
+
 def list_param(obj_list, param_name, of_type=None):
     from dagster.utils import frozenlist
 
@@ -334,6 +341,13 @@ def tuple_param(obj, param_name, of_type=None):
     return _check_tuple_items(obj, of_type)
 
 
+def tuple_param_of_shape(obj, param_name, of_shape):
+    if not isinstance(obj, tuple):
+        raise_with_traceback(_param_type_mismatch_exception(obj, tuple, param_name))
+
+    return _check_tuple_shape(obj, of_shape)
+
+
 def matrix_param(matrix, param_name, of_type=None):
     matrix = list_param(matrix, param_name, of_type=list)
     if not matrix:
@@ -356,6 +370,16 @@ def opt_tuple_param(obj, param_name, default=None, of_type=None):
         return obj
 
     return _check_tuple_items(obj, of_type)
+
+
+def opt_tuple_param_of_shape(obj, param_name, of_shape, default=None):
+    if obj is not None and not isinstance(obj, tuple):
+        raise_with_traceback(_param_type_mismatch_exception(obj, tuple, param_name))
+
+    if obj is None:
+        return default
+
+    return _check_tuple_shape(obj, of_shape)
 
 
 def _check_list_items(obj_list, of_type):
@@ -406,59 +430,57 @@ def _check_set_items(obj_set, of_type):
     return obj_set
 
 
-def _check_tuple_items(obj_tuple, of_type):
-    if isinstance(of_type, tuple):
-        len_tuple = len(obj_tuple)
-        len_type = len(of_type)
-        if not len_tuple == len_type:
+def _check_tuple_shape(obj_tuple, of_shape):
+    if not isinstance(of_shape, tuple):
+        raise_with_traceback(_param_type_mismatch_exception(of_shape, tuple, "of_shape"))
+
+    len_tuple = len(obj_tuple)
+    len_shape = len(of_shape)
+    if not len_tuple == len_shape:
+        raise_with_traceback(
+            CheckError(
+                f"Tuple mismatches expected shape: tuple had {len_tuple} members but expected "
+                f"{len_shape}"
+            )
+        )
+    for (i, obj) in enumerate(obj_tuple):
+        of_shape_i = of_shape[i]
+        if not isinstance(obj, of_shape_i):
+            if isinstance(obj, type):
+                additional_message = (
+                    " Did you pass a class where you were expecting an instance of the class?"
+                )
+            else:
+                additional_message = ""
             raise_with_traceback(
                 CheckError(
-                    "Tuple mismatches type: tuple had {len_tuple} members but type had "
-                    "{len_type}".format(len_tuple=len_tuple, len_type=len_type)
+                    f"Member of tuple mismatches expected shape at index {i}. Expected "
+                    f"{of_shape_i}. Got {repr(obj)} of type {type(obj)}.{additional_message}"
                 )
             )
-        for (i, obj) in enumerate(obj_tuple):
-            of_type_i = of_type[i]
-            if not isinstance(obj, of_type_i):
-                if isinstance(obj, type):
-                    additional_message = (
-                        " Did you pass a class where you were expecting an instance of the class?"
-                    )
-                else:
-                    additional_message = ""
-                raise_with_traceback(
-                    CheckError(
-                        "Member of tuple mismatches type at index {index}. Expected {of_type}. Got "
-                        "{obj_repr} of type {obj_type}.{additional_message}".format(
-                            index=i,
-                            of_type=of_type_i,
-                            obj_repr=repr(obj),
-                            obj_type=type(obj),
-                            additional_message=additional_message,
-                        )
+
+
+def _check_tuple_items(obj_tuple, of_type):
+    for (i, obj) in enumerate(obj_tuple):
+        if not isinstance(obj, of_type):
+            if isinstance(obj, type):
+                additional_message = (
+                    " Did you pass a class where you were expecting an instance of the class?"
+                )
+            else:
+                additional_message = ""
+            raise_with_traceback(
+                CheckError(
+                    "Member of tuple mismatches type at index {index}. Expected {of_type}. Got "
+                    "{obj_repr} of type {obj_type}.{additional_message}".format(
+                        index=i,
+                        of_type=of_type,
+                        obj_repr=repr(obj),
+                        obj_type=type(obj),
+                        additional_message=additional_message,
                     )
                 )
-    else:
-        for (i, obj) in enumerate(obj_tuple):
-            if not isinstance(obj, of_type):
-                if isinstance(obj, type):
-                    additional_message = (
-                        " Did you pass a class where you were expecting an instance of the class?"
-                    )
-                else:
-                    additional_message = ""
-                raise_with_traceback(
-                    CheckError(
-                        "Member of tuple mismatches type at index {index}. Expected {of_type}. Got "
-                        "{obj_repr} of type {obj_type}.{additional_message}".format(
-                            index=i,
-                            of_type=of_type,
-                            obj_repr=repr(obj),
-                            obj_type=type(obj),
-                            additional_message=additional_message,
-                        )
-                    )
-                )
+            )
 
     return obj_tuple
 
