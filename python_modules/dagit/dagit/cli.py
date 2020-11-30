@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import threading
 from contextlib import contextmanager
@@ -91,8 +92,17 @@ DEFAULT_DB_STATEMENT_TIMEOUT = 5000  # 5 sec
     type=click.INT,
     show_default=True,
 )
+@click.option(
+    "--with-daemon",
+    help="Also spawns the dagster-daemon process that handles schedules, sensors, and launching "
+    "queued runs. Used to speed up local development, but generally the dagster-daemon process "
+    "should be deployed separately from dagit in production.",
+    is_flag=True,
+    required=False,
+    default=False,
+)
 @click.version_option(version=__version__, prog_name="dagit")
-def ui(host, port, path_prefix, storage_fallback, db_statement_timeout, **kwargs):
+def ui(host, port, path_prefix, storage_fallback, db_statement_timeout, with_daemon, **kwargs):
     # add the path for the cwd so imports in dynamically loaded code work correctly
     sys.path.append(os.getcwd())
 
@@ -102,8 +112,25 @@ def ui(host, port, path_prefix, storage_fallback, db_statement_timeout, **kwargs
     else:
         port_lookup = False
 
-    if storage_fallback is None:
-        with seven.TemporaryDirectory() as storage_fallback:
+    daemon_process = None
+
+    if with_daemon:
+        click.echo("Spawning dagster-daemon process in background")
+        daemon_process = subprocess.Popen(["dagster-daemon", "run"])
+
+    try:
+        if storage_fallback is None:
+            with seven.TemporaryDirectory() as storage_fallback:
+                host_dagit_ui(
+                    host,
+                    port,
+                    path_prefix,
+                    storage_fallback,
+                    db_statement_timeout,
+                    port_lookup,
+                    **kwargs,
+                )
+        else:
             host_dagit_ui(
                 host,
                 port,
@@ -113,10 +140,10 @@ def ui(host, port, path_prefix, storage_fallback, db_statement_timeout, **kwargs
                 port_lookup,
                 **kwargs,
             )
-    else:
-        host_dagit_ui(
-            host, port, path_prefix, storage_fallback, db_statement_timeout, port_lookup, **kwargs
-        )
+    finally:
+        if daemon_process:
+            click.echo("Terminating daemon process")
+            daemon_process.kill()
 
 
 def host_dagit_ui(
