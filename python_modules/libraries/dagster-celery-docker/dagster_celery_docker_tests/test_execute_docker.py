@@ -3,19 +3,20 @@
 
 import base64
 import os
-import sys
 from contextlib import contextmanager
 
 import boto3
 import docker
-import pytest
 from dagster import execute_pipeline, file_relative_path, seven
-from dagster.core.test_utils import instance_for_test_tempdir
+from dagster.core.storage.pipeline_run import PipelineRunStatus
+from dagster.core.test_utils import instance_for_test_tempdir, poll_for_finished_run
 from dagster.utils import merge_dicts
 from dagster.utils.test.postgres_instance import TestPostgresInstance
 from dagster.utils.yaml_utils import merge_yamls
 from dagster_test.test_project import (
+    ReOriginatedExternalPipelineForTest,
     build_and_tag_test_image,
+    get_test_project_external_pipeline,
     get_test_project_recon_pipeline,
     test_project_docker_image,
     test_project_environments_path,
@@ -59,8 +60,124 @@ def postgres_instance(overrides=None):
                 yield instance
 
 
-@pytest.mark.integration
-@pytest.mark.skipif(sys.version_info < (3, 5), reason="Very slow on Python 2")
+def _get_or_build_local_image(docker_image):
+    try:
+        client = docker.from_env()
+        client.images.get(docker_image)
+        print(  # pylint: disable=print-call
+            "Found existing image tagged {image}, skipping image build. To rebuild, first run: "
+            "docker rmi {image}".format(image=docker_image)
+        )
+    except docker.errors.ImageNotFound:
+        build_and_tag_test_image(docker_image)
+
+
+def _get_registry_config():
+    ecr_client = boto3.client("ecr", region_name="us-west-1")
+    token = ecr_client.get_authorization_token()
+    username, password = (
+        base64.b64decode(token["authorizationData"][0]["authorizationToken"]).decode().split(":")
+    )
+    registry = token["authorizationData"][0]["proxyEndpoint"]
+
+    return {
+        "url": registry,
+        "username": username,
+        "password": password,
+    }
+
+
+def test_launch_docker_image_on_pipeline_config():
+    # Docker image name to use for launch specified as part of the pipeline origin
+    # rather than in the run launcher instance config
+
+    docker_image = test_project_docker_image()
+    launcher_config = {
+        "env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",],
+        "network": "container:test-postgres-db-celery-docker",
+    }
+
+    if IS_BUILDKITE:
+        launcher_config["registry"] = _get_registry_config()
+    else:
+        _get_or_build_local_image(docker_image)
+
+    run_config = merge_yamls(
+        [
+            os.path.join(test_project_environments_path(), "env.yaml"),
+            os.path.join(test_project_environments_path(), "env_s3.yaml"),
+        ]
+    )
+
+    with postgres_instance(
+        overrides={
+            "run_launcher": {
+                "class": "DockerRunLauncher",
+                "module": "dagster_celery_docker",
+                "config": launcher_config,
+            }
+        }
+    ) as instance:
+        recon_pipeline = get_test_project_recon_pipeline("docker_pipeline", docker_image)
+        run = instance.create_run_for_pipeline(
+            pipeline_def=recon_pipeline.get_definition(), run_config=run_config,
+        )
+
+        external_pipeline = ReOriginatedExternalPipelineForTest(
+            get_test_project_external_pipeline("docker_pipeline", container_image=docker_image),
+            container_image=docker_image,
+        )
+        instance.launch_run(run.run_id, external_pipeline)
+
+        poll_for_finished_run(instance, run.run_id, timeout=60)
+
+        assert instance.get_run_by_id(run.run_id).status == PipelineRunStatus.SUCCESS
+
+
+def test_launch_docker_image_on_instance_config():
+    docker_image = test_project_docker_image()
+    launcher_config = {
+        "env_vars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",],
+        "network": "container:test-postgres-db-celery-docker",
+        "image": docker_image,
+    }
+
+    if IS_BUILDKITE:
+        launcher_config["registry"] = _get_registry_config()
+    else:
+        _get_or_build_local_image(docker_image)
+
+    run_config = merge_yamls(
+        [
+            os.path.join(test_project_environments_path(), "env.yaml"),
+            os.path.join(test_project_environments_path(), "env_s3.yaml"),
+        ]
+    )
+
+    with postgres_instance(
+        overrides={
+            "run_launcher": {
+                "class": "DockerRunLauncher",
+                "module": "dagster_celery_docker",
+                "config": launcher_config,
+            }
+        }
+    ) as instance:
+        recon_pipeline = get_test_project_recon_pipeline("docker_pipeline")
+        run = instance.create_run_for_pipeline(
+            pipeline_def=recon_pipeline.get_definition(), run_config=run_config,
+        )
+
+        external_pipeline = ReOriginatedExternalPipelineForTest(
+            get_test_project_external_pipeline("docker_pipeline")
+        )
+        instance.launch_run(run.run_id, external_pipeline)
+
+        poll_for_finished_run(instance, run.run_id, timeout=60)
+
+        assert instance.get_run_by_id(run.run_id).status == PipelineRunStatus.SUCCESS
+
+
 def test_execute_celery_docker_image_on_executor_config():
     docker_image = test_project_docker_image()
     docker_config = {
@@ -70,31 +187,9 @@ def test_execute_celery_docker_image_on_executor_config():
     }
 
     if IS_BUILDKITE:
-        ecr_client = boto3.client("ecr", region_name="us-west-1")
-        token = ecr_client.get_authorization_token()
-        username, password = (
-            base64.b64decode(token["authorizationData"][0]["authorizationToken"])
-            .decode()
-            .split(":")
-        )
-        registry = token["authorizationData"][0]["proxyEndpoint"]
-
-        docker_config["registry"] = {
-            "url": registry,
-            "username": username,
-            "password": password,
-        }
-
+        docker_config["registry"] = _get_registry_config()
     else:
-        try:
-            client = docker.from_env()
-            client.images.get(docker_image)
-            print(  # pylint: disable=print-call
-                "Found existing image tagged {image}, skipping image build. To rebuild, first run: "
-                "docker rmi {image}".format(image=docker_image)
-            )
-        except docker.errors.ImageNotFound:
-            build_and_tag_test_image(docker_image)
+        _get_or_build_local_image(docker_image)
 
     run_config = merge_dicts(
         merge_yamls(
@@ -125,8 +220,6 @@ def test_execute_celery_docker_image_on_executor_config():
         assert result.success
 
 
-@pytest.mark.integration
-@pytest.mark.skipif(sys.version_info < (3, 5), reason="Very slow on Python 2")
 def test_execute_celery_docker_image_on_pipeline_config():
     docker_image = test_project_docker_image()
     docker_config = {
@@ -135,31 +228,10 @@ def test_execute_celery_docker_image_on_pipeline_config():
     }
 
     if IS_BUILDKITE:
-        ecr_client = boto3.client("ecr", region_name="us-west-1")
-        token = ecr_client.get_authorization_token()
-        username, password = (
-            base64.b64decode(token["authorizationData"][0]["authorizationToken"])
-            .decode()
-            .split(":")
-        )
-        registry = token["authorizationData"][0]["proxyEndpoint"]
-
-        docker_config["registry"] = {
-            "url": registry,
-            "username": username,
-            "password": password,
-        }
+        docker_config["registry"] = _get_registry_config()
 
     else:
-        try:
-            client = docker.from_env()
-            client.images.get(docker_image)
-            print(  # pylint: disable=print-call
-                "Found existing image tagged {image}, skipping image build. To rebuild, first run: "
-                "docker rmi {image}".format(image=docker_image)
-            )
-        except docker.errors.ImageNotFound:
-            build_and_tag_test_image(docker_image)
+        _get_or_build_local_image(docker_image)
 
     run_config = merge_dicts(
         merge_yamls(
@@ -181,11 +253,8 @@ def test_execute_celery_docker_image_on_pipeline_config():
     )
 
     with postgres_instance() as instance:
-
-        container_image = test_project_docker_image()
-
         result = execute_pipeline(
-            get_test_project_recon_pipeline("docker_celery_pipeline", container_image),
+            get_test_project_recon_pipeline("docker_celery_pipeline", docker_image),
             run_config=run_config,
             instance=instance,
         )

@@ -86,8 +86,9 @@ class ReOriginatedReconstructablePipelineForTest(ReconstructablePipeline):
 
 class ReOriginatedExternalPipelineForTest(ExternalPipeline):
     def __init__(
-        self, external_pipeline,
+        self, external_pipeline, container_image=None,
     ):
+        self._container_image = container_image
         super(ReOriginatedExternalPipelineForTest, self).__init__(
             external_pipeline.external_pipeline_data, external_pipeline.repository_handle,
         )
@@ -108,6 +109,7 @@ class ReOriginatedExternalPipelineForTest(ExternalPipeline):
                     "/dagster_test/test_project/test_pipelines/repo.py",
                     "define_demo_execution_repo",
                 ),
+                container_image=self._container_image,
             ),
         )
 
@@ -135,7 +137,7 @@ class ReOriginatedExternalPipelineForTest(ExternalPipeline):
         )
 
 
-def get_test_project_external_pipeline(pipeline_name):
+def get_test_project_external_pipeline(pipeline_name, container_image=None):
     return (
         RepositoryLocation.from_handle(
             RepositoryLocationHandle.create_from_repository_location_origin(
@@ -143,6 +145,7 @@ def get_test_project_external_pipeline(pipeline_name):
                     ReconstructableRepository.for_file(
                         file_relative_path(__file__, "test_pipelines/repo.py"),
                         "define_demo_execution_repo",
+                        container_image=container_image,
                     )
                 )
             )
