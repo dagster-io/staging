@@ -5,7 +5,7 @@ from dagster.builtins import Int
 from dagster.config.field import Field
 from dagster.core.definitions.configurable import ConfigurableDefinition
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
-from dagster.core.errors import DagsterUnmetExecutorRequirementsError
+from dagster.core.errors import DagsterSingleProcessOnlyResourceError
 from dagster.core.execution.retries import Retries, get_retries_config
 
 from .definition_config_schema import convert_user_facing_definition_config_schema
@@ -193,7 +193,7 @@ def check_cross_process_constraints(init_context):
 
 def _check_intra_process_pipeline(pipeline):
     if not isinstance(pipeline, ReconstructablePipeline):
-        raise DagsterUnmetExecutorRequirementsError(
+        raise DagsterSingleProcessOnlyResourceError(
             'You have attempted to use an executor that uses multiple processes with the pipeline "{name}" '
             "that is not reconstructable. Pipelines must be loaded in a way that allows dagster to reconstruct "
             "them in a new process. This means: \n"
@@ -235,7 +235,7 @@ def _check_persistent_storage_requirement(pipeline_def, mode_def, intermediate_s
         _all_outputs_non_mem_asset_stores(pipeline_def, mode_def)
         or (intermediate_storage_def and intermediate_storage_def.is_persistent)
     ):
-        raise DagsterUnmetExecutorRequirementsError(
+        raise DagsterSingleProcessOnlyResourceError(
             "You have attempted to use an executor that uses multiple processes, but your pipeline "
             "includes solid outputs that will not be stored somewhere where other processes can"
             "retrieve them. "
@@ -247,7 +247,7 @@ def _check_persistent_storage_requirement(pipeline_def, mode_def, intermediate_s
 
 def _check_non_ephemeral_instance(instance):
     if instance.is_ephemeral:
-        raise DagsterUnmetExecutorRequirementsError(
+        raise DagsterSingleProcessOnlyResourceError(
             "You have attempted to use an executor that uses multiple processes with an "
             "ephemeral DagsterInstance. A non-ephemeral instance is needed to coordinate "
             "execution between multiple processes. You can configure your default instance "
