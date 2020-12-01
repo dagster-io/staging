@@ -5,7 +5,7 @@ from threading import Thread
 import dagster_pandas as dagster_pd
 import pytest
 from dagster import (
-    DagsterUnmetExecutorRequirementsError,
+    DagsterSingleProcessOnlyResourceError,
     InputDefinition,
     ModeDefinition,
     execute_pipeline,
@@ -153,7 +153,7 @@ def test_execute_on_dask_local_with_intermediate_storage():
 
 
 def test_execute_on_dask_local_with_default_storage():
-    with pytest.raises(DagsterUnmetExecutorRequirementsError):
+    with pytest.raises(DagsterSingleProcessOnlyResourceError):
         with instance_for_test() as instance:
             result = execute_pipeline(
                 reconstructable(dask_engine_pipeline),
