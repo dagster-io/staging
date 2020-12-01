@@ -232,7 +232,9 @@ def get_external_schedule_execution(
             )
 
 
-def get_external_sensor_execution(recon_repo, instance_ref, sensor_name, last_completion_timestamp):
+def get_external_sensor_execution(
+    recon_repo, instance_ref, sensor_name, last_completion_timestamp, last_run_key
+):
     check.inst_param(
         recon_repo, "recon_repo", ReconstructableRepository,
     )
@@ -242,7 +244,7 @@ def get_external_sensor_execution(recon_repo, instance_ref, sensor_name, last_co
 
     with DagsterInstance.from_ref(instance_ref) as instance:
         sensor_context = SensorExecutionContext(
-            instance, last_completion_time=last_completion_timestamp
+            instance, last_completion_time=last_completion_timestamp, last_run_key=last_run_key
         )
 
         try:

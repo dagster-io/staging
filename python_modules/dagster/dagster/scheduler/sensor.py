@@ -50,14 +50,19 @@ class SensorLaunchContext:
     def update_state(self, status, **kwargs):
         self._tick = self._tick.with_status(status=status, **kwargs)
 
-    def add_run(self, run_id):
-        self._tick = self._tick.with_run(run_id)
+    def add_run(self, run_id, run_key=None):
+        self._tick = self._tick.with_run(run_id, run_key)
 
     def _write(self):
         self._instance.update_job_tick(self._tick)
         if self._tick.status in FULFILLED_TICK_STATES:
+            last_run_key = None
+            if self._tick.run_keys:
+                last_run_key = self._tick.run_keys[-1]
+            elif self._job_state.job_specific_data:
+                last_run_key = self._job_state.job_specific_data.last_run_key
             self._instance.update_job_state(
-                self._job_state.with_data(SensorJobData(self._tick.timestamp))
+                self._job_state.with_data(SensorJobData(self._tick.timestamp, last_run_key))
             )
 
     def __enter__(self):
@@ -180,6 +185,7 @@ def _evaluate_sensor(
         job_state.job_specific_data.last_completed_timestamp
         if job_state.job_specific_data
         else None,
+        job_state.job_specific_data.last_run_key if job_state.job_specific_data else None,
     )
     if isinstance(sensor_runtime_data, ExternalSensorExecutionErrorData):
         context.logger.error(
@@ -241,7 +247,7 @@ def _evaluate_sensor(
 
         _check_for_debug_crash(sensor_debug_crash_flags, "RUN_LAUNCHED")
 
-        context.add_run(run_id=run.run_id)
+        context.add_run(run_id=run.run_id, run_key=run_request.run_key)
 
     if context.run_count:
         context.update_state(JobTickStatus.SUCCESS)

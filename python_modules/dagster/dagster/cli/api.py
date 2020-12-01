@@ -264,8 +264,8 @@ class _ScheduleLaunchContext:
     def update_state(self, status, **kwargs):
         self._tick = self._tick.with_status(status=status, **kwargs)
 
-    def add_run(self, run_id):
-        self._tick = self._tick.with_run(run_id)
+    def add_run(self, run_id, run_key=None):
+        self._tick = self._tick.with_run(run_id, run_key)
 
     @property
     def stream(self):
@@ -590,7 +590,7 @@ def _launch_run(
         external_pipeline_origin=external_pipeline.get_external_origin(),
     )
 
-    tick_context.add_run(run_id=possibly_invalid_pipeline_run.run_id)
+    tick_context.add_run(run_id=possibly_invalid_pipeline_run.run_id, run_key=run_request.run_key)
 
     # If there were errors, inject them into the event log and fail the run
     if len(errors) > 0:

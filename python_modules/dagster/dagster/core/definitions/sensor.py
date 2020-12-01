@@ -17,19 +17,24 @@ class SensorExecutionContext(JobContext):
         last_completion_time (float): The last time that the sensor was evaluated (UTC).
     """
 
-    __slots__ = ["_last_completion_time"]
+    __slots__ = ["_last_completion_time", "_last_run_key"]
 
-    def __init__(self, instance, last_completion_time):
+    def __init__(self, instance, last_completion_time, last_run_key):
         super(SensorExecutionContext, self).__init__(
             check.inst_param(instance, "instance", DagsterInstance),
         )
         self._last_completion_time = check.opt_float_param(
             last_completion_time, "last_completion_time"
         )
+        self._last_run_key = check.opt_str_param(last_run_key, "last_run_key")
 
     @property
     def last_completion_time(self):
         return self._last_completion_time
+
+    @property
+    def last_run_key(self):
+        return self._last_run_key
 
 
 class SensorDefinition(JobDefinition):
