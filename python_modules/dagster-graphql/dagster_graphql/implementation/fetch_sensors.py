@@ -1,7 +1,9 @@
+from datetime import datetime
+
 from dagster import check
 from dagster.core.definitions.job import JobType
 from dagster.core.host_representation import ExternalSensor, RepositorySelector, SensorSelector
-from dagster.core.scheduler.job import JobState, JobStatus
+from dagster.core.scheduler.job import JobState, JobStatus, SensorJobData
 from graphql.execution.base import ResolveInfo
 
 from .utils import UserFacingGraphQLError, capture_dauphin_error
@@ -52,12 +54,16 @@ def _update_sensor_state(graphene_info, sensor_selector, job_status):
         )
 
     existing_job_state = instance.get_job_state(external_sensor.get_external_origin_id())
+
+    # set the last completed time to the modified state time
+    sensor_data = SensorJobData(datetime.utcnow().timestamp())
+
     if not existing_job_state:
         instance.add_job_state(
-            JobState(external_sensor.get_external_origin(), JobType.SENSOR, job_status)
+            JobState(external_sensor.get_external_origin(), JobType.SENSOR, job_status, sensor_data)
         )
     else:
-        instance.update_job_state(existing_job_state.with_status(job_status))
+        instance.update_job_state(existing_job_state.with_status(job_status).with_data(sensor_data))
 
     return graphene_info.schema.type_named("Sensor")(graphene_info, external_sensor)
 

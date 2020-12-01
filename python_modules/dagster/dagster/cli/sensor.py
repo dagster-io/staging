@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+from datetime import datetime
 
 import click
 import six
@@ -16,7 +17,7 @@ from dagster.core.definitions.job import JobType
 from dagster.core.host_representation import ExternalRepository
 from dagster.core.host_representation.external_data import ExternalSensorExecutionErrorData
 from dagster.core.instance import DagsterInstance
-from dagster.core.scheduler.job import JobState, JobStatus
+from dagster.core.scheduler.job import JobState, JobStatus, SensorJobData
 
 
 def create_sensor_cli_group():
@@ -181,12 +182,16 @@ def execute_list_command(running_filter, stopped_filter, name_filter, cli_args, 
 
 def _add_or_update_job_state(instance, external_sensor, status):
     existing_job_state = instance.get_job_state(external_sensor.get_external_origin_id())
+
+    # set the last completed time to the modified state time
+    sensor_data = SensorJobData(datetime.utcnow().timestamp())
+
     if not existing_job_state:
         instance.add_job_state(
-            JobState(external_sensor.get_external_origin(), JobType.SENSOR, status)
+            JobState(external_sensor.get_external_origin(), JobType.SENSOR, status, sensor_data)
         )
     else:
-        instance.update_job_state(existing_job_state.with_status(status))
+        instance.update_job_state(existing_job_state.with_status(status).with_data(sensor_data))
 
 
 @click.command(name="start", help="Start an existing sensor")
