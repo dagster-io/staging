@@ -31,7 +31,7 @@ from dagster.core.utils import make_new_run_id
 from dagster.utils.test import yield_empty_pipeline_context
 from dagster_azure.adls2 import (
     ADLS2IntermediateStorage,
-    adls2_plus_default_storage_defs,
+    adls2_plus_default_intermediate_storage_defs,
     adls2_resource,
     create_adls2_client,
 )
@@ -70,7 +70,7 @@ def define_inty_pipeline(should_throw=True):
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                system_storage_defs=adls2_plus_default_storage_defs,
+                intermediate_storage_defs=adls2_plus_default_intermediate_storage_defs,
                 resource_defs={"adls2": adls2_resource},
             )
         ]
@@ -121,7 +121,7 @@ def test_using_adls2_for_subplan(storage_account, file_system):
                 "config": {"storage_account": storage_account, "credential": get_azure_credential()}
             }
         },
-        "storage": {"adls2": {"config": {"adls2_file_system": file_system}}},
+        "intermediate_storage": {"adls2": {"config": {"adls2_file_system": file_system}}},
     }
 
     run_id = make_new_run_id()
@@ -348,7 +348,7 @@ def test_adls2_pipeline_with_custom_prefix(storage_account, file_system):
                 "config": {"storage_account": storage_account, "credential": get_azure_credential()}
             }
         },
-        "storage": {
+        "intermediate_storage": {
             "adls2": {"config": {"adls2_file_system": file_system, "adls2_prefix": adls2_prefix}}
         },
     }

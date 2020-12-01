@@ -29,31 +29,31 @@ class SolidConfig(namedtuple("_SolidConfig", "config inputs outputs")):
         )
 
 
-class EmptyIntermediateStoreBackcompatConfig:
-    """
-    This class is a sentinel object indicating that no intermediate stores have been passed in
-    and that the pipeline should instead use system storage to define an intermediate store.
-    """
+# class EmptyIntermediateStoreBackcompatConfig:
+#     """
+#     This class is a sentinel object indicating that no intermediate stores have been passed in
+#     and that the pipeline should instead use system storage to define an intermediate store.
+#     """
 
 
 class EnvironmentConfig(
     namedtuple(
         "_EnvironmentConfig",
-        "solids execution storage intermediate_storage resources loggers original_config_dict",
+        "solids execution intermediate_storage resources loggers original_config_dict",
     )
 ):
     def __new__(
         cls,
         solids=None,
         execution=None,
-        storage=None,
+        # storage=None,
         intermediate_storage=None,
         resources=None,
         loggers=None,
         original_config_dict=None,
     ):
         check.opt_inst_param(execution, "execution", ExecutionConfig)
-        check.opt_inst_param(storage, "storage", StorageConfig)
+        # check.opt_inst_param(storage, "storage", StorageConfig)
         check.opt_inst_param(
             intermediate_storage, "intermediate_storage", IntermediateStorageConfig
         )
@@ -67,7 +67,7 @@ class EnvironmentConfig(
             cls,
             solids=check.opt_dict_param(solids, "solids", key_type=str, value_type=SolidConfig),
             execution=execution,
-            storage=storage,
+            # storage=storage,
             intermediate_storage=intermediate_storage,
             resources=resources,
             loggers=check.opt_dict_param(loggers, "loggers", key_type=str, value_type=dict),
@@ -83,8 +83,8 @@ class EnvironmentConfig(
         """
         from dagster.config.validate import process_config
         from dagster.core.definitions.executor import ExecutorDefinition
-        from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
-        from dagster.core.definitions.system_storage import SystemStorageDefinition
+
+        # from dagster.core.definitions.system_storage import SystemStorageDefinition
         from .composite_descent import composite_descent
 
         check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition)
@@ -114,28 +114,13 @@ class EnvironmentConfig(
         config_value = config_evr.value
 
         mode_def = pipeline_def.get_mode_definition(mode)
-        config_mapped_intermediate_storage_configs = config_map_objects(
-            config_value,
-            mode_def.intermediate_storage_defs,
-            "intermediate_storage",
-            IntermediateStorageDefinition,
-            "intermediate storage",
+
+        intermediate_storage = config_map_intermediate_storage_backcompat(
+            config_value, mode_def.intermediate_storage_defs
         )
-        # TODO:  replace this with a simple call to from_dict of config_mapped_intermediate_storage_configs when ready to fully deprecate
-        # TODO:  tracking: https://github.com/dagster-io/dagster/issues/2705
-        temp_intermed = config_mapped_intermediate_storage_configs
-        if config_value.get("storage") and temp_intermed is None:
-            temp_intermed = {EmptyIntermediateStoreBackcompatConfig(): {}}
 
         config_mapped_execution_configs = config_map_objects(
             config_value, mode_def.executor_defs, "execution", ExecutorDefinition, "executor"
-        )
-        config_mapped_system_storage_configs = config_map_objects(
-            config_value,
-            mode_def.system_storage_defs,
-            "storage",
-            SystemStorageDefinition,
-            "system storage",
         )
 
         config_mapped_resource_configs = config_map_resources(pipeline_def, config_value, mode)
@@ -146,19 +131,14 @@ class EnvironmentConfig(
         return EnvironmentConfig(
             solids=solid_config_dict,
             execution=ExecutionConfig.from_dict(config_mapped_execution_configs),
-            storage=StorageConfig.from_dict(config_mapped_system_storage_configs),
-            intermediate_storage=IntermediateStorageConfig.from_dict(temp_intermed),
+            # storage=intermediate_storage,
+            intermediate_storage=intermediate_storage,
             loggers=config_mapped_logger_configs,
             original_config_dict=run_config,
             resources=config_mapped_resource_configs,
         )
 
     def intermediate_storage_def_for_mode(self, mode_definition):
-        if isinstance(
-            self.intermediate_storage.intermediate_storage_name,
-            EmptyIntermediateStoreBackcompatConfig,
-        ):
-            return None
         for intermediate_storage_def in mode_definition.intermediate_storage_defs:
             if intermediate_storage_def.name == self.intermediate_storage.intermediate_storage_name:
                 return intermediate_storage_def
@@ -168,6 +148,35 @@ class EnvironmentConfig(
                 self.intermediate_storage.intermediate_storage_name
             )
         )
+
+
+def config_map_intermediate_storage_backcompat(config_value, intermediate_storage_defs):
+    """This method will be replaced with a simple call to config_mapped_intermediate_storage_configs
+    For backwards compatibility, we treat "storage" as as alias of "intermediate_storage", i.e.
+    run config that has been passed in through the "storage" entry will be used to define intermediate
+    storage.
+    tracking https://github.com/dagster-io/dagster/issues/3280
+    """
+    from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
+
+    if config_value.get("storage"):
+        config_mapped_intermediate_storage_configs = config_map_objects(
+            config_value,
+            intermediate_storage_defs,
+            "storage",
+            IntermediateStorageDefinition,
+            "intermediate storage",
+        )
+    else:
+        config_mapped_intermediate_storage_configs = config_map_objects(
+            config_value,
+            intermediate_storage_defs,
+            "intermediate_storage",
+            IntermediateStorageDefinition,
+            "intermediate storage",
+        )
+
+    return IntermediateStorageConfig.from_dict(config_mapped_intermediate_storage_configs)
 
 
 def config_map_resources(pipeline_def, config_value, mode):
@@ -296,25 +305,25 @@ class ExecutionConfig(
         return ExecutionConfig(None, None)
 
 
-class StorageConfig(namedtuple("_FilesConfig", "system_storage_name system_storage_config")):
-    def __new__(cls, system_storage_name, system_storage_config):
-        return super(StorageConfig, cls).__new__(
-            cls,
-            system_storage_name=check.opt_str_param(
-                system_storage_name, "system_storage_name", "in_memory"
-            ),
-            system_storage_config=check.opt_dict_param(
-                system_storage_config, "system_storage_config", key_type=str
-            ),
-        )
+# class StorageConfig(namedtuple("_FilesConfig", "system_storage_name system_storage_config")):
+#     def __new__(cls, system_storage_name, system_storage_config):
+#         return super(StorageConfig, cls).__new__(
+#             cls,
+#             system_storage_name=check.opt_str_param(
+#                 system_storage_name, "system_storage_name", "in_memory"
+#             ),
+#             system_storage_config=check.opt_dict_param(
+#                 system_storage_config, "system_storage_config", key_type=str
+#             ),
+#         )
 
-    @staticmethod
-    def from_dict(config=None):
-        check.opt_dict_param(config, "config", key_type=str)
-        if config:
-            system_storage_name, system_storage_config = ensure_single_item(config)
-            return StorageConfig(system_storage_name, system_storage_config.get("config"))
-        return StorageConfig(None, None)
+#     @staticmethod
+#     def from_dict(config=None):
+#         check.opt_dict_param(config, "config", key_type=str)
+#         if config:
+#             system_storage_name, system_storage_config = ensure_single_item(config)
+#             return StorageConfig(system_storage_name, system_storage_config.get("config"))
+#         return StorageConfig(None, None)
 
 
 class IntermediateStorageConfig(
@@ -323,11 +332,8 @@ class IntermediateStorageConfig(
     def __new__(cls, intermediate_storage_name, intermediate_storage_config):
         return super(IntermediateStorageConfig, cls).__new__(
             cls,
-            intermediate_storage_name=check.opt_inst_param(
-                intermediate_storage_name,
-                "intermediate_storage_name",
-                (str, EmptyIntermediateStoreBackcompatConfig),
-                "in_memory",
+            intermediate_storage_name=check.opt_str_param(
+                intermediate_storage_name, "intermediate_storage_name", "in_memory",
             ),
             intermediate_storage_config=check.opt_dict_param(
                 intermediate_storage_config, "intermediate_storage_config", key_type=str
@@ -336,9 +342,7 @@ class IntermediateStorageConfig(
 
     @staticmethod
     def from_dict(config=None):
-        check.opt_dict_param(
-            config, "config", key_type=(str, EmptyIntermediateStoreBackcompatConfig)
-        )
+        check.opt_dict_param(config, "config", key_type=str)
         if config:
             intermediate_storage_name, intermediate_storage_config = ensure_single_item(config)
             return IntermediateStorageConfig(

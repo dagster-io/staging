@@ -14,7 +14,7 @@ from dagster import (
     solid,
 )
 from dagster.utils.test import get_temp_file_name
-from dagster_aws.s3 import S3FileHandle, S3FileManager, s3_system_storage
+from dagster_aws.s3 import S3FileHandle, S3FileManager, s3_intermediate_storage
 from moto import mock_s3
 
 # for dep graphs
@@ -81,7 +81,7 @@ def test_unzip_file_handle_on_fake_s3():
                     "s3": ResourceDefinition.hardcoded_resource(s3),
                     "file_manager": ResourceDefinition.hardcoded_resource(file_manager),
                 },
-                system_storage_defs=[s3_system_storage],
+                intermediate_storage_defs=[s3_intermediate_storage],
             )
         ]
     )
@@ -91,7 +91,7 @@ def test_unzip_file_handle_on_fake_s3():
     result = execute_pipeline(
         do_test_unzip_file_handle_s3,
         run_config={
-            "storage": {"s3": {"config": {"s3_bucket": "some-bucket"}}},
+            "intermediate_storage": {"s3": {"config": {"s3_bucket": "some-bucket"}}},
             "solids": {
                 "unzip_file_handle": {"inputs": {"archive_member": {"value": "an_archive_member"}}}
             },

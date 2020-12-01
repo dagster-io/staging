@@ -17,7 +17,7 @@ from dagster_azure.adls2 import (
     ADLS2FileManager,
     FakeADLS2Resource,
     adls2_file_manager,
-    adls2_plus_default_storage_defs,
+    adls2_plus_default_intermediate_storage_defs,
 )
 
 # For deps
@@ -104,7 +104,7 @@ def test_depends_on_adls2_resource_intermediates(storage_account, file_system):
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                system_storage_defs=adls2_plus_default_storage_defs,
+                intermediate_storage_defs=adls2_plus_default_intermediate_storage_defs,
                 resource_defs={"adls2": ResourceDefinition.hardcoded_resource(adls2_fake_resource)},
             )
         ]
@@ -118,7 +118,7 @@ def test_depends_on_adls2_resource_intermediates(storage_account, file_system):
             "solids": {
                 "add_numbers": {"inputs": {"num_one": {"value": 2}, "num_two": {"value": 4}}}
             },
-            "storage": {"adls2": {"config": {"adls2_file_system": file_system}}},
+            "intermediate_storage": {"adls2": {"config": {"adls2_file_system": file_system}}},
         },
     )
 
@@ -166,7 +166,7 @@ def test_depends_on_adls2_resource_file_manager(storage_account, file_system):
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                system_storage_defs=adls2_plus_default_storage_defs,
+                intermediate_storage_defs=adls2_plus_default_intermediate_storage_defs,
                 resource_defs={
                     "adls2": ResourceDefinition.hardcoded_resource(adls2_fake_resource),
                     "file_manager": ResourceDefinition.hardcoded_resource(adls2_fake_file_manager),
@@ -179,7 +179,9 @@ def test_depends_on_adls2_resource_file_manager(storage_account, file_system):
 
     result = execute_pipeline(
         adls2_file_manager_test,
-        run_config={"storage": {"adls2": {"config": {"adls2_file_system": file_system}}}},
+        run_config={
+            "intermediate_storage": {"adls2": {"config": {"adls2_file_system": file_system}}}
+        },
     )
 
     assert result.success

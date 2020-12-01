@@ -32,7 +32,7 @@ from dagster.core.utils import make_new_run_id
 from dagster.utils.test import yield_empty_pipeline_context
 from dagster_gcp.gcs.intermediate_storage import GCSIntermediateStorage
 from dagster_gcp.gcs.resources import gcs_resource
-from dagster_gcp.gcs.system_storage import gcs_plus_default_storage_defs
+from dagster_gcp.gcs.system_storage import gcs_plus_default_intermediate_storage_defs
 
 
 class UppercaseSerializationStrategy(SerializationStrategy):  # pylint: disable=no-init
@@ -67,7 +67,7 @@ def define_inty_pipeline(should_throw=True):
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                system_storage_defs=gcs_plus_default_storage_defs,
+                intermediate_storage_defs=gcs_plus_default_intermediate_storage_defs,
                 resource_defs={"gcs": gcs_resource},
             )
         ]
@@ -95,7 +95,7 @@ def get_step_output(step_events, step_key, output_name="result"):
 def test_using_gcs_for_subplan(gcs_bucket):
     pipeline_def = define_inty_pipeline()
 
-    run_config = {"storage": {"gcs": {"config": {"gcs_bucket": gcs_bucket}}}}
+    run_config = {"intermediate_storage": {"gcs": {"config": {"gcs_bucket": gcs_bucket}}}}
 
     run_id = make_new_run_id()
 
@@ -326,7 +326,9 @@ def test_gcs_pipeline_with_custom_prefix(gcs_bucket):
 
     pipe = define_inty_pipeline(should_throw=False)
     run_config = {
-        "storage": {"gcs": {"config": {"gcs_bucket": gcs_bucket, "gcs_prefix": gcs_prefix}}}
+        "intermediate_storage": {
+            "gcs": {"config": {"gcs_bucket": gcs_bucket, "gcs_prefix": gcs_prefix}}
+        }
     }
 
     pipeline_run = PipelineRun(pipeline_name=pipe.name, run_config=run_config)
@@ -343,7 +345,9 @@ def test_gcs_pipeline_with_custom_prefix(gcs_bucket):
             gcs_prefix=gcs_prefix,
             client=context.scoped_resources_builder.build(required_resource_keys={"gcs"},).gcs,
         )
-        assert intermediate_storage.root == "/".join(["custom_prefix", "storage", result.run_id])
+        assert intermediate_storage.root == "/".join(
+            ["custom_prefix", "intermediate_storage", result.run_id]
+        )
         assert (
             intermediate_storage.get_intermediate(
                 context, Int, StepOutputHandle("return_one.compute")

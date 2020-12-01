@@ -10,12 +10,13 @@ from dagster import (
     pipeline,
     solid,
 )
+from dagster.core.definitions.intermediate_storage import intermediate_storage
 from dagster.seven import mock
 from dagster_aws.s3 import (
     S3FileHandle,
     S3FileManager,
     s3_file_manager,
-    s3_plus_default_storage_defs,
+    s3_plus_default_intermediate_storage_defs,
     s3_resource,
 )
 
@@ -66,7 +67,8 @@ def test_depends_on_s3_resource_intermediates(mock_s3_bucket):
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                system_storage_defs=s3_plus_default_storage_defs, resource_defs={"s3": s3_resource},
+                intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
+                resource_defs={"s3": s3_resource},
             )
         ]
     )
@@ -113,7 +115,7 @@ def test_depends_on_s3_resource_file_manager(mock_s3_bucket):
     @pipeline(
         mode_defs=[
             ModeDefinition(
-                system_storage_defs=s3_plus_default_storage_defs,
+                intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
                 resource_defs={"s3": s3_resource, "file_manager": s3_file_manager},
             )
         ]

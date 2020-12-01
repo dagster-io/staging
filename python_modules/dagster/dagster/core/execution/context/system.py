@@ -28,7 +28,7 @@ class SystemExecutionContextData(
         "_SystemExecutionContextData",
         (
             "pipeline_run scoped_resources_builder environment_config pipeline "
-            "mode_def system_storage_def intermediate_storage_def instance intermediate_storage "
+            "mode_def intermediate_storage_def instance intermediate_storage "
             "raise_on_error retries execution_plan"
         ),
     )
@@ -45,7 +45,6 @@ class SystemExecutionContextData(
         environment_config,
         pipeline,
         mode_def,
-        system_storage_def,
         intermediate_storage_def,
         instance,
         intermediate_storage,
@@ -70,9 +69,6 @@ class SystemExecutionContextData(
             ),
             pipeline=check.inst_param(pipeline, "pipeline", IPipeline),
             mode_def=check.inst_param(mode_def, "mode_def", ModeDefinition),
-            system_storage_def=check.inst_param(
-                system_storage_def, "system_storage_def", SystemStorageDefinition
-            ),
             intermediate_storage_def=check.opt_inst_param(
                 intermediate_storage_def, "intermediate_storage_def", IntermediateStorageDefinition
             ),
@@ -138,10 +134,6 @@ class SystemExecutionContext:
     @property
     def mode_def(self):
         return self._execution_context_data.mode_def
-
-    @property
-    def system_storage_def(self):
-        return self._execution_context_data.system_storage_def
 
     @property
     def intermediate_storage_def(self):
@@ -220,7 +212,6 @@ class SystemStepExecutionContext(SystemExecutionContext):
         self._required_resource_keys = get_required_resource_keys_for_step(
             step,
             execution_context_data.execution_plan,
-            execution_context_data.system_storage_def,
             execution_context_data.intermediate_storage_def,
         )
         self._resources = self._execution_context_data.scoped_resources_builder.build(
