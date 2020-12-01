@@ -1,8 +1,7 @@
-import inspect
 import os
 
-from dagster import RunRequest, SensorDefinition, SkipReason, check
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster import AssetKey, RunRequest, SensorDefinition, SkipReason, check, sensor
+from dagster.core.definitions.sensor import wrap_sensor_evaluation
 
 
 def directory_file_sensor(
@@ -51,20 +50,10 @@ def directory_file_sensor(
                 if fstats.st_mtime > since:
                     fileinfo_since.append((filename, fstats.st_mtime))
 
-            result = fn(context, fileinfo_since)
+            result = wrap_sensor_evaluation(sensor_name, fn(context, fileinfo_since))
 
-            if inspect.isgenerator(result):
-                for item in result:
-                    yield item
-            elif isinstance(result, (SkipReason, RunRequest)):
-                yield result
-
-            elif result is not None:
-                raise DagsterInvariantViolationError(
-                    f"Error in sensor {sensor_name}: Sensor unexpectedly returned output "
-                    f"{result} of type {type(result)}.  Should only return SkipReason or "
-                    "RunRequest objects."
-                )
+            for item in result:
+                yield item
 
         return SensorDefinition(
             name=sensor_name,
@@ -96,4 +85,27 @@ def get_toys_sensors():
                 },
             )
 
-    return [toy_file_sensor]
+    @sensor(pipeline_name="log_asset_pipeline")
+    def toy_asset_sensor(context):
+        events = context.instance.events_for_asset_key(
+            AssetKey(["model"]), cursor=context.last_run_key, ascending=True
+        )
+
+        if not events:
+            return
+
+        record_id, event = events[-1]  # take the most recent materialization
+        from_pipeline = event.pipeline_name
+
+        yield RunRequest(
+            run_key=str(record_id),
+            run_config={
+                "solids": {
+                    "read_materialization": {
+                        "config": {"asset_key": ["model"], "pipeline": from_pipeline}
+                    }
+                }
+            },
+        )
+
+    return [toy_file_sensor, toy_asset_sensor]
