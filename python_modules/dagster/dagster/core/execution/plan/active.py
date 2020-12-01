@@ -7,6 +7,7 @@ from dagster.core.execution.plan.inputs import FromMultipleSources, FromStepOutp
 from dagster.core.execution.retries import Retries
 from dagster.utils import pop_delayed_interrupts
 
+from .key import StepKey
 from .plan import ExecutionPlan
 
 
@@ -280,22 +281,27 @@ class ActiveExecution:
             steps_to_abandon = self.get_steps_to_abandon()
 
     def mark_failed(self, step_key):
+        check.inst_param(step_key, "step_key", StepKey)
         self._failed.add(step_key)
         self._mark_complete(step_key)
 
     def mark_success(self, step_key):
+        check.inst_param(step_key, "step_key", StepKey)
         self._success.add(step_key)
         self._mark_complete(step_key)
 
     def mark_skipped(self, step_key):
+        check.inst_param(step_key, "step_key", StepKey)
         self._skipped.add(step_key)
         self._mark_complete(step_key)
 
     def mark_abandoned(self, step_key):
+        check.inst_param(step_key, "step_key", StepKey)
         self._abandoned.add(step_key)
         self._mark_complete(step_key)
 
     def mark_interrupted(self, step_key):
+        check.inst_param(step_key, "step_key", StepKey)
         self._interrupted.add(step_key)
 
     def check_for_interrupts(self):
@@ -306,6 +312,7 @@ class ActiveExecution:
             not self._retries.disabled,
             "Attempted to mark {} as up for retry but retries are disabled".format(step_key),
         )
+        check.inst_param(step_key, "step_key", StepKey)
         check.opt_float_param(at_time, "at_time")
 
         # if retries are enabled - queue this back up
@@ -319,7 +326,7 @@ class ActiveExecution:
             # do not attempt to execute again
             self._abandoned.add(step_key)
 
-        self._retries.mark_attempt(step_key)
+        self._retries.mark_attempt(str(step_key))
 
         self._mark_complete(step_key)
 
@@ -334,16 +341,16 @@ class ActiveExecution:
 
     def handle_event(self, dagster_event):
         check.inst_param(dagster_event, "dagster_event", DagsterEvent)
-
+        step_key = StepKey.from_string(dagster_event.step_key) if dagster_event.step_key else None
         if dagster_event.is_step_failure:
-            self.mark_failed(dagster_event.step_key)
+            self.mark_failed(step_key)
         elif dagster_event.is_step_success:
-            self.mark_success(dagster_event.step_key)
+            self.mark_success(step_key)
         elif dagster_event.is_step_skipped:
-            self.mark_skipped(dagster_event.step_key)
+            self.mark_skipped(step_key)
         elif dagster_event.is_step_up_for_retry:
             self.mark_up_for_retry(
-                dagster_event.step_key,
+                step_key,
                 time.time() + dagster_event.step_retry_data.seconds_to_wait
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,

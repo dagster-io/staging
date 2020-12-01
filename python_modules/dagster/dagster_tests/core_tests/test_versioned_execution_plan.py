@@ -20,6 +20,7 @@ from dagster import (
 from dagster.core.definitions import InputDefinition
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.api import create_execution_plan
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.resolve_versions import (
     join_and_hash,
@@ -138,11 +139,12 @@ def test_resolve_step_versions_no_external_dependencies():
     versions = resolve_step_versions_for_test(speculative_execution_plan)
 
     assert (
-        versions["versioned_solid_no_input.compute"] == versioned_pipeline_expected_step1_version()
+        versions[StepKey.from_string("versioned_solid_no_input.compute")]
+        == versioned_pipeline_expected_step1_version()
     )
 
     assert (
-        versions["versioned_solid_takes_input.compute"]
+        versions[StepKey.from_string("versioned_solid_takes_input.compute")]
         == versioned_pipeline_expected_step2_version()
     )
 
@@ -205,8 +207,8 @@ def test_resolve_memoized_execution_plan_no_stored_results():
     )
 
     assert set(memoized_execution_plan.step_keys_to_execute) == {
-        "versioned_solid_no_input.compute",
-        "versioned_solid_takes_input.compute",
+        StepKey.from_string("versioned_solid_no_input.compute"),
+        StepKey.from_string("versioned_solid_takes_input.compute"),
     }
 
 
@@ -223,14 +225,18 @@ def test_resolve_memoized_execution_plan_yes_stored_results():
         speculative_execution_plan, run_config={}, mode="default"
     )
 
-    assert memoized_execution_plan.step_keys_to_execute == ["versioned_solid_takes_input.compute"]
+    assert memoized_execution_plan.step_keys_to_execute == [
+        StepKey.from_string("versioned_solid_takes_input.compute")
+    ]
 
     expected_handle = StepOutputHandle(
         step_key="versioned_solid_no_input.compute", output_name="result"
     )
 
     assert (
-        memoized_execution_plan.step_dict["versioned_solid_takes_input.compute"]
+        memoized_execution_plan.step_dict[
+            StepKey.from_string("versioned_solid_takes_input.compute")
+        ]
         .step_input_dict["intput"]
         .source.step_output_handle
         == expected_handle
@@ -248,7 +254,7 @@ def test_resolve_memoized_execution_plan_partial_versioning():
 
     assert instance.resolve_memoized_execution_plan(
         speculative_execution_plan, run_config={}, mode="default"
-    ).step_keys_to_execute == ["solid_takes_input.compute"]
+    ).step_keys_to_execute == [StepKey.from_string("solid_takes_input.compute")]
 
 
 def test_versioned_execution_plan_no_external_dependencies():  # TODO: flesh out this test once version storage has been implemented
@@ -317,7 +323,10 @@ def run_test_with_builtin_type(type_to_test, loader_version, type_value):
     )
 
     step1_version = join_and_hash(input_version, solid1_version)
-    assert versions["versioned_solid_ext_input_builtin_type.compute"] == step1_version
+    assert (
+        versions[StepKey.from_string("versioned_solid_ext_input_builtin_type.compute")]
+        == step1_version
+    )
 
     output_version = join_and_hash(step1_version, "result")
     hashed_input2 = output_version
@@ -330,7 +339,7 @@ def run_test_with_builtin_type(type_to_test, loader_version, type_value):
     )
 
     step2_version = join_and_hash(hashed_input2, solid2_version)
-    assert versions["versioned_solid_takes_input.compute"] == step2_version
+    assert versions[StepKey.from_string("versioned_solid_takes_input.compute")] == step2_version
 
 
 @solid(
@@ -357,7 +366,7 @@ def test_resolve_step_versions_default_value():
     solid_version = join_and_hash(solid_def_version, solid_config_version, solid_resources_version)
 
     step_version = join_and_hash(input_version, solid_version)
-    assert versions["versioned_solid_default_value.compute"] == step_version
+    assert versions[StepKey.from_string("versioned_solid_default_value.compute")] == step_version
 
 
 def test_step_keys_already_provided():
@@ -501,7 +510,7 @@ def test_step_versions_with_resources():
 
     step_version = join_and_hash(solid_version)
 
-    assert versions["fake_solid_resources_versioned.compute"] == step_version
+    assert versions[StepKey.from_string("fake_solid_resources_versioned.compute")] == step_version
 
 
 def test_step_versions_composite_solid():
@@ -529,4 +538,4 @@ def test_step_versions_composite_solid():
 
     versions = resolve_step_versions_for_test(speculative_execution_plan, run_config=run_config)
 
-    assert versions["do_stuff.scalar_config_solid.compute"] == None
+    assert versions[StepKey.from_string("do_stuff.scalar_config_solid.compute")] == None

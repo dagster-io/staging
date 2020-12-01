@@ -17,6 +17,7 @@ from dagster import (
 from dagster.core.definitions.events import AssetMaterialization, AssetStoreOperationType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.context.system import AssetStoreContext
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.asset_store import (
     AssetStore,
@@ -84,7 +85,9 @@ def test_fs_asset_store():
             asset_store_operation_events[1].event_specific_data.op
             == AssetStoreOperationType.GET_ASSET
         )
-        assert "solid_a.compute" == asset_store_operation_events[1].event_specific_data.step_key
+        assert "solid_a.compute" == str(
+            asset_store_operation_events[1].event_specific_data.step_key
+        )
 
         # SET ASSET for step "solid_b.compute" output "result"
         assert (
@@ -126,7 +129,7 @@ def test_default_asset_store_reexecution():
             )
         )
         assert len(get_asset_events) == 1
-        assert get_asset_events[0].event_specific_data.step_key == "solid_a.compute"
+        assert str(get_asset_events[0].event_specific_data.step_key) == "solid_a.compute"
 
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):

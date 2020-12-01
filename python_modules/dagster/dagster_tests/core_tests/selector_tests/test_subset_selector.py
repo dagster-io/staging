@@ -1,6 +1,7 @@
 import pytest
 from dagster import InputDefinition, lambda_solid, pipeline
 from dagster.core.errors import DagsterInvalidSubsetError
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.selector.subset_selector import (
     MAX_NUM,
     Traverser,
@@ -141,11 +142,14 @@ def test_parse_solid_selection_invalid():
 
 
 step_deps = {
-    "return_one.compute": set(),
-    "return_two.compute": set(),
-    "add_nums.compute": {"return_one.compute", "return_two.compute"},
-    "multiply_two.compute": {"add_nums.compute"},
-    "add_one.compute": {"multiply_two.compute"},
+    StepKey.from_string("return_one.compute"): set(),
+    StepKey.from_string("return_two.compute"): set(),
+    StepKey.from_string("add_nums.compute"): {
+        StepKey.from_string("return_one.compute"),
+        StepKey.from_string("return_two.compute"),
+    },
+    StepKey.from_string("multiply_two.compute"): {StepKey.from_string("add_nums.compute")},
+    StepKey.from_string("add_one.compute"): {StepKey.from_string("multiply_two.compute")},
 }
 
 

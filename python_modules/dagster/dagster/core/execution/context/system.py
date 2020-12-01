@@ -15,6 +15,7 @@ from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
@@ -308,7 +309,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             source_run_id = self.pipeline_run.run_id
 
         return AssetStoreContext(
-            step_key=step_output_handle.step_key,
+            step_key=str(step_output_handle.step_key),
             output_name=step_output_handle.output_name,
             asset_metadata=asset_store_handle.asset_metadata,
             pipeline_name=self.pipeline_def.name,

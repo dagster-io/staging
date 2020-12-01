@@ -185,7 +185,7 @@ def _pack_value(val, whitelist_map):
         klass_name = val.__class__.__name__
         check.invariant(
             klass_name in whitelist_map["types"]["tuple"],
-            "Can only serialize whitelisted namedtuples, received tuple {}".format(val),
+            "Can only serialize whitelisted namedtuples, received tuple {}".format(repr(val)),
         )
         if klass_name in whitelist_map["persistence"]:
             return val.to_storage_value()

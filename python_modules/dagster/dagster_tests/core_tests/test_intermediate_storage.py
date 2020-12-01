@@ -46,7 +46,7 @@ class FancyStringFilesystemTypeStoragePlugin(TypeStoragePlugin):  # pylint:disab
     def set_intermediate_object(
         cls, intermediate_storage, context, dagster_type, step_output_handle, value
     ):
-        paths = ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
+        paths = ["intermediates", str(step_output_handle.step_key), step_output_handle.output_name]
         paths.append(value)
         mkdir_p(os.path.join(intermediate_storage.root, *paths))
 
@@ -54,7 +54,7 @@ class FancyStringFilesystemTypeStoragePlugin(TypeStoragePlugin):  # pylint:disab
     def get_intermediate_object(
         cls, intermediate_storage, context, dagster_type, step_output_handle
     ):
-        paths = ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
+        paths = ["intermediates", str(step_output_handle.step_key), step_output_handle.output_name]
         return os.listdir(os.path.join(intermediate_storage.root, *paths))[0]
 
 

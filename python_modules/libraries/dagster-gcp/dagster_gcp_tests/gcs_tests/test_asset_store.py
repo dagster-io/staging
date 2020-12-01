@@ -78,7 +78,7 @@ def test_gcs_asset_store_execution(gcs_bucket):
     asset_store = PickledObjectGCSAssetStore(gcs_bucket, storage.Client())
     step_output_handle = StepOutputHandle("return_one.compute")
     context = AssetStoreContext(
-        step_output_handle.step_key,
+        str(step_output_handle.step_key),
         step_output_handle.output_name,
         {},
         pipeline_def.name,
@@ -98,7 +98,7 @@ def test_gcs_asset_store_execution(gcs_bucket):
 
     step_output_handle = StepOutputHandle("add_one.compute")
     context = AssetStoreContext(
-        step_output_handle.step_key,
+        str(step_output_handle.step_key),
         step_output_handle.output_name,
         {},
         pipeline_def.name,

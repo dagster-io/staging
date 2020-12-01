@@ -24,14 +24,10 @@ def read_csv(context, csv_path: str) -> list:
 def sort_by_calories(context, cereals: list):
     sorted_cereals = sorted(cereals, key=lambda cereal: cereal["calories"])
     context.log.info(
-        "Least caloric cereal: {least_caloric}".format(
-            least_caloric=sorted_cereals[0]["name"]
-        )
+        "Least caloric cereal: {least_caloric}".format(least_caloric=sorted_cereals[0]["name"])
     )
     context.log.info(
-        "Most caloric cereal: {most_caloric}".format(
-            most_caloric=sorted_cereals[-1]["name"]
-        )
+        "Most caloric cereal: {most_caloric}".format(most_caloric=sorted_cereals[-1]["name"])
     )
     return sorted_cereals
 
@@ -44,17 +40,11 @@ def reexecution_pipeline():
 
 if __name__ == "__main__":
     run_config = {
-        "solids": {
-            "read_csv": {
-                "inputs": {"csv_path": {"value": "../../cereal.csv"}}
-            }
-        },
+        "solids": {"read_csv": {"inputs": {"csv_path": {"value": "../../cereal.csv"}}}},
         "storage": {"filesystem": {}},
     }
     instance = DagsterInstance.ephemeral()
-    result = execute_pipeline(
-        reexecution_pipeline, run_config=run_config, instance=instance
-    )
+    result = execute_pipeline(reexecution_pipeline, run_config=run_config, instance=instance)
 
     assert result.success
 

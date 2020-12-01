@@ -56,17 +56,17 @@ def test_hook_accumulation():
 
     @event_list_hook
     def pipeline_hook(context, _):
-        called_hook_to_step_keys[context.hook_def.name].add(context.step.key)
+        called_hook_to_step_keys[context.hook_def.name].add(str(context.step.key))
         return HookExecutionResult("pipeline_hook")
 
     @event_list_hook
     def solid_1_hook(context, _):
-        called_hook_to_step_keys[context.hook_def.name].add(context.step.key)
+        called_hook_to_step_keys[context.hook_def.name].add(str(context.step.key))
         return HookExecutionResult("solid_1_hook")
 
     @event_list_hook
     def composite_1_hook(context, _):
-        called_hook_to_step_keys[context.hook_def.name].add(context.step.key)
+        called_hook_to_step_keys[context.hook_def.name].add(str(context.step.key))
         return HookExecutionResult("composite_1_hook")
 
     @solid
@@ -119,7 +119,7 @@ def test_hook_on_composite_solid_instance():
 
     @event_list_hook
     def hook_a_generic(context, _):
-        called_hook_to_step_keys[context.hook_def.name].add(context.step.key)
+        called_hook_to_step_keys[context.hook_def.name].add(str(context.step.key))
         return HookExecutionResult("hook_a_generic")
 
     @solid
@@ -254,7 +254,7 @@ def test_hook_on_pipeline_def_with_composite_solids():
 
     @event_list_hook
     def hook_a_generic(context, _):
-        called_hook_to_step_keys[context.hook_def.name].add(context.step.key)
+        called_hook_to_step_keys[context.hook_def.name].add(str(context.step.key))
         return HookExecutionResult("hook_a_generic")
 
     @solid

@@ -77,7 +77,7 @@ def test_s3_asset_store_execution(mock_s3_bucket):
     asset_store = PickledObjectS3AssetStore(mock_s3_bucket.name, s3_prefix="dagster")
     step_output_handle = StepOutputHandle("return_one.compute")
     context = AssetStoreContext(
-        step_output_handle.step_key,
+        str(step_output_handle.step_key),
         step_output_handle.output_name,
         {},
         pipeline_def.name,
@@ -97,7 +97,7 @@ def test_s3_asset_store_execution(mock_s3_bucket):
 
     step_output_handle = StepOutputHandle("add_one.compute")
     context = AssetStoreContext(
-        step_output_handle.step_key,
+        str(step_output_handle.step_key),
         step_output_handle.output_name,
         {},
         pipeline_def.name,

@@ -15,6 +15,7 @@ from dagster.core.errors import (
     DagsterRunAlreadyExists,
     DagsterRunConflict,
 )
+from dagster.core.execution.plan.key import check_opt_step_key_str_param
 from dagster.core.execution.resolve_versions import resolve_step_output_versions
 from dagster.core.storage.migration.utils import upgrading_instance
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
@@ -597,6 +598,8 @@ class DagsterInstance:
         check.opt_set_param(solids_to_execute, "solids_to_execute", of_type=str)
         check.opt_list_param(solid_selection, "solid_selection", of_type=str)
 
+        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+
         if solids_to_execute:
             if isinstance(pipeline_def, PipelineSubsetDefinition):
                 # for the case when pipeline_def is created by IPipeline or ExternalPipeline
@@ -631,7 +634,9 @@ class DagsterInstance:
             subsetted_execution_plan = self.resolve_memoized_execution_plan(
                 full_execution_plan, run_config=run_config, mode=mode,
             )  # TODO: tighter integration with existing step_keys_to_execute functionality
-            step_keys_to_execute = subsetted_execution_plan.step_keys_to_execute
+            step_keys_to_execute = [
+                str(key) for key in subsetted_execution_plan.step_keys_to_execute
+            ]
         else:
             subsetted_execution_plan = (
                 full_execution_plan.build_subset_plan(step_keys_to_execute)
@@ -1017,6 +1022,8 @@ class DagsterInstance:
         check.class_param(cls, "cls")
         check.str_param(message, "message")
         check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
+        step_key = check_opt_step_key_str_param(step_key)
+
         engine_event_data = check.opt_inst_param(
             engine_event_data, "engine_event_data", EngineEventData, EngineEventData([]),
         )
