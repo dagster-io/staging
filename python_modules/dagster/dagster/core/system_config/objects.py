@@ -1,4 +1,5 @@
 """System-provided config objects and constructors."""
+import warnings
 from collections import namedtuple
 
 from dagster import check
@@ -93,6 +94,15 @@ class EnvironmentConfig(
         mode = mode or pipeline_def.get_default_mode_name()
         environment_type = create_environment_type(pipeline_def, mode)
 
+        if run_config.get("storage"):
+            warnings.warn(
+                (
+                    'the "storage" entry in the run config is deprecated and will removed in the '
+                    'dagster 0.11.0 release. Please use "intermediate_storage" instead and update '
+                    "the corresponding `system_storage_defs` argument in `ModeDefinition` to "
+                    "`intermediate_storage_defs`."
+                )
+            )
         config_evr = process_config(environment_type, run_config)
         if not config_evr.success:
             raise DagsterInvalidConfigError(
