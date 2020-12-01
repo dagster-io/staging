@@ -84,7 +84,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             assert (
                 captured.out
                 == """2019-02-27 22:00:01 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: daily_central_time_schedule
-2019-02-27 22:00:01 - SchedulerDaemon - INFO - Launching runs for daily_central_time_schedule at 2019-02-28 00:00:00-0600
+2019-02-27 22:00:01 - SchedulerDaemon - INFO - Evaluating schedule `daily_central_time_schedule` at 2019-02-28 00:00:00-0600
 2019-02-27 22:00:01 - SchedulerDaemon - INFO - Completed scheduled launch of run {run_id} for daily_central_time_schedule
 """.format(
                     run_id=instance.get_runs()[0].run_id
