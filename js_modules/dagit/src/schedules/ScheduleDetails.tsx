@@ -12,6 +12,8 @@ import {
 } from 'src/schedules/ScheduleRow';
 import {humanCronString} from 'src/schedules/humanCronString';
 import {ScheduleDefinitionFragment} from 'src/schedules/types/ScheduleDefinitionFragment';
+import {StartSchedule} from 'src/schedules/types/StartSchedule';
+import {StopSchedule} from 'src/schedules/types/StopSchedule';
 import {ScheduleStatus} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
@@ -46,12 +48,18 @@ export const ScheduleDetails: React.FC<{
   const {repoAddress, schedule} = props;
   const {cronSchedule, executionTimezone, futureTicks, name, partitionSet, pipelineName} = schedule;
 
-  const [startSchedule, {loading: toggleOnInFlight}] = useMutation(START_SCHEDULE_MUTATION, {
-    onCompleted: displayScheduleMutationErrors,
-  });
-  const [stopSchedule, {loading: toggleOffInFlight}] = useMutation(STOP_SCHEDULE_MUTATION, {
-    onCompleted: displayScheduleMutationErrors,
-  });
+  const [startSchedule, {loading: toggleOnInFlight}] = useMutation<StartSchedule>(
+    START_SCHEDULE_MUTATION,
+    {
+      onCompleted: displayScheduleMutationErrors,
+    },
+  );
+  const [stopSchedule, {loading: toggleOffInFlight}] = useMutation<StopSchedule>(
+    STOP_SCHEDULE_MUTATION,
+    {
+      onCompleted: displayScheduleMutationErrors,
+    },
+  );
 
   const scheduleSelector = useScheduleSelector(name);
 
