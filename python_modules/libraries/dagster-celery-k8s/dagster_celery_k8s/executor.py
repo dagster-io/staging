@@ -326,7 +326,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 ]
             ),
             CeleryK8sJobExecutor,
-            step_key=step_key,
+            step_key=str(step_key),
         )
 
         if pipeline_run.status != PipelineRunStatus.STARTED:
@@ -335,7 +335,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 pipeline_run,
                 EngineEventData([EventMetadataEntry.text(step_key, "Step key"),]),
                 CeleryK8sJobExecutor,
-                step_key=step_key,
+                step_key=str(step_key),
             )
             return []
 

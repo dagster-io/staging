@@ -19,6 +19,7 @@ from dagster.core.execution.context.system import (
     SystemExecutionContext,
     SystemStepExecutionContext,
 )
+from dagster.core.execution.plan.key import check_opt_step_key_param, check_step_key_param
 from dagster.core.execution.plan.objects import StepOutputData
 from dagster.core.log_manager import DagsterLogManager
 from dagster.serdes import register_serdes_tuple_fallbacks, whitelist_for_serdes
@@ -158,7 +159,6 @@ def log_pipeline_event(pipeline_context, event, step_key):
         ),
         dagster_event=event,
         pipeline_name=pipeline_context.pipeline_def.name,
-        step_key=step_key,
     )
 
 
@@ -168,7 +168,9 @@ def log_resource_event(log_manager, pipeline_name, event):
     check.inst(event.event_specific_data, EngineEventData)
 
     log_fn = log_manager.error if event.event_specific_data.error else log_manager.debug
-    log_fn(event.message, dagster_event=event, pipeline_name=pipeline_name, step_key=event.step_key)
+    log_fn(
+        event.message, dagster_event=event, pipeline_name=pipeline_name,
+    )
 
 
 @whitelist_for_serdes
@@ -201,14 +203,14 @@ class DagsterEvent(
         check.inst_param(step_context, "step_context", SystemStepExecutionContext)
 
         event = DagsterEvent(
-            check.inst_param(event_type, "event_type", DagsterEventType).value,
-            step_context.pipeline_def.name,
-            step_context.step.key,
-            step_context.step.solid_handle,
-            step_context.step.kind.value,
-            step_context.logging_tags,
-            _validate_event_specific_data(event_type, event_specific_data),
-            check.opt_str_param(message, "message"),
+            event_type_value=check.inst_param(event_type, "event_type", DagsterEventType).value,
+            pipeline_name=step_context.pipeline_def.name,
+            step_key=str(step_context.step.key),
+            solid_handle=step_context.step.solid_handle,
+            step_kind_value=step_context.step.kind.value,
+            logging_tags=step_context.logging_tags,
+            event_specific_data=_validate_event_specific_data(event_type, event_specific_data),
+            message=check.opt_str_param(message, "message"),
             pid=os.getpid(),
         )
 
@@ -221,7 +223,7 @@ class DagsterEvent(
         event_type, pipeline_context, message=None, event_specific_data=None, step_key=None
     ):
         check.inst_param(pipeline_context, "pipeline_context", SystemExecutionContext)
-
+        check.opt_str_param(step_key, "step_key")
         pipeline_name = pipeline_context.pipeline_def.name
 
         event = DagsterEvent(
@@ -243,6 +245,7 @@ class DagsterEvent(
 
         check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
         pipeline_name = execution_plan.pipeline_def.name
+        single_step_key = execution_plan.step_key_for_single_step_plans()
         event = DagsterEvent(
             DagsterEventType.ENGINE_EVENT.value,
             pipeline_name=pipeline_name,
@@ -250,7 +253,7 @@ class DagsterEvent(
             event_specific_data=_validate_event_specific_data(
                 DagsterEventType.ENGINE_EVENT, event_specific_data
             ),
-            step_key=execution_plan.step_key_for_single_step_plans(),
+            step_key=str(single_step_key) if single_step_key else None,
             pid=os.getpid(),
         )
         log_resource_event(log_manager, pipeline_name, event)
@@ -719,6 +722,7 @@ class DagsterEvent(
 
     @staticmethod
     def engine_event(pipeline_context, message, event_specific_data=None, step_key=None):
+        check.opt_str_param(step_key, "step_key")
         return DagsterEvent.from_pipeline(
             DagsterEventType.ENGINE_EVENT,
             pipeline_context,
@@ -836,7 +840,7 @@ class DagsterEvent(
             step_context=step_context,
             event_specific_data=AssetStoreOperationData(
                 op=asset_store_operation.op,
-                step_key=asset_store_operation.step_output_handle.step_key,
+                step_key=str(asset_store_operation.step_output_handle.step_key),
                 output_name=asset_store_operation.step_output_handle.output_name,
                 asset_store_key=asset_store_operation.asset_store_handle.asset_store_key,
             ),
@@ -851,7 +855,7 @@ class DagsterEvent(
         event = DagsterEvent(
             event_type_value=event_type.value,
             pipeline_name=hook_context.pipeline_def.name,
-            step_key=hook_context.step.key,
+            step_key=str(hook_context.step.key),
             solid_handle=hook_context.step.solid_handle,
             step_kind_value=hook_context.step.kind.value,
             logging_tags=hook_context.logging_tags,
@@ -874,7 +878,7 @@ class DagsterEvent(
         event = DagsterEvent(
             event_type_value=event_type.value,
             pipeline_name=hook_context.pipeline_def.name,
-            step_key=hook_context.step.key,
+            step_key=str(hook_context.step.key),
             solid_handle=hook_context.step.solid_handle,
             step_kind_value=hook_context.step.kind.value,
             logging_tags=hook_context.logging_tags,
@@ -900,7 +904,7 @@ class DagsterEvent(
         event = DagsterEvent(
             event_type_value=event_type.value,
             pipeline_name=hook_context.pipeline_def.name,
-            step_key=hook_context.step.key,
+            step_key=str(hook_context.step.key),
             solid_handle=hook_context.step.solid_handle,
             step_kind_value=hook_context.step.kind.value,
             logging_tags=hook_context.logging_tags,

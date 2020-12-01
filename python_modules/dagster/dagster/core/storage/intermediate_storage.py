@@ -92,7 +92,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def _get_paths(self, step_output_handle):
-        return ["intermediates", step_output_handle.step_key, step_output_handle.output_name]
+        return ["intermediates", str(step_output_handle.step_key), step_output_handle.output_name]
 
     def get_intermediate_object(self, dagster_type, step_output_handle):
         check.inst_param(dagster_type, "dagster_type", DagsterType)

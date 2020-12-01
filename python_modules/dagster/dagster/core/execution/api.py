@@ -9,6 +9,7 @@ from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.plan.execute_plan import inner_plan_execution_iterator
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
 from dagster.core.execution.retries import Retries
@@ -445,9 +446,11 @@ def reexecute_pipeline(
             parent_execution_plan_snapshot = instance.get_execution_plan_snapshot(
                 parent_pipeline_run.execution_plan_snapshot_id
             )
-            step_keys_to_execute = parse_step_selection(
+            step_set_to_execute = parse_step_selection(
                 parent_execution_plan_snapshot.step_deps, step_selection
             )
+            # convert to frozenset https://github.com/dagster-io/dagster/issues/2914
+            step_keys_to_execute = list(step_set_to_execute)
         else:
             step_keys_to_execute = None
 
@@ -458,8 +461,7 @@ def reexecute_pipeline(
             tags=tags,
             solid_selection=parent_pipeline_run.solid_selection,
             solids_to_execute=parent_pipeline_run.solids_to_execute,
-            # convert to frozenset https://github.com/dagster-io/dagster/issues/2914
-            step_keys_to_execute=list(step_keys_to_execute) if step_keys_to_execute else None,
+            step_keys_to_execute=step_keys_to_execute,
             root_run_id=parent_pipeline_run.root_run_id or parent_pipeline_run.run_id,
             parent_run_id=parent_pipeline_run.run_id,
         )
@@ -631,7 +633,7 @@ def create_execution_plan(pipeline, run_config=None, mode=None, step_keys_to_exe
 
     run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
     mode = check.opt_str_param(mode, "mode", default=pipeline_def.get_default_mode_name())
-    check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+    check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=(str, StepKey))
 
     environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode)
 

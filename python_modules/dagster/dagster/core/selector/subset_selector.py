@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterInvalidSubsetError
+from dagster.core.execution.plan.key import StepKey
 from dagster.utils import check
 
 MAX_NUM = sys.maxsize
@@ -200,7 +201,7 @@ def parse_step_selection(step_deps, step_selection):
     It currently only supports top-level solids.
 
     Args:
-        step_deps (Dict[str, Set[str]]): a dictionary of execution step dependency where the key is
+        step_deps (Dict[StepKey, Set[StepKey]]): a dictionary of execution step dependency where the key is
             a step key and the value is a set of direct upstream dependency of the step.
         step_selection (List[str]): a list of the step key selection queries (including single
             step key) to execute.
@@ -210,16 +211,19 @@ def parse_step_selection(step_deps, step_selection):
             subset selected.
     """
     check.list_param(step_selection, "step_selection", of_type=str)
+    check.dict_param(step_deps, "step_deps", key_type=StepKey, value_type=set)
+
+    str_deps = {str(key): set([str(x) for x in value]) for key, value in step_deps.items()}
 
     # reverse step_deps to get the downstream_deps
     # make sure we have all items as keys, including the ones without downstream dependencies
-    downstream_deps = defaultdict(set, {k: set() for k in step_deps.keys()})
-    for downstream_key, upstream_keys in step_deps.items():
+    downstream_deps = defaultdict(set, {k: set() for k in str_deps.keys()})
+    for downstream_key, upstream_keys in str_deps.items():
         for step_key in upstream_keys:
             downstream_deps[step_key].add(downstream_key)
 
     # generate dep graph
-    graph = {"upstream": step_deps, "downstream": downstream_deps}
+    graph = {"upstream": str_deps, "downstream": downstream_deps}
     traverser = Traverser(graph=graph)
     steps_set = set()
 

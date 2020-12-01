@@ -84,7 +84,7 @@ def core_celery_execution_loop(pipeline_context, execution_plan, step_execution_
                                 step_key=step_key,
                             ),
                             EngineEventData(marker_end=DELEGATE_MARKER),
-                            step_key=step_key,
+                            step_key=str(step_key),
                         )
                     except Exception:  # pylint: disable=broad-except
                         # We will want to do more to handle the exception here.. maybe subclass Task
@@ -127,7 +127,7 @@ def core_celery_execution_loop(pipeline_context, execution_plan, step_execution_
                             step_key=step.key, queue=queue
                         ),
                         EngineEventData(marker_start=DELEGATE_MARKER),
-                        step_key=step.key,
+                        step_key=str(step.key),
                     )
 
                     # Get the Celery priority for this step

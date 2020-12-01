@@ -2,6 +2,7 @@ from collections import namedtuple
 
 from dagster import check
 from dagster.core.execution.plan.inputs import StepInput
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.plan.objects import StepKind, StepOutput, StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan, ExecutionStep
 from dagster.serdes import create_snapshot_id, whitelist_for_serdes
@@ -36,11 +37,11 @@ class ExecutionPlanSnapshot(
     @property
     def step_deps(self):
         # Construct dependency dictionary (downstream to upstreams)
-        deps = {step.key: set() for step in self.steps}
+        deps = {StepKey.from_string(step.key): set() for step in self.steps}
 
         for step in self.steps:
             for step_input in step.inputs:
-                deps[step.key].update(
+                deps[StepKey.from_string(step.key)].update(
                     [output_handle.step_key for output_handle in step_input.upstream_output_handles]
                 )
         return deps
@@ -128,7 +129,7 @@ def _snapshot_from_step_output(step_output):
 def _snapshot_from_execution_step(execution_step):
     check.inst_param(execution_step, "execution_step", ExecutionStep)
     return ExecutionStepSnap(
-        key=execution_step.key,
+        key=str(execution_step.key),
         inputs=sorted(
             list(map(_snapshot_from_step_input, execution_step.step_inputs)), key=lambda si: si.name
         ),
@@ -160,5 +161,5 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
         ),
         artifacts_persisted=execution_plan.artifacts_persisted,
         pipeline_snapshot_id=pipeline_snapshot_id,
-        step_keys_to_execute=execution_plan.step_keys_to_execute,
+        step_keys_to_execute=[str(key) for key in execution_plan.step_keys_to_execute],
     )
