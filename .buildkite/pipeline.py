@@ -104,6 +104,18 @@ def celery_docker_extra_cmds_fn(version):
     ]
 
 
+def docker_extra_cmds_fn(version):
+    return [
+        "pushd python_modules/libraries/dagster-docker/dagster_docker_tests/",
+        "docker-compose up -d --remove-orphans",
+        network_buildkite_container("postgres"),
+        connect_sibling_docker_container(
+            "postgres", "test-postgres-db-docker", "POSTGRES_TEST_DB_HOST",
+        ),
+        "popd",
+    ]
+
+
 def dagster_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
@@ -318,6 +330,12 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         "python_modules/libraries/dagster-dask",
         env_vars=["AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "AWS_DEFAULT_REGION"],
         supported_pythons=SupportedPythons,
+    ),
+    ModuleBuildSpec(
+        "python_modules/libraries/dagster-docker",
+        env_vars=["AWS_ACCOUNT_ID", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"],
+        extra_cmds_fn=docker_extra_cmds_fn,
+        depends_on_fn=test_image_depends_fn,
     ),
     ModuleBuildSpec(
         "python_modules/libraries/dagster-gcp",
