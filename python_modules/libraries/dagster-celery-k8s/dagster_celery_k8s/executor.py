@@ -14,7 +14,6 @@ from dagster import (
     executor,
 )
 from dagster.cli.api import ExecuteStepArgs
-from dagster.core.definitions.executor import check_cross_process_constraints
 from dagster.core.events import EngineEventData
 from dagster.core.events.log import DagsterEventRecord
 from dagster.core.execution.plan.objects import StepFailureData, UserFailureData
@@ -103,7 +102,7 @@ def celery_k8s_job_executor(init_context):
     commands must be invoked with the `-A dagster_celery_k8s.app` argument.
     """
 
-    check_cross_process_constraints(init_context)
+    init_context.ensure_multiprocess_safe()
 
     run_launcher = init_context.instance.run_launcher
     exc_cfg = init_context.executor_config
