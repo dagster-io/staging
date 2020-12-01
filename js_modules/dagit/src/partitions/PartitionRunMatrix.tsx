@@ -57,6 +57,8 @@ interface PartitionRunMatrixProps {
   repoAddress: RepoAddress;
   runTags: TokenizingFieldValue[];
   setRunTags: (val: TokenizingFieldValue[]) => void;
+  stepQuery: string;
+  setStepQuery: (val: string) => void;
 }
 
 export const PartitionRunMatrix: React.FC<PartitionRunMatrixProps> = (props) => {
@@ -70,7 +72,6 @@ export const PartitionRunMatrix: React.FC<PartitionRunMatrixProps> = (props) => 
         ? {partitionName: qs.partitionName, stepName: qs.stepName}
         : null,
   });
-  const [stepQuery = '', setStepQuery] = useQueryPersistedState<string>({queryKey: 'stepQuery'});
   const [stepSort = '', setStepSort] = useQueryPersistedState<string>({queryKey: 'stepSort'});
   const [options, setOptions] = useQueryPersistedState<DisplayOptions>({
     decode: (qs) => ({
@@ -101,8 +102,8 @@ export const PartitionRunMatrix: React.FC<PartitionRunMatrixProps> = (props) => 
 
   const data = useMatrixData({
     partitions: props.partitions,
+    stepQuery: props.stepQuery,
     solidHandles,
-    stepQuery,
     options,
   });
 
@@ -234,9 +235,9 @@ export const PartitionRunMatrix: React.FC<PartitionRunMatrixProps> = (props) => 
                 small
                 width={260}
                 items={solidHandles.map((h) => h.solid)}
-                value={stepQuery}
+                value={props.stepQuery}
                 placeholder="Type a Step Subset"
-                onChange={setStepQuery}
+                onChange={props.setStepQuery}
               />
             </TopLabel>
             {stepRows.map((step) => (

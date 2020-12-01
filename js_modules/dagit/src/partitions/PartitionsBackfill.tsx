@@ -112,7 +112,7 @@ function textToPartitions(selected: string, all: string[]) {
 export const PartitionsBackfillPartitionSelector: React.FC<{
   partitionSetName: string;
   pipelineName: string;
-  onLaunch?: (backfillId: string) => void;
+  onLaunch?: (backfillId: string, stepQuery: string) => void;
   repoAddress: RepoAddress;
 }> = ({partitionSetName, pipelineName, onLaunch, repoAddress}) => {
   const repositorySelector = repoAddressToSelector(repoAddress);
@@ -188,7 +188,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
       message: `Created backfill job "${backfillId}"`,
       intent: Intent.SUCCESS,
     });
-    onLaunch?.(backfillId);
+    onLaunch?.(backfillId, query);
   };
 
   const {

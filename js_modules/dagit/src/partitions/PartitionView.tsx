@@ -34,6 +34,7 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
   repoAddress,
 }) => {
   const [runTags, setRunTags] = useQueryPersistedRunFilters(RunTagsSupportedTokens);
+  const [stepQuery = '', setStepQuery] = useQueryPersistedState<string>({queryKey: 'stepQuery'});
   const [pageSize, setPageSize] = useQueryPersistedState<number | 'all'>({
     encode: (val) => ({pageSize: val}),
     decode: (qs) => Number(qs.pageSize || 30),
@@ -70,7 +71,8 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
           <PartitionsBackfillPartitionSelector
             partitionSetName={partitionSet.name}
             pipelineName={pipelineName}
-            onLaunch={(backfillId: string) => {
+            onLaunch={(backfillId, stepQuery) => {
+              setStepQuery(stepQuery);
               setRunTags([{token: 'tag', value: `dagster/backfill=${backfillId}`}]);
               setShowBackfillSetup(false);
             }}
@@ -117,6 +119,8 @@ export const PartitionView: React.FunctionComponent<PartitionViewProps> = ({
           repoAddress={repoAddress}
           runTags={runTags}
           setRunTags={setRunTags}
+          stepQuery={stepQuery}
+          setStepQuery={setStepQuery}
         />
         <PartitionGraphSet partitions={partitions} allStepKeys={Object.keys(allStepKeys)} />
       </div>
