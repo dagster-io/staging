@@ -47,3 +47,6 @@ SnapshotsTable = db.Table(
     db.Column("snapshot_body", db.LargeBinary, nullable=False),
     db.Column("snapshot_type", db.String(63), nullable=False),
 )
+
+
+db.Index("idx_run_tags", RunTagsTable.c.key, RunTagsTable.c.value)
