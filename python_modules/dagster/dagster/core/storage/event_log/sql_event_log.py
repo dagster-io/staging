@@ -593,7 +593,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
             set([AssetKey.from_db_string(asset_key) for (asset_key,) in results if asset_key])
         )
 
-    def get_asset_events(self, asset_key, cursor=None, limit=None):
+    def get_asset_events(self, asset_key, cursor=None, limit=None, since=None):
         check.inst_param(asset_key, "asset_key", AssetKey)
         query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event]).where(
             db.or_(
@@ -601,6 +601,10 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
                 SqlEventLogStorageTable.c.asset_key == asset_key.to_string(legacy=True),
             )
         )
+
+        if since is not None:
+            query = query.where(SqlEventLogStorageTable.c.timestamp > since)
+
         query = self._add_cursor_limit_to_query(query, cursor, limit)
         with self.connect() as conn:
             results = conn.execute(query).fetchall()
