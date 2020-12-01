@@ -1,7 +1,6 @@
 from dagster import check
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.init import InitResourceContext
-from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.utils.backcompat import experimental
 
 from .plan.inputs import join_and_hash
@@ -124,10 +123,13 @@ def resolve_step_versions_helper(execution_plan):
 
 
 def resolve_step_output_versions_helper(execution_plan):
+    from dagster.core.execution.plan.objects import StepOutputHandle
 
     step_versions = execution_plan.resolve_step_versions()
     return {
-        StepOutputHandle(step.key, output_name): join_and_hash(output_name, step_versions[step.key])
+        StepOutputHandle(str(step.key), output_name): join_and_hash(
+            output_name, step_versions[step.key]
+        )
         for step in execution_plan.steps
         for output_name in step.step_output_dict.keys()
     }

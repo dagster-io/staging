@@ -40,9 +40,11 @@ class Retries:
         return self._mode == RetryMode.DEFERRED
 
     def get_attempt_count(self, key):
+        check.str_param(key, "key")
         return self._attempts[key]
 
     def mark_attempt(self, key):
+        check.str_param(key, "key")
         self._attempts[key] += 1
 
     def for_inner_plan(self):
