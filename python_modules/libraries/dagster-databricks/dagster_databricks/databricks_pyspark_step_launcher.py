@@ -115,7 +115,7 @@ class DatabricksPySparkStepLauncher(StepLauncher):
         run_id = step_context.pipeline_run.run_id
         log = step_context.log
 
-        step_key = step_run_ref.step_key
+        step_key = str(step_run_ref.step_key)
         self._upload_artifacts(log, step_run_ref, run_id, step_key)
 
         task = self._get_databricks_task(run_id, step_key)

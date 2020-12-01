@@ -170,7 +170,6 @@ def test_step_context_to_step_run_ref():
         assert rehydrated_step_context.required_resource_keys == step_context.required_resource_keys
         rehydrated_step = rehydrated_step_context.step
         assert rehydrated_step.pipeline_name == step.pipeline_name
-        assert rehydrated_step.key_suffix == step.key_suffix
         assert rehydrated_step.step_inputs == step.step_inputs
         assert rehydrated_step.step_outputs == step.step_outputs
         assert rehydrated_step.kind == step.kind

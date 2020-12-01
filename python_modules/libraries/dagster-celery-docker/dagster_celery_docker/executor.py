@@ -180,7 +180,7 @@ def _submit_task_docker(app, pipeline_context, step, queue, priority):
     execute_step_args = ExecuteStepArgs(
         pipeline_origin=pipeline_context.pipeline.get_python_origin(),
         pipeline_run_id=pipeline_context.pipeline_run.run_id,
-        step_keys_to_execute=[step.key],
+        step_keys_to_execute=[str(step.key)],
         instance_ref=pipeline_context.instance.get_ref(),
         retries_dict=pipeline_context.executor.retries.for_inner_plan().to_config(),
     )

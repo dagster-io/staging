@@ -59,7 +59,7 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
 
             # capture all of the logs for this step
             with pipeline_context.instance.compute_log_manager.watch(
-                step_context.pipeline_run, step_context.step.key
+                step_context.pipeline_run, str(step_context.step.key)
             ):
                 missing_input_sources = pipeline_context.intermediate_storage.get_missing_input_sources(
                     step_context, step
@@ -216,7 +216,7 @@ def _dagster_event_sequence_for_step(step_context, retries):
     check.inst_param(retries, "retries", Retries)
 
     try:
-        prior_attempt_count = retries.get_attempt_count(step_context.step.key)
+        prior_attempt_count = retries.get_attempt_count(str(step_context.step.key))
         if step_context.step_launcher:
             step_events = step_context.step_launcher.launch_step(step_context, prior_attempt_count)
         else:
@@ -241,7 +241,7 @@ def _dagster_event_sequence_for_step(step_context, retries):
                 step_failure_data=StepFailureData(error=fail_err, user_failure_data=None),
             )
         else:  # retries.enabled or retries.deferred
-            prev_attempts = retries.get_attempt_count(step_context.step.key)
+            prev_attempts = retries.get_attempt_count(str(step_context.step.key))
             if prev_attempts >= retry_request.max_retries:
                 fail_err = SerializableErrorInfo(
                     message="Exceeded max_retries of {}".format(retry_request.max_retries),

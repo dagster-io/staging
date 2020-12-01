@@ -197,7 +197,7 @@ def _make_airflow_dag(
     coalesced_plan = coalesce_execution_steps(execution_plan)
 
     for solid_handle, solid_steps in coalesced_plan.items():
-        step_keys = [step.key for step in solid_steps]
+        step_keys = [str(step.key) for step in solid_steps]
 
         operator_parameters = DagsterOperatorParameters(
             recon_repo=recon_repo,

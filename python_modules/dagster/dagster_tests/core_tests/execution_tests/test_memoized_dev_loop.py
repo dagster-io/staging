@@ -1,5 +1,6 @@
 from dagster import execute_pipeline, seven
 from dagster.core.execution.api import create_execution_plan
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.resolve_versions import resolve_memoized_execution_plan
 from dagster.core.instance import DagsterInstance, InstanceType
 from dagster.core.launcher import DefaultRunLauncher
@@ -55,7 +56,7 @@ def test_dev_loop_changing_versions():
         run_config["solids"]["take_string_1_asset"]["config"]["input_str"] = "banana"
 
         assert get_step_keys_to_execute(asset_pipeline, run_config, "only_mode") == [
-            "take_string_1_asset.compute"
+            StepKey.from_string("take_string_1_asset.compute")
         ]
         result = execute_pipeline(
             asset_pipeline,

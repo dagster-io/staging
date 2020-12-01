@@ -30,6 +30,7 @@ from .inputs import (
     FromStepOutput,
     StepInput,
 )
+from .key import StepKey, check_step_key_param
 from .objects import ExecutionStep, StepOutputHandle
 
 
@@ -50,7 +51,8 @@ class _PlanBuilder:
             environment_config, "environment_config", EnvironmentConfig
         )
         check.opt_str_param(mode, "mode")
-        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=StepKey)
+
         self.step_keys_to_execute = step_keys_to_execute
         self.mode_definition = (
             pipeline.get_definition().get_mode_definition(mode)
@@ -306,7 +308,7 @@ def get_step_input(
 class ExecutionPlan(
     namedtuple(
         "_ExecutionPlan",
-        "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute environment_config",
+        "pipeline step_dict deps artifacts_persisted step_keys_to_execute environment_config",
     )
 ):
     def __new__(
@@ -318,7 +320,14 @@ class ExecutionPlan(
         step_keys_to_execute,
         environment_config,
     ):
-        missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
+        check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=StepKey)
+        check.dict_param(deps, "deps", key_type=StepKey, value_type=set)
+        for key, dep_key_set in deps.items():
+            check.set_param(dep_key_set, f"deps[{key}]", of_type=StepKey)
+
+        missing_steps = [
+            str(step_key) for step_key in step_keys_to_execute if step_key not in step_dict
+        ]
         if missing_steps:
             raise DagsterExecutionStepNotFoundError(
                 "Execution plan does not contain step{plural}: {steps}".format(
@@ -326,18 +335,16 @@ class ExecutionPlan(
                 ),
                 step_keys=missing_steps,
             )
+
         return super(ExecutionPlan, cls).__new__(
             cls,
             pipeline=check.inst_param(pipeline, "pipeline", IPipeline),
             step_dict=check.dict_param(
-                step_dict, "step_dict", key_type=str, value_type=ExecutionStep
+                step_dict, "step_dict", key_type=StepKey, value_type=ExecutionStep
             ),
-            deps=check.dict_param(deps, "deps", key_type=str, value_type=set),
-            steps=list(step_dict.values()),
+            deps=deps,
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
-            step_keys_to_execute=check.list_param(
-                step_keys_to_execute, "step_keys_to_execute", of_type=str
-            ),
+            step_keys_to_execute=step_keys_to_execute,
             environment_config=check.inst_param(
                 environment_config, "environment_config", EnvironmentConfig
             ),
@@ -371,12 +378,16 @@ class ExecutionPlan(
         return handle.asset_store_key if handle else None
 
     def has_step(self, key):
-        check.str_param(key, "key")
+        check.inst_param(key, "key", StepKey)
         return key in self.step_dict
 
-    def get_step_by_key(self, key):
-        check.str_param(key, "key")
-        return self.step_dict[key]
+    def get_step_by_key(self, step_key):
+        step_key = check_step_key_param(step_key)
+        return self.step_dict[step_key]
+
+    @property
+    def steps(self):
+        return list(self.step_dict.values())
 
     def topological_steps(self):
         return [step for step_level in self.topological_step_levels() for step in step_level]
@@ -416,7 +427,8 @@ class ExecutionPlan(
         return deps
 
     def build_subset_plan(self, step_keys_to_execute):
-        check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        check.list_param(step_keys_to_execute, "step_keys_to_execute")
+        step_keys_to_execute = [check_step_key_param(key) for key in step_keys_to_execute]
         return ExecutionPlan(
             self.pipeline,
             self.step_dict,
@@ -484,7 +496,9 @@ class ExecutionPlan(
         check.inst_param(pipeline, "pipeline", IPipeline)
         check.inst_param(environment_config, "environment_config", EnvironmentConfig)
         check.opt_str_param(mode, "mode")
-        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=(str, StepKey))
+        if step_keys_to_execute:
+            step_keys_to_execute = [check_step_key_param(key) for key in step_keys_to_execute]
 
         plan_builder = _PlanBuilder(
             pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute,

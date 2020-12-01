@@ -94,7 +94,7 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
                     'for non-optional output "{step_output_def.name}"'.format(
                         handle=str(step.solid_handle), step_output_def=step_output_def
                     ),
-                    step_key=step.key,
+                    step_key=str(step.key),
                     output_name=step_output_def.name,
                 )
 
@@ -313,7 +313,7 @@ def _create_step_events_for_output(step_context, output):
     step_output = step.step_output_named(output.output_name)
 
     version = step_context.execution_plan.resolve_step_output_versions()[
-        StepOutputHandle(step_context.step.key, output.output_name)
+        StepOutputHandle(str(step_context.step.key), output.output_name)
     ]
 
     for output_event in _type_checked_step_output_event_sequence(step_context, output, version):
@@ -450,7 +450,7 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
             solid_def=step_context.solid_def.name,
             solid=step_context.solid.name,
         ),
-        step_key=step_context.step.key,
+        step_key=str(step_context.step.key),
         solid_def_name=step_context.solid_def.name,
         solid_name=step_context.solid.name,
     ):

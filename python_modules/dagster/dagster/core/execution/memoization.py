@@ -6,6 +6,7 @@ from dagster.core.errors import DagsterInvariantViolationError, DagsterRunNotFou
 from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.events.log import EventRecord
 from dagster.core.execution.context.system import SystemExecutionContext
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.storage.asset_store import mem_asset_store
@@ -93,7 +94,7 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
     )
     output_handles_to_copy_by_step = defaultdict(list)
     for handle in output_handles_to_copy:
-        output_handles_to_copy_by_step[handle.step_key].append(handle)
+        output_handles_to_copy_by_step[StepKey.from_string(handle.step_key)].append(handle)
 
     intermediate_storage = pipeline_context.intermediate_storage
     for step in execution_plan.topological_steps():
@@ -159,6 +160,9 @@ def output_handles_from_execution_plan(execution_plan):
                 for step_output_handle in step_input.source.step_output_handle_dependencies:
                     # Only include handles that won't be satisfied by steps included in this
                     # execution.
-                    if step_output_handle.step_key not in execution_plan.step_keys_to_execute:
+                    if (
+                        StepKey.from_string(step_output_handle.step_key)
+                        not in execution_plan.step_keys_to_execute
+                    ):
                         output_handles_for_current_run.add(step_output_handle)
     return output_handles_for_current_run

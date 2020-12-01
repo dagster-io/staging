@@ -10,6 +10,7 @@ from dagster.core.definitions.events import (
 )
 from dagster.core.definitions.input import InputDefinition
 from dagster.core.errors import DagsterTypeLoadingError, user_code_error_boundary
+from dagster.core.execution.plan.key import StepKey
 
 
 def join_and_hash(*args):
@@ -95,7 +96,7 @@ class FromStepOutput(
 
     @property
     def step_key_dependencies(self):
-        return {self.step_output_handle.step_key}
+        return {self.get_output_step_key()}
 
     @property
     def step_output_handle_dependencies(self):
@@ -139,17 +140,20 @@ class FromStepOutput(
 
     def compute_version(self, step_versions):
         if (
-            self.step_output_handle.step_key not in step_versions
-            or not step_versions[self.step_output_handle.step_key]
+            self.get_output_step_key() not in step_versions
+            or not step_versions[self.get_output_step_key()]
         ):
             return None
         else:
             return join_and_hash(
-                step_versions[self.step_output_handle.step_key], self.step_output_handle.output_name
+                step_versions[self.get_output_step_key()], self.step_output_handle.output_name
             )
 
     def required_resource_keys(self):
         return {self.input_def.manager_key} if self.input_def.manager_key else set()
+
+    def get_output_step_key(self):
+        return StepKey.from_string(self.step_output_handle.step_key)
 
 
 def _generate_error_boundary_msg_for_step_input(context, input_name):

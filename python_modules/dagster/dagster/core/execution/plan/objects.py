@@ -6,8 +6,9 @@ from dagster.core.definitions import AssetMaterialization, Materialization, Soli
 from dagster.core.definitions.events import EventMetadataEntry
 from dagster.core.types.dagster_type import DagsterType
 from dagster.serdes import whitelist_for_serdes
-from dagster.utils import merge_dicts
 from dagster.utils.error import SerializableErrorInfo
+
+from .key import StepKey
 
 
 @whitelist_for_serdes
@@ -16,13 +17,27 @@ class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name")):
     def from_step(step, output_name="result"):
         check.inst_param(step, "step", ExecutionStep)
 
-        return StepOutputHandle(step.key, output_name)
+        return StepOutputHandle(str(step.key), output_name)
 
     def __new__(cls, step_key, output_name="result"):
         return super(StepOutputHandle, cls).__new__(
             cls,
             step_key=check.str_param(step_key, "step_key"),
             output_name=check.str_param(output_name, "output_name"),
+        )
+
+    def to_storage_value(self):
+        return {
+            "__class__": self.__class__.__name__,
+            "step_key": str(self.step_key),
+            "output_name": self.output_name,
+        }
+
+    @classmethod
+    def from_storage_dict(cls, storage_dict):
+        return cls(
+            step_key=StepKey.from_string(storage_dict["step_key"]),
+            output_name=storage_dict["output_name"],
         )
 
 
@@ -160,29 +175,19 @@ class ExecutionStep(
     namedtuple(
         "_ExecutionStep",
         (
-            "pipeline_name key_suffix step_inputs step_input_dict step_outputs step_output_dict "
-            "compute_fn kind solid_handle solid logging_tags tags hook_defs"
+            "pipeline_name step_inputs step_input_dict step_outputs step_output_dict "
+            "compute_fn kind solid_handle solid tags hook_defs"
         ),
     )
 ):
     def __new__(
-        cls,
-        pipeline_name,
-        key_suffix,
-        step_inputs,
-        step_outputs,
-        compute_fn,
-        kind,
-        solid_handle,
-        solid,
-        logging_tags=None,
+        cls, pipeline_name, step_inputs, step_outputs, compute_fn, kind, solid_handle, solid,
     ):
         from .inputs import StepInput
 
         return super(ExecutionStep, cls).__new__(
             cls,
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            key_suffix=check.str_param(key_suffix, "key_suffix"),
             step_inputs=check.list_param(step_inputs, "step_inputs", of_type=StepInput),
             step_input_dict={si.name: si for si in step_inputs},
             step_outputs=check.list_param(step_outputs, "step_outputs", of_type=StepOutput),
@@ -194,22 +199,14 @@ class ExecutionStep(
             kind=check.inst_param(kind, "kind", StepKind),
             solid_handle=check.inst_param(solid_handle, "solid_handle", SolidHandle),
             solid=check.inst_param(solid, "solid", Solid),
-            logging_tags=merge_dicts(
-                {
-                    "step_key": str(solid_handle) + "." + key_suffix,
-                    "pipeline": pipeline_name,
-                    "solid": solid_handle.name,
-                    "solid_definition": solid.definition.name,
-                },
-                check.opt_dict_param(logging_tags, "logging_tags"),
-            ),
             tags=solid.tags,
             hook_defs=solid.hook_defs,
         )
 
     @property
     def key(self):
-        return str(self.solid_handle) + "." + self.key_suffix
+        # will remove .compute in follow up diff
+        return StepKey.from_string(f"{self.solid_handle}.compute")
 
     @property
     def solid_name(self):
@@ -230,3 +227,12 @@ class ExecutionStep(
     def step_input_named(self, name):
         check.str_param(name, "name")
         return self.step_input_dict[name]
+
+    @property
+    def logging_tags(self):
+        return {
+            "step_key": str(self.key),
+            "pipeline": self.pipeline_name,
+            "solid": self.solid_handle.name,
+            "solid_definition": self.solid.definition.name,
+        }

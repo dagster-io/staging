@@ -306,7 +306,7 @@ def test_execution_plan():
 
     levels = plan.topological_step_levels()
 
-    assert "emit_nothing" in levels[0][0].key
-    assert "consume_nothing" in levels[1][0].key
+    assert "emit_nothing" in str(levels[0][0].key)
+    assert "consume_nothing" in str(levels[1][0].key)
 
     assert execute_pipeline(pipe).success

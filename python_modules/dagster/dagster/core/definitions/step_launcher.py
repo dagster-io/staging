@@ -4,6 +4,7 @@ from collections import namedtuple
 import six
 from dagster import check
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
+from dagster.core.execution.plan.key import StepKey
 from dagster.core.execution.retries import Retries
 from dagster.core.storage.pipeline_run import PipelineRun
 
@@ -35,7 +36,7 @@ class StepRunRef(
             check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
             check.str_param(run_id, "run_id"),
             check.inst_param(retries, "retries", Retries),
-            check.str_param(step_key, "step_key"),
+            check.inst_param(step_key, "step_key", StepKey),
             check.inst_param(recon_pipeline, "recon_pipeline", ReconstructablePipeline),
             check.int_param(prior_attempts_count, "prior_attempts_count"),
         )

@@ -44,7 +44,7 @@ class LocalExternalStepLauncher(StepLauncher):
         step_run_ref = step_context_to_step_run_ref(step_context, prior_attempts_count)
         run_id = step_context.pipeline_run.run_id
 
-        step_run_dir = os.path.join(self.scratch_dir, run_id, step_run_ref.step_key)
+        step_run_dir = os.path.join(self.scratch_dir, run_id, str(step_run_ref.step_key))
         os.makedirs(step_run_dir)
 
         step_run_ref_file_path = os.path.join(step_run_dir, PICKLED_STEP_RUN_REF_FILE_NAME)
