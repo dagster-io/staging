@@ -31,8 +31,8 @@ class _ScheduleLaunchContext:
     def update_state(self, status, **kwargs):
         self._tick = self._tick.with_status(status=status, **kwargs)
 
-    def add_run(self, run_id):
-        self._tick = self._tick.with_run(run_id)
+    def add_run(self, run_id, run_key=None):
+        self._tick = self._tick.with_run(run_id, run_key)
 
     def _write(self):
         self._instance.update_job_tick(self._tick)
@@ -275,7 +275,7 @@ def _schedule_runs_at_time(
                 logger.info(
                     f"Run {run.run_id} already completed for this execution of {external_schedule.name}"
                 )
-                tick_context.add_run(run_id=run.run_id)
+                tick_context.add_run(run_id=run.run_id, run_key=run_request.run_key)
                 continue
             else:
                 logger.info(
@@ -302,7 +302,7 @@ def _schedule_runs_at_time(
                 logger.error(f"Run {run.run_id} created successfully but failed to launch.")
 
         _check_for_debug_crash(debug_crash_flags, "RUN_LAUNCHED")
-        tick_context.add_run(run_id=run.run_id)
+        tick_context.add_run(run_id=run.run_id, run_key=run_request.run_key)
         _check_for_debug_crash(debug_crash_flags, "RUN_ADDED")
 
     _check_for_debug_crash(debug_crash_flags, "TICK_SUCCESS")
