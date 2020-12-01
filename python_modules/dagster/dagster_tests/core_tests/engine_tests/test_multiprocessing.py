@@ -150,7 +150,7 @@ def test_invalid_instance():
     assert result.event_list[2].is_failure
     assert (
         result.event_list[2].pipeline_init_failure_data.error.cls_name
-        == "DagsterUnmetExecutorRequirementsError"
+        == "DagsterSingleProcessOnlyResourceError"
     )
     assert "non-ephemeral instance" in result.event_list[2].pipeline_init_failure_data.error.message
 
@@ -167,7 +167,7 @@ def test_no_handle():
     assert result.event_list[2].is_failure
     assert (
         result.event_list[2].pipeline_init_failure_data.error.cls_name
-        == "DagsterUnmetExecutorRequirementsError"
+        == "DagsterSingleProcessOnlyResourceError"
     )
     assert "is not reconstructable" in result.event_list[2].pipeline_init_failure_data.error.message
 
