@@ -66,7 +66,7 @@ def test_failure_recovery_before_run_created(
             assert (
                 captured.out.replace("\r\n", "\n")
                 == """2019-02-26 18:00:00 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: simple_schedule
-2019-02-26 18:00:00 - SchedulerDaemon - INFO - Launching runs for simple_schedule at 2019-02-27 00:00:00+0000
+2019-02-26 18:00:00 - SchedulerDaemon - INFO - Evaluating schedule `simple_schedule` at 2019-02-27 00:00:00+0000
 """
             )
 
@@ -107,7 +107,7 @@ def test_failure_recovery_before_run_created(
             assert (
                 captured.out.replace("\r\n", "\n")
                 == """2019-02-26 18:05:00 - SchedulerDaemon - INFO - Checking for new runs for the following schedules: simple_schedule
-2019-02-26 18:05:00 - SchedulerDaemon - INFO - Launching runs for simple_schedule at 2019-02-27 00:00:00+0000
+2019-02-26 18:05:00 - SchedulerDaemon - INFO - Evaluating schedule `simple_schedule` at 2019-02-27 00:00:00+0000
 2019-02-26 18:05:00 - SchedulerDaemon - INFO - Resuming previously interrupted schedule execution
 2019-02-26 18:05:00 - SchedulerDaemon - INFO - Completed scheduled launch of run {run_id} for simple_schedule
 """.format(

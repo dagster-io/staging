@@ -546,6 +546,8 @@ def _launch_scheduled_executions(
             instance, repo_location, external_schedule, external_pipeline, tick_context, run_request
         )
 
+    tick_context.update_state(JobTickStatus.SUCCESS)
+
 
 def _launch_run(
     instance, repo_location, external_schedule, external_pipeline, tick_context, run_request
@@ -588,7 +590,6 @@ def _launch_run(
         external_pipeline_origin=external_pipeline.get_external_origin(),
     )
 
-    tick_context.update_state(JobTickStatus.SUCCESS)
     tick_context.add_run(run_id=possibly_invalid_pipeline_run.run_id)
 
     # If there were errors, inject them into the event log and fail the run
