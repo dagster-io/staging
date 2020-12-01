@@ -1,5 +1,6 @@
 from dagster.core.utils import check_dagster_package_version
 
+from .docker_run_launcher import DockerRunLauncher
 from .executor import celery_docker_executor
 from .version import __version__
 
