@@ -1,4 +1,5 @@
 import datetime
+import logging
 import os
 import sys
 import time
@@ -17,7 +18,7 @@ from dagster.core.host_representation import (
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler.job import JobState, JobStatus, JobTickData, JobTickStatus, JobType
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from dagster.core.storage.tags import SCHEDULED_EXECUTION_TIME_TAG, check_tags
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG, SCHEDULED_EXECUTION_TIME_TAG, check_tags
 from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 

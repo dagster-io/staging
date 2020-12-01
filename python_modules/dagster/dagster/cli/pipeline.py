@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import logging
 import os
 import re
 import sys
@@ -43,6 +44,7 @@ from dagster.core.instance import DagsterInstance
 from dagster.core.snap import PipelineSnapshot, SolidInvocationSnap
 from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshotErrorData
 from dagster.core.storage.pipeline_run import PipelineRun
+from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.telemetry import log_external_repo_stats, telemetry_wrapper
 from dagster.core.utils import make_new_backfill_id
 from dagster.seven import IS_WINDOWS, JSONDecodeError, json
