@@ -13,7 +13,7 @@ from dagster import (
 )
 from dagster.config.field_utils import Selector
 from dagster.utils import dict_without_keys
-from dagster.utils.backcompat import canonicalize_backcompat_args, experimental
+from dagster.utils.backcompat import experimental
 from dagster_pandas.constraints import (
     ColumnDTypeFnConstraint,
     ColumnDTypeInSetConstraint,
@@ -158,8 +158,6 @@ def create_dagster_pandas_dataframe_type(
     dataframe_constraints=None,
     loader=None,
     materializer=None,
-    input_hydration_config=None,
-    output_materialization_config=None,
 ):
     """
     Constructs a custom pandas dataframe dagster type.
@@ -213,22 +211,11 @@ def create_dagster_pandas_dataframe_type(
             else None,
         )
 
-    loader_ = canonicalize_backcompat_args(
-        loader, "loader", input_hydration_config, "input_hydration_config", "0.10.0",
-    )
-    materializer_ = canonicalize_backcompat_args(
-        materializer,
-        "materializer",
-        output_materialization_config,
-        "output_materialization_config",
-        "0.10.0",
-    )
-
     return DagsterType(
         name=name,
         type_check_fn=_dagster_type_check,
-        loader=loader_ if loader_ else dataframe_loader,
-        materializer=materializer_ if materializer_ else dataframe_materializer,
+        loader=loader,
+        materializer=materializer,
         description=description,
     )
 
@@ -242,8 +229,6 @@ def create_structured_dataframe_type(
     dataframe_validator=None,
     loader=None,
     materializer=None,
-    input_hydration_config=None,
-    output_materialization_config=None,
 ):
     """
 
@@ -314,21 +299,11 @@ def create_structured_dataframe_type(
         )
 
     description = check.opt_str_param(description, "description", default="")
-    loader_ = canonicalize_backcompat_args(
-        loader, "loader", input_hydration_config, "input_hydration_config", "0.10.0",
-    )
-    materializer_ = canonicalize_backcompat_args(
-        materializer,
-        "materializer",
-        output_materialization_config,
-        "output_materialization_config",
-        "0.10.0",
-    )
     return DagsterType(
         name=name,
         type_check_fn=_dagster_type_check,
-        loader=loader_ if loader_ else dataframe_loader,
-        materializer=materializer_ if materializer_ else dataframe_materializer,
+        loader=loader,
+        materializer=materializer,
         description=description,
     )
 
