@@ -154,7 +154,9 @@ def define_environment_cls(creation_data):
                 "execution": Field(
                     selector_for_named_defs(creation_data.mode_definition.executor_defs),
                     is_required=False,
-                ),
+                )
+                if creation_data.mode_definition.executor_defs is not None
+                else None,
                 "loggers": Field(define_logger_dictionary_cls(creation_data)),
                 "resources": Field(
                     define_resource_dictionary_cls(creation_data.mode_definition.resource_defs)

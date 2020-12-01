@@ -1,7 +1,12 @@
 from collections import namedtuple
 
 from dagster import check
-from dagster.core.definitions.executor import ExecutorDefinition, default_executors
+from dagster.core.definitions.executor import (
+    ExecutorDefinition,
+    default_executors,
+    in_process_executor,
+)
+from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.loggers import default_loggers
 from dagster.utils.merger import merge_dicts
 
@@ -65,6 +70,17 @@ class ModeDefinition(
                 {"asset_store": mem_asset_store}, resource_defs or {}
             )
 
+        executors_in_resource_defs = (
+            [resource_def for resource_def in resource_defs.values() if resource_def.is_executor]
+            if resource_defs
+            else []
+        )
+
+        if len(executors_in_resource_defs) > 1:
+            raise DagsterInvalidDefinitionError(
+                "Cannot specify more than one executor in a set of resources."
+            )
+
         return super(ModeDefinition, cls).__new__(
             cls,
             name=check_valid_name(name) if name else DEFAULT_MODE_NAME,
@@ -82,7 +98,9 @@ class ModeDefinition(
                 "intermediate_storage_defs",
                 of_type=IntermediateStorageDefinition,
             ),
-            executor_defs=check.list_param(
+            executor_defs=None
+            if executors_in_resource_defs
+            else check.list_param(
                 executor_defs if executor_defs else default_executors,
                 "executor_defs",
                 of_type=ExecutorDefinition,

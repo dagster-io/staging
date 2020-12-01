@@ -24,11 +24,11 @@ def assert_pipeline_runs_with_executor(executor_defs, execution_config):
 
 @pytest.mark.xfail(raises=check.ParameterCheckError)
 def test_in_process_executor_primitive_config():
-    @executor(name="test_executor", config_schema=str)
+    @executor(name="test_executor", config_schema=str, requires_multiprocess_safe_env=False)
     def test_executor(init_context):
         from dagster.core.executor.in_process import InProcessExecutor
 
-        assert init_context.executor_config == "secret testing value!!"
+        assert init_context.resource_config == "secret testing value!!"
 
         return InProcessExecutor(
             # shouldn't need to .get() here - issue with defaults in config setup
@@ -42,11 +42,13 @@ def test_in_process_executor_primitive_config():
 
 
 def test_in_process_executor_dict_config():
-    @executor(name="test_executor", config_schema={"value": str})
+    @executor(
+        name="test_executor", config_schema={"value": str}, requires_multiprocess_safe_env=False
+    )
     def test_executor(init_context):
         from dagster.core.executor.in_process import InProcessExecutor
 
-        assert init_context.executor_config["value"] == "secret testing value!!"
+        assert init_context.resource_config["value"] == "secret testing value!!"
 
         return InProcessExecutor(
             # shouldn't need to .get() here - issue with defaults in config setup
@@ -60,11 +62,13 @@ def test_in_process_executor_dict_config():
 
 
 def test_in_process_executor_dict_config_configured():
-    @executor(name="test_executor", config_schema={"value": str})
+    @executor(
+        name="test_executor", config_schema={"value": str}, requires_multiprocess_safe_env=False
+    )
     def test_executor(init_context):
         from dagster.core.executor.in_process import InProcessExecutor
 
-        assert init_context.executor_config["value"] == "secret testing value!!"
+        assert init_context.resource_config["value"] == "secret testing value!!"
 
         return InProcessExecutor(
             # shouldn't need to .get() here - issue with defaults in config setup
