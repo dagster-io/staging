@@ -418,7 +418,7 @@ def test_multiproc_invalid():
     )
     # which is invalid for multiproc
     assert add_result.exit_code != 0
-    assert "DagsterUnmetExecutorRequirementsError" in add_result.output
+    assert "DagsterSingleProcessOnlyResourceError" in add_result.output
 
 
 def test_tags_pipeline():

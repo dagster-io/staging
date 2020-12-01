@@ -3,21 +3,18 @@ from functools import update_wrapper
 from dagster import check
 from dagster.builtins import Int
 from dagster.config.field import Field
-from dagster.core.definitions.configurable import ConfigurableDefinition
-from dagster.core.definitions.reconstructable import ReconstructablePipeline
-from dagster.core.errors import DagsterUnmetExecutorRequirementsError
 from dagster.core.execution.retries import Retries, get_retries_config
 
-from .definition_config_schema import convert_user_facing_definition_config_schema
+from .resource import ResourceDefinition
 
 
-class ExecutorDefinition(ConfigurableDefinition):
+class ExecutorDefinition(ResourceDefinition):
     """
     Args:
         name (Optional[str]): The name of the executor.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data
-            available in `init_context.executor_config`.
-        executor_creation_fn(Optional[Callable]): Should accept an :py:class:`InitExecutorContext`
+            available in `init_context.resource_config`.
+        resource_fn (Callable): Should accept an :py:class:`InitResourceContext`
             and return an instance of :py:class:`Executor`
         required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
             executor.
@@ -26,79 +23,62 @@ class ExecutorDefinition(ConfigurableDefinition):
     def __init__(
         self,
         name,
+        resource_fn=None,
         config_schema=None,
-        executor_creation_fn=None,
-        required_resource_keys=None,
         description=None,
+        requires_multiprocess_safe_env=False,
     ):
         self._name = check.str_param(name, "name")
-        self._config_schema = convert_user_facing_definition_config_schema(config_schema)
-        self._executor_creation_fn = check.opt_callable_param(
-            executor_creation_fn, "executor_creation_fn"
+        self._requires_multiprocess_safe_env = requires_multiprocess_safe_env
+
+        super(ExecutorDefinition, self).__init__(
+            resource_fn=resource_fn, config_schema=config_schema, description=description
         )
-        self._required_resource_keys = frozenset(
-            check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
-        )
-        self._description = check.opt_str_param(description, "description")
 
     @property
     def name(self):
         return self._name
 
     @property
-    def description(self):
-        return self._description
-
-    @property
-    def config_schema(self):
-        return self._config_schema
-
-    @property
-    def executor_creation_fn(self):
-        return self._executor_creation_fn
-
-    @property
-    def required_resource_keys(self):
-        return self._required_resource_keys
+    def requires_multiprocess_safe_env(self):
+        return self._requires_multiprocess_safe_env
 
     def copy_for_configured(self, name, description, config_schema, _):
         return ExecutorDefinition(
             name=name or self.name,
             config_schema=config_schema,
-            executor_creation_fn=self.executor_creation_fn,
-            required_resource_keys=self.required_resource_keys,
+            resource_fn=self.resource_fn,
             description=description or self.description,
         )
 
 
-def executor(name=None, config_schema=None, required_resource_keys=None):
+def executor(name=None, config_schema=None, requires_multiprocess_safe_env=True):
     """Define an executor.
 
-    The decorated function should accept an :py:class:`InitExecutorContext` and return an instance
+    The decorated function should accept an :py:class:`InitResourceContext` and return an instance
     of :py:class:`Executor`.
 
     Args:
         name (Optional[str]): The name of the executor.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data available in
-            `init_context.executor_config`.
-        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
-            executor.
+            `init_context.resource_config`.
     """
     if callable(name):
         check.invariant(config_schema is None)
-        check.invariant(required_resource_keys is None)
         return _ExecutorDecoratorCallable()(name)
 
     return _ExecutorDecoratorCallable(
-        name=name, config_schema=config_schema, required_resource_keys=required_resource_keys,
+        name=name,
+        config_schema=config_schema,
+        requires_multiprocess_safe_env=requires_multiprocess_safe_env,
     )
 
 
 class _ExecutorDecoratorCallable:
-    def __init__(self, name=None, config_schema=None, required_resource_keys=None):
+    def __init__(self, name=None, config_schema=None, requires_multiprocess_safe_env=True):
         self.name = check.opt_str_param(name, "name")
         self.config_schema = config_schema  # type check in definition
-        self.required_resource_keys = required_resource_keys  # type check in definition
+        self.requires_multiprocess_safe_env = requires_multiprocess_safe_env
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -109,8 +89,8 @@ class _ExecutorDecoratorCallable:
         executor_def = ExecutorDefinition(
             name=self.name,
             config_schema=self.config_schema,
-            executor_creation_fn=fn,
-            required_resource_keys=self.required_resource_keys,
+            resource_fn=fn,
+            requires_multiprocess_safe_env=self.requires_multiprocess_safe_env,
         )
 
         update_wrapper(executor_def, wrapped=fn)
@@ -124,6 +104,7 @@ class _ExecutorDecoratorCallable:
         "retries": get_retries_config(),
         "marker_to_close": Field(str, is_required=False),
     },
+    requires_multiprocess_safe_env=False,
 )
 def in_process_executor(init_context):
     """The default in-process executor.
@@ -141,15 +122,12 @@ def in_process_executor(init_context):
     where the higher the number the higher the priority. 0 is the default and both positive
     and negative numbers can be used.
     """
-    from dagster.core.executor.init import InitExecutorContext
     from dagster.core.executor.in_process import InProcessExecutor
-
-    check.inst_param(init_context, "init_context", InitExecutorContext)
 
     return InProcessExecutor(
         # shouldn't need to .get() here - issue with defaults in config setup
-        retries=Retries.from_config(init_context.executor_config.get("retries", {"enabled": {}})),
-        marker_to_close=init_context.executor_config.get("marker_to_close"),
+        retries=Retries.from_config(init_context.resource_config.get("retries", {"enabled": {}})),
+        marker_to_close=init_context.resource_config.get("marker_to_close"),
     )
 
 
@@ -182,96 +160,13 @@ def multiprocess_executor(init_context):
     where the higher the number the higher the priority. 0 is the default and both positive
     and negative numbers can be used.
     """
-    from dagster.core.executor.init import InitExecutorContext
     from dagster.core.executor.multiprocess import MultiprocessExecutor
-
-    check.inst_param(init_context, "init_context", InitExecutorContext)
-
-    check_cross_process_constraints(init_context)
 
     return MultiprocessExecutor(
         pipeline=init_context.pipeline,
-        max_concurrent=init_context.executor_config["max_concurrent"],
-        retries=Retries.from_config(init_context.executor_config["retries"]),
+        max_concurrent=init_context.resource_config["max_concurrent"],
+        retries=Retries.from_config(init_context.resource_config["retries"]),
     )
 
 
 default_executors = [in_process_executor, multiprocess_executor]
-
-
-def check_cross_process_constraints(init_context):
-    from dagster.core.executor.init import InitExecutorContext
-
-    check.inst_param(init_context, "init_context", InitExecutorContext)
-
-    _check_intra_process_pipeline(init_context.pipeline)
-    _check_non_ephemeral_instance(init_context.instance)
-    _check_persistent_storage_requirement(
-        init_context.pipeline.get_definition(),
-        init_context.mode_def,
-        init_context.intermediate_storage_def,
-    )
-
-
-def _check_intra_process_pipeline(pipeline):
-    if not isinstance(pipeline, ReconstructablePipeline):
-        raise DagsterUnmetExecutorRequirementsError(
-            'You have attempted to use an executor that uses multiple processes with the pipeline "{name}" '
-            "that is not reconstructable. Pipelines must be loaded in a way that allows dagster to reconstruct "
-            "them in a new process. This means: \n"
-            "  * using the file, module, or repository.yaml arguments of dagit/dagster-graphql/dagster\n"
-            "  * loading the pipeline through the reconstructable() function\n".format(
-                name=pipeline.get_definition().name
-            )
-        )
-
-
-def _all_outputs_non_mem_asset_stores(pipeline_def, mode_def):
-    """Returns true if every output definition in the pipeline uses an asset store that's not
-    the mem_asset_store.
-
-    If true, this indicates that it's OK to execute steps in their own processes, because their
-    outputs will be available to other processes.
-    """
-    # pylint: disable=comparison-with-callable
-    from dagster.core.storage.asset_store import mem_asset_store
-
-    output_defs = [
-        output_def
-        for solid_def in pipeline_def.all_solid_defs
-        for output_def in solid_def.output_defs
-    ]
-    for output_def in output_defs:
-        if mode_def.resource_defs[output_def.asset_store_key] == mem_asset_store:
-            return False
-
-    return True
-
-
-def _check_persistent_storage_requirement(pipeline_def, mode_def, intermediate_storage_def):
-    """We prefer to store outputs with asset stores, but will fall back to intermediate storage
-    if an asset store isn't set and will fall back to system storage if neither an asset
-    store nor an intermediate storage are set.
-    """
-    if not (
-        _all_outputs_non_mem_asset_stores(pipeline_def, mode_def)
-        or (intermediate_storage_def and intermediate_storage_def.is_persistent)
-    ):
-        raise DagsterUnmetExecutorRequirementsError(
-            "You have attempted to use an executor that uses multiple processes, but your pipeline "
-            "includes solid outputs that will not be stored somewhere where other processes can"
-            "retrieve them. "
-            "Please make sure that your pipeline definition includes a ModeDefinition whose "
-            'resource_keys assign the "asset_store" key to an AssetStore resource '
-            "that stores outputs outside of the process, such as the fs_asset_store."
-        )
-
-
-def _check_non_ephemeral_instance(instance):
-    if instance.is_ephemeral:
-        raise DagsterUnmetExecutorRequirementsError(
-            "You have attempted to use an executor that uses multiple processes with an "
-            "ephemeral DagsterInstance. A non-ephemeral instance is needed to coordinate "
-            "execution between multiple processes. You can configure your default instance "
-            "via $DAGSTER_HOME or ensure a valid one is passed when invoking the python APIs."
-        )
