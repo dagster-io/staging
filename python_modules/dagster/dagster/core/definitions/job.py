@@ -47,16 +47,14 @@ class SkipReason(namedtuple("_SkipReason", "skip_message")):
 @whitelist_for_serdes
 class RunRequest(namedtuple("_RunRequest", "run_key run_config tags")):
     """
-    Represents all the information required to launch a single run instigated by a sensor body.
-    Must be returned by a SensorDefinition or ScheduleDefinition's evaluation function for a run to
-    be launched.
+    Represents all the information required to launch a single run.  Must be returned by a
+    SensorDefinition or ScheduleDefinition's evaluation function for a run to be launched.
 
     Attributes:
-        run_key (str | None): A string key to identify this launched run. The sensor will
-            ensure that exactly one run is created for each run key, and will not create
-            another run if the same run key is requested in a later evaluation.  Passing in
-            a `None` value means that the sensor will attempt to create and launch every run
-            requested for every sensor evaluation.
+        run_key (str | None): A string key to identify this launched run. For sensors, ensures that
+            only one run is created per run key across all sensor evaluations.  For schedules,
+            ensures that one run is created per tick, across failure recoveries. Passing in a `None`
+            value means that a run will always be launched per evaluation.
         run_config (Optional[Dict]): The environment config that parameterizes the run execution to
             be launched, as a dict.
         tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach

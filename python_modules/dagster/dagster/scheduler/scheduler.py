@@ -51,7 +51,6 @@ class _ScheduleLaunchContext:
         self._write()
 
 
-#
 _DEFAULT_MAX_CATCHUP_RUNS = 5
 
 _SCHEDULER_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S%z"
@@ -164,10 +163,10 @@ def launch_scheduled_runs_for_schedule(
 
     if len(tick_times) == 1:
         tick_time = tick_times[0].strftime(_SCHEDULER_DATETIME_FORMAT)
-        logger.info(f"Launching runs for {schedule_name} at {tick_time}")
+        logger.info(f"Evaluating schedule `{schedule_name}` at {tick_time}")
     else:
         times = ", ".join([time.strftime(_SCHEDULER_DATETIME_FORMAT) for time in tick_times])
-        logger.info(f"Launching runs for {schedule_name} at the following times: {times}")
+        logger.info(f"Evaluating schedule `{schedule_name}` at the following times: {times}")
 
     for tick_time in tick_times:
         schedule_time = pendulum.instance(tick_time).in_tz(timezone_str)
