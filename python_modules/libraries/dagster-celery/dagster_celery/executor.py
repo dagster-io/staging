@@ -1,5 +1,4 @@
 from dagster import Executor, Field, Noneable, Permissive, StringSource, check, executor
-from dagster.core.definitions.executor import check_cross_process_constraints
 from dagster.core.execution.retries import Retries, RetryMode, get_retries_config
 
 from .config import DEFAULT_CONFIG, dict_wrapper
@@ -84,7 +83,7 @@ def celery_executor(init_context):
     different broker than the one your workers are listening to, the workers will never be able to
     pick up tasks for execution.
     """
-    check_cross_process_constraints(init_context)
+    init_context.ensure_multiprocess_safe_only()
 
     return CeleryExecutor(
         broker=init_context.executor_config.get("broker"),

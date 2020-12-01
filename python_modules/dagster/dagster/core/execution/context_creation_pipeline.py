@@ -440,7 +440,7 @@ def create_intermediate_storage(
 
 def create_executor(context_creation_data):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
-    return context_creation_data.executor_def.executor_creation_fn(
+    return context_creation_data.executor_def.resource_fn(
         InitExecutorContext(
             pipeline=context_creation_data.pipeline,
             mode_def=context_creation_data.mode_def,
