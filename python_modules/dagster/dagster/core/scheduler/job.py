@@ -15,10 +15,12 @@ class JobStatus(Enum):
 
 
 @whitelist_for_serdes
-class SensorJobData(namedtuple("_SensorJobData", "last_completed_timestamp")):
-    def __new__(cls, last_completed_timestamp=None):
+class SensorJobData(namedtuple("_SensorJobData", "last_completed_timestamp last_run_key")):
+    def __new__(cls, last_completed_timestamp=None, last_run_key=None):
         return super(SensorJobData, cls).__new__(
-            cls, check.opt_float_param(last_completed_timestamp, "last_completed_timestamp"),
+            cls,
+            check.opt_float_param(last_completed_timestamp, "last_completed_timestamp"),
+            check.opt_str_param(last_run_key, "last_run_key"),
         )
 
 
@@ -117,8 +119,8 @@ class JobTick(namedtuple("_JobTick", "tick_id job_tick_data")):
         check.inst_param(status, "status", JobTickStatus)
         return self._replace(job_tick_data=self.job_tick_data.with_status(status, **kwargs))
 
-    def with_run(self, run_id):
-        return self._replace(job_tick_data=self.job_tick_data.with_run(run_id))
+    def with_run(self, run_id, run_key=None):
+        return self._replace(job_tick_data=self.job_tick_data.with_run(run_id, run_key))
 
     @property
     def job_origin_id(self):
@@ -145,16 +147,30 @@ class JobTick(namedtuple("_JobTick", "tick_id job_tick_data")):
         return self.job_tick_data.run_ids
 
     @property
+    def run_keys(self):
+        return self.job_tick_data.run_keys
+
+    @property
     def error(self):
         return self.job_tick_data.error
 
 
 @whitelist_for_serdes
 class JobTickData(
-    namedtuple("_JobTickData", "job_origin_id job_name job_type status timestamp run_ids error",)
+    namedtuple(
+        "_JobTickData", "job_origin_id job_name job_type status timestamp run_ids run_keys error"
+    )
 ):
     def __new__(
-        cls, job_origin_id, job_name, job_type, status, timestamp, run_ids=None, error=None,
+        cls,
+        job_origin_id,
+        job_name,
+        job_type,
+        status,
+        timestamp,
+        run_ids=None,
+        run_keys=None,
+        error=None,
     ):
         """
         This class defines the data that is serialized and stored in ``JobStorage``. We depend
@@ -184,10 +200,11 @@ class JobTickData(
             check.inst_param(status, "status", JobTickStatus),
             check.float_param(timestamp, "timestamp"),
             check.opt_list_param(run_ids, "run_ids", of_type=str),
+            check.opt_list_param(run_keys, "run_keys", of_type=str),
             error,  # validated in _validate_job_tick_args
         )
 
-    def with_status(self, status, run_ids=None, error=None, timestamp=None):
+    def with_status(self, status, error=None, timestamp=None):
         check.inst_param(status, "status", JobTickStatus)
         return JobTickData(
             job_origin_id=self.job_origin_id,
@@ -195,11 +212,12 @@ class JobTickData(
             job_type=self.job_type,
             status=status,
             timestamp=timestamp if timestamp is not None else self.timestamp,
-            run_ids=run_ids if run_ids is not None else self.run_ids,
+            run_ids=self.run_ids,
+            run_keys=self.run_keys,
             error=error if error is not None else self.error,
         )
 
-    def with_run(self, run_id):
+    def with_run(self, run_id, run_key=None):
         check.str_param(run_id, "run_id")
         return JobTickData(
             job_origin_id=self.job_origin_id,
@@ -208,6 +226,7 @@ class JobTickData(
             status=self.status,
             timestamp=self.timestamp,
             run_ids=[*self.run_ids, run_id],
+            run_keys=[*self.run_keys, run_key] if run_key else self.run_keys,
             error=self.error,
         )
 
