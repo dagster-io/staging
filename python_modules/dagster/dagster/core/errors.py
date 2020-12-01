@@ -313,7 +313,7 @@ class DagsterInvalidConfigError(DagsterError):
         super(DagsterInvalidConfigError, self).__init__(error_msg, *args, **kwargs)
 
 
-class DagsterUnmetExecutorRequirementsError(DagsterError):
+class DagsterSingleProcessOnlyResourceError(DagsterError):
     """Indicates the resolved executor is incompatible with the state of other systems
     such as the :py:class:`~dagster.core.instance.DagsterInstance` or system storage configuration.
     """
