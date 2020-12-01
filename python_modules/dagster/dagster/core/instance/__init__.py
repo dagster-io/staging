@@ -967,10 +967,10 @@ class DagsterInstance:
         self.check_asset_aware()
         return self._event_storage.has_asset_key(asset_key)
 
-    def events_for_asset_key(self, asset_key, cursor=None, limit=None):
+    def events_for_asset_key(self, asset_key, cursor=None, limit=None, since=None):
         check.inst_param(asset_key, "asset_key", AssetKey)
         self.check_asset_aware()
-        return self._event_storage.get_asset_events(asset_key, cursor, limit)
+        return self._event_storage.get_asset_events(asset_key, cursor, limit, since)
 
     def run_ids_for_asset_key(self, asset_key):
         check.inst_param(asset_key, "asset_key", AssetKey)

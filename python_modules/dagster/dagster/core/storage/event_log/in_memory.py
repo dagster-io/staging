@@ -114,7 +114,7 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
             asset_keys["/".join(event.asset_key.path)] = event.asset_key
         return list(asset_keys.values())
 
-    def get_asset_events(self, asset_key, cursor=None, limit=None):
+    def get_asset_events(self, asset_key, cursor=None, limit=None, since=None):
         asset_events = []
         for records in self._logs.values():
             asset_events += [
@@ -130,6 +130,9 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
 
         if limit:
             asset_events = asset_events[:limit]
+
+        if since:
+            asset_events = filter(lambda x: x.timestamp > since, asset_events)
 
         return asset_events
 
