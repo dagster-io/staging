@@ -113,9 +113,9 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
 
         client = self._get_client()
 
-        client.images.get(docker_image)
+        #        client.images.get(docker_image)
 
-        container = client.containers.create(
+        container = client.containers.run(
             image=docker_image,
             command=command,
             detach=True,
@@ -125,11 +125,11 @@ class DockerRunLauncher(RunLauncher, ConfigurableClass):
             network=self._network,
         )
 
-        self._instance.add_run_tags(
-            run.run_id, {DOCKER_CONTAINER_ID_TAG: container.id},
-        )
+        #        self._instance.add_run_tags(
+        #            run.run_id, {DOCKER_CONTAINER_ID_TAG: container.id},
+        #        )
 
-        container.start()
+        #        container.start()
 
         return run
 
