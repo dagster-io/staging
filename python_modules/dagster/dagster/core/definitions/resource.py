@@ -1,3 +1,4 @@
+from abc import abstractproperty
 from collections import namedtuple
 from functools import update_wrapper
 
@@ -11,7 +12,17 @@ from ..decorator_utils import split_function_parameters, validate_decorated_fn_p
 from .definition_config_schema import convert_user_facing_definition_config_schema
 
 
-class ResourceDefinition(ConfigurableDefinition):
+class IResourceDefinition(ConfigurableDefinition):
+    @abstractproperty
+    def resource_fn(self):
+        pass
+
+    @abstractproperty
+    def version(self):
+        pass
+
+
+class ResourceDefinition(IResourceDefinition):
     """Core class for defining resources.
 
     Resources are scoped ways to make external resources (like database connections) available to
