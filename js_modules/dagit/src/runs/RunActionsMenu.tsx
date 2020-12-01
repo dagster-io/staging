@@ -25,6 +25,9 @@ import {
   getReexecutionVariables,
   handleLaunchResult,
 } from 'src/runs/RunUtils';
+import {Cancel} from 'src/runs/types/Cancel';
+import {Delete} from 'src/runs/types/Delete';
+import {LaunchPipelineReexecution} from 'src/runs/types/LaunchPipelineReexecution';
 import {PipelineEnvironmentYamlQuery} from 'src/runs/types/PipelineEnvironmentYamlQuery';
 import {RunActionMenuFragment} from 'src/runs/types/RunActionMenuFragment';
 import {RunTableRunFragment} from 'src/runs/types/RunTableRunFragment';
@@ -35,9 +38,11 @@ export const RunActionsMenu: React.FC<{
 }> = React.memo(({run}) => {
   const {refetch} = React.useContext(RunsQueryRefetchContext);
 
-  const [reexecute] = useMutation(LAUNCH_PIPELINE_REEXECUTION_MUTATION, {onCompleted: refetch});
-  const [cancel] = useMutation(CANCEL_MUTATION, {onCompleted: refetch});
-  const [destroy] = useMutation(DELETE_MUTATION, {onCompleted: refetch});
+  const [reexecute] = useMutation<LaunchPipelineReexecution>(LAUNCH_PIPELINE_REEXECUTION_MUTATION, {
+    onCompleted: refetch,
+  });
+  const [cancel] = useMutation<Cancel>(CANCEL_MUTATION, {onCompleted: refetch});
+  const [destroy] = useMutation<Delete>(DELETE_MUTATION, {onCompleted: refetch});
   const [loadEnv, {called, loading, data}] = useLazyQuery<PipelineEnvironmentYamlQuery>(
     PIPELINE_ENVIRONMENT_YAML_QUERY,
     {
@@ -120,7 +125,12 @@ export const RunActionsMenu: React.FC<{
               disabled={!run.canTerminate}
               onClick={async () => {
                 const result = await cancel({variables: {runId: run.runId}});
-                showToastFor(result.data.terminatePipelineExecution, `Run ${run.runId} cancelled.`);
+                if (result.data) {
+                  showToastFor(
+                    result.data.terminatePipelineExecution,
+                    `Run ${run.runId} cancelled.`,
+                  );
+                }
               }}
             />
             <MenuDivider />
@@ -137,7 +147,9 @@ export const RunActionsMenu: React.FC<{
             disabled={run.canTerminate}
             onClick={async () => {
               const result = await destroy({variables: {runId: run.runId}});
-              showToastFor(result.data.deletePipelineRun, `Run ${run.runId} deleted.`);
+              if (result.data) {
+                showToastFor(result.data.deletePipelineRun, `Run ${run.runId} deleted.`);
+              }
             }}
           />
         </Menu>
@@ -159,8 +171,8 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
   onChangeSelection: (runs: RunTableRunFragment[]) => void;
 }> = React.memo(({selected, onChangeSelection}) => {
   const {refetch} = React.useContext(RunsQueryRefetchContext);
-  const [cancel] = useMutation(CANCEL_MUTATION, {onCompleted: refetch});
-  const [destroy] = useMutation(DELETE_MUTATION, {onCompleted: refetch});
+  const [cancel] = useMutation<Cancel>(CANCEL_MUTATION, {onCompleted: refetch});
+  const [destroy] = useMutation<Delete>(DELETE_MUTATION, {onCompleted: refetch});
 
   const cancelable = selected.filter((r) => r.canTerminate);
   const deletable = selected.filter((r) => !r.canTerminate);
@@ -176,7 +188,12 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
             onClick={async () => {
               for (const run of cancelable) {
                 const result = await cancel({variables: {runId: run.runId}});
-                showToastFor(result.data.terminatePipelineExecution, `Run ${run.runId} cancelled.`);
+                if (result.data) {
+                  showToastFor(
+                    result.data.terminatePipelineExecution,
+                    `Run ${run.runId} cancelled.`,
+                  );
+                }
               }
               onChangeSelection([]);
             }}
@@ -188,7 +205,9 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
             onClick={async () => {
               for (const run of deletable) {
                 const result = await destroy({variables: {runId: run.runId}});
-                showToastFor(result.data.deletePipelineRun, `Run ${run.runId} deleted.`);
+                if (result.data) {
+                  showToastFor(result.data.deletePipelineRun, `Run ${run.runId} deleted.`);
+                }
               }
               // we could remove just the runs that are deleted and leave the others, but we may
               // need to test it for a while and see what seems natural.
