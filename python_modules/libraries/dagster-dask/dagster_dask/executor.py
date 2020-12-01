@@ -1,7 +1,7 @@
 import dask
 import dask.distributed
 from dagster import Executor, Field, Permissive, Selector, StringSource, check, seven
-from dagster.core.definitions.executor import check_cross_process_constraints, executor
+from dagster.core.definitions.executor import executor
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
@@ -98,8 +98,7 @@ def dask_executor(init_context):
             pass
 
     """
-    check_cross_process_constraints(init_context)
-    ((cluster_type, cluster_configuration),) = init_context.executor_config["cluster"].items()
+    ((cluster_type, cluster_configuration),) = init_context.resource_config["cluster"].items()
     return DaskExecutor(cluster_type, cluster_configuration)
 
 

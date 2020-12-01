@@ -78,12 +78,12 @@ from dagster.core.errors import (
     DagsterInvariantViolationError,
     DagsterResourceFunctionError,
     DagsterRunNotFoundError,
+    DagsterSingleProcessOnlyResourceError,
     DagsterStepOutputNotFoundError,
     DagsterSubprocessError,
     DagsterTypeCheckDidNotPass,
     DagsterTypeCheckError,
     DagsterUnknownResourceError,
-    DagsterUnmetExecutorRequirementsError,
     DagsterUserCodeExecutionError,
 )
 from dagster.core.events import DagsterEvent, DagsterEventType
@@ -108,7 +108,6 @@ from dagster.core.execution.results import (
     SolidExecutionResult,
 )
 from dagster.core.executor.base import Executor
-from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import DefaultRunLauncher
 from dagster.core.log_manager import DagsterLogManager
@@ -209,7 +208,6 @@ __all__ = [
     "DagsterEventType",
     "DefaultRunLauncher",
     "Executor",
-    "InitExecutorContext",
     "InitLoggerContext",
     "InitResourceContext",
     "InitSystemStorageContext",
@@ -256,7 +254,7 @@ __all__ = [
     "DagsterTypeCheckDidNotPass",
     "DagsterTypeCheckError",
     "DagsterUnknownResourceError",
-    "DagsterUnmetExecutorRequirementsError",
+    "DagsterSingleProcessOnlyResourceError",
     "DagsterUserCodeExecutionError",
     # Logging
     "DagsterLogManager",
