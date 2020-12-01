@@ -202,6 +202,7 @@ class TestScheduleStorage:
             status,
             current_time,
             [run_id] if run_id else [],
+            [],
             error,
         )
 
