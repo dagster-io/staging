@@ -994,7 +994,7 @@ class DauphinDaemonHealth(dauphin.ObjectType):
         name = "DaemonHealth"
 
     daemonStatus = dauphin.Field(
-        dauphin.NonNull("DaemonStatus"), daemon_type=dauphin.Argument("DaemonType")
+        dauphin.NonNull("DaemonStatus"), daemon_type=dauphin.Argument(dauphin.String)
     )
     allDaemonStatuses = dauphin.non_null_list("DaemonStatus")
 
