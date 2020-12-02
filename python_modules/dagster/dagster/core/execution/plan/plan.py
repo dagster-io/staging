@@ -22,7 +22,14 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
 from .compute import create_compute_step
-from .inputs import FromConfig, FromDefaultValue, FromMultipleSources, FromStepOutput, StepInput
+from .inputs import (
+    FromConfig,
+    FromDefaultValue,
+    FromMultipleSources,
+    FromRootInputManager,
+    FromStepOutput,
+    StepInput,
+)
 from .objects import ExecutionStep, StepOutputHandle
 
 
@@ -207,19 +214,23 @@ def get_step_input(
     check.opt_inst_param(handle, "handle", SolidHandle)
     check.opt_list_param(parent_step_inputs, "parent_step_inputs", of_type=StepInput)
 
+    input_handle = solid.input_handle(input_name)
     solid_config = plan_builder.environment_config.solids.get(str(handle))
-    if solid_config and input_name in solid_config.inputs:
+    input_config = solid_config.inputs.get(input_name) if solid_config else None
+
+    input_def = solid.definition.input_def_named(input_name)
+    if input_def.manager_key and not dependency_structure.has_deps(input_handle):
         return StepInput(
             name=input_name,
             dagster_type=input_def.dagster_type,
-            source=FromConfig(
-                solid_config.inputs[input_name],
-                dagster_type=input_def.dagster_type,
-                input_name=input_name,
+            source=FromRootInputManager(
+                input_name,
+                input_def.manager_key,
+                config_data=input_config,
+                input_metadata=input_def.metadata,
             ),
         )
 
-    input_handle = solid.input_handle(input_name)
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
         return StepInput(
@@ -229,6 +240,10 @@ def get_step_input(
                 step_output_handle=plan_builder.get_output_handle(solid_output_handle),
                 dagster_type=input_def.dagster_type,
                 check_for_missing=False,
+                manager_key=input_def.manager_key,
+                config_data=input_config,
+                input_metadata=input_def.metadata,
+                input_name=input_def.name,
             ),
         )
 
@@ -243,9 +258,22 @@ def get_step_input(
                         step_output_handle=plan_builder.get_output_handle(solid_output_handle),
                         dagster_type=input_def.dagster_type.get_inner_type_for_fan_in(),
                         check_for_missing=True,
+                        manager_key=input_def.manager_key,
+                        config_data=input_config,
+                        input_metadata=input_def.metadata,
+                        input_name=input_def.name,
                     )
                     for solid_output_handle in solid_output_handles
-                ]
+                ],
+            ),
+        )
+
+    if solid_config and input_name in solid_config.inputs:
+        return StepInput(
+            name=input_name,
+            dagster_type=input_def.dagster_type,
+            source=FromConfig(
+                input_config, dagster_type=input_def.dagster_type, input_name=input_name,
             ),
         )
 
