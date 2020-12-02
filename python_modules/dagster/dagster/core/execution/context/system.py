@@ -314,6 +314,11 @@ class SystemStepExecutionContext(SystemExecutionContext):
             version=version,
         )
 
+    def for_input_manager(self, input_name, input_config, input_metadata):
+        return LoadContext(
+            input_name=input_name, input_config=input_config, input_metadata=input_metadata
+        )
+
     def get_asset_store(self, asset_store_key):
         from dagster.core.storage.asset_store import AssetStore
 
@@ -408,13 +413,69 @@ class HookContext(SystemExecutionContext):
         return solid_config.config if solid_config else None
 
 
+class LoadContext(
+    namedtuple(
+        "_LoadContext",
+        "output_step_key output_name output_metadata pipeline_name solid_def source_run_id "
+        "output_version input_name input_config input_metadata",
+    )
+):
+    """
+    The ``context`` object available to the load method of :py:class:`InputManager`.
+
+    Attributes:
+        output_step_key (Optional[str]): The step_key for the compute step that produced the object we're
+            loading.
+        output_name (Optional[str]): The name of the output that produced the object we're loading.
+        output_metadata (Optional[Dict[str, Any]]): A dict of the metadata that is assigned to the
+            OutputDefinition that produced the object we're loading.
+        output_version (Optional[str]): The version corresponding to the provided step output.
+        pipeline_name (Optional[str]): The name of the pipeline.
+        solid_def (Optional[SolidDefinition]): The definition of the solid that's loading the input.
+        source_run_id (Optional[str]): The id of the run which generates the output.
+        input_name (Optional[str]): The name of the input that we're loading.
+        input_config (Optional[Any]): The config attached to the input that we're loading.
+        input_metadata (Optional[Dict[str, Any]]): A dict of metadata that is assigned to the
+            InputDefinition that we're loading for.
+    """
+
+    def __new__(
+        cls,
+        output_step_key=None,
+        output_name=None,
+        output_metadata=None,
+        output_version=None,
+        pipeline_name=None,
+        solid_def=None,
+        source_run_id=None,
+        input_name=None,
+        input_config=None,
+        input_metadata=None,
+    ):
+
+        return super(LoadContext, cls).__new__(
+            cls,
+            output_step_key=check.opt_str_param(output_step_key, "step_key"),
+            output_name=check.opt_str_param(output_name, "output_name"),
+            output_metadata=check.opt_dict_param(output_metadata, "output_metadata", key_type=str),
+            pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
+            solid_def=check.opt_inst_param(solid_def, "solid_def", SolidDefinition),
+            source_run_id=check.opt_str_param(source_run_id, "source_run_id"),
+            output_version=check.opt_str_param(output_version, "output_version"),
+            input_name=check.opt_str_param(input_name, "input_name"),
+            input_config=input_config,
+            input_metadata=input_metadata,
+        )
+
+
 class AssetStoreContext(
     namedtuple(
         "_AssetStoreContext",
         "step_key output_name asset_metadata pipeline_name solid_def source_run_id version",
     )
 ):
-    """The ``context`` object available to :py:class:`AssetStore`.
+    """
+    The ``context`` object available to the methods of :py:class:`AssetStore`.
 
     Attributes:
         step_key (str): The step_key for the compute step.
