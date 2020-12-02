@@ -1,0 +1,63 @@
+version: "3.7"
+
+services:
+  docker_example_postgresql:
+    image: postgres:11
+    container_name: docker_example_postgresql
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "test"
+      POSTGRES_PASSWORD: "test"
+      POSTGRES_DB: "test"
+    networks:
+      - postgres
+
+  #  docker_example_user_code:
+  #    build:
+  #      context: .
+  #      dockerfile: ./user_code/Dockerfile
+  #    container_name: docker_example_user_code
+  #    ports:
+  #      - "4000:4000"
+  #    environment:
+  #      POSTGRES_USER: "docker_example_user"
+  #      POSTGRES_PASSWORD: "docker_example_password"
+  #      POSTGRES_DB: "docker_example_db"
+  #      DAGSTER_CURRENT_IMAGE: "docker_example_user_code"
+  #    networks:
+  #      - postgres
+
+  docker_example_dagit:
+    build:
+      context: .
+      dockerfile: ./dagit/Dockerfile
+    container_name: docker_example_dagit
+    ports:
+      - "3000:3000"
+    environment:
+      DAGSTER_POSTGRES_USER: "test"
+      DAGSTER_POSTGRES_PASSWORD: "test"
+      DAGSTER_POSTGRES_DB: "test"
+    networks:
+      - postgres
+    depends_on:
+      - docker_example_postgresql
+
+#   docker_example_daemon:
+#     build:
+#       context: .
+#       dockerfile: ./daemon/Dockerfile
+#     container_name: docker_example_daemon
+#     environment:
+#       POSTGRES_USER: "docker_example_user"
+#       POSTGRES_PASSWORD: "docker_example_password"
+#       POSTGRES_DB: "docker_example_db"
+#     networks:
+#       - postgres
+
+networks:
+  postgres:
+    driver: bridge
+    name: postgres
