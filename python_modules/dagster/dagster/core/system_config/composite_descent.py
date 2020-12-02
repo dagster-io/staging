@@ -52,7 +52,7 @@ class DescentStack(namedtuple("_DescentStack", "pipeline_def handle")):
         return self._replace(handle=SolidHandle(solid.name, parent=self.handle))
 
 
-def composite_descent(pipeline_def, solids_config):
+def composite_descent(pipeline_def, solids_config, resource_defs):
     """
     This function is responsible for constructing the dictionary
     of SolidConfig (indexed by handle) that will be passed into the
@@ -76,12 +76,14 @@ def composite_descent(pipeline_def, solids_config):
     return {
         handle.to_string(): solid_config
         for handle, solid_config in _composite_descent(
-            parent_stack=DescentStack(pipeline_def, None), solids_config_dict=solids_config,
+            parent_stack=DescentStack(pipeline_def, None),
+            solids_config_dict=solids_config,
+            resource_defs=resource_defs,
         )
     }
 
 
-def _composite_descent(parent_stack, solids_config_dict):
+def _composite_descent(parent_stack, solids_config_dict, resource_defs):
     """
     The core implementation of composite_descent. This yields a stream of
     SolidConfigEntry. This is used by composite_descent to construct a
@@ -135,15 +137,19 @@ def _composite_descent(parent_stack, solids_config_dict):
         # If there is a config mapping, invoke it and get the descendent solids
         # config that way. Else just grabs the solids entry of the current config
         solids_dict = (
-            _get_mapped_solids_dict(solid, graph_def, current_stack, current_solid_config)
+            _get_mapped_solids_dict(
+                solid, graph_def, current_stack, current_solid_config, resource_defs
+            )
             if graph_def.config_mapping
             else current_solid_config.get("solids", {})
         )
 
-        yield from _composite_descent(current_stack, solids_dict)
+        yield from _composite_descent(current_stack, solids_dict, resource_defs)
 
 
-def _get_mapped_solids_dict(composite, graph_def, current_stack, current_solid_config):
+def _get_mapped_solids_dict(
+    composite, graph_def, current_stack, current_solid_config, resource_defs
+):
     # the spec of the config mapping function is that it takes the dictionary at:
     # solid_name:
     #    config: {dict_passed_to_user}
@@ -180,6 +186,7 @@ def _get_mapped_solids_dict(composite, graph_def, current_stack, current_solid_c
         ignored_solids=None,
         dependency_structure=graph_def.dependency_structure,
         parent_handle=current_stack.handle,
+        resource_defs=resource_defs,
     )
 
     # process against that new type
