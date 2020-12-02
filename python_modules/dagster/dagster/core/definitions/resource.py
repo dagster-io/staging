@@ -38,7 +38,12 @@ class ResourceDefinition(ConfigurableDefinition):
     """
 
     def __init__(
-        self, resource_fn=None, config_schema=None, description=None, version=None,
+        self,
+        resource_fn=None,
+        config_schema=None,
+        description=None,
+        version=None,
+        required_resource_keys=None,
     ):
         EXPECTED_POSITIONALS = ["*"]
         fn_positionals, _ = split_function_parameters(resource_fn, EXPECTED_POSITIONALS)
@@ -57,6 +62,9 @@ class ResourceDefinition(ConfigurableDefinition):
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
         self._description = check.opt_str_param(description, "description")
         self._version = check.opt_str_param(version, "version")
+        self._required_resource_keys = check.opt_set_param(
+            required_resource_keys, "required_resource_keys"
+        )
         if version:
             experimental_arg_warning("version", "ResourceDefinition.__init__")
 
@@ -75,6 +83,10 @@ class ResourceDefinition(ConfigurableDefinition):
     @property
     def version(self):
         return self._version
+
+    @property
+    def required_resource_keys(self):
+        return self._required_resource_keys
 
     @staticmethod
     def none_resource(description=None):
@@ -134,10 +146,15 @@ class ResourceDefinition(ConfigurableDefinition):
 
 
 class _ResourceDecoratorCallable:
-    def __init__(self, config_schema=None, description=None, version=None):
+    def __init__(
+        self, config_schema=None, description=None, version=None, required_resource_keys=None
+    ):
         self.config_schema = config_schema  # checked by underlying definition
         self.description = check.opt_str_param(description, "description")
         self.version = check.opt_str_param(version, "version")
+        self.required_resource_keys = check.opt_set_param(
+            required_resource_keys, "required_resource_keys"
+        )
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -147,6 +164,7 @@ class _ResourceDecoratorCallable:
             config_schema=self.config_schema,
             description=self.description,
             version=self.version,
+            required_resource_keys=self.required_resource_keys,
         )
 
         update_wrapper(resource_def, wrapped=fn)
@@ -154,7 +172,7 @@ class _ResourceDecoratorCallable:
         return resource_def
 
 
-def resource(config_schema=None, description=None, version=None):
+def resource(config_schema=None, description=None, version=None, required_resource_keys=None):
     """Define a resource.
 
     The decorated function should accept an :py:class:`InitResourceContext` and return an instance of
@@ -173,6 +191,7 @@ def resource(config_schema=None, description=None, version=None):
         version (Optional[str]): (Experimental) The version of a resource function. Two wrapped
             resource functions should only have the same version if they produce the same resource
             definition when provided with the same inputs.
+        required_resource_keys (Optional[Set[str]]): Keys for the resources required by this resource.
     """
 
     # This case is for when decorator is used bare, without arguments.
@@ -182,7 +201,10 @@ def resource(config_schema=None, description=None, version=None):
 
     def _wrap(resource_fn):
         return _ResourceDecoratorCallable(
-            config_schema=config_schema, description=description, version=version,
+            config_schema=config_schema,
+            description=description,
+            version=version,
+            required_resource_keys=required_resource_keys,
         )(resource_fn)
 
     return _wrap
