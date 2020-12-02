@@ -28,7 +28,7 @@ def test_in_process_executor_primitive_config():
     def test_executor(init_context):
         from dagster.core.executor.in_process import InProcessExecutor
 
-        assert init_context.executor_config == "secret testing value!!"
+        assert init_context.resource_config == "secret testing value!!"
 
         return InProcessExecutor(
             # shouldn't need to .get() here - issue with defaults in config setup
@@ -48,7 +48,7 @@ def test_in_process_executor_dict_config():
     def test_executor(init_context):
         from dagster.core.executor.in_process import InProcessExecutor
 
-        assert init_context.executor_config["value"] == "secret testing value!!"
+        assert init_context.resource_config["value"] == "secret testing value!!"
 
         return InProcessExecutor(
             # shouldn't need to .get() here - issue with defaults in config setup
@@ -68,7 +68,7 @@ def test_in_process_executor_dict_config_configured():
     def test_executor(init_context):
         from dagster.core.executor.in_process import InProcessExecutor
 
-        assert init_context.executor_config["value"] == "secret testing value!!"
+        assert init_context.resource_config["value"] == "secret testing value!!"
 
         return InProcessExecutor(
             # shouldn't need to .get() here - issue with defaults in config setup

@@ -98,7 +98,7 @@ def dask_executor(init_context):
             pass
 
     """
-    ((cluster_type, cluster_configuration),) = init_context.executor_config["cluster"].items()
+    ((cluster_type, cluster_configuration),) = init_context.resource_config["cluster"].items()
     return DaskExecutor(cluster_type, cluster_configuration)
 
 

@@ -129,7 +129,7 @@ def celery_docker_executor(init_context):
     commands must be invoked with the `-A dagster_celery_docker.app` argument.
     """
 
-    exc_cfg = init_context.executor_config
+    exc_cfg = init_context.resource_config
 
     return CeleryDockerExecutor(
         broker=exc_cfg.get("broker"),

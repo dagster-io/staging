@@ -84,11 +84,11 @@ def celery_executor(init_context):
     pick up tasks for execution.
     """
     return CeleryExecutor(
-        broker=init_context.executor_config.get("broker"),
-        backend=init_context.executor_config.get("backend"),
-        config_source=init_context.executor_config.get("config_source"),
-        include=init_context.executor_config.get("include"),
-        retries=Retries.from_config(init_context.executor_config["retries"]),
+        broker=init_context.resource_config.get("broker"),
+        backend=init_context.resource_config.get("backend"),
+        config_source=init_context.resource_config.get("config_source"),
+        include=init_context.resource_config.get("include"),
+        retries=Retries.from_config(init_context.resource_config["retries"]),
     )
 
 

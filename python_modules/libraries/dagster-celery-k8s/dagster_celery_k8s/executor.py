@@ -103,7 +103,7 @@ def celery_k8s_job_executor(init_context):
     """
 
     run_launcher = init_context.instance.run_launcher
-    exc_cfg = init_context.executor_config
+    exc_cfg = init_context.resource_config
 
     check.inst(
         run_launcher,

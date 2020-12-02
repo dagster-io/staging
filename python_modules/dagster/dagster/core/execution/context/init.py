@@ -82,4 +82,4 @@ class InitResourceContext(
     # TODO rename all callsites and deprecate
     @property
     def executor_config(self):
-        return self.resource_config
+        raise Exception("TODO")

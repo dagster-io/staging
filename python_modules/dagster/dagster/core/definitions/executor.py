@@ -14,7 +14,7 @@ class ExecutorDefinition(IResourceDefinition):
     Args:
         name (Optional[str]): The name of the executor.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data
-            available in `init_context.executor_config`.
+            available in `init_context.resource_config`.
         resource_fn (Callable): Should accept an :py:class:`InitResourceContext`
             and return an instance of :py:class:`Executor`
         required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
@@ -77,7 +77,7 @@ def executor(name=None, config_schema=None, requires_multiprocess_safe_env=True)
     Args:
         name (Optional[str]): The name of the executor.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data available in
-            `init_context.executor_config`.
+            `init_context.resource_config`.
     """
     if callable(name):
         check.invariant(config_schema is None)
@@ -142,8 +142,8 @@ def in_process_executor(init_context):
 
     return InProcessExecutor(
         # shouldn't need to .get() here - issue with defaults in config setup
-        retries=Retries.from_config(init_context.executor_config.get("retries", {"enabled": {}})),
-        marker_to_close=init_context.executor_config.get("marker_to_close"),
+        retries=Retries.from_config(init_context.resource_config.get("retries", {"enabled": {}})),
+        marker_to_close=init_context.resource_config.get("marker_to_close"),
     )
 
 
@@ -180,8 +180,8 @@ def multiprocess_executor(init_context):
 
     return MultiprocessExecutor(
         pipeline=init_context.pipeline,
-        max_concurrent=init_context.executor_config["max_concurrent"],
-        retries=Retries.from_config(init_context.executor_config["retries"]),
+        max_concurrent=init_context.resource_config["max_concurrent"],
+        retries=Retries.from_config(init_context.resource_config["retries"]),
     )
 
 
