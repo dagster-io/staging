@@ -15,7 +15,7 @@ class ExecutorDefinition(IResourceDefinition):
         name (Optional[str]): The name of the executor.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data
             available in `init_context.executor_config`.
-        resource_fn (Callable): Should accept an :py:class:`InitExecutorContext`
+        resource_fn (Callable): Should accept an :py:class:`InitResourceContext`
             and return an instance of :py:class:`Executor`
         required_resource_keys (Optional[Set[str]]): Keys for the resources required by the
             executor.
@@ -71,7 +71,7 @@ class ExecutorDefinition(IResourceDefinition):
 def executor(name=None, config_schema=None, requires_multiprocess_safe_env=True):
     """Define an executor.
 
-    The decorated function should accept an :py:class:`InitExecutorContext` and return an instance
+    The decorated function should accept an :py:class:`InitResourceContext` and return an instance
     of :py:class:`Executor`.
 
     Args:
@@ -138,10 +138,7 @@ def in_process_executor(init_context):
     where the higher the number the higher the priority. 0 is the default and both positive
     and negative numbers can be used.
     """
-    from dagster.core.executor.init import InitExecutorContext
     from dagster.core.executor.in_process import InProcessExecutor
-
-    check.inst_param(init_context, "init_context", InitExecutorContext)
 
     return InProcessExecutor(
         # shouldn't need to .get() here - issue with defaults in config setup
@@ -179,10 +176,7 @@ def multiprocess_executor(init_context):
     where the higher the number the higher the priority. 0 is the default and both positive
     and negative numbers can be used.
     """
-    from dagster.core.executor.init import InitExecutorContext
     from dagster.core.executor.multiprocess import MultiprocessExecutor
-
-    check.inst_param(init_context, "init_context", InitExecutorContext)
 
     return MultiprocessExecutor(
         pipeline=init_context.pipeline,
