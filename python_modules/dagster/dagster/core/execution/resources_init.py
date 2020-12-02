@@ -51,7 +51,7 @@ def _core_resource_initialization_event_generator(
                 continue
 
             resource_context = InitResourceContext(
-                pipeline_def=pipeline_def,
+                pipeline=execution_plan.pipeline,
                 resource_def=resource_def,
                 resource_config=environment_config.resources.get(resource_name, {}).get("config"),
                 run_id=pipeline_run.run_id,

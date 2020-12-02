@@ -48,4 +48,3 @@ class InitExecutorContext:
     @property
     def environment_config(self):
         raise NotImplementedError(_property_deleted_error_message())
-
