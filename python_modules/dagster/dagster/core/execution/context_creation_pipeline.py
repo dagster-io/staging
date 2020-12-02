@@ -35,6 +35,7 @@ from .context.system import (
     SystemExecutionContextData,
     SystemPipelineExecutionContext,
 )
+from .ensure_multiprocess_safe import ensure_multiprocess_safe
 
 
 def construct_intermediate_storage_data(storage_init_context):
@@ -367,21 +368,23 @@ def create_executor(context_creation_data):
 
     executor_def = context_creation_data.executor_def
 
-    executor_context = InitExecutorContext(
-        pipeline=context_creation_data.pipeline,
-        mode_def=context_creation_data.mode_def,
-        executor_def=executor_def,
-        pipeline_run=context_creation_data.pipeline_run,
-        environment_config=context_creation_data.environment_config,
-        executor_config=context_creation_data.environment_config.execution.execution_engine_config,
-        intermediate_storage_def=context_creation_data.intermediate_storage_def,
-        instance=context_creation_data.instance,
-    )
-
     if executor_def.requires_multiprocess_safe_env:
-        executor_context.ensure_multiprocess_safe()
+        ensure_multiprocess_safe(
+            context_creation_data.pipeline,
+            context_creation_data.instance,
+            context_creation_data.mode_def,
+            context_creation_data.intermediate_storage_def,
+        )
 
-    return executor_def.resource_fn(executor_context)
+    return executor_def.resource_fn(
+        InitExecutorContext(
+            pipeline=context_creation_data.pipeline,
+            executor_def=executor_def,
+            pipeline_run=context_creation_data.pipeline_run,
+            executor_config=context_creation_data.environment_config.execution.execution_engine_config,
+            instance=context_creation_data.instance,
+        )
+    )
 
 
 def construct_execution_context_data(
