@@ -83,8 +83,6 @@ def celery_executor(init_context):
     different broker than the one your workers are listening to, the workers will never be able to
     pick up tasks for execution.
     """
-    init_context.ensure_multiprocess_safe()
-
     return CeleryExecutor(
         broker=init_context.executor_config.get("broker"),
         backend=init_context.executor_config.get("backend"),

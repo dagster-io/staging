@@ -22,12 +22,18 @@ class ExecutorDefinition(IResourceDefinition):
     """
 
     def __init__(
-        self, name, resource_fn=None, config_schema=None, description=None,
+        self,
+        name,
+        resource_fn=None,
+        config_schema=None,
+        description=None,
+        requires_multiprocess_safe_env=False,
     ):
         self._name = check.str_param(name, "name")
         self._resource_fn = check.callable_param(resource_fn, "resource_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
         self._description = check.opt_str_param(description, "description")
+        self._requires_multiprocess_safe_env = requires_multiprocess_safe_env
 
     @property
     def name(self):
@@ -46,6 +52,10 @@ class ExecutorDefinition(IResourceDefinition):
         return self._resource_fn
 
     @property
+    def requires_multiprocess_safe_env(self):
+        return self._requires_multiprocess_safe_env
+
+    @property
     def version(self):
         raise NotImplementedError()
 
@@ -58,7 +68,7 @@ class ExecutorDefinition(IResourceDefinition):
         )
 
 
-def executor(name=None, config_schema=None):
+def executor(name=None, config_schema=None, requires_multiprocess_safe_env=True):
     """Define an executor.
 
     The decorated function should accept an :py:class:`InitExecutorContext` and return an instance
@@ -73,13 +83,18 @@ def executor(name=None, config_schema=None):
         check.invariant(config_schema is None)
         return _ExecutorDecoratorCallable()(name)
 
-    return _ExecutorDecoratorCallable(name=name, config_schema=config_schema)
+    return _ExecutorDecoratorCallable(
+        name=name,
+        config_schema=config_schema,
+        requires_multiprocess_safe_env=requires_multiprocess_safe_env,
+    )
 
 
 class _ExecutorDecoratorCallable:
-    def __init__(self, name=None, config_schema=None):
+    def __init__(self, name=None, config_schema=None, requires_multiprocess_safe_env=True):
         self.name = check.opt_str_param(name, "name")
         self.config_schema = config_schema  # type check in definition
+        self.requires_multiprocess_safe_env = requires_multiprocess_safe_env
 
     def __call__(self, fn):
         check.callable_param(fn, "fn")
@@ -88,7 +103,10 @@ class _ExecutorDecoratorCallable:
             self.name = fn.__name__
 
         executor_def = ExecutorDefinition(
-            name=self.name, config_schema=self.config_schema, resource_fn=fn,
+            name=self.name,
+            config_schema=self.config_schema,
+            resource_fn=fn,
+            requires_multiprocess_safe_env=self.requires_multiprocess_safe_env,
         )
 
         update_wrapper(executor_def, wrapped=fn)
@@ -102,6 +120,7 @@ class _ExecutorDecoratorCallable:
         "retries": get_retries_config(),
         "marker_to_close": Field(str, is_required=False),
     },
+    requires_multiprocess_safe_env=False,
 )
 def in_process_executor(init_context):
     """The default in-process executor.
@@ -164,8 +183,6 @@ def multiprocess_executor(init_context):
     from dagster.core.executor.multiprocess import MultiprocessExecutor
 
     check.inst_param(init_context, "init_context", InitExecutorContext)
-
-    init_context.ensure_multiprocess_safe()
 
     return MultiprocessExecutor(
         pipeline=init_context.pipeline,

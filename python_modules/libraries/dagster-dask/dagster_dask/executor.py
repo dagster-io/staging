@@ -98,7 +98,6 @@ def dask_executor(init_context):
             pass
 
     """
-    init_context.ensure_multiprocess_safe()
     ((cluster_type, cluster_configuration),) = init_context.executor_config["cluster"].items()
     return DaskExecutor(cluster_type, cluster_configuration)
 
