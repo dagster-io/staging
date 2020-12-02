@@ -28,18 +28,6 @@ class MultipleStepOutputsListWrapper(list):
     pass
 
 
-def _get_addressable_asset(step_context, step_output_handle):
-    asset_store_handle = step_context.execution_plan.get_asset_store_handle(step_output_handle)
-    asset_store = step_context.get_asset_store(asset_store_handle.asset_store_key)
-    asset_store_context = step_context.for_asset_store(step_output_handle, asset_store_handle)
-
-    obj = asset_store.get_asset(asset_store_context)
-
-    return AssetStoreOperation(
-        AssetStoreOperationType.GET_ASSET, step_output_handle, asset_store_handle, obj=obj,
-    )
-
-
 class StepInputSource(ABC):
     """How to load the data for a step input"""
 
@@ -64,13 +52,45 @@ class StepInputSource(ABC):
         raise NotImplementedError()
 
 
+class FromRootInputManager(
+    namedtuple("_FromRootInputManager", "input_name manager_key config_data input_metadata"),
+    StepInputSource,
+):
+    def load_input_object(self, step_context):
+        loader = getattr(step_context.resources, self.manager_key)
+        load_input_context = step_context.for_input_manager(
+            self.input_name, self.config_data, input_metadata=self.input_metadata
+        )
+        return loader.load(load_input_context)
+
+    def compute_version(self, step_versions):
+        # TODO: support versioning for root loaders
+        return None
+
+    def required_resource_keys(self):
+        return {self.manager_key}
+
+
 class FromStepOutput(
-    namedtuple("_FromStepOutput", "step_output_handle dagster_type check_for_missing"),
+    namedtuple(
+        "_FromStepOutput",
+        "step_output_handle dagster_type check_for_missing manager_key config_data input_name "
+        "input_metadata",
+    ),
     StepInputSource,
 ):
     """This step input source is the output of a previous step"""
 
-    def __new__(cls, step_output_handle, dagster_type, check_for_missing):
+    def __new__(
+        cls,
+        step_output_handle,
+        dagster_type,
+        check_for_missing,
+        manager_key,
+        config_data,
+        input_name,
+        input_metadata,
+    ):
         from .objects import StepOutputHandle
 
         return super(FromStepOutput, cls).__new__(
@@ -80,6 +100,10 @@ class FromStepOutput(
             ),
             dagster_type=dagster_type,
             check_for_missing=check_for_missing,
+            manager_key=check.opt_str_param(manager_key, "manager_key"),
+            config_data=config_data,
+            input_name=input_name,
+            input_metadata=input_metadata,
         )
 
     @property
@@ -92,8 +116,22 @@ class FromStepOutput(
 
     def load_input_object(self, step_context):
         source_handle = self.step_output_handle
+        if self.manager_key:
+            loader = getattr(step_context.resources, self.manager_key)
+            load_context = step_context.for_input_manager(
+                self.input_name, self.config_data, self.input_metadata, source_handle
+            )
+            return loader.load(load_context)
         if step_context.using_asset_store(source_handle):
-            return _get_addressable_asset(step_context, source_handle)
+            asset_store_handle = step_context.execution_plan.get_asset_store_handle(source_handle)
+            loader = getattr(step_context.resources, asset_store_handle.asset_store_key)
+
+            asset_store_context = step_context.for_asset_store(source_handle, asset_store_handle)
+            obj = loader.get_asset(asset_store_context)
+
+            return AssetStoreOperation(
+                AssetStoreOperationType.GET_ASSET, source_handle, asset_store_handle, obj=obj,
+            )
         else:
             if self.check_for_missing and not step_context.intermediate_storage.has_intermediate(
                 context=step_context, step_output_handle=source_handle,
@@ -116,6 +154,9 @@ class FromStepOutput(
             return join_and_hash(
                 step_versions[self.step_output_handle.step_key], self.step_output_handle.output_name
             )
+
+    def required_resource_keys(self):
+        return {self.manager_key} if self.manager_key else set()
 
 
 def _generate_error_boundary_msg_for_step_input(context, input_name):
