@@ -128,7 +128,6 @@ def celery_docker_executor(init_context):
     In deployments where the celery_k8s_job_executor is used all appropriate celery and dagster_celery
     commands must be invoked with the `-A dagster_celery_docker.app` argument.
     """
-    init_context.ensure_multiprocess_safe()
 
     exc_cfg = init_context.executor_config
 
