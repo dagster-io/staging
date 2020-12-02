@@ -28,9 +28,6 @@ Executors
 
 .. autoclass:: ExecutorDefinition
 
-.. autoclass:: InitExecutorContext
-    :members:
-
 .. autoclass:: Executor
     :members:
 

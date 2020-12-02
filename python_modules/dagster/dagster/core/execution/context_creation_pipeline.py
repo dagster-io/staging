@@ -9,6 +9,7 @@ from dagster.core.definitions import PipelineDefinition
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.errors import DagsterError
 from dagster.core.events import DagsterEvent, PipelineInitFailureData
+from dagster.core.execution.context.init import InitResourceContext
 from dagster.core.execution.memoization import validate_reexecution_memoization
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resources_init import (
@@ -17,7 +18,6 @@ from dagster.core.execution.resources_init import (
 )
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
-from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.init import InitIntermediateStorageContext
@@ -67,7 +67,7 @@ class ContextCreationData(
         "_ContextCreationData",
         "pipeline environment_config pipeline_run mode_def "
         "intermediate_storage_def executor_def instance resource_keys_to_init "
-        "execution_plan",
+        "execution_plan log_manager",
     )
 ):
     @property
@@ -85,6 +85,10 @@ def create_context_creation_data(
     intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)
     executor_def = executor_def_from_config(mode_def, environment_config)
 
+    log_manager = create_log_manager(
+        instance, pipeline_def, mode_def, environment_config, pipeline_run
+    )
+
     return ContextCreationData(
         pipeline=execution_plan.pipeline,
         environment_config=environment_config,
@@ -97,6 +101,7 @@ def create_context_creation_data(
             execution_plan, intermediate_storage_def
         ),
         execution_plan=execution_plan,
+        log_manager=log_manager,
     )
 
 
@@ -134,12 +139,7 @@ class ExecutionContextManager(six.with_metaclass(ABCMeta)):
 
     @abstractmethod
     def construct_context(
-        self,
-        context_creation_data,
-        scoped_resources_builder,
-        intermediate_storage,
-        log_manager,
-        raise_on_error,
+        self, context_creation_data, scoped_resources_builder, intermediate_storage, raise_on_error,
     ):
         pass
 
@@ -185,13 +185,13 @@ class ExecutionContextManager(six.with_metaclass(ABCMeta)):
                 execution_plan, run_config, pipeline_run, instance,
             )
 
-            log_manager = create_log_manager(context_creation_data)
             resources_manager = scoped_resources_builder_cm(
                 execution_plan,
                 context_creation_data.environment_config,
                 context_creation_data.pipeline_run,
-                log_manager,
+                context_creation_data.log_manager,
                 context_creation_data.resource_keys_to_init,
+                instance,
             )
             yield from resources_manager.generate_setup_events()
             scoped_resources_builder = check.inst(
@@ -205,7 +205,6 @@ class ExecutionContextManager(six.with_metaclass(ABCMeta)):
             execution_context = self.construct_context(
                 context_creation_data=context_creation_data,
                 scoped_resources_builder=scoped_resources_builder,
-                log_manager=log_manager,
                 intermediate_storage=intermediate_storage,
                 raise_on_error=raise_on_error,
             )
@@ -251,12 +250,7 @@ class PipelineExecutionContextManager(ExecutionContextManager):
         return SystemPipelineExecutionContext
 
     def construct_context(
-        self,
-        context_creation_data,
-        scoped_resources_builder,
-        intermediate_storage,
-        log_manager,
-        raise_on_error,
+        self, context_creation_data, scoped_resources_builder, intermediate_storage, raise_on_error,
     ):
         executor = check.inst(
             create_executor(context_creation_data), Executor, "Must return an Executor"
@@ -267,12 +261,11 @@ class PipelineExecutionContextManager(ExecutionContextManager):
                 context_creation_data=context_creation_data,
                 scoped_resources_builder=scoped_resources_builder,
                 intermediate_storage=intermediate_storage,
-                log_manager=log_manager,
                 retries=executor.retries,
                 raise_on_error=raise_on_error,
             ),
             executor=executor,
-            log_manager=log_manager,
+            log_manager=context_creation_data.log_manager,
         )
 
 
@@ -302,23 +295,17 @@ class PlanExecutionContextManager(ExecutionContextManager):
         return SystemExecutionContext
 
     def construct_context(
-        self,
-        context_creation_data,
-        scoped_resources_builder,
-        intermediate_storage,
-        log_manager,
-        raise_on_error,
+        self, context_creation_data, scoped_resources_builder, intermediate_storage, raise_on_error,
     ):
         return SystemExecutionContext(
             construct_execution_context_data(
                 context_creation_data=context_creation_data,
                 scoped_resources_builder=scoped_resources_builder,
                 intermediate_storage=intermediate_storage,
-                log_manager=log_manager,
                 retries=self._retries,
                 raise_on_error=raise_on_error,
             ),
-            log_manager=log_manager,
+            log_manager=context_creation_data.log_manager,
         )
 
 
@@ -377,23 +364,19 @@ def create_executor(context_creation_data):
         )
 
     return executor_def.resource_fn(
-        InitExecutorContext(
+        InitResourceContext(
             pipeline=context_creation_data.pipeline,
-            executor_def=executor_def,
+            resource_config=context_creation_data.environment_config.execution.execution_engine_config,
+            resource_def=executor_def,
             pipeline_run=context_creation_data.pipeline_run,
-            executor_config=context_creation_data.environment_config.execution.execution_engine_config,
             instance=context_creation_data.instance,
+            log_manager=context_creation_data.log_manager,
         )
     )
 
 
 def construct_execution_context_data(
-    context_creation_data,
-    scoped_resources_builder,
-    intermediate_storage,
-    log_manager,
-    retries,
-    raise_on_error,
+    context_creation_data, scoped_resources_builder, intermediate_storage, retries, raise_on_error,
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
     scoped_resources_builder = check.inst_param(
@@ -402,7 +385,6 @@ def construct_execution_context_data(
         ScopedResourcesBuilder,
     )
     check.inst_param(intermediate_storage, "intermediate_storage", IntermediateStorage)
-    check.inst_param(log_manager, "log_manager", DagsterLogManager)
     check.inst_param(retries, "retries", Retries)
 
     return SystemExecutionContextData(
@@ -463,15 +445,15 @@ def scoped_pipeline_context(
             pass
 
 
-def create_log_manager(context_creation_data):
-    check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
+def create_log_manager(instance, pipeline_def, mode_def, environment_config, pipeline_run):
+    # check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 
-    pipeline_def, mode_def, environment_config, pipeline_run = (
-        context_creation_data.pipeline_def,
-        context_creation_data.mode_def,
-        context_creation_data.environment_config,
-        context_creation_data.pipeline_run,
-    )
+    # pipeline_def, mode_def, environment_config, pipeline_run = (
+    #     context_creation_data.pipeline_def,
+    #     context_creation_data.mode_def,
+    #     context_creation_data.environment_config,
+    #     context_creation_data.pipeline_run,
+    # )
 
     # The following logic is tightly coupled to the processing of logger config in
     # python_modules/dagster/dagster/core/system_config/objects.py#config_map_loggers
@@ -501,11 +483,11 @@ def create_log_manager(context_creation_data):
             )
 
     # should this be first in loggers list?
-    loggers.append(context_creation_data.instance.get_logger())
+    loggers.append(instance.get_logger())
 
     return DagsterLogManager(
         run_id=pipeline_run.run_id,
-        logging_tags=get_logging_tags(pipeline_run, context_creation_data.pipeline_def),
+        logging_tags=get_logging_tags(pipeline_run, pipeline_def),
         loggers=loggers,
     )
 
