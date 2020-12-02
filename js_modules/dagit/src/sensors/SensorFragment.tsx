@@ -10,6 +10,9 @@ export const SENSOR_FRAGMENT = gql`
     pipelineName
     solidSelection
     mode
+    futureTick {
+      timestamp
+    }
     sensorState {
       id
       ...JobStateFragment
