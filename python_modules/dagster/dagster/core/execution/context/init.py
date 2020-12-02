@@ -22,14 +22,14 @@ class InitResourceContext(
         log_manager (DagsterLogManager): The log manager for this run of the pipeline
     """
 
-    def __new__(cls, pipeline, resource_config, resource_def, run_id, log_manager=None):
+    def __new__(cls, pipeline, resource_config, resource_def, run_id, log_manager):
         return super(InitResourceContext, cls).__new__(
             cls,
             check.inst_param(pipeline, "pipeline", IPipeline),
             resource_config,
             check.inst_param(resource_def, "resource_def", ResourceDefinition),
             check.str_param(run_id, "run_id"),
-            check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
+            check.inst_param(log_manager, "log_manager", DagsterLogManager),
         )
 
     @property

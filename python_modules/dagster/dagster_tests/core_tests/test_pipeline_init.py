@@ -93,6 +93,7 @@ def test_clean_event_generator_exit():
         resource_def=resource_def,
         resource_config=None,
         run_id=make_new_run_id(),
+        log_manager=log_manager,
     )
     generator = single_resource_event_generator(resource_context, resource_name, resource_def)
     next(generator)
