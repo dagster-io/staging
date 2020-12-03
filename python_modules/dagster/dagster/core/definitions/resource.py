@@ -202,6 +202,42 @@ class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_inst
             ),
         )
 
+    def build_from_mapping(self, required_resource_mapping):
+
+        """We dynamically create a type that has the resource keys as properties, to enable dotting into
+        the resources from a context.
+
+        For example, given:
+
+        resources = {'foo': <some resource>, 'bar': <some other resource>}
+
+        then this will create the type Resource(namedtuple('foo bar'))
+
+        and then binds the specified resources into an instance of this object, which can be consumed
+        as, e.g., context.resources.foo.
+        """
+        required_resource_keys = check.opt_set_param(
+            set(required_resource_mapping.values()),
+            "required_resource_mapping.values()",
+            of_type=str,
+        )
+
+        original_names = {val: key for key, val in required_resource_mapping.items()}
+        # it is possible that the surrounding context does NOT have the required resource keys
+        # because we are building a context for steps that we are not going to execute (e.g. in the
+        # resume/retry case, in order to generate copy intermediates events)
+        resource_instance_dict = {
+            original_names[key]: self.resource_instance_dict[key]
+            for key in required_resource_keys
+            if key in self.resource_instance_dict
+        }
+
+        class ScopedResources(namedtuple("Resources", list(resource_instance_dict.keys()))):
+            def __getattr__(self, attr):
+                raise DagsterUnknownResourceError(attr)
+
+        return ScopedResources(**resource_instance_dict)
+
     def build(self, required_resource_keys):
 
         """We dynamically create a type that has the resource keys as properties, to enable dotting into

@@ -1,5 +1,6 @@
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.utils import frozendict
 from dagster.utils.backcompat import experimental_arg_warning
 
 from .config import ConfigMapping
@@ -8,9 +9,10 @@ from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition
 from .output import OutputDefinition
+from .resource_mappable import ResourceMappable
 
 
-class SolidDefinition(NodeDefinition):
+class SolidDefinition(NodeDefinition, ResourceMappable):
     """
     The definition of a Solid that performs a user-defined computation.
 
@@ -75,11 +77,20 @@ class SolidDefinition(NodeDefinition):
         required_resource_keys=None,
         positional_inputs=None,
         version=None,
+        resource_mappings=None,
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
-        self._required_resource_keys = frozenset(
-            check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
+        resource_mappings = check.opt_dict_param(resource_mappings, "resource_mappings")
+        self._resource_key_mapping = frozendict(
+            {
+                key: resource_mappings[key]
+                if resource_mappings and key in resource_mappings
+                else key
+                for key in check.opt_set_param(
+                    required_resource_keys, "required_resource_keys", of_type=str
+                )
+            }
         )
         self._version = check.opt_str_param(version, "version")
         if version:
@@ -104,7 +115,11 @@ class SolidDefinition(NodeDefinition):
 
     @property
     def required_resource_keys(self):
-        return frozenset(self._required_resource_keys)
+        return frozenset(self._resource_key_mapping.values())
+
+    @property
+    def resource_mapping(self):
+        return self._resource_key_mapping
 
     @property
     def has_config_entry(self):
@@ -141,6 +156,22 @@ class SolidDefinition(NodeDefinition):
             required_resource_keys=self.required_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
+        )
+
+    def copy_for_resource_mapping(self, orig_key, new_key, **kwargs):
+        name = check.str_param(kwargs["name"], "name")
+        return SolidDefinition(
+            name=name,
+            input_defs=self._input_defs,
+            compute_fn=self.compute_fn,
+            output_defs=self.output_defs,
+            config_schema=self.config_schema,
+            description=self.description,
+            tags=self.tags,
+            required_resource_keys=self.required_resource_keys,
+            positional_inputs=self.positional_inputs,
+            version=self.version,
+            resource_mappings={orig_key: new_key},
         )
 
 

@@ -2,12 +2,14 @@ from functools import update_wrapper
 
 from dagster import check
 from dagster.core.definitions.configurable import ConfigurableDefinition
+from dagster.core.definitions.resource_mappable import ResourceMappable
+from dagster.utils import frozendict
 
 from .definition_config_schema import convert_user_facing_definition_config_schema
 from .utils import check_valid_name
 
 
-class IntermediateStorageDefinition(ConfigurableDefinition):
+class IntermediateStorageDefinition(ConfigurableDefinition, ResourceMappable):
     """Defines intermediate data storage behaviors.
 
     Args:
@@ -32,7 +34,19 @@ class IntermediateStorageDefinition(ConfigurableDefinition):
         config_schema=None,
         intermediate_storage_creation_fn=None,
         description=None,
+        resource_mappings=None,
     ):
+        resource_mappings = check.opt_dict_param(resource_mappings, "resource_mappings")
+        self._resource_key_mapping = frozendict(
+            {
+                key: resource_mappings[key]
+                if resource_mappings and key in resource_mappings
+                else key
+                for key in check.opt_set_param(
+                    required_resource_keys, "required_resource_keys", of_type=str
+                )
+            }
+        )
         self._name = check_valid_name(name)
         self._is_persistent = check.bool_param(is_persistent, "is_persistent")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
@@ -70,7 +84,11 @@ class IntermediateStorageDefinition(ConfigurableDefinition):
 
     @property
     def required_resource_keys(self):
-        return self._required_resource_keys
+        return frozenset(self._resource_key_mapping.values())
+
+    @property
+    def resource_mapping(self):
+        return self._resource_key_mapping
 
     def copy_for_configured(self, name, description, config_schema, _):
         return IntermediateStorageDefinition(
@@ -80,6 +98,18 @@ class IntermediateStorageDefinition(ConfigurableDefinition):
             config_schema=config_schema,
             intermediate_storage_creation_fn=self.intermediate_storage_creation_fn,
             description=description or self.description,
+        )
+
+    def copy_for_resource_mapping(self, orig_key, new_key, **kwargs):
+        name = check.str_param(kwargs["name"], "name")
+        return IntermediateStorageDefinition(
+            name=name,
+            is_persistent=self.is_persistent,
+            required_resource_keys=self.required_resource_keys,
+            config_schema=self.config_schema,
+            intermediate_storage_creation_fn=self.intermediate_storage_creation_fn,
+            description=self.description,
+            resource_mappings=self.resource_mapping,
         )
 
 
