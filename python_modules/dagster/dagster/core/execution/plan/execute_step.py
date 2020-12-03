@@ -193,6 +193,7 @@ def _type_checked_step_output_event_sequence(step_context, output, version):
     check.inst_param(output, "output", Output)
 
     step_output = step_context.step.step_output_named(output.output_name)
+    dagster_type = step_output.output_def.dagster_type
     with user_code_error_boundary(
         DagsterTypeCheckError,
         lambda: (
@@ -205,13 +206,11 @@ def _type_checked_step_output_event_sequence(step_context, output, version):
             output_name=output.output_name,
             output_value=output.value,
             output_type=type(output.value),
-            dagster_type_name=step_output.dagster_type.display_name,
+            dagster_type_name=dagster_type.display_name,
             step_key=step_context.step.key,
         ),
     ):
-        type_check = _do_type_check(
-            step_context.for_type(step_output.dagster_type), step_output.dagster_type, output.value
-        )
+        type_check = _do_type_check(step_context.for_type(dagster_type), dagster_type, output.value)
 
         yield _create_step_output_event(
             step_context,
@@ -224,11 +223,10 @@ def _type_checked_step_output_event_sequence(step_context, output, version):
         if not type_check.success:
             raise DagsterTypeCheckDidNotPass(
                 description='Type check failed for step output "{output_name}" - expected type "{dagster_type}".'.format(
-                    output_name=output.output_name,
-                    dagster_type=step_output.dagster_type.display_name,
+                    output_name=output.output_name, dagster_type=dagster_type.display_name,
                 ),
                 metadata_entries=type_check.metadata_entries,
-                dagster_type=step_output.dagster_type,
+                dagster_type=dagster_type,
             )
 
 
@@ -370,7 +368,7 @@ def _set_intermediates(step_context, step_output, step_output_handle, output, ve
     else:
         res = step_context.intermediate_storage.set_intermediate(
             context=step_context,
-            dagster_type=step_output.dagster_type,
+            dagster_type=step_output.output_def.dagster_type,
             step_output_handle=step_output_handle,
             value=output.value,
             version=version,
