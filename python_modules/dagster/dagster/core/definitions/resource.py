@@ -4,6 +4,11 @@ from functools import update_wrapper
 from dagster import check, seven
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.configurable import ConfigurableDefinition
+from dagster.core.definitions.resource_mappable import (
+    ResourceKeyMapping,
+    vend_new_key,
+    vend_old_key,
+)
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterUnknownResourceError
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -243,15 +248,21 @@ class ScopedResourcesBuilder(namedtuple("ScopedResourcesBuilder", "resource_inst
         as, e.g., context.resources.foo.
         """
         required_resource_keys = check.opt_set_param(
-            required_resource_keys, "required_resource_keys", of_type=str
+            required_resource_keys, "required_resource_keys", of_type=(str, ResourceKeyMapping)
         )
+
+        original_names = {
+            vend_new_key(key_or_map): vend_old_key(key_or_map)
+            for key_or_map in required_resource_keys
+        }  # Map of original key to key which will be contained in self.resource_instance_dict.
+
         # it is possible that the surrounding context does NOT have the required resource keys
         # because we are building a context for steps that we are not going to execute (e.g. in the
         # resume/retry case, in order to generate copy intermediates events)
         resource_instance_dict = {
-            key: self.resource_instance_dict[key]
+            original_names[vend_new_key(key)]: self.resource_instance_dict[vend_new_key(key)]
             for key in required_resource_keys
-            if key in self.resource_instance_dict
+            if vend_new_key(key) in self.resource_instance_dict
         }
 
         class ScopedResources(namedtuple("Resources", list(resource_instance_dict.keys()))):

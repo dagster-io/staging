@@ -276,6 +276,10 @@ class SystemStepExecutionContext(SystemExecutionContext):
     def log(self):
         return self._log_manager
 
+    @property
+    def execution_context_data(self):
+        return self._execution_context_data
+
     def for_hook(self, hook_def):
         return HookContext(self._execution_context_data, self.log, hook_def, self.step)
 

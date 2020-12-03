@@ -14,6 +14,7 @@ from dagster import (
     configured,
     execute_pipeline,
     execute_pipeline_iterator,
+    pipeline,
     reconstructable,
     resource,
     seven,
@@ -325,13 +326,13 @@ def test_none_resource():
         assert context.resources.test_null is None
         called["yup"] = True
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_none_resource",
         solid_defs=[solid_test_null],
         mode_defs=[ModeDefinition(resource_defs={"test_null": ResourceDefinition.none_resource()})],
     )
 
-    result = execute_pipeline(pipeline)
+    result = execute_pipeline(pipeline_def)
 
     assert result.success
     assert called["yup"]
@@ -345,7 +346,7 @@ def test_string_resource():
         assert context.resources.test_string == "foo"
         called["yup"] = True
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_string_resource",
         solid_defs=[solid_test_string],
         mode_defs=[
@@ -353,7 +354,7 @@ def test_string_resource():
         ],
     )
 
-    result = execute_pipeline(pipeline, {"resources": {"test_string": {"config": "foo"}}})
+    result = execute_pipeline(pipeline_def, {"resources": {"test_string": {"config": "foo"}}})
 
     assert result.success
     assert called["yup"]
@@ -369,7 +370,7 @@ def test_hardcoded_resource():
         assert context.resources.hardcoded("called")
         called["yup"] = True
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="hardcoded_resource",
         solid_defs=[solid_hardcoded],
         mode_defs=[
@@ -379,7 +380,7 @@ def test_hardcoded_resource():
         ],
     )
 
-    result = execute_pipeline(pipeline)
+    result = execute_pipeline(pipeline_def)
 
     assert result.success
     assert called["yup"]
@@ -394,13 +395,13 @@ def test_mock_resource():
         assert context.resources.test_mock is not None
         called["yup"] = True
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_mock_resource",
         solid_defs=[solid_test_mock],
         mode_defs=[ModeDefinition(resource_defs={"test_mock": ResourceDefinition.mock_resource()})],
     )
 
-    result = execute_pipeline(pipeline)
+    result = execute_pipeline(pipeline_def)
 
     assert result.success
     assert called["yup"]
@@ -419,13 +420,13 @@ def test_no_config_resource_pass_none():
         called["solid"] = True
         assert context.resources.return_thing == "thing"
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_no_config_resource",
         solid_defs=[check_thing],
         mode_defs=[ModeDefinition(resource_defs={"return_thing": return_thing})],
     )
 
-    execute_pipeline(pipeline)
+    execute_pipeline(pipeline_def)
 
     assert called["resource"]
     assert called["solid"]
@@ -444,13 +445,13 @@ def test_no_config_resource_no_arg():
         called["solid"] = True
         assert context.resources.return_thing == "thing"
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_no_config_resource",
         solid_defs=[check_thing],
         mode_defs=[ModeDefinition(resource_defs={"return_thing": return_thing})],
     )
 
-    execute_pipeline(pipeline)
+    execute_pipeline(pipeline_def)
 
     assert called["resource"]
     assert called["solid"]
@@ -469,13 +470,13 @@ def test_no_config_resource_bare_no_arg():
         called["solid"] = True
         assert context.resources.return_thing == "thing"
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_no_config_resource",
         solid_defs=[check_thing],
         mode_defs=[ModeDefinition(resource_defs={"return_thing": return_thing})],
     )
 
-    execute_pipeline(pipeline)
+    execute_pipeline(pipeline_def)
 
     assert called["resource"]
     assert called["solid"]
@@ -493,7 +494,7 @@ def test_no_config_resource_definition():
         called["solid"] = True
         assert context.resources.return_thing == "thing"
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_no_config_resource",
         solid_defs=[check_thing],
         mode_defs=[
@@ -503,7 +504,7 @@ def test_no_config_resource_definition():
         ],
     )
 
-    execute_pipeline(pipeline)
+    execute_pipeline(pipeline_def)
 
     assert called["resource"]
     assert called["solid"]
@@ -522,7 +523,7 @@ def test_resource_cleanup():
         called["solid"] = True
         assert context.resources.resource_with_cleanup is True
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_resource_cleanup",
         solid_defs=[check_resource_created],
         mode_defs=[
@@ -532,7 +533,7 @@ def test_resource_cleanup():
         ],
     )
 
-    execute_pipeline(pipeline)
+    execute_pipeline(pipeline_def)
 
     assert called["creation"] is True
     assert called["solid"] is True
@@ -558,7 +559,7 @@ def test_stacked_resource_cleanup():
         assert context.resources.resource_with_cleanup_1 is True
         assert context.resources.resource_with_cleanup_2 is True
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_resource_cleanup",
         solid_defs=[check_resource_created],
         mode_defs=[
@@ -571,7 +572,7 @@ def test_stacked_resource_cleanup():
         ],
     )
 
-    execute_pipeline(pipeline)
+    execute_pipeline(pipeline_def)
 
     assert called == ["creation_1", "creation_2", "solid", "cleanup_2", "cleanup_1"]
 
@@ -602,20 +603,20 @@ def test_resource_init_failure():
     def failing_resource_solid(_context):
         pass
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_resource_init_failure",
         solid_defs=[failing_resource_solid],
         mode_defs=[ModeDefinition(resource_defs={"failing_resource": failing_resource})],
     )
 
-    res = execute_pipeline(pipeline, raise_on_error=False)
+    res = execute_pipeline(pipeline_def, raise_on_error=False)
 
     event_types = [event.event_type_value for event in res.event_list]
     assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
 
     instance = DagsterInstance.ephemeral()
-    execution_plan = create_execution_plan(pipeline)
-    pipeline_run = instance.create_run_for_pipeline(pipeline, execution_plan=execution_plan)
+    execution_plan = create_execution_plan(pipeline_def)
+    pipeline_run = instance.create_run_for_pipeline(pipeline_def, execution_plan=execution_plan)
 
     step_events = execute_plan(execution_plan, pipeline_run=pipeline_run, instance=instance)
 
@@ -625,7 +626,7 @@ def test_resource_init_failure():
     # Test the pipeline init failure event fires even if we are raising errors
     events = []
     try:
-        for event in execute_pipeline_iterator(pipeline):
+        for event in execute_pipeline_iterator(pipeline_def):
             events.append(event)
     except DagsterResourceFunctionError:
         pass
@@ -673,13 +674,13 @@ def test_resource_init_failure_with_teardown():
     def resource_solid(_):
         pass
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_resource_init_failure_with_cleanup",
         solid_defs=[resource_solid],
         mode_defs=[ModeDefinition(resource_defs={"a": resource_a, "b": resource_b})],
     )
 
-    res = execute_pipeline(pipeline, raise_on_error=False)
+    res = execute_pipeline(pipeline_def, raise_on_error=False)
     event_types = [event.event_type_value for event in res.event_list]
     assert DagsterEventType.PIPELINE_INIT_FAILURE.value in event_types
 
@@ -691,7 +692,7 @@ def test_resource_init_failure_with_teardown():
 
     events = []
     try:
-        for event in execute_pipeline_iterator(pipeline):
+        for event in execute_pipeline_iterator(pipeline_def):
             events.append(event)
     except DagsterResourceFunctionError:
         pass
@@ -726,13 +727,13 @@ def test_solid_failure_resource_teardown():
     def resource_solid(_):
         raise Exception("uh oh")
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_solid_failure_resource_teardown",
         solid_defs=[resource_solid],
         mode_defs=[ModeDefinition(resource_defs={"a": resource_a, "b": resource_b})],
     )
 
-    res = execute_pipeline(pipeline, raise_on_error=False)
+    res = execute_pipeline(pipeline_def, raise_on_error=False)
     assert res.event_list[-1].event_type_value == "PIPELINE_FAILURE"
     assert called == ["A", "B"]
     assert cleaned == ["B", "A"]
@@ -742,7 +743,7 @@ def test_solid_failure_resource_teardown():
 
     events = []
     try:
-        for event in execute_pipeline_iterator(pipeline):
+        for event in execute_pipeline_iterator(pipeline_def):
             events.append(event)
     except DagsterResourceFunctionError:
         pass
@@ -778,14 +779,14 @@ def test_solid_failure_resource_teardown_raise():
     def resource_solid(_):
         raise Exception("uh oh")
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_solid_failure_resource_teardown",
         solid_defs=[resource_solid],
         mode_defs=[ModeDefinition(resource_defs={"a": resource_a, "b": resource_b})],
     )
 
     with pytest.raises(Exception):
-        execute_pipeline(pipeline)
+        execute_pipeline(pipeline_def)
 
     assert called == ["A", "B"]
     assert cleaned == ["B", "A"]
@@ -819,13 +820,13 @@ def test_resource_teardown_failure():
     def resource_solid(_):
         pass
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="test_resource_teardown_failure",
         solid_defs=[resource_solid],
         mode_defs=[ModeDefinition(resource_defs={"a": resource_a, "b": resource_b})],
     )
 
-    result = execute_pipeline(pipeline, raise_on_error=False)
+    result = execute_pipeline(pipeline_def, raise_on_error=False)
     assert result.success
     error_events = [
         event
@@ -840,7 +841,7 @@ def test_resource_teardown_failure():
     cleaned = []
     events = []
     try:
-        for event in execute_pipeline_iterator(pipeline):
+        for event in execute_pipeline_iterator(pipeline_def):
             events.append(event)
     except DagsterResourceFunctionError:
         pass
@@ -877,9 +878,9 @@ def define_resource_teardown_failure_pipeline():
 
 def test_multiprocessing_resource_teardown_failure():
     with instance_for_test() as instance:
-        pipeline = reconstructable(define_resource_teardown_failure_pipeline)
+        pipeline_def = reconstructable(define_resource_teardown_failure_pipeline)
         result = execute_pipeline(
-            pipeline,
+            pipeline_def,
             run_config={
                 "intermediate_storage": {"filesystem": {}},
                 "execution": {"multiprocess": {}},
@@ -917,7 +918,7 @@ def test_single_step_resource_event_logs():
         context.log.info(USER_RESOURCE_MESSAGE)
         return "A"
 
-    pipeline = PipelineDefinition(
+    pipeline_def = PipelineDefinition(
         name="resource_logging_pipeline",
         solid_defs=[resource_solid],
         mode_defs=[
@@ -930,12 +931,12 @@ def test_single_step_resource_event_logs():
 
     with instance_for_test() as instance:
         pipeline_run = instance.create_run_for_pipeline(
-            pipeline,
+            pipeline_def,
             run_config={"loggers": {"callback": {}}},
             step_keys_to_execute=["resource_solid.compute"],
         )
 
-        result = execute_run(InMemoryPipeline(pipeline), pipeline_run, instance)
+        result = execute_run(InMemoryPipeline(pipeline_def), pipeline_run, instance)
 
         assert result.success
         log_messages = [event for event in events if isinstance(event, LogMessageRecord)]
@@ -1044,3 +1045,67 @@ def test_resource_with_enum_in_schema_configured():
     assert_pipeline_runs_with_resource(
         passthrough_to_enum_resource, {"enum": "VALUE_ONE"}, TestPythonEnum.VALUE_ONE
     )
+
+
+def test_resource_remapping():
+    # simple remapping case where I have only one solid, one resource, and I want to remap the name
+    # of the resource.
+    @solid(required_resource_keys={"foo1"})
+    def solid1(context):
+        return context.resources.foo1
+
+    @resource
+    def bar1(_):
+        return "fish"
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"bar1": bar1})])
+    def remap_pipeline():
+        return solid1.remap_resource_key({"foo1": "bar1"}, name="woah")()
+
+    result = execute_pipeline(remap_pipeline)
+
+    assert result.success
+
+
+def test_resource_remapping_name_collisions():
+    # remapping case where we call the same solid with two different resources.
+    @solid(required_resource_keys={"animal_resource"})
+    def return_animal(context):
+        return context.resources.animal_resource
+
+    @resource
+    def fish(_):
+        return "fish"
+
+    @resource
+    def mammal(_):
+        return "mammal"
+
+    @resource
+    def amphibian(_):
+        return "amphibian"
+
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "animal_resource": amphibian,
+                    "animal_resource_1": fish,
+                    "animal_resource_2": mammal,
+                }
+            )
+        ]
+    )
+    def animal_pipeline():
+        return (
+            return_animal(),
+            return_animal.remap_resource_key(
+                {"animal_resource": "animal_resource_1"}, name="fish_solid"
+            )(),
+            return_animal.remap_resource_key(
+                {"animal_resource": "animal_resource_2"}, name="mammal_solid"
+            )(),
+        )
+
+    result = execute_pipeline(animal_pipeline)
+    assert result.success

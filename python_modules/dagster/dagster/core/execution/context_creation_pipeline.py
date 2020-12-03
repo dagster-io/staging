@@ -353,7 +353,7 @@ def create_intermediate_storage(
                     pipeline_def, intermediate_storage_def
                 ),
                 resources=scoped_resources_builder.build(
-                    context_creation_data.intermediate_storage_def.required_resource_keys,
+                    context_creation_data.intermediate_storage_def.resource_key_mappings,
                 ),
             )
         )

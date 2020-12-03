@@ -56,6 +56,12 @@ class SolidExecutionContext(StepExecutionContext, AbstractComputeExecutionContex
             SystemComputeExecutionContext,
         )
         self._pdb = None
+        resource_key_mappings = system_compute_execution_context.solid_def.resource_key_mappings
+        self._resource_builder = (
+            system_compute_execution_context.execution_context_data.scoped_resources_builder
+        )
+        self._resources = self._resource_builder.build(resource_key_mappings)
+
         super(SolidExecutionContext, self).__init__(system_compute_execution_context)
 
     @property
@@ -90,3 +96,7 @@ class SolidExecutionContext(StepExecutionContext, AbstractComputeExecutionContex
             self._pdb = ForkedPdb()
 
         return self._pdb
+
+    @property
+    def resources(self):
+        return self._resources

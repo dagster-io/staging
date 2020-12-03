@@ -8,9 +8,10 @@ from .graph import GraphDefinition
 from .i_solid_definition import NodeDefinition
 from .input import InputDefinition
 from .output import OutputDefinition
+from .resource_mappable import ResourceKeyMapping, ResourceMappableDefinition, vend_new_key
 
 
-class SolidDefinition(NodeDefinition):
+class SolidDefinition(NodeDefinition, ResourceMappableDefinition):
     """
     The definition of a Solid that performs a user-defined computation.
 
@@ -78,8 +79,8 @@ class SolidDefinition(NodeDefinition):
     ):
         self._compute_fn = check.callable_param(compute_fn, "compute_fn")
         self._config_schema = convert_user_facing_definition_config_schema(config_schema)
-        self._required_resource_keys = frozenset(
-            check.opt_set_param(required_resource_keys, "required_resource_keys", of_type=str)
+        self._resource_key_mappings = check.opt_set_param(
+            required_resource_keys, "required_resource_keys", of_type=(ResourceKeyMapping, str),
         )
         self._version = check.opt_str_param(version, "version")
         if version:
@@ -104,7 +105,11 @@ class SolidDefinition(NodeDefinition):
 
     @property
     def required_resource_keys(self):
-        return frozenset(self._required_resource_keys)
+        return frozenset([vend_new_key(key_or_map) for key_or_map in self._resource_key_mappings])
+
+    @property
+    def resource_key_mappings(self):
+        return frozenset(self._resource_key_mappings)
 
     @property
     def has_config_entry(self):
@@ -139,6 +144,25 @@ class SolidDefinition(NodeDefinition):
             description=description or self.description,
             tags=self.tags,
             required_resource_keys=self.required_resource_keys,
+            positional_inputs=self.positional_inputs,
+            version=self.version,
+        )
+
+    def remap_resource_key(self, resource_key_mappings, name=None):
+
+        mapped_resource_keys = self.get_mapped_resource_keys(resource_key_mappings)
+
+        name = check.str_param(name, "name")
+
+        return SolidDefinition(
+            name=name,
+            input_defs=self._input_defs,
+            compute_fn=self.compute_fn,
+            output_defs=self.output_defs,
+            config_schema=self.config_schema,
+            description=self.description,
+            tags=self.tags,
+            required_resource_keys=mapped_resource_keys,
             positional_inputs=self.positional_inputs,
             version=self.version,
         )
