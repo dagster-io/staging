@@ -5,7 +5,7 @@ import re
 import pendulum
 import pytest
 from dagster.core.test_utils import instance_for_test
-from dagster.daemon.controller import DagsterDaemonController
+from dagster.daemon.controller import DagsterDaemonController, all_daemons_healthy, required
 from dagster.daemon.daemon import SchedulerDaemon
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import QueuedRunCoordinatorDaemon
 
@@ -132,7 +132,7 @@ def test_required():
             },
         }
     ) as instance:
-        assert DagsterDaemonController.required(instance)
+        assert required(instance)
 
 
 def test_healthy():
@@ -149,12 +149,12 @@ def test_healthy():
         beyond_tolerated_time = init_time + datetime.timedelta(seconds=60)
 
         controller = DagsterDaemonController(instance)
-        assert not controller.daemon_healthy(instance, curr_time=init_time)
+        assert not all_daemons_healthy(instance, curr_time=init_time)
 
         controller.run_iteration(init_time)
-        assert controller.daemon_healthy(instance, curr_time=init_time)
+        assert all_daemons_healthy(instance, curr_time=init_time)
 
-        assert not controller.daemon_healthy(instance, curr_time=beyond_tolerated_time)
+        assert not all_daemons_healthy(instance, curr_time=beyond_tolerated_time)
 
 
 def test_healthy_with_different_daemons():
@@ -171,4 +171,4 @@ def test_healthy_with_different_daemons():
             },
         }
     ) as instance:
-        assert not DagsterDaemonController.daemon_healthy(instance, curr_time=init_time)
+        assert not all_daemons_healthy(instance, curr_time=init_time)
