@@ -1,7 +1,8 @@
 import {useMutation} from '@apollo/client';
-import {Colors, NonIdealState, Switch, Tooltip} from '@blueprintjs/core';
+import {Colors, Icon, NonIdealState, Switch, Tooltip} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
+import styled from 'styled-components';
 
 import {timestampToString, TimezoneContext} from 'src/TimeComponents';
 import {
@@ -17,6 +18,7 @@ import {StopSchedule} from 'src/schedules/types/StopSchedule';
 import {ScheduleStatus} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
 import {ButtonLink} from 'src/ui/ButtonLink';
+import {Countdown, CountdownStatus} from 'src/ui/Countdown';
 import {Group} from 'src/ui/Group';
 import {MetadataTable} from 'src/ui/MetadataTable';
 import {Code, Heading} from 'src/ui/Text';
@@ -45,8 +47,11 @@ const TimestampDisplay = (props: TimestampDisplayProps) => {
 export const ScheduleDetails: React.FC<{
   schedule: ScheduleDefinitionFragment;
   repoAddress: RepoAddress;
+  countdownDuration: number;
+  countdownStatus: CountdownStatus;
+  onRefresh: () => void;
 }> = (props) => {
-  const {repoAddress, schedule} = props;
+  const {repoAddress, schedule, countdownDuration, countdownStatus, onRefresh} = props;
   const {cronSchedule, executionTimezone, futureTicks, name, partitionSet, pipelineName} = schedule;
 
   const [copyText, setCopyText] = React.useState('Click to copy');
@@ -115,6 +120,23 @@ export const ScheduleDetails: React.FC<{
   const copyId = () => {
     navigator.clipboard.writeText(scheduleOriginId);
     setCopyText('Copied!');
+  };
+
+  const countdownMessage = (timeRemaining: number) => {
+    const refreshing = countdownStatus === 'idle' || timeRemaining === 0;
+    const seconds = Math.floor(timeRemaining / 1000);
+    return (
+      <Group direction="horizontal" spacing={8} alignItems="center">
+        <span style={{color: Colors.GRAY3, fontVariantNumeric: 'tabular-nums'}}>
+          {refreshing ? 'Refreshing data…' : `0:${seconds < 10 ? `0${seconds}` : seconds}`}
+        </span>
+        <Tooltip content="Refresh now">
+          <RefreshButton onClick={onRefresh}>
+            <Icon iconSize={11} icon="refresh" color={Colors.GRAY3} />
+          </RefreshButton>
+        </Tooltip>
+      </Group>
+    );
   };
 
   const running = status === ScheduleStatus.RUNNING;
@@ -204,15 +226,43 @@ export const ScheduleDetails: React.FC<{
         />
       </Group>
       <Box margin={{top: 4}}>
-        <Tooltip content={copyText}>
-          <ButtonLink color={{link: Colors.GRAY3, hover: Colors.GRAY1}} onClick={copyId}>
-            <span style={{fontFamily: FontFamily.monospace}}>{`id: ${scheduleOriginId.slice(
-              0,
-              8,
-            )}`}</span>
-          </ButtonLink>
-        </Tooltip>
+        <Group direction="vertical" spacing={8} alignItems="flex-end">
+          <div>
+            <Countdown
+              duration={countdownDuration}
+              message={countdownMessage}
+              status={countdownStatus}
+            />
+          </div>
+          <Tooltip content={copyText}>
+            <ButtonLink color={{link: Colors.GRAY3, hover: Colors.GRAY1}} onClick={copyId}>
+              <span style={{fontFamily: FontFamily.monospace}}>{`id: ${scheduleOriginId.slice(
+                0,
+                8,
+              )}`}</span>
+            </ButtonLink>
+          </Tooltip>
+        </Group>
       </Box>
     </Box>
   );
 };
+
+const RefreshButton = styled.button`
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  outline: none;
+  background-color: transparent;
+
+  .bp3-icon {
+    display: block;
+
+    &:hover {
+      svg {
+        fill: ${Colors.DARK_GRAY5};
+      }
+    }
+  }
+`;
