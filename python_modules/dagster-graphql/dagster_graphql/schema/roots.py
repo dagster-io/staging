@@ -11,11 +11,10 @@ from dagster.core.host_representation import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import RunLauncher
-from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.storage.compute_log_manager import ComputeIOType
 from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFilter
+from dagster.daemon.types import DaemonStatus, DaemonType
 from dagster.utils import datetime_as_float
-
 from dagster_graphql import dauphin
 from dagster_graphql.implementation.execution import (
     ExecutionParams,
@@ -968,39 +967,87 @@ class DauphinRunLauncher(dauphin.ObjectType):
     def resolve_name(self, _graphene_info):
         return self._run_launcher.__class__.__name__
 
+
 class DauphinDaemonType(dauphin.Enum):
     class Meta:
         name = "DaemonType"
 
-    DAGSTER_DAEMON_SCHEDULER = "DagsterDaemonScheduler"
-    SENSOR_DAEMON = "SensorDaemon"
-    QUEUED_RUN_COORDINATOR_DAEMON = "QueuedRunCoordinatorDaemon"
+    SCHEDULER = "SCHEDULER"
+    SENSOR = "SENSOR"
+    QUEUED_RUN_COORDINATOR = "QUEUED_RUN_COORDINATOR"
+
+
+class DauphinDaemonStatus(dauphin.ObjectType):
+    class Meta:
+        name = "DaemonStatus"
+
+    daemonType = dauphin.NonNull("DaemonType")
+    required = dauphin.NonNull(dauphin.Boolean)
+    healthy = dauphin.Boolean()
+    lastHeartbeatTime = dauphin.Float()
+
+    def __init__(self, daemon_status):
+
+        check.inst_param(daemon_status, "daemon_status", DaemonStatus)
+
+        if daemon_status.last_heartbeat is None:
+            last_heartbeat_time = None
+        else:
+            last_heartbeat_time = datetime_as_float(daemon_status.last_heartbeat.timestamp)
+
+        daemon_type = daemon_type_to_dauphin(daemon_status.daemon_type)
+
+        super(DauphinDaemonStatus, self).__init__(
+            daemonType=daemon_type,
+            required=daemon_status.required,
+            healthy=daemon_status.healthy,
+            lastHeartbeatTime=last_heartbeat_time,
+        )
+
+
+def daemon_type_to_dauphin(daemon_type):
+    check.inst_param(daemon_type, "daemon_type", DaemonType)
+
+    return {
+        DaemonType.QUEUED_RUN_COORDINATOR: DauphinDaemonType.QUEUED_RUN_COORDINATOR,
+        DaemonType.SENSOR: DauphinDaemonType.SENSOR,
+        DaemonType.SCHEDULER: DauphinDaemonType.SCHEDULER,
+    }[daemon_type]
+
 
 class DauphinDaemonHealth(dauphin.ObjectType):
     class Meta:
         name = "DaemonHealth"
 
-    daemonType = dauphin.NonNull(DauphinDaemonType)
-    lastHeartbeat = dauphin.Float()
+    daemonStatus = dauphin.Field(
+        dauphin.NonNull("DaemonStatus"), daemon_type=dauphin.Argument("DaemonType")
+    )
+    allDaemonStatuses = dauphin.non_null_list("DaemonStatus")
 
-    def __init__(self, daemon_heartbeat):
-        from dagster.daemon.types import DaemonHeartbeat
+    def __init__(self, instance):
+        from dagster.daemon.controller import get_daemon_status
 
-        check.inst_param(daemon_heartbeat, "daemon_heartbeat", DaemonHeartbeat)
-        if daemon_heartbeat.daemon_type == "DagsterDaemonScheduler":
-            daemonType = DauphinDaemonType.DAGSTER_DAEMON_SCHEDULER
-        elif daemon_heartbeat.daemon_type == "SensorDaemon":
-            daemonType = DauphinDaemonType.SENSOR_DAEMON
-        elif daemon_heartbeat.daemon_type == "QueuedRunCoordinatorDaemon":
-            daemonType = DauphinDaemonType.QUEUED_RUN_COORDINATOR_DAEMON
-        else:
-            raise DagsterInvariantViolationError(f"Daemon type {daemon_heartbeat.daemon_type} not recognized")
+        self._daemon_statuses = {
+            DauphinDaemonType.SCHEDULER.value: get_daemon_status(  # pylint: disable=no-member
+                instance, DaemonType.SCHEDULER
+            ),
+            DauphinDaemonType.SENSOR.value: get_daemon_status(  # pylint: disable=no-member
+                instance, DaemonType.SENSOR
+            ),
+            DauphinDaemonType.QUEUED_RUN_COORDINATOR.value: get_daemon_status(  # pylint: disable=no-member
+                instance, DaemonType.QUEUED_RUN_COORDINATOR
+            ),
+        }
 
-        super(DauphinDaemonHealth, self).__init__(
-            daemonType=daemonType,
-            lastHeartbeat=datetime_as_float(daemon_heartbeat.timestamp),
-        )
-        dauphin.Enum()
+    def resolve_daemonStatus(self, _graphene_info, daemon_type):
+        check.str_param(daemon_type, "daemon_type")  # DauphinDaemonType
+        return _graphene_info.schema.type_named("DaemonStatus")(self._daemon_statuses[daemon_type])
+
+    def resolve_allDaemonStatuses(self, _graphene_info):
+        return [
+            _graphene_info.schema.type_named("DaemonStatus")(daemon_status)
+            for daemon_status in self._daemon_statuses.values()
+        ]
 
 
 class DauphinInstance(dauphin.ObjectType):
@@ -1011,8 +1058,7 @@ class DauphinInstance(dauphin.ObjectType):
     runLauncher = dauphin.Field("RunLauncher")
     assetsSupported = dauphin.NonNull(dauphin.Boolean)
     executablePath = dauphin.NonNull(dauphin.String)
-    daemonHealthList = dauphin.("DaemonHealth")
-    daemonOverallHealth = dauphin.Boolean
+    daemonHealth = dauphin.NonNull("DaemonHealth")
 
     def __init__(self, instance):
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
@@ -1031,13 +1077,8 @@ class DauphinInstance(dauphin.ObjectType):
     def resolve_executablePath(self, _graphene_info):
         return sys.executable
 
-    def resolve_daemonHealthList(self, _graphene_info):
-        return [
-            DauphinDaemonHealth(heartbeat) for heartbeat in self._instance.get_daemon_heartbeats()
-        ]
-
-    def resolve_daemonOverallHealth(self, _graphene_info):
-        return self._instance.daemon_healthy()
+    def resolve_daemonHealth(self, _graphene_info):
+        return DauphinDaemonHealth(instance=self._instance)
 
 
 class DauphinAssetKeyInput(dauphin.InputObjectType):
