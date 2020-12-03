@@ -848,7 +848,7 @@ type Instance {
   runLauncher: RunLauncher
   assetsSupported: Boolean!
   executablePath: String!
-  daemonHealthList: [DaemonHealth!]!
+  daemonHealth: DaemonHealth!
 }
 
 type RunLauncher {
@@ -856,8 +856,15 @@ type RunLauncher {
 }
 
 type DaemonHealth {
-  daemonType: String!
-  lastHeartbeat: Float
+  dagsterDaemonScheduler: DaemonStatus!
+  sensorDaemon: DaemonStatus!
+  queuedRunCoordinatorDaemon: DaemonStatus!
+}
+
+type DaemonStatus {
+  required: Boolean!
+  healthy: Boolean
+  lastHeartbeatTime: Float
 }
 
 union AssetsOrError = AssetConnection | AssetsNotSupportedError | PythonError
