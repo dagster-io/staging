@@ -7,6 +7,7 @@ from dagster.core.storage.pipeline_run import PipelineRunStatus, PipelineRunsFil
 from dagster.daemon.daemon import DagsterDaemon
 from dagster.utils.backcompat import experimental
 from dagster.utils.external import external_pipeline_from_run
+from dagster.utils.tags import DAGSTER_PRIORITY_TAG
 
 IN_PROGRESS_STATUSES = [
     PipelineRunStatus.NOT_STARTED,
@@ -38,14 +39,16 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
             )
             return
 
-        queued_runs = self._get_queued_runs(limit=max_runs_to_launch)
+        queued_runs = self._get_queued_runs()
 
         if not queued_runs:
             self._logger.info("Poll returned no queued runs.")
         else:
-            self._logger.info("Retrieved {} queued runs to launch.".format(len(queued_runs)))
+            self._logger.info("Retrieved {} queued runs.".format(len(queued_runs)))
 
-        for run in queued_runs:
+        sorted_runs = self._priority_sort(queued_runs)
+
+        for run in sorted_runs[:max_runs_to_launch]:
             with external_pipeline_from_run(run) as external_pipeline:
                 enqueued_event = DagsterEvent(
                     event_type_value=DagsterEventType.PIPELINE_DEQUEUED.value,
@@ -65,14 +68,26 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
 
                 self._instance.launch_run(run.run_id, external_pipeline)
 
-    def _get_queued_runs(self, limit=None):
+    def _get_queued_runs(self):
         queued_runs_filter = PipelineRunsFilter(statuses=[PipelineRunStatus.QUEUED])
 
-        runs = self._instance.get_runs(filters=queued_runs_filter, limit=limit)
-        assert len(runs) <= limit
+        # Reversed for fifo ordering
+        # Note: should add a maximum fetch limit https://github.com/dagster-io/dagster/issues/3339
+        runs = self._instance.get_runs(filters=queued_runs_filter)[::-1]
         return runs
 
     def _count_in_progress_runs(self):
         return self._instance.get_runs_count(
             filters=PipelineRunsFilter(statuses=IN_PROGRESS_STATUSES)
         )
+
+    def _priority_sort(self, runs):
+        def get_priority(run):
+            priority_tag_value = run.tags.get(DAGSTER_PRIORITY_TAG, "0")
+            try:
+                return int(priority_tag_value)
+            except ValueError:
+                return 0
+
+        # sorted is stable, so fifo is maintained
+        return sorted(runs, key=get_priority, reverse=True)

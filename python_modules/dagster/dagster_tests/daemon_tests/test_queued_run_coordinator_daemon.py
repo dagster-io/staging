@@ -1,3 +1,5 @@
+# pylint: disable=redefined-outer-name
+
 import pytest
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import create_run_for_test, instance_for_test
@@ -5,6 +7,7 @@ from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import (
     IN_PROGRESS_STATUSES,
     QueuedRunCoordinatorDaemon,
 )
+from dagster.utils.tags import DAGSTER_PRIORITY_TAG
 from dagster_tests.api_tests.utils import get_foo_pipeline_handle
 
 
@@ -17,7 +20,7 @@ def instance():
         yield inst
 
 
-def create_run(instance, **kwargs):  # pylint: disable=redefined-outer-name
+def create_run(instance, **kwargs):
     with get_foo_pipeline_handle() as pipeline_handle:
         create_run_for_test(
             instance,
@@ -31,7 +34,7 @@ def get_run_ids(runs_queue):
     return [run.run_id for run in runs_queue]
 
 
-def test_attempt_to_launch_runs_filter(instance):  # pylint: disable=redefined-outer-name
+def test_attempt_to_launch_runs_filter(instance):
 
     create_run(
         instance, run_id="queued-run", status=PipelineRunStatus.QUEUED,
@@ -47,7 +50,7 @@ def test_attempt_to_launch_runs_filter(instance):  # pylint: disable=redefined-o
     assert get_run_ids(instance.run_launcher.queue()) == ["queued-run"]
 
 
-def test_attempt_to_launch_runs_no_queued(instance):  # pylint: disable=redefined-outer-name
+def test_attempt_to_launch_runs_no_queued(instance):
 
     create_run(
         instance, run_id="queued-run", status=PipelineRunStatus.STARTED,
@@ -65,9 +68,7 @@ def test_attempt_to_launch_runs_no_queued(instance):  # pylint: disable=redefine
 @pytest.mark.parametrize(
     "num_in_progress_runs", [0, 1, 3, 4, 5],
 )
-def test_get_queued_runs_max_runs(
-    instance, num_in_progress_runs
-):  # pylint: disable=redefined-outer-name
+def test_get_queued_runs_max_runs(instance, num_in_progress_runs):
     max_runs = 4
 
     # fill run store with ongoing runs
@@ -92,3 +93,42 @@ def test_get_queued_runs_max_runs(
     coordinator.run_iteration()
 
     assert len(instance.run_launcher.queue()) == max(0, max_runs - num_in_progress_runs)
+
+
+def test_priority(instance):
+    create_run(instance, run_id="default-pri-run", status=PipelineRunStatus.QUEUED)
+    create_run(
+        instance,
+        run_id="low-pri-run",
+        status=PipelineRunStatus.QUEUED,
+        tags={DAGSTER_PRIORITY_TAG: "-1"},
+    )
+    create_run(
+        instance,
+        run_id="hi-pri-run",
+        status=PipelineRunStatus.QUEUED,
+        tags={DAGSTER_PRIORITY_TAG: "3"},
+    )
+
+    coordinator = QueuedRunCoordinatorDaemon(instance, interval_seconds=5, max_concurrent_runs=10)
+    coordinator.run_iteration()
+
+    assert get_run_ids(instance.run_launcher.queue()) == [
+        "hi-pri-run",
+        "default-pri-run",
+        "low-pri-run",
+    ]
+
+
+def test_priority_on_malformed_tag(instance):
+    create_run(
+        instance,
+        run_id="bad-pri-run",
+        status=PipelineRunStatus.QUEUED,
+        tags={DAGSTER_PRIORITY_TAG: "foobar"},
+    )
+
+    coordinator = QueuedRunCoordinatorDaemon(instance, interval_seconds=5, max_concurrent_runs=10)
+    coordinator.run_iteration()
+
+    assert get_run_ids(instance.run_launcher.queue()) == ["bad-pri-run"]
