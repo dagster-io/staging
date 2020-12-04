@@ -107,7 +107,6 @@ class TestRetryExecution(ExecutingGraphQLContextTestMatrix):
                 }
             },
         )
-
         run_id = retry_one.data["launchPipelineReexecution"]["run"]["runId"]
         logs = get_all_logs_for_finished_run_via_subscription(graphql_context, run_id)[
             "pipelineRunLogs"
