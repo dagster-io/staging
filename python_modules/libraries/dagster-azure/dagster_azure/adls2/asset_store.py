@@ -83,6 +83,10 @@ class PickledObjectADLS2AssetStore(AssetStore):
         with file.acquire_lease(self.lease_duration) as lease:
             file.upload_data(pickled_obj, lease=lease, overwrite=True)
 
+    def has_asset(self, context):
+        key = self._get_path(context)
+        return self._has_object(key)
+
 
 @resource(
     config_schema={

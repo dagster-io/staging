@@ -13,6 +13,10 @@ def read_dataframe_from_table(**_kwargs):
     pass
 
 
+def has_table(**_kwargs):
+    return True
+
+
 # solids_start_marker
 @solid(
     output_defs=[OutputDefinition(asset_metadata={"schema": "some_schema", "table": "some_table"})]
@@ -43,6 +47,9 @@ class MyAssetStore(AssetStore):
         table_name = context.asset_metadata["table"]
         schema = context.asset_metadata["schema"]
         return read_dataframe_from_table(name=table_name, schema=schema)
+
+    def has_asset(self, context):
+        return has_table(context=context)
 
 
 @resource

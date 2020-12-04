@@ -83,6 +83,9 @@ def test_override_asset_store():
         def get_asset(self, context):
             assert False, "should not be called"
 
+        def has_asset(self, context):
+            return True
+
     @resource
     def my_asset_store(_):
         return MyAssetStore()

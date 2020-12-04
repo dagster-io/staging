@@ -53,8 +53,14 @@ class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-in
     def is_input_source_missing(self, context, source):
         if isinstance(source, FromStepOutput):
             if context.using_asset_store(source.step_output_handle):
-                # skip when the source output has asset store configured
-                return False
+                asset_store_handle = context.execution_plan.get_asset_store_handle(
+                    source.step_output_handle
+                )
+                asset_store = getattr(context.resources, asset_store_handle.asset_store_key)
+                asset_store_context = context.for_asset_store(
+                    source.step_output_handle, asset_store_handle
+                )
+                return not asset_store.has_asset(asset_store_context)
 
             return not self.has_intermediate(context, source.step_output_handle)
         elif isinstance(source, FromMultipleSources):

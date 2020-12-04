@@ -19,6 +19,10 @@ class PandasCsvAssetStore(AssetStore):
             asset_key=AssetKey(file_path), description="Persisted result to storage."
         )
 
+    def has_asset(self, context):
+        file_path = os.path.join(["my_base_dir", context.step_key, context.output_name])
+        return os.path.exists(file_path)
+
 
 # end_marker_0
 
@@ -42,6 +46,10 @@ class PandasCsvAssetStoreWithMetadata(AssetStore):
                 EventMetadataEntry.float(obj["some_column"].mean(), "some_column mean"),
             ],
         )
+
+    def has_asset(self, context):
+        file_path = os.path.join(["my_base_dir", context.step_key, context.output_name])
+        return os.path.exists(file_path)
 
 
 # end_marker_1
