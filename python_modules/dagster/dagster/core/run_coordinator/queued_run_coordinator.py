@@ -3,7 +3,7 @@ import time
 import weakref
 
 from dagster import DagsterEvent, DagsterEventType, DagsterInstance, check
-from dagster.config import Field
+from dagster.config import Field, Permissive
 from dagster.config.source import IntSource
 from dagster.core.events.log import DagsterEventRecord
 from dagster.core.host_representation import ExternalPipeline
@@ -21,11 +21,20 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
     """
 
     @experimental
-    def __init__(self, max_concurrent_runs=None, dequeue_interval_seconds=None, inst_data=None):
+    def __init__(
+        self,
+        max_concurrent_runs=None,
+        tag_concurrency_limits=None,
+        dequeue_interval_seconds=None,
+        inst_data=None,
+    ):
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
         self._instance_ref = None
         self.max_concurrent_runs = check.opt_int_param(
             max_concurrent_runs, "max_concurrent_runs", 10
+        )
+        self.tag_concurrency_limits = check.opt_dict_param(
+            tag_concurrency_limits, "tag_concurrency_limits",
         )
         self.dequeue_interval_seconds = check.opt_int_param(
             dequeue_interval_seconds, "dequeue_interval_seconds", 5
@@ -39,6 +48,7 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
     def config_type(cls):
         return {
             "max_concurrent_runs": Field(IntSource, is_required=False),
+            "tag_concurrency_limits": Field(Permissive, is_required=False),
             "dequeue_interval_seconds": Field(IntSource, is_required=False),
         }
 
@@ -47,6 +57,7 @@ class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
         return cls(
             inst_data=inst_data,
             max_concurrent_runs=config_value.get("max_concurrent_runs"),
+            tag_concurrency_limits=config_value.get("tag_concurrency_limits"),
             dequeue_interval_seconds=config_value.get("dequeue_interval_seconds"),
         )
 

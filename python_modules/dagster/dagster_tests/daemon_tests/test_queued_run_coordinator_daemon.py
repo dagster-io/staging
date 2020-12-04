@@ -126,3 +126,51 @@ def test_priority_on_malformed_tag(instance):
     coordinator.run_iteration()
 
     assert get_run_ids(instance.run_launcher.queue()) == ["bad-pri-run"]
+
+
+def test_tag_limits(instance):
+    create_run(
+        instance, run_id="tiny-1", status=PipelineRunStatus.QUEUED, tags={"database": "tiny"},
+    )
+    create_run(
+        instance, run_id="tiny-2", status=PipelineRunStatus.QUEUED, tags={"database": "tiny"},
+    )
+    create_run(
+        instance, run_id="large-1", status=PipelineRunStatus.QUEUED, tags={"database": "large"},
+    )
+    coordinator = QueuedRunCoordinatorDaemon(
+        instance,
+        interval_seconds=5,
+        max_concurrent_runs=10,
+        tag_concurrency_limits={("database", "tiny"): 1},
+    )
+    coordinator.run_iteration()
+
+    assert get_run_ids(instance.run_launcher.queue()) == ["tiny-1", "large-1"]
+
+
+def test_multiple_tag_limits(instance):
+    create_run(
+        instance,
+        run_id="run-1",
+        status=PipelineRunStatus.QUEUED,
+        tags={"database": "tiny", "user": "johann"},
+    )
+    create_run(
+        instance, run_id="run-2", status=PipelineRunStatus.QUEUED, tags={"database": "tiny"},
+    )
+    create_run(
+        instance, run_id="run-3", status=PipelineRunStatus.QUEUED, tags={"user": "johann"},
+    )
+    create_run(
+        instance, run_id="run-4", status=PipelineRunStatus.QUEUED, tags={"user": "johann"},
+    )
+    coordinator = QueuedRunCoordinatorDaemon(
+        instance,
+        interval_seconds=5,
+        max_concurrent_runs=10,
+        tag_concurrency_limits={("database", "tiny"): 1, ("user", "johann"): 2},
+    )
+    coordinator.run_iteration()
+
+    assert get_run_ids(instance.run_launcher.queue()) == ["run-1", "run-3"]
