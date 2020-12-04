@@ -20,6 +20,10 @@ def read_dataframe_from_table(**_kwargs):
     pass
 
 
+def has_table(**_kwargs):
+    return True
+
+
 # start_marker
 from dagster import AssetStore, ModeDefinition, pipeline, resource
 
@@ -34,6 +38,9 @@ class MyAssetStore(AssetStore):
         # output_name is the name given to the OutputDefinition that we're retrieving for
         table_name = context.output_name
         return read_dataframe_from_table(name=table_name)
+
+    def has_asset(self, context):
+        return has_table(context=context)
 
 
 @resource

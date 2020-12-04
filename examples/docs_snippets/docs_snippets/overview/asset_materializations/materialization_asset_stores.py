@@ -43,5 +43,9 @@ class PandasCsvAssetStoreWithMetadata(AssetStore):
             ],
         )
 
+    def has_asset(self, context):
+        file_path = os.path.join(["my_base_dir", context.step_key, context.output_name])
+        return os.path.exists(file_path)
+
 
 # end_marker_1

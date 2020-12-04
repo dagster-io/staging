@@ -55,15 +55,6 @@ class AssetStore(six.with_metaclass(ABCMeta)):
             Any: The data object.
         """
 
-
-class VersionedAssetStore(AssetStore):
-    """
-    Base class for asset store enabled to work with memoized execution. Users should implement the
-    ``set_asset`` and ``get_asset`` methods described in the ``AssetStore`` API, and the
-    ``has_asset`` method, which returns a boolean representing whether a data object with a version
-    corresponding to the context can be found.
-    """
-
     @abstractmethod
     def has_asset(self, context):
         """The user-defined method that returns whether data exists given the metadata.
@@ -74,6 +65,27 @@ class VersionedAssetStore(AssetStore):
         Returns:
             bool: True if there is data present that matches the provided context. False otherwise.
         """
+
+
+class VersionedAssetStore(AssetStore):
+    """
+    Base class for asset store enabled to work with memoized execution. Users should implement the
+    ``set_asset`` and ``get_asset`` methods described in the ``AssetStore`` API, and the
+    ``has_asset`` method, which returns a boolean representing whether a data object with a version
+    corresponding to the context can be found.
+    """
+
+    @abstractmethod
+    def set_asset(self, context, obj):
+        pass
+
+    @abstractmethod
+    def get_asset(self, context):
+        pass
+
+    @abstractmethod
+    def has_asset(self, context):
+        pass
 
 
 class InMemoryAssetStore(AssetStore):
@@ -87,6 +99,10 @@ class InMemoryAssetStore(AssetStore):
     def get_asset(self, context):
         keys = tuple(context.get_run_scoped_output_identifier())
         return self.values[keys]
+
+    def has_asset(self, context):
+        keys = tuple(context.get_run_scoped_output_identifier())
+        return keys in self.values
 
 
 @resource
@@ -137,6 +153,14 @@ class PickledObjectFilesystemAssetStore(AssetStore):
 
         with open(filepath, self.read_mode) as read_obj:
             return pickle.load(read_obj)
+
+    def has_asset(self, context):
+        """Check whether a file already exists containing the corresponding data."""
+        check.inst_param(context, "context", AssetStoreContext)
+
+        filepath = self._get_path(context)
+
+        return os.path.exists(filepath) and os.path.isfile(filepath)
 
 
 @resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
@@ -206,7 +230,9 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
         self.write_mode = "wb"
         self.read_mode = "rb"
 
-    def _get_path(self, path):
+    def _get_path(self, context):
+        asset_metadata = context.asset_metadata
+        path = check.str_param(asset_metadata.get("path"), "asset_metadata.path")
         return os.path.join(self.base_dir, path)
 
     def set_asset(self, context, obj):
@@ -216,10 +242,8 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
         Asset Catalog.
         """
         check.inst_param(context, "context", AssetStoreContext)
-        asset_metadata = context.asset_metadata
-        path = check.str_param(asset_metadata.get("path"), "asset_metadata.path")
 
-        filepath = self._get_path(path)
+        filepath = self._get_path(context)
 
         # Ensure path exists
         mkdir_p(os.path.dirname(filepath))
@@ -235,12 +259,17 @@ class CustomPathPickledObjectFilesystemAssetStore(AssetStore):
     def get_asset(self, context):
         """Unpickle the file from a given file path and Load it to a data object."""
         check.inst_param(context, "context", AssetStoreContext)
-        asset_metadata = context.asset_metadata
-        path = check.str_param(asset_metadata.get("path"), "asset_metadata.path")
-        filepath = self._get_path(path)
+        filepath = self._get_path(context)
 
         with open(filepath, self.read_mode) as read_obj:
             return pickle.load(read_obj)
+
+    def has_asset(self, context):
+        """Check whether a file already exists containing the corresponding data."""
+        check.inst_param(context, "context", AssetStoreContext)
+        filepath = self._get_path(context)
+
+        return os.path.exists(filepath) and os.path.isfile(filepath)
 
 
 @resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})

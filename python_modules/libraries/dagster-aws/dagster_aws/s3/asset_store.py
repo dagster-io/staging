@@ -76,6 +76,10 @@ class PickledObjectS3AssetStore(AssetStore):
         pickled_obj = pickle.dumps(obj, PICKLE_PROTOCOL)
         self.s3.put_object(Bucket=self.bucket, Key=key, Body=pickled_obj)
 
+    def has_asset(self, context):
+        key = self._get_path(context)
+        return self._has_object(key)
+
 
 @resource(
     config_schema={

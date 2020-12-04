@@ -70,6 +70,10 @@ class PickledObjectGCSAssetStore(AssetStore):
             retry_on=(TooManyRequests,),
         )
 
+    def has_asset(self, context):
+        key = self._get_path(context)
+        return self._has_object(key)
+
 
 @resource(
     config_schema={

@@ -18,6 +18,10 @@ class LocalParquetStore(AssetStore):
         spark = SparkSession.builder.getOrCreate()
         return spark.read.parquet(self._get_path(context))
 
+    def has_asset(self, context):
+        path = self._get_path(context)
+        return os.path.exists(path)
+
 
 @resource
 def local_parquet_store(_):
