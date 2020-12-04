@@ -55,8 +55,9 @@ def execute_run_iterator(pipeline, pipeline_run, instance):
     check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
     check.inst_param(instance, "instance", DagsterInstance)
     check.invariant(
-        pipeline_run.status == PipelineRunStatus.NOT_STARTED,
-        desc="Pipeline run {} ({}) in state {}, expected PipelineRunStatus.NOT_STARTED".format(
+        pipeline_run.status == PipelineRunStatus.NOT_STARTED
+        or pipeline_run.status == PipelineRunStatus.STARTING,
+        desc="Pipeline run {} ({}) in state {}, expected NOT_STARTED or STARTING".format(
             pipeline_run.pipeline_name, pipeline_run.run_id, pipeline_run.status
         ),
     )
