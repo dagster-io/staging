@@ -15,10 +15,10 @@ from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.definitions.solid import SolidDefinition
 from dagster.core.definitions.step_launcher import StepLauncher
 from dagster.core.errors import DagsterInvalidPropertyError, DagsterInvariantViolationError
-from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.output_manager import OutputManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import EnvironmentConfig
 
@@ -300,22 +300,6 @@ class SystemStepExecutionContext(SystemExecutionContext):
             else None
         )
 
-    def for_asset_store(self, step_output_handle, asset_store_handle):
-        from dagster.core.storage.asset_store import AssetStoreHandle
-
-        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
-
-        return AssetStoreContext(
-            step_key=step_output_handle.step_key,
-            output_name=step_output_handle.output_name,
-            asset_metadata=asset_store_handle.asset_metadata,
-            pipeline_name=self.pipeline_def.name,
-            solid_def=self.solid_def,
-            source_run_id=self._get_source_run_id(step_output_handle),
-            version=self._step_output_version(step_output_handle),
-        )
-
     def get_output_context(self, step_output_handle):
         # get config
         step = self.execution_plan.get_step_by_key(step_output_handle.step_key)
@@ -330,9 +314,10 @@ class SystemStepExecutionContext(SystemExecutionContext):
         return OutputContext(
             step_key=step_output_handle.step_key,
             name=step_output_handle.output_name,
-            metadata=self.execution_plan.get_asset_store_handle(step_output_handle).asset_metadata,
+            metadata=self.execution_plan.get_step_output(step_output_handle).output_def.metadata,
             run_id=self._get_source_run_id(step_output_handle),
             version=self._step_output_version(step_output_handle),
+            solid_def=self.solid_def,
             pipeline_name=self.pipeline_def.name,
             config=output_config,
         )
@@ -347,19 +332,19 @@ class SystemStepExecutionContext(SystemExecutionContext):
             upstream_output=self.get_output_context(source_handle) if source_handle else None,
         )
 
-    def get_asset_store(self, asset_store_key):
-        from dagster.core.storage.asset_store import AssetStore
-
-        # get AssetStore from resources using asset_store_key
-        asset_store = getattr(self.resources, asset_store_key)
-        return check.inst(asset_store, AssetStore)
+    def get_output_manager(self, step_output_handle):
+        step_output = self.execution_plan.get_step_output(step_output_handle)
+        output_manager = getattr(self.resources, step_output.output_def.manager_key)
+        return check.inst(output_manager, OutputManager)
 
     def using_asset_store(self, step_output_handle):
         # pylint: disable=comparison-with-callable
         from dagster.core.storage.asset_store import mem_asset_store
 
-        asset_store_key = self.execution_plan.get_asset_store_key(step_output_handle)
-        return self.mode_def.resource_defs[asset_store_key] != mem_asset_store
+        output_manager_key = self.execution_plan.get_step_output(
+            step_output_handle
+        ).output_def.manager_key
+        return self.mode_def.resource_defs[output_manager_key] != mem_asset_store
 
 
 class SystemComputeExecutionContext(SystemStepExecutionContext):
@@ -442,7 +427,9 @@ class HookContext(SystemExecutionContext):
 
 
 class OutputContext(
-    namedtuple("_OutputContext", "step_key name metadata run_id pipeline_name config version")
+    namedtuple(
+        "_OutputContext", "step_key name metadata run_id pipeline_name config solid_def version"
+    )
 ):
     """
     Attributes:
@@ -453,6 +440,7 @@ class OutputContext(
         run_id (str): The id of the run that produced the output.
         pipeline_name (str): The name of the pipeline definition.
         config (Optional[Any]): The configuration for the output.
+        solid_def (Optional[SolidDefinition]): The definition of the solid that produced the output.
         version (Optional[str]): (Experimental) The version of the output.
     """
 
@@ -467,7 +455,7 @@ class InputContext(
     The ``context`` object available to the load method of :py:class:`InputManager`.
 
     Attributes:
-        input_name (str): The name of the input that we're loading.
+        input_name (Optional[str]): The name of the input that we're loading.
         pipeline_name (str): The name of the pipeline.
         solid_def (Optional[SolidDefinition]): The definition of the solid that's loading the input.
         input_config (Optional[Any]): The config attached to the input that we're loading.
@@ -479,8 +467,9 @@ class InputContext(
 
     def __new__(
         cls,
-        input_name,
         pipeline_name,
+        # This will be None when called from calling SolidExecutionResult.output_value
+        input_name=None,
         solid_def=None,
         input_config=None,
         input_metadata=None,
@@ -489,71 +478,10 @@ class InputContext(
 
         return super(InputContext, cls).__new__(
             cls,
-            input_name=check.str_param(input_name, "input_name"),
+            input_name=check.opt_str_param(input_name, "input_name"),
             pipeline_name=check.opt_str_param(pipeline_name, "pipeline_name"),
             solid_def=check.opt_inst_param(solid_def, "solid_def", SolidDefinition),
             input_config=input_config,
             input_metadata=input_metadata,
             upstream_output=check.opt_inst_param(upstream_output, "upstream_output", OutputContext),
         )
-
-
-class AssetStoreContext(
-    namedtuple(
-        "_AssetStoreContext",
-        "step_key output_name asset_metadata pipeline_name solid_def source_run_id version",
-    )
-):
-    """
-    The ``context`` object available to the methods of :py:class:`AssetStore`.
-
-    Attributes:
-        step_key (str): The step_key for the compute step.
-        output_name (str): The name of the output. (default: 'result').
-        asset_metadata ([Dict[str, Any]]): A dict of the metadata that is used for the asset store
-            to store or retrieve the data object.
-        pipeline_name (str): The name of the pipeline.
-        solid_def (SolidDefinition): The definition of the solid that uses the asset store.
-        source_run_id (Optional[str]): The id of the run which generates the output.
-        version (Optional[str]): The version corresponding to the provided step output.
-    """
-
-    def __new__(
-        cls,
-        step_key,
-        output_name,
-        asset_metadata,
-        pipeline_name,
-        solid_def,
-        source_run_id=None,
-        version=None,
-    ):
-
-        return super(AssetStoreContext, cls).__new__(
-            cls,
-            step_key=check.str_param(step_key, "step_key"),
-            output_name=check.str_param(output_name, "output_name"),
-            asset_metadata=check.opt_dict_param(asset_metadata, "asset_metadata", key_type=str),
-            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            solid_def=check.inst_param(solid_def, "solid_def", SolidDefinition),
-            source_run_id=check.opt_str_param(source_run_id, "source_run_id"),
-            version=check.opt_str_param(version, "version"),
-        )
-
-    def get_run_scoped_output_identifier(self):
-        """Utility method to get a collection of identifiers that as a whole represent a unique
-        step output.
-
-        The unique identifier collection consists of
-
-        - ``source_run_id``: the id of the run which generates the output.
-            Note: This method also handles the re-execution memoization logic. If the step that
-            generates the output is skipped in the re-execution, the ``run_id`` will be the id
-            of its parent run.
-        - ``step_key``: the key for a compute step.
-        - ``output_name``: the name of the output. (default: 'result').
-
-        Returns:
-            List[str, ...]: A list of identifiers, i.e. run id, step key, and output name
-        """
-        return [self.source_run_id, self.step_key, self.output_name]

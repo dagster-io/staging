@@ -16,10 +16,10 @@ from dagster import (
 )
 from dagster.core.definitions.events import AssetMaterialization, AssetStoreOperationType
 from dagster.core.execution.api import create_execution_plan, execute_plan
-from dagster.core.execution.context.system import AssetStoreContext
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.asset_store import (
     AssetStore,
+    AssetStoreContext,
     AssetStoreHandle,
     VersionedPickledObjectFilesystemAssetStore,
     custom_path_fs_asset_store,

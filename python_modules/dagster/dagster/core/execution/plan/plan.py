@@ -12,7 +12,6 @@ from dagster.core.definitions import (
 )
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
-from dagster.core.execution.context.system import AssetStoreContext
 from dagster.core.execution.resolve_versions import (
     resolve_step_output_versions_helper,
     resolve_step_versions_helper,
@@ -360,19 +359,8 @@ class ExecutionPlan(
         step = self.get_step_by_key(step_output_handle.step_key)
         return step.step_output_named(step_output_handle.output_name)
 
-    def get_asset_store_handle(self, step_output_handle):
-        from dagster.core.storage.asset_store import AssetStoreHandle
-
-        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        step_output = self.get_step_output(step_output_handle)
-        return AssetStoreHandle(
-            step_output.output_def.asset_store_key, step_output.output_def.asset_metadata
-        )
-
-    def get_asset_store_key(self, step_output_handle):
-        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        handle = self.get_asset_store_handle(step_output_handle)
-        return handle.asset_store_key if handle else None
+    def get_manager_key(self, step_output_handle):
+        return self.get_step_output(step_output_handle).output_def.manager_key
 
     def has_step(self, key):
         check.str_param(key, "key")
@@ -431,7 +419,7 @@ class ExecutionPlan(
         )
 
     def construct_asset_store_context(self, step_output_handle, asset_store_handle):
-        from dagster.core.storage.asset_store import AssetStoreHandle
+        from dagster.core.storage.asset_store import AssetStoreHandle, AssetStoreContext
 
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
         check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
