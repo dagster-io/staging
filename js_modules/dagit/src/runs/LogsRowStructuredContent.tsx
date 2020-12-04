@@ -190,6 +190,8 @@ export const LogsRowStructuredContent: React.FunctionComponent<IStructuredConten
       return <DefaultContent message={node.message} eventType="Pipeline Enqueued" />;
     case 'PipelineDequeuedEvent':
       return <DefaultContent message={node.message} eventType="Pipeline Dequeued" />;
+    case 'PipelineStartingEvent':
+      return <DefaultContent message={node.message} eventType="Pipeline Starting" />;
     case 'EngineEvent':
       if (node.engineError) {
         return (

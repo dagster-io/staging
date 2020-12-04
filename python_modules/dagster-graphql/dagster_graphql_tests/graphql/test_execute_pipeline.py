@@ -30,6 +30,8 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         assert not result.errors
         assert result.data
 
+        print(repr(result.data))
+
         # just test existence
         assert result.data["launchPipelineExecution"]["__typename"] == "LaunchPipelineRunSuccess"
         assert uuid.UUID(result.data["launchPipelineExecution"]["run"]["runId"])
