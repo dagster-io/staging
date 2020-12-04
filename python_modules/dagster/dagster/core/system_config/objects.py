@@ -16,7 +16,7 @@ class SolidConfig(namedtuple("_SolidConfig", "config inputs outputs")):
             cls,
             config,
             check.opt_dict_param(inputs, "inputs", key_type=str),
-            check.opt_list_param(outputs, "outputs", of_type=dict),
+            check.opt_inst_param(outputs, "outputs", OutputsConfig),
         )
 
     @staticmethod
@@ -26,8 +26,40 @@ class SolidConfig(namedtuple("_SolidConfig", "config inputs outputs")):
         return SolidConfig(
             config=config.get("config"),
             inputs=config.get("inputs") or {},
-            outputs=config.get("outputs") or [],
+            outputs=OutputsConfig(config.get("outputs")),
         )
+
+
+class OutputsConfig:
+    """
+    Outputs are configured as a dict if any of the outputs have an output manager with an
+    output_config_schema, and a list otherwise.
+    """
+
+    def __init__(self, config):
+        self._config = check.opt_inst_param(config, "config", (dict, list))
+
+    @property
+    def output_names(self):
+        if isinstance(self._config, list):
+            return {key for entry in self._config for key in entry.keys()}
+        elif isinstance(self._config, dict):
+            return self._config.keys()
+        else:
+            return {}
+
+    @property
+    def type_materializer_specs(self):
+        if isinstance(self._config, list):
+            return self._config
+        else:
+            return []
+
+    def get_output_manager_config(self, output_name):
+        if isinstance(self._config, dict):
+            return self._config.get(output_name)
+        else:
+            return None
 
 
 class EnvironmentConfig(
