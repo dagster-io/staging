@@ -8,6 +8,7 @@ from dagster.core.execution.retries import Retries
 from dagster.core.storage.tags import PRIORITY_TAG
 from dagster.utils import pop_delayed_interrupts
 
+from .handle import StepHandle
 from .plan import ExecutionPlan
 
 
@@ -108,18 +109,18 @@ class ActiveExecution:
         successful_or_skipped_steps = self._success | self._skipped
         failed_or_abandoned_steps = self._failed | self._abandoned
 
-        for step_key, requirements in self._pending.items():
+        for step_handle, requirements in self._pending.items():
             # If any upstream deps failed - this is not executable
             if requirements.intersection(failed_or_abandoned_steps):
-                new_steps_to_abandon.append(step_key)
+                new_steps_to_abandon.append(step_handle)
 
             # If all upstream deps are good - this is executable
             elif requirements.issubset(self._success):
-                new_steps_to_execute.append(step_key)
+                new_steps_to_execute.append(step_handle)
 
             # If some upstream deps skipped...
             elif requirements.issubset(successful_or_skipped_steps):
-                step = self.get_step_by_key(step_key)
+                step = self.get_step_by_key(step_handle)
 
                 # The base case is downstream step will skip
                 should_skip = True
@@ -137,9 +138,9 @@ class ActiveExecution:
                             should_skip = True
 
                 if should_skip:
-                    new_steps_to_skip.append(step_key)
+                    new_steps_to_skip.append(step_handle)
                 else:
-                    new_steps_to_execute.append(step_key)
+                    new_steps_to_execute.append(step_handle)
 
         for key in new_steps_to_execute:
             self._executable.append(key)
@@ -184,8 +185,8 @@ class ActiveExecution:
         check.invariant(step is not None, "Unexpected ActiveExecution state")
         return step
 
-    def get_step_by_key(self, step_key):
-        return self._plan.get_step_by_key(step_key)
+    def get_step_by_key(self, step_handle):
+        return self._plan.get_step_by_key(step_handle)
 
     def get_steps_to_execute(self, limit=None):
         check.invariant(
@@ -280,99 +281,107 @@ class ActiveExecution:
 
             steps_to_abandon = self.get_steps_to_abandon()
 
-    def mark_failed(self, step_key):
-        self._failed.add(step_key)
-        self._mark_complete(step_key)
+    def mark_failed(self, step_handle):
+        check.inst_param(step_handle, "step_handle", StepHandle)
+        self._failed.add(step_handle)
+        self._mark_complete(step_handle)
 
-    def mark_success(self, step_key):
-        self._success.add(step_key)
-        self._mark_complete(step_key)
+    def mark_success(self, step_handle):
+        check.inst_param(step_handle, "step_handle", StepHandle)
+        self._success.add(step_handle)
+        self._mark_complete(step_handle)
 
-    def mark_skipped(self, step_key):
-        self._skipped.add(step_key)
-        self._mark_complete(step_key)
+    def mark_skipped(self, step_handle):
+        check.inst_param(step_handle, "step_handle", StepHandle)
+        self._skipped.add(step_handle)
+        self._mark_complete(step_handle)
 
-    def mark_abandoned(self, step_key):
-        self._abandoned.add(step_key)
-        self._mark_complete(step_key)
+    def mark_abandoned(self, step_handle):
+        check.inst_param(step_handle, "step_handle", StepHandle)
+        self._abandoned.add(step_handle)
+        self._mark_complete(step_handle)
 
-    def mark_interrupted(self, step_key):
-        self._interrupted.add(step_key)
+    def mark_interrupted(self, step_handle):
+        check.inst_param(step_handle, "step_handle", StepHandle)
+        self._interrupted.add(step_handle)
 
     def check_for_interrupts(self):
         return pop_delayed_interrupts()
 
-    def mark_up_for_retry(self, step_key, at_time=None):
+    def mark_up_for_retry(self, step_handle, at_time=None):
         check.invariant(
             not self._retries.disabled,
-            "Attempted to mark {} as up for retry but retries are disabled".format(step_key),
+            "Attempted to mark {} as up for retry but retries are disabled".format(step_handle),
         )
+        check.inst_param(step_handle, "step_handle", StepHandle)
         check.opt_float_param(at_time, "at_time")
 
         # if retries are enabled - queue this back up
         if self._retries.enabled:
             if at_time:
-                self._waiting_to_retry[step_key] = at_time
+                self._waiting_to_retry[step_handle] = at_time
             else:
-                self._pending[step_key] = self._plan.execution_deps()[step_key]
+                self._pending[step_handle] = self._plan.execution_deps()[step_handle]
 
         elif self._retries.deferred:
             # do not attempt to execute again
-            self._abandoned.add(step_key)
+            self._abandoned.add(step_handle)
 
-        self._retries.mark_attempt(step_key)
+        self._retries.mark_attempt(str(step_handle))
 
-        self._mark_complete(step_key)
+        self._mark_complete(step_handle)
 
-    def _mark_complete(self, step_key):
+    def _mark_complete(self, step_handle):
         check.invariant(
-            step_key in self._in_flight,
+            step_handle in self._in_flight,
             "Attempted to mark step {} as complete that was not known to be in flight".format(
-                step_key
+                step_handle
             ),
         )
-        self._in_flight.remove(step_key)
+        self._in_flight.remove(step_handle)
 
     def handle_event(self, dagster_event):
         check.inst_param(dagster_event, "dagster_event", DagsterEvent)
-
+        step_handle = (
+            StepHandle.from_key(dagster_event.step_key) if dagster_event.step_key else None
+        )
         if dagster_event.is_step_failure:
-            self.mark_failed(dagster_event.step_key)
+            self.mark_failed(step_handle)
         elif dagster_event.is_step_success:
-            self.mark_success(dagster_event.step_key)
+            self.mark_success(step_handle)
         elif dagster_event.is_step_skipped:
-            self.mark_skipped(dagster_event.step_key)
+            self.mark_skipped(step_handle)
         elif dagster_event.is_step_up_for_retry:
             self.mark_up_for_retry(
-                dagster_event.step_key,
+                step_handle,
                 time.time() + dagster_event.step_retry_data.seconds_to_wait
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,
             )
 
-    def verify_complete(self, pipeline_context, step_key):
+    def verify_complete(self, pipeline_context, step_handle):
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
         """
-        if step_key in self._in_flight:
-            if step_key in self._interrupted:
+        if step_handle in self._in_flight:
+            if step_handle in self._interrupted:
                 pipeline_context.log.error(
-                    "Step {key} did not complete due to being interrupted.".format(key=step_key)
+                    "Step {key} did not complete due to being interrupted.".format(key=step_handle)
                 )
-                self.mark_abandoned(step_key)
+                self.mark_abandoned(step_handle)
             else:
                 pipeline_context.log.error(
                     "Step {key} finished without success or failure event. Downstream steps will not execute.".format(
-                        key=step_key
+                        key=step_handle
                     )
                 )
-                self.mark_unknown_state(step_key)
+                self.mark_unknown_state(step_handle)
 
     # factored out for test
-    def mark_unknown_state(self, step_key):
+    def mark_unknown_state(self, step_handle):
         # note the step so that we throw upon plan completion
-        self._unknown_state.add(step_key)
+        self._unknown_state.add(step_handle)
         # mark as abandoned so downstream tasks do not execute
-        self.mark_abandoned(step_key)
+        self.mark_abandoned(step_handle)
 
     @property
     def is_complete(self):

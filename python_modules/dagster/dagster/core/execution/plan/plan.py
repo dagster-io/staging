@@ -31,6 +31,7 @@ from .inputs import (
     StepInput,
     StepInputSource,
 )
+from .handle import StepHandle
 from .objects import ExecutionStep, StepOutputHandle
 
 
@@ -45,14 +46,15 @@ class _PlanBuilder:
     execution.
     """
 
-    def __init__(self, pipeline, environment_config, mode, step_keys_to_execute):
+    def __init__(self, pipeline, environment_config, mode, step_handles_to_execute):
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
         self.environment_config = check.inst_param(
             environment_config, "environment_config", EnvironmentConfig
         )
         check.opt_str_param(mode, "mode")
-        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
-        self.step_keys_to_execute = step_keys_to_execute
+        check.opt_list_param(step_handles_to_execute, "step_handles_to_execute", of_type=StepHandle)
+
+        self.step_handles_to_execute = step_handles_to_execute
         self.mode_definition = (
             pipeline.get_definition().get_mode_definition(mode)
             if mode is not None
@@ -82,7 +84,7 @@ class _PlanBuilder:
         for step in steps:
             self.add_step(step)
 
-    def get_step_by_handle(self, handle):
+    def get_step_by_solid_handle(self, handle):
         check.inst_param(handle, "handle", SolidHandle)
         return self._steps[handle.to_string()]
 
@@ -96,8 +98,7 @@ class _PlanBuilder:
         self.step_output_map[key] = val
 
     def build(self):
-        """Builds the execution plan.
-        """
+        """Builds the execution plan."""
         pipeline_def = self.pipeline.get_definition()
         # Recursively build the execution plan starting at the root pipeline
         self._build_from_sorted_solids(
@@ -113,8 +114,8 @@ class _PlanBuilder:
 
         step_dict = {step.key: step for step in self._steps.values()}
 
-        step_keys_to_execute = self.step_keys_to_execute or [
-            step.key for step in self._steps.values()
+        step_handles_to_execute = self.step_handles_to_execute or [
+            step.handle for step in self._steps.values()
         ]
 
         check_asset_store_intermediate_storage(self.mode_definition, self.environment_config)
@@ -124,7 +125,7 @@ class _PlanBuilder:
             step_dict,
             deps,
             self.storage_is_persistent(),
-            step_keys_to_execute,
+            step_handles_to_execute,
             self.environment_config,
         )
 
@@ -203,7 +204,7 @@ class _PlanBuilder:
                 resolved_output_def, resolved_handle = solid.definition.resolve_output_to_origin(
                     output_def.name, handle
                 )
-                compute_step = self.get_step_by_handle(resolved_handle)
+                compute_step = self.get_step_by_solid_handle(resolved_handle)
                 self.set_output_handle(
                     output_handle,
                     StepOutputHandle.from_step(compute_step, resolved_output_def.name),
@@ -300,7 +301,7 @@ def get_step_input_source(
 class ExecutionPlan(
     namedtuple(
         "_ExecutionPlan",
-        "pipeline step_dict deps steps artifacts_persisted step_keys_to_execute environment_config",
+        "pipeline step_dict deps artifacts_persisted step_keys_to_execute environment_config",
     )
 ):
     def __new__(
@@ -312,7 +313,14 @@ class ExecutionPlan(
         step_keys_to_execute,
         environment_config,
     ):
-        missing_steps = [step_key for step_key in step_keys_to_execute if step_key not in step_dict]
+        check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=StepHandle)
+        check.dict_param(deps, "deps", key_type=StepHandle, value_type=set)
+        for key, dep_key_set in deps.items():
+            check.set_param(dep_key_set, f"deps[{key}]", of_type=StepHandle)
+
+        missing_steps = [
+            str(step_key) for step_key in step_keys_to_execute if step_key not in step_dict
+        ]
         if missing_steps:
             raise DagsterExecutionStepNotFoundError(
                 "Execution plan does not contain step{plural}: {steps}".format(
@@ -320,18 +328,16 @@ class ExecutionPlan(
                 ),
                 step_keys=missing_steps,
             )
+
         return super(ExecutionPlan, cls).__new__(
             cls,
             pipeline=check.inst_param(pipeline, "pipeline", IPipeline),
             step_dict=check.dict_param(
-                step_dict, "step_dict", key_type=str, value_type=ExecutionStep
+                step_dict, "step_dict", key_type=StepHandle, value_type=ExecutionStep
             ),
-            deps=check.dict_param(deps, "deps", key_type=str, value_type=set),
-            steps=list(step_dict.values()),
+            deps=deps,
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
-            step_keys_to_execute=check.list_param(
-                step_keys_to_execute, "step_keys_to_execute", of_type=str
-            ),
+            step_keys_to_execute=step_keys_to_execute,
             environment_config=check.inst_param(
                 environment_config, "environment_config", EnvironmentConfig
             ),
@@ -357,13 +363,21 @@ class ExecutionPlan(
     def get_manager_key(self, step_output_handle):
         return self.get_step_output(step_output_handle).output_def.manager_key
 
-    def has_step(self, key):
-        check.str_param(key, "key")
-        return key in self.step_dict
+    def has_step(self, handle):
+        check.inst_param(handle, "handle", StepHandle)
+        return handle in self.step_dict
 
-    def get_step_by_key(self, key):
-        check.str_param(key, "key")
-        return self.step_dict[key]
+    def get_step_by_key(self, step_key):
+        check.str_param(step_key, "step_key")
+        return self.step_dict[StepHandle.from_key(step_key)]
+
+    def get_step_by_handle(self, step_handle):
+        check.inst_param(step_handle, "step_handle", StepHandle)
+        return self.step_dict[step_handle]
+
+    @property
+    def steps(self):
+        return list(self.step_dict.values())
 
     def topological_steps(self):
         return [step for step_level in self.topological_step_levels() for step in step_level]
@@ -403,13 +417,14 @@ class ExecutionPlan(
         return deps
 
     def build_subset_plan(self, step_keys_to_execute):
-        check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=(str, StepHandle))
+        step_handles_to_execute = [StepHandle.coerce(x) for x in step_keys_to_execute]
         return ExecutionPlan(
             self.pipeline,
             self.step_dict,
             self.deps,
             self.artifacts_persisted,
-            step_keys_to_execute,
+            step_handles_to_execute,
             self.environment_config,
         )
 
@@ -435,7 +450,7 @@ class ExecutionPlan(
         return self.step_keys_to_execute[0] if len(self.step_keys_to_execute) == 1 else None
 
     @staticmethod
-    def build(pipeline, environment_config, mode=None, step_keys_to_execute=None):
+    def build(pipeline, environment_config, mode=None, steps_to_execute=None):
         """Here we build a new ExecutionPlan from a pipeline definition and the environment config.
 
         To do this, we iterate through the pipeline's solids in topological order, and hand off the
@@ -447,10 +462,12 @@ class ExecutionPlan(
         check.inst_param(pipeline, "pipeline", IPipeline)
         check.inst_param(environment_config, "environment_config", EnvironmentConfig)
         check.opt_str_param(mode, "mode")
-        check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
+        check.opt_list_param(steps_to_execute, "step_keys_to_execute", of_type=(str, StepHandle))
+        if steps_to_execute:
+            steps_to_execute = [StepHandle.coerce(key) for key in steps_to_execute]
 
         plan_builder = _PlanBuilder(
-            pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute,
+            pipeline, environment_config, mode=mode, step_handles_to_execute=steps_to_execute,
         )
 
         # Finally, we build and return the execution plan
