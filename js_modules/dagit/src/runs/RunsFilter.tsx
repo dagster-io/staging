@@ -70,7 +70,10 @@ export function runsFilterForSearchTokens(search: TokenizingFieldValue[]) {
     } else if (item.token === 'id') {
       obj.runId = item.value;
     } else if (item.token === 'status') {
-      obj.status = item.value as PipelineRunStatus;
+      if (!obj.statuses) {
+        obj.statuses = [];
+      }
+      obj.statuses.push(item.value as PipelineRunStatus);
     } else if (item.token === 'snapshotId') {
       obj.snapshotId = item.value;
     } else if (item.token === 'tag') {
