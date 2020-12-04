@@ -10,6 +10,7 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import click
+import pendulum
 from dagster import check, seven
 from dagster.cli.workspace.cli_target import (
     get_repository_location_from_kwargs,
@@ -491,6 +492,15 @@ def grpc_health_check_command(port=None, socket=None, host="localhost"):
         sys.exit(1)
 
 
+@contextmanager
+def mocked_system_timezone(override_timezone):
+    if not override_timezone:
+        yield
+        return
+    with pendulum.tz.LocalTimezone.test(pendulum.Timezone.load(override_timezone)):
+        yield
+
+
 ###################################################################################################
 # WARNING: these cli args are encoded in cron, so are not safely changed without migration
 ###################################################################################################
@@ -504,45 +514,74 @@ def grpc_health_check_command(port=None, socket=None, host="localhost"):
 @click.argument("output_file", type=click.Path())
 @repository_target_argument
 @click.option("--schedule_name")
-def launch_scheduled_execution(output_file, schedule_name, **kwargs):
-    with ipc_write_stream(output_file) as stream:
-        with DagsterInstance.get() as instance:
-            repository_origin = get_repository_origin_from_kwargs(kwargs)
-            job_origin = repository_origin.get_job_origin(schedule_name)
+@click.option("--mock-system-timezone")
+def launch_scheduled_execution(output_file, schedule_name, mock_system_timezone, **kwargs):
+    with mocked_system_timezone(mock_system_timezone):
+        with ipc_write_stream(output_file) as stream:
+            with DagsterInstance.get() as instance:
+                repository_origin = get_repository_origin_from_kwargs(kwargs)
+                job_origin = repository_origin.get_job_origin(schedule_name)
 
-            # open the tick scope before we load any external artifacts so that
-            # load errors are stored in DB
-            with _schedule_tick_context(
-                instance,
-                stream,
-                JobTickData(
-                    job_origin_id=job_origin.get_id(),
-                    job_name=schedule_name,
-                    job_type=JobType.SCHEDULE,
-                    status=JobTickStatus.STARTED,
-                    timestamp=time.time(),
-                ),
-            ) as tick_context:
-                with get_repository_location_from_kwargs(kwargs) as repo_location:
-                    repo_dict = repo_location.get_repositories()
-                    check.invariant(
-                        repo_dict and len(repo_dict) == 1,
-                        "Passed in arguments should reference exactly one repository, instead there are {num_repos}".format(
-                            num_repos=len(repo_dict)
-                        ),
-                    )
-                    external_repo = next(iter(repo_dict.values()))
-                    check.invariant(
-                        schedule_name
-                        in [schedule.name for schedule in external_repo.get_external_schedules()],
-                        "Could not find schedule named {schedule_name}".format(
-                            schedule_name=schedule_name
-                        ),
-                    )
-                    external_schedule = external_repo.get_external_schedule(schedule_name)
-                    _launch_scheduled_executions(
-                        instance, repo_location, external_repo, external_schedule, tick_context
-                    )
+                # open the tick scope before we load any external artifacts so that
+                # load errors are stored in DB
+                with _schedule_tick_context(
+                    instance,
+                    stream,
+                    JobTickData(
+                        job_origin_id=job_origin.get_id(),
+                        job_name=schedule_name,
+                        job_type=JobType.SCHEDULE,
+                        status=JobTickStatus.STARTED,
+                        timestamp=time.time(),
+                    ),
+                ) as tick_context:
+                    with get_repository_location_from_kwargs(kwargs) as repo_location:
+                        repo_dict = repo_location.get_repositories()
+                        check.invariant(
+                            repo_dict and len(repo_dict) == 1,
+                            "Passed in arguments should reference exactly one repository, instead there are {num_repos}".format(
+                                num_repos=len(repo_dict)
+                            ),
+                        )
+                        external_repo = next(iter(repo_dict.values()))
+                        check.invariant(
+                            schedule_name
+                            in [
+                                schedule.name for schedule in external_repo.get_external_schedules()
+                            ],
+                            "Could not find schedule named {schedule_name}".format(
+                                schedule_name=schedule_name
+                            ),
+                        )
+
+                        external_schedule = external_repo.get_external_schedule(schedule_name)
+
+                        # Validate that either the schedule has no timezone or it matches
+                        # the system timezone
+                        schedule_timezone = external_schedule.execution_timezone
+                        if schedule_timezone:
+                            system_timezone = pendulum.now().timezone.name
+
+                            check.invariant(
+                                system_timezone == external_schedule.execution_timezone,
+                                "Schedule {schedule_name} is set to execute in {schedule_timezone}, "
+                                "but this scheduler can only run in the system timezone, "
+                                "{system_timezone}. Use DagsterDaemonScheduler if you want to be able "
+                                "to execute schedules in arbitrary timezones.".format(
+                                    schedule_name=external_schedule.name,
+                                    schedule_timezone=schedule_timezone,
+                                    system_timezone=system_timezone,
+                                ),
+                            )
+
+                            check.invariant(
+                                pendulum.now().timezone.name
+                                == external_schedule.execution_timezone,
+                            )
+
+                        _launch_scheduled_executions(
+                            instance, repo_location, external_repo, external_schedule, tick_context
+                        )
 
 
 @telemetry_wrapper
