@@ -14,7 +14,7 @@ services:
       POSTGRES_PASSWORD: "postgres_password"
       POSTGRES_DB: "postgres_db"
     networks:
-      - postgres
+      - docker_example_network
 
   # This service runs the gRPC server that loads and executes user code, in both dagit
   # and dagster-daemon. By setting DAGSTER_CURRENT_IMAGE to its own image, we tell the
@@ -32,7 +32,7 @@ services:
       DAGSTER_POSTGRES_DB: "postgres_db"
       DAGSTER_CURRENT_IMAGE: "deploy_docker_docker_example_user_code"
     networks:
-      - postgres
+      - docker_example_network
 
   # This service runs dagit, which loads the repository from the user code container.
   # Since our instance uses the QueuedRunCoordinator, any runs submitted from dagit will be put on
@@ -49,7 +49,7 @@ services:
       DAGSTER_POSTGRES_PASSWORD: "postgres_password"
       DAGSTER_POSTGRES_DB: "postgres_db"
     networks:
-      - postgres
+      - docker_example_network
     depends_on:
       - docker_example_postgresql
       - docker_example_user_code
@@ -68,12 +68,12 @@ services:
     volumes: # Make docker client accessible so we can launch containers using host docker
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - postgres
+      - docker_example_network
     depends_on:
       - docker_example_postgresql
       - docker_example_user_code
 
 networks:
-  postgres:
+  docker_example_network:
     driver: bridge
-    name: postgres
+    name: docker_example_network
