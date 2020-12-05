@@ -4,13 +4,18 @@ import subprocess
 import time
 from contextlib import contextmanager
 
-import pytest
 import requests
 from dagster import file_relative_path
+
+IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 
 
 @contextmanager
 def docker_service_up(docker_compose_file, git_commit):
+    if IS_BUILDKITE:
+        yield  # buildkite pipeline handles the service
+        return
+
     try:
         subprocess.check_output(["docker-compose", "-f", docker_compose_file, "stop"])
         subprocess.check_output(["docker-compose", "-f", docker_compose_file, "rm", "-f"])
@@ -43,9 +48,6 @@ def docker_service_up(docker_compose_file, git_commit):
     finally:
         subprocess.check_output(["docker-compose", "-f", docker_compose_file, "stop"])
         subprocess.check_output(["docker-compose", "-f", docker_compose_file, "rm", "-f"])
-
-
-IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 
 
 PIPELINES_OR_ERROR_QUERY = """
@@ -99,10 +101,6 @@ mutation($executionParams: ExecutionParams!) {
 """
 
 
-@pytest.mark.skipif(
-    IS_BUILDKITE,
-    reason="Need to figure out docker-compose networking on buildkite for this test to run",
-)
 def test_deploy_docker():
     # To test this locally, push your local change to a git branch and reference it here
     with docker_service_up(file_relative_path(__file__, "../docker-compose.yml"), "origin/master"):
@@ -110,12 +108,16 @@ def test_deploy_docker():
 
         start_time = time.time()
 
+        dagit_host = os.environ.get("DEPLOY_DOCKER_DAGIT_HOST", "localhost")
+
         while True:
             if time.time() - start_time > 15:
                 raise Exception("Timed out waiting for dagit server to be available")
 
             try:
-                sanity_check = requests.get("http://localhost:3000/dagit_info")
+                sanity_check = requests.get(
+                    "http://{dagit_host}:3000/dagit_info".format(dagit_host=dagit_host)
+                )
                 assert "dagit" in sanity_check.text
                 break
             except requests.exceptions.ConnectionError:
@@ -124,8 +126,8 @@ def test_deploy_docker():
             time.sleep(1)
 
         res = requests.get(
-            "http://localhost:3000/graphql?query={query_string}".format(
-                query_string=PIPELINES_OR_ERROR_QUERY,
+            "http://{dagit_host}:3000/graphql?query={query_string}".format(
+                dagit_host=dagit_host, query_string=PIPELINES_OR_ERROR_QUERY,
             )
         ).json()
 
@@ -152,8 +154,10 @@ def test_deploy_docker():
         }
 
         launch_res = requests.post(
-            "http://localhost:3000/graphql?query={query_string}&variables={variables}".format(
-                query_string=LAUNCH_PIPELINE_MUTATION, variables=json.dumps(variables)
+            "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
+                dagit_host=dagit_host,
+                query_string=LAUNCH_PIPELINE_MUTATION,
+                variables=json.dumps(variables),
             )
         ).json()
 
@@ -173,8 +177,10 @@ def test_deploy_docker():
                 raise Exception("Timed out waiting for launched run to complete")
 
             run_res = requests.get(
-                "http://localhost:3000/graphql?query={query_string}&variables={variables}".format(
-                    query_string=RUN_QUERY, variables=json.dumps({"runId": run_id})
+                "http://{dagit_host}:3000/graphql?query={query_string}&variables={variables}".format(
+                    dagit_host=dagit_host,
+                    query_string=RUN_QUERY,
+                    variables=json.dumps({"runId": run_id}),
                 )
             ).json()
 
