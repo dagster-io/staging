@@ -4,7 +4,6 @@ import subprocess
 import time
 from contextlib import contextmanager
 
-import pytest
 import requests
 from dagster import file_relative_path
 
@@ -99,10 +98,6 @@ mutation($executionParams: ExecutionParams!) {
 """
 
 
-@pytest.mark.skipif(
-    IS_BUILDKITE,
-    reason="Need to figure out docker-compose networking on buildkite for this test to run",
-)
 def test_deploy_docker():
     # To test this locally, push your local change to a git branch and reference it here
     with docker_service_up(file_relative_path(__file__, "../docker-compose.yml"), "origin/master"):
