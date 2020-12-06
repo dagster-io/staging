@@ -655,7 +655,7 @@ def test_partitions_for_weekly_schedule_decorators_without_timezone():
 
             @weekly_schedule(
                 pipeline_name="foo_pipeline",
-                execution_day_of_week=2,
+                execution_day_of_week=3,
                 start_date=start_date,
                 execution_time=time(9, 30),
             )
@@ -696,7 +696,7 @@ def test_partitions_for_weekly_schedule_decorators_with_timezone():
 
             @weekly_schedule(
                 pipeline_name="foo_pipeline",
-                execution_day_of_week=2,
+                execution_day_of_week=3,
                 start_date=start_date,
                 execution_time=time(9, 30),
                 execution_timezone="US/Central",
