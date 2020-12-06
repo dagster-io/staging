@@ -146,9 +146,9 @@ def get_toys_schedules():
     from dagster import ScheduleDefinition, file_relative_path
 
     return [
-        backfill_test_schedule(),
-        longitudinal_schedule(),
-        materialization_schedule(),
+        #     backfill_test_schedule(),
+        #     longitudinal_schedule(),
+        #     materialization_schedule(),
         ScheduleDefinition(
             name="many_events_every_min",
             cron_schedule="* * * * *",
