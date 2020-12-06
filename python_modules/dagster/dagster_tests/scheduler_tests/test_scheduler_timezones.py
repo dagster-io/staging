@@ -8,6 +8,7 @@ from .test_scheduler_run import (
     instance_with_schedules,
     logger,
     repos,
+    the_repo,
     validate_run_started,
     validate_tick,
     wait_for_all_runs_to_start,
@@ -619,6 +620,18 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
                 pendulum.create(2019, 3, 8, tz="US/Central"),
             ]
 
+            # Verify that the skip was reflected in the schedule's underlying
+            # partition set as well
+
+            partition_set_def = the_repo.get_partition_set_def(
+                "daily_dst_transition_schedule_skipped_time_partitions"
+            )
+            partition_names = partition_set_def.get_partition_names()
+
+            assert "2019-03-08" in partition_names
+            assert not "2019-03-09" in partition_names
+            assert "2019-03-10" in partition_names
+
             for i in range(2):
                 validate_tick(
                     ticks[i],
@@ -679,7 +692,7 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
 
             expected_datetimes_utc = [
                 pendulum.create(2019, 11, 4, 7, 30, 0, tz="UTC"),
-                pendulum.create(2019, 11, 3, 6, 30, 0, tz="UTC"),
+                pendulum.create(2019, 11, 3, 7, 30, 0, tz="UTC"),
                 pendulum.create(2019, 11, 2, 6, 30, 0, tz="UTC"),
             ]
 
