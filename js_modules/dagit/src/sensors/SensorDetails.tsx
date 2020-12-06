@@ -3,8 +3,8 @@ import {Switch} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 
+import {TickTag} from 'src/JobTick';
 import {Timestamp} from 'src/TimeComponents';
-import {TickTag} from 'src/schedules/ScheduleRow';
 import {
   displaySensorMutationErrors,
   START_SENSOR_MUTATION,
@@ -90,7 +90,7 @@ export const SensorDetails = (props: Props) => {
             value: latestTick ? (
               <Group direction="horizontal" spacing={8} alignItems="center">
                 <Timestamp unix={latestTick.timestamp} />
-                <TickTag status={latestTick.status} eventSpecificData={null} />
+                <TickTag tick={latestTick} />
               </Group>
             ) : (
               'Sensor has never run'
