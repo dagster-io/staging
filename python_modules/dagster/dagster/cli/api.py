@@ -26,6 +26,7 @@ from dagster.core.execution.api import (
     execute_plan_iterator,
     execute_run_iterator,
 )
+from dagster.core.execution.plan.plan import should_skip
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import ExternalScheduleExecutionErrorData
@@ -59,6 +60,11 @@ from dagster.utils.merger import merge_dicts
 
 @whitelist_for_serdes
 class ExecuteRunArgsLoadComplete(namedtuple("_ExecuteRunArgsLoadComplete", "")):
+    pass
+
+
+@whitelist_for_serdes
+class StepExecutionSkipped(namedtuple("_StepExecutionSkipped", "")):
     pass
 
 
@@ -160,6 +166,10 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
         instance.report_engine_event(
             "Process for pipeline exited (pid: {pid}).".format(pid=pid), pipeline_run,
         )
+
+
+class StepExecutionSkipped:
+    """A flag indicates the step execution should be skipped."""
 
 
 def get_step_stats_by_key(instance, pipeline_run, step_keys_to_execute):
@@ -268,7 +278,6 @@ def execute_step_command(input_json):
 
         recon_pipeline = recon_pipeline_from_origin(args.pipeline_origin)
         retries = Retries.from_config(args.retries_dict)
-
         if args.should_verify_step:
             success = verify_step(instance, pipeline_run, retries, args.step_keys_to_execute)
             if not success:
@@ -284,6 +293,10 @@ def execute_step_command(input_json):
         )
 
         buff = []
+
+        if should_skip(execution_plan, instance=instance, run_id=pipeline_run.run_id):
+            click.echo(StepExecutionSkipped())
+            return
         for event in execute_plan_iterator(
             execution_plan,
             pipeline_run,
