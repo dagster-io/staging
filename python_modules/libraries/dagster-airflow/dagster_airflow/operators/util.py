@@ -22,6 +22,9 @@ def check_events_for_failures(events):
 def check_events_for_skips(events):
     check.list_param(events, "events", of_type=DagsterEvent)
     skipped = any([e.event_type_value == DagsterEventType.STEP_SKIPPED.value for e in events])
+    # import ipdb
+
+    # ipdb.set_trace()
     if skipped:
         raise AirflowSkipException("Dagster emitted skip event, skipping execution in Airflow")
 
