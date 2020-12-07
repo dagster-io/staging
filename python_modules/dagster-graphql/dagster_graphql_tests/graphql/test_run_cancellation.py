@@ -27,6 +27,10 @@ mutation($runId: String!) {
     ... on PipelineRunNotFoundError {
       runId
     }
+    ... on PythonError {
+      message
+      stack
+    }
   }
 }
 """
