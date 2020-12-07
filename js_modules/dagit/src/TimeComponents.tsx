@@ -3,6 +3,9 @@ import {Select} from '@blueprintjs/select';
 import moment from 'moment-timezone';
 import React from 'react';
 
+const browserTimezone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
+const browserTimezoneAbbreviation = () => moment.tz(browserTimezone()).format('z');
+
 type TimestampProps = ({ms: number} | {unix: number}) & {
   format?: string;
 };
@@ -12,7 +15,7 @@ type TimestampProps = ({ms: number} | {unix: number}) & {
 export function timestampToString(time: TimestampProps, timezone: string) {
   let m = 'ms' in time ? moment(time.ms) : moment.unix(time.unix);
   if (timezone !== 'Automatic') {
-    m = m.tz(timezone);
+    m = m.tz(timezone === 'Automatic' ? browserTimezone() : timezone);
   }
   const defaultFormat = timezone === 'UTC' ? 'YYYY-MM-DD HH:mm' : 'MMM DD, h:mm A';
 
@@ -60,9 +63,11 @@ const AllTimezoneItems = moment.tz
 
 const PopularTimezones = ['UTC', 'US/Pacific', 'US/Mountain', 'US/Central', 'US/Eastern'];
 
+const automaticLabel = () => `Automatic (${browserTimezoneAbbreviation()})`;
+
 const SortedTimezoneItems = [
   {
-    key: 'Automatic',
+    key: automaticLabel(),
     offsetLabel: '',
     offset: 0,
   },
@@ -105,7 +110,7 @@ export const TimezonePicker: React.FunctionComponent = () => {
         noResults={<Menu.Item disabled={true} text="No results." />}
         onItemSelect={(tz) => setTimezone(tz.key)}
       >
-        <Button small text={timezone} icon="time" />
+        <Button small text={timezone === 'Automatic' ? automaticLabel() : timezone} icon="time" />
       </Select>
     </div>
   );
