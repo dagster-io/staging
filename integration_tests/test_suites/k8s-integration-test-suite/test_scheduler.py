@@ -231,8 +231,9 @@ def test_start_schedule_cron_job(
 
             schedule_def = external_schedules_dict[schedule_origin_id]
             assert cron_schedule == schedule_def.cron_schedule
-            assert command == ["dagster"]
+            assert command == None
             assert args[:4] == [
+                "dagter",
                 "api",
                 "launch_scheduled_execution",
                 "/tmp/launch_scheduled_execution_output",
