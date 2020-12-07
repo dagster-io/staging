@@ -3,15 +3,20 @@ import json
 import warnings
 from contextlib import contextmanager
 
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowSkipException
 from dagster import check, seven
+from dagster.cli.api import StepExecutionSkipped
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
 from dagster.grpc.types import ExecuteStepArgs
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 from dagster_airflow.vendor.docker_operator import DockerOperator
 from docker import APIClient, from_env
 
-from .util import check_events_for_failures, check_events_for_skips, get_aws_environment
+from .util import (  # should_skip,
+    check_events_for_failures,
+    check_events_for_skips,
+    get_aws_environment,
+)
 
 DOCKER_TEMPDIR = "/tmp"
 
@@ -277,6 +282,11 @@ class DagsterDockerOperator(DockerOperator):
 
             if not res:
                 raise AirflowException("Missing query response")
+
+            if isinstance(res, StepExecutionSkipped):
+                raise AirflowSkipException(
+                    "Dagster emitted skip event, skipping execution in Airflow"
+                )
 
             try:
                 events = [deserialize_json_to_dagster_namedtuple(line) for line in res if line]

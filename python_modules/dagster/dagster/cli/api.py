@@ -26,6 +26,7 @@ from dagster.core.execution.api import (
     execute_plan_iterator,
     execute_run_iterator,
 )
+from dagster.core.execution.plan.plan import should_skip
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import ExternalScheduleExecutionErrorData
@@ -162,6 +163,10 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
         )
 
 
+class StepExecutionSkipped:
+    """A flag indicates the step execution should ship."""
+
+
 def get_step_stats_by_key(instance, pipeline_run, step_keys_to_execute):
     # When using the k8s executor, there whould only ever be one step key
     step_stats = instance.get_run_step_stats(pipeline_run.run_id, step_keys=step_keys_to_execute)
@@ -256,6 +261,9 @@ def execute_step_command(input_json):
 
     args = check.inst(deserialize_json_to_dagster_namedtuple(input_json), ExecuteStepArgs)
 
+    # import ipdb
+
+    # ipdb.set_trace()
     with (
         DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
     ) as instance:
@@ -283,6 +291,8 @@ def execute_step_command(input_json):
             mode=pipeline_run.mode,
         )
 
+        if should_skip(execution_plan, instance=instance, run_id=pipeline_run.run_id):
+            return StepExecutionSkipped
         buff = []
         for event in execute_plan_iterator(
             execution_plan,
