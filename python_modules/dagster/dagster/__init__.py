@@ -53,6 +53,7 @@ from dagster.core.definitions import (
     logger,
     monthly_schedule,
     multiprocess_executor,
+    op,
     pipeline,
     reconstructable,
     repository,

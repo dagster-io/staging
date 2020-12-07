@@ -83,6 +83,10 @@ class _Solid:
         return solid_def
 
 
+def op(*args, **kwargs):
+    return solid(*args, **kwargs)
+
+
 def solid(
     name=None,
     description=None,
