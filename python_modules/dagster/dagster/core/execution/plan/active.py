@@ -1,9 +1,12 @@
 import time
 
 from dagster import check
-from dagster.core.errors import DagsterIncompleteExecutionPlanError, DagsterUnknownStepStateError
+from dagster.core.errors import (  # DagsterStepOutputNotFoundError,
+    DagsterIncompleteExecutionPlanError,
+    DagsterUnknownStepStateError,
+)
 from dagster.core.events import DagsterEvent
-from dagster.core.execution.plan.inputs import FromMultipleSources, FromStepOutput
+# from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.retries import Retries
 from dagster.core.storage.tags import PRIORITY_TAG
 from dagster.utils import pop_delayed_interrupts
@@ -25,6 +28,9 @@ class ActiveExecution:
         self._sort_key_fn = check.opt_callable_param(sort_key_fn, "sort_key_fn", _default_sort_key)
 
         self._context_guard = False  # Prevent accidental direct use
+
+        # We decide what steps to skip based on what outputs are yielded by upstream steps
+        self._step_outputs = set()
 
         # All steps to be executed start out here in _pending
         self._pending = self._plan.execution_deps()
@@ -113,28 +119,41 @@ class ActiveExecution:
             if requirements.intersection(failed_or_abandoned_steps):
                 new_steps_to_abandon.append(step_key)
 
-            # If all upstream deps are good - this is executable
-            elif requirements.issubset(self._success):
-                new_steps_to_execute.append(step_key)
+            # # If all upstream deps are good - this is executable
+            # elif requirements.issubset(self._success):
+            #     new_steps_to_execute.append(step_key)
 
-            # If some upstream deps skipped...
+            # If all the upstream steps of a step are complete or skipped
             elif requirements.issubset(successful_or_skipped_steps):
                 step = self.get_step_by_key(step_key)
 
-                # The base case is downstream step will skip
-                should_skip = True
+                # The base case is downstream step won't skip
+                should_skip = False
 
-                # Unless a fan-in input has any successful inputs
-                for inp in step.step_inputs:
-                    if isinstance(inp.source, FromMultipleSources):
-                        if any([key in self._success for key in inp.dependency_keys]):
-                            should_skip = False
+                # if at least one of the step's inputs, none of the upstream steps have yielded an
+                # output, we should skip the step.
+                for step_input in step.step_inputs:
+                    missing_source_handles = [
+                        source_handle
+                        for source_handle in step_input.source.step_output_handle_dependencies
+                        if source_handle.step_key in requirements
+                        and source_handle not in self._step_outputs
+                    ]
+                    if missing_source_handles:
+                        # import ipdb
 
-                # but no missing regular inputs
-                for inp in step.step_inputs:
-                    if isinstance(inp.source, FromStepOutput):
-                        if any([key not in self._success for key in inp.dependency_keys]):
+                        # ipdb.set_trace()
+                        # # In partial pipeline execution, we may end up here without having validated the
+                        # # missing dependent outputs were optional
+                        # self._assert_missing_sources_from_optional_outputs(
+                        #     missing_source_handles, step_key
+                        # )
+
+                        if len(missing_source_handles) == len(
+                            step_input.source.step_output_handle_dependencies
+                        ):
                             should_skip = True
+                            break
 
                 if should_skip:
                     new_steps_to_skip.append(step_key)
@@ -162,6 +181,26 @@ class ActiveExecution:
         for key in ready_to_retry:
             self._executable.append(key)
             del self._waiting_to_retry[key]
+
+    # def _assert_missing_sources_from_optional_outputs(self, missing_source_handles, step_key):
+    #     check.list_param(missing_source_handles, "missing_source_handles", of_type=StepOutputHandle)
+    #     for source_handle in missing_source_handles:
+    #         # if isinstance(source, FromMultipleSources):
+    #         #     self._assert_missing_sources_from_optional_outputs(source.sources, step_key)
+    #         # elif isinstance(source, FromStepOutput):
+    #         if not self._plan.get_step_output(source_handle).output_def.optional:
+    #             raise DagsterStepOutputNotFoundError(
+    #                 (
+    #                     "When executing {step} discovered required output missing "
+    #                     "from previous step: {source_handle}"
+    #                 ).format(source_handle=source_handle, step=step_key),
+    #                 step_key=source_handle.step_key,
+    #                 output_name=source_handle.output_name,
+    #             )
+    #     # elif isinstance(source, (FromConfig, FromDefaultValue)):
+    #     #     pass  # value is sourced directly
+    #     # else:
+    #     #     check.failed(f"Unhandled step input source {source}")
 
     def sleep_til_ready(self):
         now = time.time()
@@ -349,6 +388,8 @@ class ActiveExecution:
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,
             )
+        elif dagster_event.is_successful_output:
+            self.mark_step_produced_output(dagster_event.event_specific_data.step_output_handle)
 
     def verify_complete(self, pipeline_context, step_key):
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
@@ -373,6 +414,10 @@ class ActiveExecution:
         self._unknown_state.add(step_key)
         # mark as abandoned so downstream tasks do not execute
         self.mark_abandoned(step_key)
+
+    # factored out for test
+    def mark_step_produced_output(self, step_output_handle):
+        self._step_outputs.add(step_output_handle)
 
     @property
     def is_complete(self):

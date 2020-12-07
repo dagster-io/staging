@@ -5,7 +5,49 @@ from airflow.exceptions import AirflowException, AirflowSkipException
 from dagster import DagsterEventType, check
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.api import create_execution_plan, execute_plan
+from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.instance import AIRFLOW_EXECUTION_DATE_STR, DagsterInstance
+
+
+def should_skip(execution_plan, instance, run_id):
+    """Check if it should skip executing the plan.
+
+    For each Dagster execution step
+    - if none of its inputs come from optional outputs, do not skip
+    - if there is at least one input, where none of the upstream steps have yielded an
+      output, we should skip the step.
+    """
+    check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
+    check.inst_param(instance, "instance", DagsterInstance)
+    check.str_param(run_id, "run_id")
+
+    optional_source_handles = set()
+    for step_key in execution_plan.step_keys_to_execute:
+        step = execution_plan.get_step_by_key(step_key)
+        for step_input in step.step_inputs:
+            for source_handle in step_input.source.step_output_handle_dependencies:
+                if execution_plan.get_step_output(source_handle).output_def.optional:
+                    optional_source_handles.add(source_handle)
+
+    if len(optional_source_handles) == 0:
+        # do not skip when all the inputs come from non-optional outputs
+        return False
+    else:
+        # note: as we only expect one step per execution plan (checked upper in the stack)
+        # if none of sources in the optional_source_handles have yielded an output, we skip the
+        # step, i.e. execution plan here
+        all_logs = instance.all_logs(run_id)
+        for event_record in all_logs:
+            if event_record.dagster_event and event_record.dagster_event.is_successful_output:
+                if (
+                    event_record.dagster_event.event_specific_data.step_output_handle
+                    in optional_source_handles
+                ):
+                    # do not skip when the source has an output yielded in the event records
+                    return False
+
+        # skip when none of the sources have yielded an output
+        return True
 
 
 def check_events_for_failures(events):
@@ -137,10 +179,13 @@ def invoke_steps_within_python_operator(
                 step_keys_to_execute=step_keys,
                 mode=mode,
             )
-
+            if should_skip(execution_plan, instance, pipeline_run.run_id):
+                raise AirflowSkipException(
+                    "Dagster emitted skip event, skipping execution in Airflow"
+                )
             events = execute_plan(execution_plan, instance, pipeline_run, run_config=run_config)
             check_events_for_failures(events)
-            check_events_for_skips(events)
+            # check_events_for_skips(events)
             return events
 
 

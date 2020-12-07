@@ -11,7 +11,11 @@ from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dag
 from dagster_airflow.vendor.docker_operator import DockerOperator
 from docker import APIClient, from_env
 
-from .util import check_events_for_failures, check_events_for_skips, get_aws_environment
+from .util import (  # should_skip,
+    check_events_for_failures,
+    check_events_for_skips,
+    get_aws_environment,
+)
 
 DOCKER_TEMPDIR = "/tmp"
 
@@ -271,7 +275,13 @@ class DagsterDockerOperator(DockerOperator):
                 execution_plan_snapshot=self.execution_plan_snapshot,
                 parent_pipeline_snapshot=self.parent_pipeline_snapshot,
             )
+            # import ipdb
 
+            # ipdb.set_trace()
+            # if should_skip(execution_plan, instance=self.instance, run_id=self.run_id):
+            #     raise AirflowSkipException(
+            #         "Dagster emitted skip event, skipping execution in Airflow"
+            #     )
             res = self.execute_raw(context)
             self.log.info("Finished executing container.")
 
