@@ -26,6 +26,7 @@ from dagster.core.execution.api import (
     execute_plan_iterator,
     execute_run_iterator,
 )
+from dagster.core.execution.plan.plan import should_skip
 from dagster.core.execution.retries import Retries
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.external_data import ExternalScheduleExecutionErrorData
@@ -256,6 +257,9 @@ def execute_step_command(input_json):
 
     args = check.inst(deserialize_json_to_dagster_namedtuple(input_json), ExecuteStepArgs)
 
+    # import ipdb
+
+    # ipdb.set_trace()
     with (
         DagsterInstance.from_ref(args.instance_ref) if args.instance_ref else DagsterInstance.get()
     ) as instance:
@@ -283,6 +287,9 @@ def execute_step_command(input_json):
             mode=pipeline_run.mode,
         )
 
+        if should_skip(execution_plan, instance=instance, run_id=pipeline_run.run_id):
+            # raise AirflowSkipException("Dagster emitted skip event, skipping execution in Airflow")
+            return
         buff = []
         for event in execute_plan_iterator(
             execution_plan,

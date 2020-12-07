@@ -11,7 +11,11 @@ from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dag
 from dagster_airflow.vendor.docker_operator import DockerOperator
 from docker import APIClient, from_env
 
-from .util import check_events_for_failures, check_events_for_skips, get_aws_environment
+from .util import (  # should_skip,
+    check_events_for_failures,
+    check_events_for_skips,
+    get_aws_environment,
+)
 
 DOCKER_TEMPDIR = "/tmp"
 
