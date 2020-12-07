@@ -6,6 +6,7 @@ from dagster.core.errors import (
     DagsterUnknownStepStateError,
 )
 from dagster.core.execution.api import create_execution_plan, execute_plan
+from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.execution.retries import Retries, RetryMode
 
 from ..engine_tests.test_multiprocessing import define_diamond_pipeline
@@ -44,6 +45,7 @@ def test_active_execution_plan():
         assert len(steps) == 0  # cant progress
 
         active_execution.mark_success(step_1.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_1.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 2
@@ -56,11 +58,13 @@ def test_active_execution_plan():
         assert len(steps) == 0  # cant progress
 
         active_execution.mark_success(step_2.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_2.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 0  # cant progress
 
         active_execution.mark_success(step_3.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_3.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 1
@@ -93,6 +97,7 @@ def test_failing_execution_plan():
         assert len(steps) == 0  # cant progress
 
         active_execution.mark_success(step_1.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_1.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 2
@@ -105,12 +110,14 @@ def test_failing_execution_plan():
         assert len(steps) == 0  # cant progress
 
         active_execution.mark_success(step_2.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_2.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 0  # cant progress
 
         # uh oh failure
         active_execution.mark_failed(step_3.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_3.key, "result"))
 
         # cant progres to 4th step
         steps = active_execution.get_steps_to_execute()
@@ -155,6 +162,7 @@ def test_retries_active_execution():
         assert steps[0].key == "return_two.compute"
 
         active_execution.mark_success(step_1.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_1.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 2
@@ -167,6 +175,7 @@ def test_retries_active_execution():
         assert len(steps) == 0  # cant progress
 
         active_execution.mark_success(step_2.key)
+        active_execution.mark_step_produced_output(StepOutputHandle(step_2.key, "result"))
 
         steps = active_execution.get_steps_to_execute()
         assert len(steps) == 0  # cant progress
