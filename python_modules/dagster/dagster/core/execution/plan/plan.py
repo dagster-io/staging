@@ -18,6 +18,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_step_output_versions_helper,
     resolve_step_versions_helper,
 )
+from dagster.core.instance import DagsterInstance
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
@@ -518,3 +519,44 @@ def check_asset_store_intermediate_storage(mode_def, environment_config):
                 intermediate_storage_name=intermediate_storage_def.name
             )
         )
+
+
+def should_skip(execution_plan, instance, run_id):
+    """[INTERNAL] Check if it should skip executing the plan. Primarily used by execution without
+    no run-level plan process, e.g. Airflow step execution.
+
+    For each Dagster execution step
+    - if none of its inputs come from optional outputs, do not skip
+    - if there is at least one input, where none of the upstream steps have yielded an
+      output, we should skip the step.
+    """
+    check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
+    check.inst_param(instance, "instance", DagsterInstance)
+    check.str_param(run_id, "run_id")
+
+    optional_source_handles = set()
+    for step_key in execution_plan.step_keys_to_execute:
+        step = execution_plan.get_step_by_key(step_key)
+        for step_input in step.step_inputs:
+            for source_handle in step_input.source.step_output_handle_dependencies:
+                if execution_plan.get_step_output(source_handle).output_def.optional:
+                    optional_source_handles.add(source_handle)
+
+    if len(optional_source_handles) == 0:
+        # do not skip when all the inputs come from non-optional outputs
+        return False
+    else:
+        # if none of sources in the optional_source_handles have yielded an output, we skip the
+        # step, i.e. execution plan here
+        all_logs = instance.all_logs(run_id)
+        for event_record in all_logs:
+            if event_record.dagster_event and event_record.dagster_event.is_successful_output:
+                if (
+                    event_record.dagster_event.event_specific_data.step_output_handle
+                    in optional_source_handles
+                ):
+                    # do not skip when the source has an output yielded in the event records
+                    return False
+
+        # skip when none of the sources have yielded an output
+        return True
