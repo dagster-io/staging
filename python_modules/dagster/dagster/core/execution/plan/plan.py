@@ -413,30 +413,6 @@ class ExecutionPlan(
             self.environment_config,
         )
 
-    def construct_asset_store_context(self, step_output_handle, asset_store_handle):
-        from dagster.core.storage.asset_store import AssetStoreHandle, AssetStoreContext
-
-        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
-        check.inst_param(asset_store_handle, "asset_store_handle", AssetStoreHandle)
-        step = self.get_step_by_key(step_output_handle.step_key)
-        solid_def = self.pipeline_def.solid_def_named(step.solid_handle.name)
-        step_output_versions = self.resolve_step_output_versions()
-        version = (
-            step_output_versions[step_output_handle]
-            if step_output_handle in step_output_versions
-            else None
-        )
-
-        return AssetStoreContext(
-            step_key=step_output_handle.step_key,
-            output_name=step_output_handle.output_name,
-            asset_metadata=asset_store_handle.asset_metadata,
-            pipeline_name=self.pipeline_def.name,
-            solid_def=solid_def,
-            source_run_id=None,
-            version=version,
-        )
-
     def resolve_step_versions(self):
         return resolve_step_versions_helper(self)
 
