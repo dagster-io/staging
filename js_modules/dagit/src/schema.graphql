@@ -67,7 +67,7 @@ type Pipeline implements SolidContainer & IPipelineSnapshot {
   solidHandle(handleID: String!): SolidHandle
   tags: [PipelineTag!]!
   id: ID!
-  runs: [PipelineRun!]!
+  runs(cursor: String, limit: Int): [PipelineRun!]!
   schedules: [ScheduleDefinition!]!
   parentSnapshotId: String
   presets: [PipelinePreset!]!
