@@ -423,6 +423,24 @@ class OutputContext(
         version (Optional[str]): (Experimental) The version of the output.
     """
 
+    def get_run_scoped_output_identifier(self):
+        """Utility method to get a collection of identifiers that as a whole represent a unique
+        step output.
+
+        The unique identifier collection consists of
+
+        - ``run_id``: the id of the run which generates the output.
+            Note: This method also handles the re-execution memoization logic. If the step that
+            generates the output is skipped in the re-execution, the ``run_id`` will be the id
+            of its parent run.
+        - ``step_key``: the key for a compute step.
+        - ``name``: the name of the output. (default: 'result').
+
+        Returns:
+            List[str, ...]: A list of identifiers, i.e. run id, step key, and output name
+        """
+        return [self.run_id, self.step_key, self.name]
+
 
 class InputContext(
     namedtuple(

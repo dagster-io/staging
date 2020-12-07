@@ -16,11 +16,9 @@ from dagster import (
 )
 from dagster.core.definitions.events import AssetMaterialization, AssetStoreOperationType
 from dagster.core.execution.api import create_execution_plan, execute_plan
-from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.asset_store import (
     AssetStore,
     AssetStoreContext,
-    AssetStoreHandle,
     VersionedPickledObjectFilesystemAssetStore,
     custom_path_fs_asset_store,
     fs_asset_store,
@@ -267,22 +265,6 @@ def test_set_asset_store_configure_intermediate_storage():
             pass
 
         execute_pipeline(my_pipeline, run_config={"intermediate_storage": {"filesystem": {}}})
-
-
-def test_asset_store_context_from_execution_plan():
-    pipeline_def = define_asset_pipeline(fs_asset_store, {})
-    execution_plan = create_execution_plan(pipeline_def)
-    asset_store_context = execution_plan.construct_asset_store_context(
-        step_output_handle=StepOutputHandle("solid_a.compute", "result"),
-        asset_store_handle=AssetStoreHandle("asset_store"),
-    )
-    assert asset_store_context == AssetStoreContext(
-        step_key="solid_a.compute",
-        output_name="result",
-        asset_metadata={},
-        pipeline_name=pipeline_def.name,
-        solid_def=pipeline_def.solid_def_named("solid_a"),
-    )
 
 
 def test_fan_in():
