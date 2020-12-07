@@ -175,6 +175,40 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         job_image = None
         pipeline_origin = None
         env_vars = None
+
+        job_image_from_executor_config = exc_config.get("job_image")
+
+        # If the repository location is an unmanaged gRPC server location, then we grab the job
+        # image from the server
+        if isinstance(
+            external_pipeline.get_external_origin().external_repository_origin.repository_location_origin,
+            GrpcServerRepositoryLocationOrigin,
+        ):
+
+            repository_location_handle = (
+                external_pipeline.repository_handle.repository_location_handle
+            )
+
+            if not isinstance(repository_location_handle, GrpcServerRepositoryLocationHandle):
+                raise DagsterInvariantViolationError(
+                    "Expected RepositoryLocationHandle to be of type "
+                    "GrpcServerRepositoryLocationHandle but found type {}".format(
+                        type(repository_location_handle)
+                    )
+                )
+
+            repository_name = external_pipeline.repository_handle.repository_name
+            repository_origin = repository_location_handle.reload_repository_python_origin(
+                repository_name
+            )
+
+            if job_image_from_executor_config:
+                raise DagsterInvariantViolationError(
+                    "You have specified "
+                    "Cannot specify job_image in executor config when loading pipeline "
+                    "from GRPC server."
+                )
+
         if isinstance(
             external_pipeline.get_external_origin().external_repository_origin.repository_location_origin,
             GrpcServerRepositoryLocationOrigin,
