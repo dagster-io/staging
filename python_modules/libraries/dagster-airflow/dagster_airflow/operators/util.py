@@ -22,6 +22,9 @@ def check_events_for_failures(events):
 def check_events_for_skips(events):
     check.list_param(events, "events", of_type=DagsterEvent)
     skipped = any([e.event_type_value == DagsterEventType.STEP_SKIPPED.value for e in events])
+    import ipdb
+
+    ipdb.set_trace()
     if skipped:
         raise AirflowSkipException("Dagster emitted skip event, skipping execution in Airflow")
 
@@ -99,6 +102,10 @@ def invoke_steps_within_python_operator(
     mode = invocation_args.mode
     pipeline_name = invocation_args.pipeline_name
     step_keys = invocation_args.step_keys
+    print(step_keys)
+    import ipdb
+
+    ipdb.set_trace()
     instance_ref = invocation_args.instance_ref
     run_config = invocation_args.run_config
     recon_repo = invocation_args.recon_repo
