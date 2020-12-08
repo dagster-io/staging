@@ -118,6 +118,16 @@ export class Structured extends React.Component<StructuredProps, StructuredState
             op
           }
         }
+        ... on HandledOutputEvent {
+          outputName
+          managerKey
+        }
+        ... on LoadedInputEvent {
+          inputName
+          managerKey
+          upstreamOutputName
+          upstreamStepKey
+        }
         ... on EngineEvent {
           metadataEntries {
             ...MetadataEntryFragment

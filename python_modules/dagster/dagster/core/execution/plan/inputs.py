@@ -3,10 +3,12 @@ from abc import ABC, abstractmethod
 from collections import namedtuple
 
 from dagster import check
-from dagster.core.definitions.events import AssetStoreOperation, AssetStoreOperationType
+from dagster.core.definitions.events import ObjectStoreOperation
 from dagster.core.definitions.input import InputDefinition
 from dagster.core.errors import DagsterTypeLoadingError, user_code_error_boundary
+from dagster.core.events import DagsterEvent
 from dagster.core.storage.input_manager import InputManager
+from dagster.utils import ensure_gen
 
 
 def join_and_hash(*args):
@@ -16,10 +18,6 @@ def join_and_hash(*args):
     else:
         unhashed = "".join(sorted(lst))
         return hashlib.sha1(unhashed.encode("utf-8")).hexdigest()
-
-
-class FanInStepInputValuesWrapper(list):
-    """Wrapper to distinguish fan-in input loads from values loads of a regular list"""
 
 
 class StepInputSource(ABC):
@@ -125,7 +123,7 @@ class FromStepOutput(
         source_handle = self.step_output_handle
         if self.input_def.manager_key:
             loader = getattr(step_context.resources, self.input_def.manager_key)
-            return loader.load_input(self.get_load_context(step_context))
+            yield loader.load_input(self.get_load_context(step_context))
         elif step_context.using_asset_store(source_handle):
             object_manager = step_context.get_output_manager(source_handle)
 
@@ -138,24 +136,25 @@ class FromStepOutput(
                 f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
             )
 
-            obj = object_manager.load_input(self.get_load_context(step_context))
-
-            output_def = step_context.execution_plan.get_step_output(source_handle).output_def
-
-            from dagster.core.storage.asset_store import AssetStoreHandle
-
-            return AssetStoreOperation(
-                AssetStoreOperationType.GET_ASSET,
-                source_handle,
-                AssetStoreHandle(output_def.manager_key, output_def.metadata),
-                obj=obj,
-            )
+            yield object_manager.load_input(self.get_load_context(step_context))
         else:
-            return step_context.intermediate_storage.get_intermediate(
+            result = step_context.intermediate_storage.get_intermediate(
                 context=step_context,
                 step_output_handle=source_handle,
                 dagster_type=self._input_dagster_type(),
             )
+            if isinstance(result, ObjectStoreOperation):
+                yield result.obj
+            else:
+                yield result
+
+        yield DagsterEvent.loaded_input(
+            step_context,
+            input_name=self.input_def.name,
+            manager_key=self.input_def.manager_key,
+            upstream_output_name=source_handle.output_name,
+            upstream_step_key=source_handle.step_key,
+        )
 
     def compute_version(self, step_versions):
         if (
@@ -270,12 +269,15 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
             # perform a can_load check since some upstream steps may have skipped, and
             # we allow fan-in to continue in their absence
             if inner_source.can_load_input_object(step_context):
-                values.append(inner_source.load_input_object(step_context))
+                for event_or_input_value in ensure_gen(
+                    inner_source.load_input_object(step_context)
+                ):
+                    if isinstance(event_or_input_value, DagsterEvent):
+                        yield event_or_input_value
+                    else:
+                        values.append(event_or_input_value)
 
-        # When we're using an object store-backed intermediate store, we wrap the
-        # representing the fan-in values in a FanInStepInputValuesWrapper
-        # so we can yield the relevant object store events and unpack the values in the caller
-        return FanInStepInputValuesWrapper(values)
+        yield values
 
     def required_resource_keys(self):
         resource_keys = set()
