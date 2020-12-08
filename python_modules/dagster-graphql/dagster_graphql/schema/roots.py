@@ -51,6 +51,7 @@ from dagster_graphql.implementation.fetch_runs import (
     get_run_groups,
     get_run_tags,
     get_runs,
+    get_runs_count,
     validate_pipeline_config,
 )
 from dagster_graphql.implementation.fetch_schedules import (
@@ -269,7 +270,7 @@ class DauphinQuery(dauphin.ObjectType):
             filters = filters.to_selector()
 
         return graphene_info.schema.type_named("PipelineRuns")(
-            results=get_runs(graphene_info, filters, kwargs.get("cursor"), kwargs.get("limit"))
+            filters=filters, cursor=kwargs.get("cursor"), limit=kwargs.get("limit"),
         )
 
     def resolve_pipelineRunOrError(self, graphene_info, runId):
