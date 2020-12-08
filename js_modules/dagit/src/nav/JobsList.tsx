@@ -160,7 +160,10 @@ export const JobsList: React.FunctionComponent<JobsListProps> = ({repo, selector
                 flex={{alignItems: 'center', justifyContent: 'space-between'}}
                 padding={{vertical: 8, right: 8, left: 12}}
               >
-                <Box flex={{alignItems: 'center', justifyContent: 'flex-start'}}>
+                <Box
+                  flex={{alignItems: 'center', justifyContent: 'flex-start'}}
+                  style={{overflow: 'hidden'}}
+                >
                   <Icon icon={icon} iconSize={14} />
                   <Label>{p.label}</Label>
                 </Box>
@@ -203,7 +206,7 @@ const StatusDot = styled.div<{
 
 const Items = styled.div`
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
   max-height: calc((100vh - 405px) / 2);
   &::-webkit-scrollbar {
     width: 11px;
