@@ -55,6 +55,18 @@ export const RunStatusTag = (props: {status: IRunStatus}) => {
           Managed
         </StatusTag>
       );
+    case 'CANCELING':
+      return (
+        <StatusTag minimal intent="danger">
+          Canceling
+        </StatusTag>
+      );
+    case 'CANCELED':
+      return (
+        <StatusTag minimal intent="danger">
+          Canceled
+        </StatusTag>
+      );
     default:
       return assertUnreachable(status);
   }
