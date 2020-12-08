@@ -180,7 +180,7 @@ def test_execute_eagerly_on_celery():
             assert len(result.step_event_list) == 4
             assert len(events_of_type(result, "STEP_START")) == 1
             assert len(events_of_type(result, "STEP_OUTPUT")) == 1
-            assert len(events_of_type(result, "OBJECT_STORE_OPERATION")) == 1
+            assert len(events_of_type(result, "HANDLED_OUTPUT")) == 1
             assert len(events_of_type(result, "STEP_SUCCESS")) == 1
 
             events = instance.all_logs(result.run_id)
@@ -215,7 +215,8 @@ def test_execute_eagerly_serial_on_celery():
         assert len(events_of_type(result, "STEP_START")) == 2
         assert len(events_of_type(result, "STEP_INPUT")) == 1
         assert len(events_of_type(result, "STEP_OUTPUT")) == 2
-        assert len(events_of_type(result, "OBJECT_STORE_OPERATION")) == 3
+        assert len(events_of_type(result, "HANDLED_OUTPUT")) == 2
+        assert len(events_of_type(result, "LOADED_INPUT")) == 1
         assert len(events_of_type(result, "STEP_SUCCESS")) == 2
 
 
