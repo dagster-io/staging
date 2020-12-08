@@ -51,6 +51,7 @@ def build_run_stats_from_events(run_id, records):
         if (
             event.dagster_event.event_type == DagsterEventType.PIPELINE_SUCCESS
             or event.dagster_event.event_type == DagsterEventType.PIPELINE_FAILURE
+            or event.dagster_event.event_type == DagsterEventType.PIPELINE_CANCELLED
         ):
             end_time = (
                 event.timestamp

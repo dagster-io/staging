@@ -656,6 +656,7 @@ def _pipeline_execution_iterator(pipeline_context, execution_plan):
     yield DagsterEvent.pipeline_start(pipeline_context)
 
     pipeline_exception_info = None
+    pipeline_cancelled_info = None
     failed_steps = []
     generator_closed = False
     try:
@@ -670,11 +671,16 @@ def _pipeline_execution_iterator(pipeline_context, execution_plan):
         generator_closed = True
         pipeline_exception_info = serializable_error_info_from_exc_info(sys.exc_info())
         raise
-    except (Exception, KeyboardInterrupt):  # pylint: disable=broad-except
+    except KeyboardInterrupt:
+        pipeline_cancelled_info = serializable_error_info_from_exc_info(sys.exc_info())
+        raise
+    except Exception:  # pylint: disable=broad-except
         pipeline_exception_info = serializable_error_info_from_exc_info(sys.exc_info())
         raise  # finally block will run before this is re-raised
     finally:
-        if pipeline_exception_info:
+        if pipeline_cancelled_info:
+            event = DagsterEvent.pipeline_cancelled(pipeline_context, pipeline_cancelled_info,)
+        elif pipeline_exception_info:
             event = DagsterEvent.pipeline_failure(
                 pipeline_context,
                 "An exception was thrown during execution.",

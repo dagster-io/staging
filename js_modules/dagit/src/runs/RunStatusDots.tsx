@@ -11,7 +11,9 @@ export type IRunStatus =
   | 'FAILURE'
   | 'STARTED'
   | 'MANAGED'
-  | 'STARTING';
+  | 'STARTING'
+  | 'CANCELLING'
+  | 'CANCELLED';
 
 export const RUN_STATUS_COLORS = {
   QUEUED: Colors.BLUE1,
@@ -21,6 +23,8 @@ export const RUN_STATUS_COLORS = {
   STARTED: Colors.GRAY3,
   SUCCESS: Colors.GREEN2,
   FAILURE: Colors.RED3,
+  CANCELLING: Colors.RED1,
+  CANCELLED: Colors.RED3,
 };
 
 export const RUN_STATUS_HOVER_COLORS = {
@@ -31,6 +35,8 @@ export const RUN_STATUS_HOVER_COLORS = {
   STARTED: Colors.GRAY5,
   SUCCESS: Colors.GREEN4,
   FAILURE: Colors.RED5,
+  CANCELLING: Colors.RED3,
+  CANCELLED: Colors.RED5,
 };
 export const RunStatusWithStats: React.FunctionComponent<
   RunStatusProps & {

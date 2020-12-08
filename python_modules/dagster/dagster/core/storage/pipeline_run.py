@@ -26,6 +26,8 @@ class PipelineRunStatus(Enum):
     STARTED = "STARTED"
     SUCCESS = "SUCCESS"
     FAILURE = "FAILURE"
+    CANCELLING = "CANCELLING"
+    CANCELLED = "CANCELLED"
 
 
 @whitelist_for_serdes
@@ -287,7 +289,11 @@ class PipelineRun(
 
     @property
     def is_finished(self):
-        return self.status == PipelineRunStatus.SUCCESS or self.status == PipelineRunStatus.FAILURE
+        return (
+            self.status == PipelineRunStatus.SUCCESS
+            or self.status == PipelineRunStatus.FAILURE
+            or self.status == PipelineRunStatus.CANCELLED
+        )
 
     @property
     def is_success(self):
@@ -295,7 +301,9 @@ class PipelineRun(
 
     @property
     def is_failure(self):
-        return self.status == PipelineRunStatus.FAILURE
+        return (
+            self.status == PipelineRunStatus.FAILURE or self.status == PipelineRunStatus.CANCELLED
+        )
 
     @property
     def is_resume_retry(self):
