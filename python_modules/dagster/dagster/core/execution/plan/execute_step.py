@@ -35,8 +35,6 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.utils import ensure_gen, iterate_with_context, raise_interrupts_immediately
 from dagster.utils.timing import time_execution_scope
 
-from .inputs import FanInStepInputValuesWrapper
-
 
 def _step_output_error_checked_user_event_sequence(step_context, user_event_sequence):
     """
@@ -246,35 +244,16 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
-    for input_name, input_value in _load_input_values(step_context):
-        if isinstance(input_value, ObjectStoreOperation):
-            yield DagsterEvent.object_store_operation(
-                step_context, ObjectStoreOperation.serializable(input_value, value_name=input_name)
-            )
-            inputs[input_name] = input_value.obj
-        elif isinstance(input_value, FanInStepInputValuesWrapper):
-            final_values = []
-            for inner_value in input_value:
-                # inner value is either a store interaction
-                if isinstance(inner_value, ObjectStoreOperation):
-                    yield DagsterEvent.object_store_operation(
-                        step_context,
-                        ObjectStoreOperation.serializable(inner_value, value_name=input_name),
-                    )
-                    final_values.append(inner_value.obj)
-                elif isinstance(inner_value, AssetStoreOperation):
-                    yield DagsterEvent.asset_store_operation(step_context, inner_value)
-                    final_values.append(inner_value.obj)
-                # or the value directly
-                else:
-                    final_values.append(inner_value)
+    for step_input in step_context.step.step_inputs:
+        if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
+            continue
 
-            inputs[input_name] = final_values
-        elif isinstance(input_value, AssetStoreOperation):
-            yield DagsterEvent.asset_store_operation(step_context, input_value)
-            inputs[input_name] = input_value.obj
-        else:
-            inputs[input_name] = input_value
+        for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
+            if isinstance(event_or_input_value, DagsterEvent):
+                yield event_or_input_value
+            else:
+                check.invariant(step_input.name not in inputs)
+                inputs[step_input.name] = event_or_input_value
 
     for input_name, input_value in inputs.items():
         for evt in check.generator(
@@ -356,8 +335,6 @@ def _materializations_to_events(step_context, step_output_handle, materializatio
 
 
 def _set_objects(step_context, step_output, step_output_handle, output, version):
-    from dagster.core.storage.asset_store import AssetStoreHandle
-
     output_def = step_output.output_def
     if step_context.using_asset_store(step_output_handle):
         output_manager = getattr(step_context.resources, output_def.manager_key)
@@ -366,18 +343,8 @@ def _set_objects(step_context, step_output, step_output_handle, output, version)
 
         for evt in _materializations_to_events(step_context, step_output_handle, materializations):
             yield evt
-
-        # SET_ASSET operation by AssetStore
-        yield DagsterEvent.asset_store_operation(
-            step_context,
-            AssetStoreOperation(
-                AssetStoreOperationType.SET_ASSET,
-                step_output_handle,
-                AssetStoreHandle(output_def.manager_key, output_def.metadata),
-            ),
-        )
     else:
-        res = step_context.intermediate_storage.set_intermediate(
+        step_context.intermediate_storage.set_intermediate(
             context=step_context,
             dagster_type=step_output.output_def.dagster_type,
             step_output_handle=step_output_handle,
@@ -385,10 +352,9 @@ def _set_objects(step_context, step_output, step_output_handle, output, version)
             version=version,
         )
 
-        if isinstance(res, ObjectStoreOperation):
-            yield DagsterEvent.object_store_operation(
-                step_context, ObjectStoreOperation.serializable(res, value_name=output.output_name),
-            )
+    yield DagsterEvent.handled_output(
+        step_context, output_name=step_output_handle.output_name, manager_key=output_def.manager_key
+    )
 
 
 def _create_output_materializations(step_context, output_name, value):
@@ -485,13 +451,3 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
         solid_def=context.solid_def.name,
         solid=context.solid.name,
     )
-
-
-def _load_input_values(step_context):
-    step = step_context.step
-
-    for step_input in step.step_inputs:
-        if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
-            continue
-
-        yield step_input.name, step_input.source.load_input_object(step_context)
