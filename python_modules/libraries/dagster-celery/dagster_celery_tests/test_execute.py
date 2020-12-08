@@ -180,7 +180,7 @@ def test_execute_eagerly_on_celery():
             assert len(result.step_event_list) == 4
             assert len(events_of_type(result, "STEP_START")) == 1
             assert len(events_of_type(result, "STEP_OUTPUT")) == 1
-            assert len(events_of_type(result, "OBJECT_STORE_OPERATION")) == 1
+            assert len(events_of_type(result, "HANDLED_OUTPUT")) == 1
             assert len(events_of_type(result, "STEP_SUCCESS")) == 1
 
             events = instance.all_logs(result.run_id)
