@@ -124,6 +124,20 @@ def test_execute_run_iterator():
         ):
             execute_run_iterator(InMemoryPipeline(pipeline_def), pipeline_run, instance=instance)
 
+        pipeline_run = instance.create_run_for_pipeline(
+            pipeline_def=pipeline_def, run_config={"loggers": {"callback": {}}}, mode="default",
+        ).with_status(PipelineRunStatus.FAILURE)
+
+        events = list(
+            execute_run_iterator(InMemoryPipeline(pipeline_def), pipeline_run, instance=instance)
+        )
+
+        assert len(events) == 1
+        assert (
+            events[0].message
+            == "Stopping execution since the run was marked as failed before execution could start"
+        )
+
 
 def test_execute_run_bad_state():
     records = []
