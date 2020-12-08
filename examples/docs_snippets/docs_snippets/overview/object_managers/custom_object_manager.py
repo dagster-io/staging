@@ -21,27 +21,27 @@ def read_dataframe_from_table(**_kwargs):
 
 
 # start_marker
-from dagster import AssetStore, ModeDefinition, pipeline, resource
+from dagster import ObjectManager, ModeDefinition, object_manager, pipeline
 
 
-class MyAssetStore(AssetStore):
-    def set_asset(self, context, obj):
+class MyObjectManager(ObjectManager):
+    def handle_output(self, context, obj):
         # output_name is the name given to the OutputDefinition that we're storing for
-        table_name = context.output_name
+        table_name = context.name
         write_dataframe_to_table(name=table_name, dataframe=obj)
 
-    def get_asset(self, context):
+    def load_input(self, context):
         # output_name is the name given to the OutputDefinition that we're retrieving for
-        table_name = context.output_name
+        table_name = context.upstream_output.name
         return read_dataframe_from_table(name=table_name)
 
 
-@resource
-def my_asset_store(_):
-    return MyAssetStore()
+@object_manager
+def my_object_manager(_):
+    return MyObjectManager()
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": my_asset_store})])
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": my_object_manager})])
 def my_pipeline():
     solid2(solid1())
 
