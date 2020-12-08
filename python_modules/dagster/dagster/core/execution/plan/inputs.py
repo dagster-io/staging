@@ -243,6 +243,10 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
                 not isinstance(source, FromMultipleSources),
                 "Can not have multiple levels of FromMultipleSources StepInputSource",
             )
+            check.invariant(
+                not isinstance(source, FromMappingStepOutput),
+                "Fan-in of mappable outputs not yet supported",
+            )
         return super(FromMultipleSources, cls).__new__(cls, sources=sources)
 
     @property
@@ -305,3 +309,129 @@ class StepInput(namedtuple("_StepInput", "name dagster_type source")):
     @property
     def dependency_keys(self):
         return self.source.step_key_dependencies
+
+
+class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type source")):
+    def __new__(
+        cls, name, dagster_type, source,
+    ):
+        from dagster import DagsterType
+
+        return super(UnresolvedStepInput, cls).__new__(
+            cls,
+            name=check.str_param(name, "name"),
+            dagster_type=check.inst_param(dagster_type, "dagster_type", DagsterType),
+            source=check.inst_param(
+                source, "source", (FromMappingStepOutput, FromUnresolvedStepOutput)
+            ),
+        )
+
+    @property
+    def mapping_step_key(self):
+        return self.source.mapping_step_key
+
+    def resolve(self, map_key):
+        return StepInput(
+            name=self.name, dagster_type=self.dagster_type, source=self.source.resolve(map_key),
+        )
+
+
+class FromMappingStepOutput(
+    namedtuple("_FromMappingStepOutput", "step_output_handle input_def config_data"),
+):
+    """This step input source will be a mapped item from a mapping step output"""
+
+    def __new__(cls, step_output_handle, input_def, config_data):
+        from .objects import StepOutputHandle
+
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        # should we model this is a different type instead?
+        check.invariant(step_output_handle.mapping_key is None)
+
+        return super(FromMappingStepOutput, cls).__new__(
+            cls,
+            step_output_handle=step_output_handle,
+            input_def=check.inst_param(input_def, "input_def", InputDefinition),
+            config_data=config_data,
+        )
+
+    @property
+    def mapping_step_key(self):
+        return self.step_output_handle.step_key
+
+    @property
+    def step_output_handle_dependencies(self):
+        # shortcut
+        return []
+
+    def required_resource_keys(self):
+        # shortcut
+        return {}
+
+    def resolve(self, map_key):
+        from .objects import StepOutputHandle
+
+        return FromStepOutput(
+            StepOutputHandle(
+                self.step_output_handle.step_key, self.step_output_handle.output_name, map_key
+            ),
+            self.input_def,
+            self.config_data,
+            fan_in=False,
+        )
+
+
+class FromUnresolvedStepOutput(
+    namedtuple("_FromUnresolvedStepOutput", "unresolved_step_output_handle input_def config_data"),
+):
+    """
+    This step input source is from a step that is not yet resolved,
+    for example downstream from a mapping step.
+    """
+
+    def __new__(cls, unresolved_step_output_handle, input_def, config_data):
+        from .objects import UnresolvedStepOutputHandle
+
+        return super(FromUnresolvedStepOutput, cls).__new__(
+            cls,
+            unresolved_step_output_handle=check.inst_param(
+                unresolved_step_output_handle,
+                "unresolved_step_output_handle",
+                UnresolvedStepOutputHandle,
+            ),
+            input_def=check.inst_param(input_def, "input_def", InputDefinition),
+            config_data=config_data,
+        )
+
+    @property
+    def mapping_step_key(self):
+        return self.unresolved_step_output_handle.mapping_step_key
+
+    def resolve(self, key):
+        return FromStepOutput(
+            self.unresolved_step_output_handle.resolve(key),
+            input_def=self.input_def,
+            config_data=self.config_data,
+            fan_in=False,
+        )
+
+    @property
+    def step_output_handle_dependencies(self):
+        # shortcut
+        return []
+
+    def required_resource_keys(self):
+        # shortcut
+        return {}
+
+    # @property
+    # def step_output_handle_dependencies(self):
+    #     from .objects import StepOutputHandle
+
+    #     # short cut for execution plan snapshot
+    #     return [
+    #         StepOutputHandle(
+    #             self.unresolved_step_output_handle.unresolved_step_handle.to_key(),
+    #             self.unresolved_step_output_handle.output_name,
+    #         )
+    #     ]

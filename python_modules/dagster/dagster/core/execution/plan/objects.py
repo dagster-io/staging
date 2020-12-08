@@ -2,32 +2,24 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check
-from dagster.core.definitions import (
-    AssetMaterialization,
-    Materialization,
-    OutputDefinition,
-    Solid,
-    SolidHandle,
-)
+from dagster.core.definitions import AssetMaterialization, Materialization, OutputDefinition, Solid
 from dagster.core.definitions.events import EventMetadataEntry
+from dagster.core.execution.plan.inputs import StepInput, UnresolvedStepInput
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import merge_dicts
 from dagster.utils.error import SerializableErrorInfo
 
+from .handle import MappedStepHandle, StepHandle, UnresolvedStepHandle
+
 
 @whitelist_for_serdes
-class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name")):
-    @staticmethod
-    def from_step(step, output_name="result"):
-        check.inst_param(step, "step", ExecutionStep)
-
-        return StepOutputHandle(step.key, output_name)
-
-    def __new__(cls, step_key, output_name="result"):
+class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name mapping_key")):
+    def __new__(cls, step_key, output_name="result", mapping_key=None):
         return super(StepOutputHandle, cls).__new__(
             cls,
             step_key=check.str_param(step_key, "step_key"),
             output_name=check.str_param(output_name, "output_name"),
+            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
         )
 
 
@@ -155,60 +147,60 @@ class ExecutionStep(
     namedtuple(
         "_ExecutionStep",
         (
-            "pipeline_name key_suffix step_inputs step_input_dict step_outputs step_output_dict "
-            "compute_fn kind solid_handle solid logging_tags tags hook_defs"
+            "handle pipeline_name step_inputs step_input_dict step_outputs step_output_dict "
+            "compute_fn solid logging_tags"
         ),
     )
 ):
     def __new__(
-        cls,
-        pipeline_name,
-        key_suffix,
-        step_inputs,
-        step_outputs,
-        compute_fn,
-        kind,
-        solid_handle,
-        solid,
-        logging_tags=None,
+        cls, handle, pipeline_name, step_inputs, step_outputs, compute_fn, solid, logging_tags=None,
     ):
-        from .inputs import StepInput
-
         return super(ExecutionStep, cls).__new__(
             cls,
+            handle=check.inst_param(handle, "handle", (StepHandle, MappedStepHandle)),
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            key_suffix=check.str_param(key_suffix, "key_suffix"),
             step_inputs=check.list_param(step_inputs, "step_inputs", of_type=StepInput),
             step_input_dict={si.name: si for si in step_inputs},
             step_outputs=check.list_param(step_outputs, "step_outputs", of_type=StepOutput),
             step_output_dict={so.name: so for so in step_outputs},
-            compute_fn=check.callable_param(
-                compute_fn, "compute_fn"
-            ),  # Compute_fn is the compute function for the step.
-            #     Not to be confused with the compute_fn of the passed in solid.
-            kind=check.inst_param(kind, "kind", StepKind),
-            solid_handle=check.inst_param(solid_handle, "solid_handle", SolidHandle),
+            # Compute_fn is the compute function for the step.
+            # Not to be confused with the compute_fn of the passed in solid.
+            compute_fn=check.callable_param(compute_fn, "compute_fn"),
             solid=check.inst_param(solid, "solid", Solid),
             logging_tags=merge_dicts(
                 {
-                    "step_key": str(solid_handle) + "." + key_suffix,
+                    "step_key": str(handle.solid_handle) + "." + "compute",
                     "pipeline": pipeline_name,
-                    "solid": solid_handle.name,
+                    "solid": handle.solid_handle.name,
                     "solid_definition": solid.definition.name,
                 },
                 check.opt_dict_param(logging_tags, "logging_tags"),
             ),
-            tags=solid.tags,
-            hook_defs=solid.hook_defs,
         )
 
     @property
+    def solid_handle(self):
+        return self.handle.solid_handle
+
+    @property
+    def tags(self):
+        return self.solid.tags
+
+    @property
+    def hook_defs(self):
+        return self.solid.hook_defs
+
+    @property
     def key(self):
-        return str(self.solid_handle) + "." + self.key_suffix
+        return self.handle.to_key()
 
     @property
     def solid_name(self):
         return self.solid_handle.name
+
+    @property
+    def kind(self):
+        return StepKind.COMPUTE
 
     def has_step_output(self, name):
         check.str_param(name, "name")
@@ -225,3 +217,107 @@ class ExecutionStep(
     def step_input_named(self, name):
         check.str_param(name, "name")
         return self.step_input_dict[name]
+
+    def get_execution_dependency_keys(self):
+        deps = set()
+        for inp in self.step_inputs:
+            deps.update(inp.dependency_keys)
+        return deps
+
+
+class UnresolvedExecutionStep(
+    namedtuple("_UnresolvedExecutionStep", "pipeline_name solid step_inputs solid_handle")
+):
+    def __new__(cls, pipeline_name, solid, step_inputs, solid_handle):
+        return super(UnresolvedExecutionStep, cls).__new__(
+            cls,
+            pipeline_name=pipeline_name,
+            solid=solid,
+            step_inputs=check.list_param(
+                step_inputs, "step_inputs", of_type=(StepInput, UnresolvedStepInput)
+            ),
+            solid_handle=solid_handle,
+        )
+
+    @property
+    def handle(self):
+        return UnresolvedStepHandle(solid_handle=self.solid_handle)
+
+    @property
+    def step_outputs(self):
+        # shortcut
+        return []
+
+    @property
+    def key(self):
+        return self.handle.to_key()
+
+    def mapping_step_key(self):
+        keys = set()
+        for inp in self.step_inputs:
+            if isinstance(inp, UnresolvedStepInput):
+                keys.add(inp.mapping_step_key)
+
+        check.invariant(len(keys) == 1, "Unresolved step expects one and only one mapping step key")
+
+        return list(keys)[0]
+
+    def resolve(self, mapping_step_key, mapped_keys):
+        from .compute import _execute_core_compute
+
+        check.invariant(
+            self.mapping_step_key() == mapping_step_key, "mapping step key did not match"
+        )
+
+        execution_steps = []
+        solid = self.solid
+
+        for mapped_key in mapped_keys:
+            resolved_inputs = [_resolved_input(inp, mapped_key) for inp in self.step_inputs]
+
+            execution_steps.append(
+                ExecutionStep(
+                    handle=MappedStepHandle(self.handle.solid_handle, mapped_key),
+                    pipeline_name=self.pipeline_name,
+                    step_inputs=resolved_inputs,
+                    step_outputs=[
+                        StepOutput(
+                            output_def=output_def,
+                            should_materialize=False,  # hax - should derive from config
+                        )
+                        for name, output_def in solid.definition.output_dict.items()
+                    ],
+                    compute_fn=lambda step_context, inputs: _execute_core_compute(
+                        step_context.for_compute(), inputs, solid.definition.compute_fn
+                    ),
+                    solid=solid,
+                )
+            )
+
+        return execution_steps
+
+
+def _resolved_input(step_input, map_key):
+    if isinstance(step_input, StepInput):
+        return step_input
+    return step_input.resolve(map_key)
+
+
+class UnresolvedStepOutputHandle(
+    namedtuple("_UnresolvedStepOutputHandle", "unresolved_step_handle output_name mapping_step_key")
+):
+    def __new__(cls, unresolved_step_handle, output_name, mapping_step_key):
+        return super(UnresolvedStepOutputHandle, cls).__new__(
+            cls,
+            unresolved_step_handle=check.inst_param(
+                unresolved_step_handle, "unresolved_step_handle", UnresolvedStepHandle
+            ),
+            output_name=check.str_param(output_name, "output_name"),
+            # this could be a set of resolution keys to support multiple mapping operations
+            mapping_step_key=check.str_param(mapping_step_key, "mapping_step_key"),
+        )
+
+    def resolve(self, map_key):
+        return StepOutputHandle(
+            self.unresolved_step_handle.resolve(map_key).to_key(), self.output_name
+        )

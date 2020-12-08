@@ -1,4 +1,5 @@
 import time
+from collections import defaultdict
 
 from dagster import check
 from dagster.core.errors import DagsterIncompleteExecutionPlanError, DagsterUnknownStepStateError
@@ -27,13 +28,16 @@ class ActiveExecution:
         self._context_guard = False  # Prevent accidental direct use
 
         # All steps to be executed start out here in _pending
-        self._pending = self._plan.execution_deps()
+        self._pending = self._plan.get_executable_step_deps()
+
+        self._mapped_outputs = defaultdict(list)
 
         # steps move in to these buckets as a result of _update calls
         self._executable = []
         self._pending_skip = []
         self._pending_retry = []
         self._pending_abandon = []
+        self._pending_resolve = []
         self._waiting_to_retry = {}
 
         # then are considered _in_flight when vended via get_steps_to_*
@@ -107,6 +111,13 @@ class ActiveExecution:
 
         successful_or_skipped_steps = self._success | self._skipped
         failed_or_abandoned_steps = self._failed | self._abandoned
+
+        for idx, key in enumerate(list(self._pending_resolve)):
+            new_step_deps = self._plan.resolve(key, self._mapped_outputs[key])
+            for step_key, deps in new_step_deps.items():
+                # does this work right with step_keys_to_execute?
+                self._pending[step_key] = deps
+            del self._pending_resolve[idx]
 
         for step_key, requirements in self._pending.items():
             # If any upstream deps failed - this is not executable
@@ -287,6 +298,8 @@ class ActiveExecution:
     def mark_success(self, step_key):
         self._success.add(step_key)
         self._mark_complete(step_key)
+        if step_key in self._mapped_outputs:
+            self._pending_resolve.append(step_key)
 
     def mark_skipped(self, step_key):
         self._skipped.add(step_key)
@@ -348,6 +361,14 @@ class ActiveExecution:
                 time.time() + dagster_event.step_retry_data.seconds_to_wait
                 if dagster_event.step_retry_data.seconds_to_wait
                 else None,
+            )
+        elif (
+            dagster_event.is_successful_output
+            and dagster_event.step_output_data.step_output_handle.mapping_key
+        ):
+
+            self._mapped_outputs[dagster_event.step_key].append(
+                dagster_event.step_output_data.step_output_handle.mapping_key
             )
 
     def verify_complete(self, pipeline_context, step_key):

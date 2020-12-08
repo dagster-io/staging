@@ -7,12 +7,14 @@ from dagster.core.definitions import (
     Solid,
     SolidHandle,
 )
+from dagster.core.definitions.events import MappableOutput
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.execution.plan.handle import StepHandle
 
 from .inputs import StepInput
-from .objects import ExecutionStep, StepKind, StepOutput
+from .objects import ExecutionStep, StepOutput
 
 
 def create_compute_step(pipeline_name, environment_config, solid, step_inputs, handle):
@@ -30,8 +32,8 @@ def create_compute_step(pipeline_name, environment_config, solid, step_inputs, h
         config_output_names = config_output_names.union(solid_config.outputs.output_names)
 
     return ExecutionStep(
+        handle=StepHandle(solid_handle=handle),
         pipeline_name=pipeline_name,
-        key_suffix="compute",
         step_inputs=step_inputs,
         step_outputs=[
             StepOutput(output_def=output_def, should_materialize=name in config_output_names)
@@ -40,8 +42,6 @@ def create_compute_step(pipeline_name, environment_config, solid, step_inputs, h
         compute_fn=lambda step_context, inputs: _execute_core_compute(
             step_context.for_compute(), inputs, solid.definition.compute_fn
         ),
-        kind=StepKind.COMPUTE,
-        solid_handle=handle,
         solid=solid,
     )
 
@@ -64,7 +64,10 @@ def _yield_compute_results(compute_context, inputs, compute_fn):
         return
 
     for event in user_event_sequence:
-        if isinstance(event, (Output, AssetMaterialization, Materialization, ExpectationResult)):
+        if isinstance(
+            event,
+            (MappableOutput, Output, AssetMaterialization, Materialization, ExpectationResult),
+        ):
             yield event
         else:
             raise DagsterInvariantViolationError(

@@ -130,7 +130,8 @@ def resolve_step_output_versions_helper(execution_plan):
     step_versions = execution_plan.resolve_step_versions()
     return {
         StepOutputHandle(step.key, output_name): join_and_hash(output_name, step_versions[step.key])
-        for step in execution_plan.steps
+        # ugh, maybe this is fine?
+        for step in execution_plan.executable_steps
         for output_name in step.step_output_dict.keys()
     }
 

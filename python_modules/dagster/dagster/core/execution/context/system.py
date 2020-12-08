@@ -519,6 +519,7 @@ def get_output_context(execution_plan, environment_config, step_output_handle, r
     return OutputContext(
         step_key=step_output_handle.step_key,
         name=step_output_handle.output_name,
+        mapping_key=step_output_handle.mapping_key,
         metadata=execution_plan.get_step_output(step_output_handle).output_def.metadata,
         run_id=run_id,
         version=_step_output_version(execution_plan, step_output_handle),

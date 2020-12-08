@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 from dagster import check
-from dagster.core.execution.plan.inputs import StepInput
+from dagster.core.execution.plan.inputs import StepInput, UnresolvedStepInput
 from dagster.core.execution.plan.objects import StepKind, StepOutput, StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan, ExecutionStep
 from dagster.serdes import create_snapshot_id, whitelist_for_serdes
@@ -110,7 +110,7 @@ class ExecutionPlanMetadataItemSnap(namedtuple("_ExecutionPlanMetadataItemSnap",
 
 
 def _snapshot_from_step_input(step_input):
-    check.inst_param(step_input, "step_input", StepInput)
+    check.inst_param(step_input, "step_input", (StepInput, UnresolvedStepInput))
     return ExecutionStepInputSnap(
         name=step_input.name,
         dagster_type_key=step_input.dagster_type.key,
@@ -155,10 +155,10 @@ def snapshot_from_execution_plan(execution_plan, pipeline_snapshot_id):
     check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id")
 
     return ExecutionPlanSnapshot(
-        steps=sorted(
-            list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
-        ),
+        steps=[],  # sorted(
+        #    list(map(_snapshot_from_execution_step, execution_plan.steps)), key=lambda es: es.key
+        # ),
         artifacts_persisted=execution_plan.artifacts_persisted,
         pipeline_snapshot_id=pipeline_snapshot_id,
-        step_keys_to_execute=execution_plan.step_keys_to_execute,
+        step_keys_to_execute=[],  # execution_plan.step_keys_to_execute,
     )
