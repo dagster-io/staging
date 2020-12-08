@@ -14,7 +14,7 @@ from dagster import (
     seven,
     solid,
 )
-from dagster.core.definitions.events import AssetMaterialization, AssetStoreOperationType
+from dagster.core.definitions.events import AssetMaterialization
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.storage.asset_store import (
     AssetStore,
@@ -55,7 +55,7 @@ def test_result_output():
         assert result.result_for_solid("solid_b").output_value() == 1
 
 
-def test_fs_asset_store():
+def test_fs_object_manager():
     with seven.TemporaryDirectory() as tmpdir_path:
         asset_store = fs_asset_store.configured({"base_dir": tmpdir_path})
         pipeline_def = define_asset_pipeline(asset_store, {})
@@ -63,33 +63,18 @@ def test_fs_asset_store():
         result = execute_pipeline(pipeline_def)
         assert result.success
 
-        asset_store_operation_events = list(
-            filter(lambda evt: evt.is_asset_store_operation, result.event_list)
-        )
+        handled_output_events = list(filter(lambda evt: evt.is_handled_output, result.event_list))
 
-        assert len(asset_store_operation_events) == 3
-        # SET ASSET for step "solid_a.compute" output "result"
-        assert (
-            asset_store_operation_events[0].event_specific_data.op
-            == AssetStoreOperationType.SET_ASSET
-        )
+        assert len(handled_output_events) == 2
         filepath_a = os.path.join(tmpdir_path, result.run_id, "solid_a.compute", "result")
         assert os.path.isfile(filepath_a)
         with open(filepath_a, "rb") as read_obj:
             assert pickle.load(read_obj) == [1, 2, 3]
 
-        # GET ASSET for step "solid_b.compute" input "_df"
-        assert (
-            asset_store_operation_events[1].event_specific_data.op
-            == AssetStoreOperationType.GET_ASSET
-        )
-        assert "solid_a.compute" == asset_store_operation_events[1].event_specific_data.step_key
+        loaded_input_events = list(filter(lambda evt: evt.is_loaded_input, result.event_list))
+        assert len(loaded_input_events) == 1
+        assert "solid_a.compute" == loaded_input_events[0].event_specific_data.upstream_step_key
 
-        # SET ASSET for step "solid_b.compute" output "result"
-        assert (
-            asset_store_operation_events[2].event_specific_data.op
-            == AssetStoreOperationType.SET_ASSET
-        )
         filepath_b = os.path.join(tmpdir_path, result.run_id, "solid_b.compute", "result")
         assert os.path.isfile(filepath_b)
         with open(filepath_b, "rb") as read_obj:
@@ -109,17 +94,9 @@ def test_default_asset_store_reexecution():
             pipeline_def, result.run_id, instance=instance, step_selection=["solid_b.compute"],
         )
 
-        # re-execution should yield asset_store_operation events instead of intermediate events
-        get_asset_events = list(
-            filter(
-                lambda evt: evt.is_asset_store_operation
-                and AssetStoreOperationType(evt.event_specific_data.op)
-                == AssetStoreOperationType.GET_ASSET,
-                re_result.event_list,
-            )
-        )
-        assert len(get_asset_events) == 1
-        assert get_asset_events[0].event_specific_data.step_key == "solid_a.compute"
+        loaded_input_events = list(filter(lambda evt: evt.is_loaded_input, re_result.event_list,))
+        assert len(loaded_input_events) == 1
+        assert loaded_input_events[0].event_specific_data.upstream_step_key == "solid_a.compute"
 
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
