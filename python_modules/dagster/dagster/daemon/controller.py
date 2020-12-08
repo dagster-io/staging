@@ -14,6 +14,8 @@ from dagster.daemon.types import DaemonHeartbeat, DaemonStatus, DaemonType
 # unhealthy 60s after the last heartbeat.
 DAEMON_HEARTBEAT_SKIP_TOLERANCE = 2
 
+DEFAULT_DAEMON_INTERVAL_SECONDS = 30
+
 
 def _sorted_quoted(strings):
     return "[" + ", ".join(["'{}'".format(s) for s in sorted(list(strings))]) + "]"
@@ -35,26 +37,19 @@ class DagsterDaemonController:
             self._add_daemon(
                 SchedulerDaemon(
                     instance,
-                    interval_seconds=_get_interval_seconds(instance, SchedulerDaemon.daemon_type()),
+                    interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,
                     max_catchup_runs=max_catchup_runs,
                 )
             )
 
-        self._add_daemon(
-            SensorDaemon(
-                instance,
-                interval_seconds=_get_interval_seconds(instance, SensorDaemon.daemon_type()),
-            )
-        )
+        self._add_daemon(SensorDaemon(instance, interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,))
 
         if isinstance(instance.run_coordinator, QueuedRunCoordinator):
             max_concurrent_runs = instance.run_coordinator.max_concurrent_runs
             self._add_daemon(
                 QueuedRunCoordinatorDaemon(
                     instance,
-                    interval_seconds=_get_interval_seconds(
-                        instance, QueuedRunCoordinatorDaemon.daemon_type()
-                    ),
+                    interval_seconds=instance.run_coordinator.dequeue_interval_seconds,
                     max_concurrent_runs=max_concurrent_runs,
                 )
             )
@@ -81,12 +76,18 @@ class DagsterDaemonController:
         return list(self._daemons.values())
 
     def run_iteration(self, curr_time):
+        if (not self._last_heartbeat_time) or (
+            (curr_time - self._last_heartbeat_time) >= DEFAULT_DAEMON_INTERVAL_SECONDS
+        ):
+            self._last_heartbeat_time = curr_time
+            for daemon in self.daemons:
+                self._add_heartbeat(daemon)
+
         for daemon in self.daemons:
             if (not daemon.last_iteration_time) or (
                 (curr_time - daemon.last_iteration_time).total_seconds() >= daemon.interval_seconds
             ):
                 daemon.last_iteration_time = curr_time
-                self._add_heartbeat(daemon)
                 daemon.run_iteration()
 
     def _add_heartbeat(self, daemon):
@@ -96,17 +97,6 @@ class DagsterDaemonController:
         self._instance.add_daemon_heartbeat(
             DaemonHeartbeat(pendulum.now("UTC"), daemon.daemon_type(), None, None)
         )
-
-
-def _get_interval_seconds(instance, daemon_type):
-    """
-    Return the interval in which each daemon is configured to run
-    """
-    if daemon_type == DaemonType.QUEUED_RUN_COORDINATOR:
-        return instance.run_coordinator.dequeue_interval_seconds
-
-    # default
-    return 30
 
 
 def required_daemons(instance):
@@ -157,7 +147,7 @@ def get_daemon_status(instance, daemon_type, curr_time=None):
     hearbeat_timestamp = pendulum.instance(heartbeats[daemon_type].timestamp)
 
     maximum_tolerated_time = hearbeat_timestamp.add(
-        seconds=(DAEMON_HEARTBEAT_SKIP_TOLERANCE + 1) * _get_interval_seconds(instance, daemon_type)
+        seconds=(DAEMON_HEARTBEAT_SKIP_TOLERANCE + 1) * DEFAULT_DAEMON_INTERVAL_SECONDS
     )
     healthy = curr_time <= maximum_tolerated_time
 
