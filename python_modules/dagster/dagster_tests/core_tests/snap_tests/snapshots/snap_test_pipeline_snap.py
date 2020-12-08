@@ -1034,7 +1034,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "asset_store"
+          "name": "object_manager"
         }
       ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
@@ -2096,7 +2096,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "asset_store"
+          "name": "object_manager"
         }
       ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
@@ -3160,7 +3160,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "asset_store"
+          "name": "object_manager"
         }
       ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
@@ -4242,7 +4242,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "asset_store"
+          "name": "object_manager"
         }
       ],
       "root_config_key": "Shape.2f9eb2ea67ca27d614d082efc26b5a4ff7466ecf"
@@ -5362,7 +5362,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "asset_store"
+          "name": "object_manager"
         }
       ],
       "root_config_key": "Shape.ddf9231cc0c13fd1ef3f3717d0743e3d817cf91c"
@@ -6482,7 +6482,7 @@ snapshots['test_basic_fan_in 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "asset_store"
+          "name": "object_manager"
         }
       ],
       "root_config_key": "Shape.a18bd09d0a3d5af64d95af39f68813a0247c4344"
