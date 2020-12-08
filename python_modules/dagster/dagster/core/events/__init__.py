@@ -13,7 +13,7 @@ from dagster.core.definitions import (
     SolidHandle,
     TypeCheck,
 )
-from dagster.core.definitions.events import AssetStoreOperationType, ObjectStoreOperationType
+from dagster.core.definitions.events import ObjectStoreOperationType
 from dagster.core.execution.context.system import (
     HookContext,
     SystemExecutionContext,
@@ -54,6 +54,8 @@ class DagsterEventType(Enum):
 
     OBJECT_STORE_OPERATION = "OBJECT_STORE_OPERATION"
     ASSET_STORE_OPERATION = "ASSET_STORE_OPERATION"
+    LOADED_INPUT = "LOADED_INPUT"
+    HANDLED_OUTPUT = "HANDLED_OUTPUT"
 
     ENGINE_EVENT = "ENGINE_EVENT"
 
@@ -364,8 +366,12 @@ class DagsterEvent(
         return self.event_type == DagsterEventType.ENGINE_EVENT
 
     @property
-    def is_asset_store_operation(self):
-        return self.event_type == DagsterEventType.ASSET_STORE_OPERATION
+    def is_handled_output(self):
+        return self.event_type == DagsterEventType.HANDLED_OUTPUT
+
+    @property
+    def is_loaded_input(self):
+        return self.event_type == DagsterEventType.LOADED_INPUT
 
     @property
     def is_step_materialization(self):
@@ -810,38 +816,34 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def asset_store_operation(step_context, asset_store_operation):
-        from dagster.core.definitions.events import AssetStoreOperation
-
-        check.inst_param(asset_store_operation, "asset_store_operation", AssetStoreOperation)
-
-        if AssetStoreOperationType(asset_store_operation.op) == AssetStoreOperationType.SET_ASSET:
-            message = (
-                'Stored output "{output_name}" using asset store "{asset_store_key}".'
-            ).format(
-                asset_store_key=asset_store_operation.asset_store_handle.asset_store_key,
-                output_name=asset_store_operation.step_output_handle.output_name,
-            )
-        elif AssetStoreOperationType(asset_store_operation.op) == AssetStoreOperationType.GET_ASSET:
-            message = (
-                'Retrieved output "{output_name}" from step "{step_key}" '
-                'using asset store "{asset_store_key}".'
-            ).format(
-                asset_store_key=asset_store_operation.asset_store_handle.asset_store_key,
-                output_name=asset_store_operation.step_output_handle.output_name,
-                step_key=asset_store_operation.step_output_handle.step_key,
-            )
-        else:
-            message = ""
+    def handled_output(step_context, output_name, manager_key):
+        message = f'Handled output "{output_name} using output manager "{manager_key}"'
 
         return DagsterEvent.from_step(
-            event_type=DagsterEventType.ASSET_STORE_OPERATION,
+            event_type=DagsterEventType.HANDLED_OUTPUT,
             step_context=step_context,
-            event_specific_data=AssetStoreOperationData(
-                op=asset_store_operation.op,
-                step_key=asset_store_operation.step_output_handle.step_key,
-                output_name=asset_store_operation.step_output_handle.output_name,
-                asset_store_key=asset_store_operation.asset_store_handle.asset_store_key,
+            event_specific_data=HandledOutputData(
+                output_name=output_name, manager_key=manager_key,
+            ),
+            message=message,
+        )
+
+    @staticmethod
+    def loaded_input(
+        step_context, input_name, manager_key, upstream_output_name=None, upstream_step_key=None
+    ):
+        message = f'Loaded input "{input_name}"" using input manager "{manager_key}"'
+        if upstream_output_name:
+            message += f', from output "{upstream_output_name}" of step "{upstream_step_key}"'
+
+        return DagsterEvent.from_step(
+            event_type=DagsterEventType.LOADED_INPUT,
+            step_context=step_context,
+            event_specific_data=LoadedInputData(
+                input_name=input_name,
+                upstream_output_name=upstream_output_name,
+                upstream_step_key=upstream_step_key,
+                manager_key=manager_key,
             ),
             message=message,
         )
@@ -1047,6 +1049,18 @@ class HookErroredData(namedtuple("_HookErroredData", "error")):
         return super(HookErroredData, cls).__new__(
             cls, error=check.inst_param(error, "error", SerializableErrorInfo),
         )
+
+
+@whitelist_for_serdes
+class HandledOutputData(namedtuple("_HandledOutputData", "output_name manager_key")):
+    pass
+
+
+@whitelist_for_serdes
+class LoadedInputData(
+    namedtuple("_LoadedInputData", "input_name manager_key upstream_output_name upstream_step_key")
+):
+    pass
 
 
 ###################################################################################################

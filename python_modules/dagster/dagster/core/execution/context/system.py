@@ -194,6 +194,15 @@ class SystemExecutionContext:
     def for_type(self, dagster_type):
         return TypeCheckContext(self._execution_context_data, self.log, dagster_type)
 
+    def using_asset_store(self, step_output_handle):
+        # pylint: disable=comparison-with-callable
+        from dagster.core.storage.asset_store import mem_asset_store
+
+        output_manager_key = self.execution_plan.get_step_output(
+            step_output_handle
+        ).output_def.manager_key
+        return self.mode_def.resource_defs[output_manager_key] != mem_asset_store
+
 
 class SystemPipelineExecutionContext(SystemExecutionContext):
     __slots__ = ["_executor"]
@@ -315,15 +324,6 @@ class SystemStepExecutionContext(SystemExecutionContext):
         step_output = self.execution_plan.get_step_output(step_output_handle)
         output_manager = getattr(self.resources, step_output.output_def.manager_key)
         return check.inst(output_manager, OutputManager)
-
-    def using_asset_store(self, step_output_handle):
-        # pylint: disable=comparison-with-callable
-        from dagster.core.storage.asset_store import mem_asset_store
-
-        output_manager_key = self.execution_plan.get_step_output(
-            step_output_handle
-        ).output_def.manager_key
-        return self.mode_def.resource_defs[output_manager_key] != mem_asset_store
 
 
 class SystemComputeExecutionContext(SystemStepExecutionContext):
