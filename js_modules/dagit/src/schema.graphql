@@ -14,6 +14,7 @@ type Query {
   partitionSetsOrError(repositorySelector: RepositorySelector!, pipelineName: String!): PartitionSetsOrError!
   partitionSetOrError(repositorySelector: RepositorySelector!, partitionSetName: String): PartitionSetOrError!
   pipelineRunsOrError(filter: PipelineRunsFilter, cursor: String, limit: Int): PipelineRunsOrError!
+  pipelineRunsCountOrError(filter: PipelineRunsFilter): PipelineRunsCountOrError!
   pipelineRunOrError(runId: ID!): PipelineRunOrError!
   pipelineRunTags: [PipelineTagAndValues!]!
   runGroupOrError(runId: ID!): RunGroupOrError!
@@ -743,6 +744,12 @@ type PipelineRuns {
 
 type InvalidPipelineRunsFilterError implements Error {
   message: String!
+}
+
+union PipelineRunsCountOrError = PipelineRunsCount | InvalidPipelineRunsFilterError | PythonError
+
+type PipelineRunsCount {
+  count: Int
 }
 
 type PipelineTagAndValues {

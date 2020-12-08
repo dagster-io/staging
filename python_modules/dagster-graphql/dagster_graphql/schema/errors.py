@@ -568,6 +568,26 @@ class DauphinPipelineRunsOrError(dauphin.Union):
         types = (DauphinPipelineRuns, DauphinInvalidPipelineRunsFilterError, DauphinPythonError)
 
 
+class DauphinPipelineRunsCount(dauphin.ObjectType):
+    class Meta:
+        name = "PipelineRunsCount"
+
+    def __init__(self, count):
+        super(DauphinPipelineRunsCount, self).__init__(count=count)
+
+    count = dauphin.Int()
+
+
+class DauphinPipelineRunsCountOrError(dauphin.Union):
+    class Meta:
+        name = "PipelineRunsCountOrError"
+        types = (
+            DauphinPipelineRunsCount,
+            DauphinInvalidPipelineRunsFilterError,
+            DauphinPythonError,
+        )
+
+
 class DauphinRunGroupOrError(dauphin.Union):
     class Meta:
         name = "RunGroupOrError"
