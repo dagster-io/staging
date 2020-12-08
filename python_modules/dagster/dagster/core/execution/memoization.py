@@ -111,19 +111,31 @@ def copy_required_intermediates_for_execution(pipeline_context, execution_plan):
             )
 
 
-def is_intermediate_storage_write_event(record):
+def step_output_handle_from_storage_event(record):
+    """
+    If the record is a storage event, returns the StepOutputHandle that was stored for.  Otherwise,
+    returns None.
+    """
     check.inst_param(record, "record", EventRecord)
     if not record.is_dagster_event:
-        return False
+        return None
+
+    event = record.dagster_event
 
     write_ops = (
         ObjectStoreOperationType.SET_OBJECT.value,
         ObjectStoreOperationType.CP_OBJECT.value,
     )
-    return (
-        record.dagster_event.event_type_value == DagsterEventType.OBJECT_STORE_OPERATION.value
-        and record.dagster_event.event_specific_data.op in write_ops
-    )
+    if (
+        event.event_type_value == DagsterEventType.OBJECT_STORE_OPERATION.value
+        and event.event_specific_data.op in write_ops
+    ):
+        return StepOutputHandle(event.step_key, event.event_specific_data.value_name)
+
+    if event.event_type == DagsterEventType.HANDLED_OUTPUT:
+        return StepOutputHandle(event.step_key, event.event_specific_data.output_name)
+
+    return None
 
 
 def output_handles_from_event_logs(event_logs):
@@ -135,18 +147,9 @@ def output_handles_from_event_logs(event_logs):
     )
 
     for record in event_logs:
-        if not is_intermediate_storage_write_event(record):
-            continue
-
-        if record.dagster_event.step_key in failed_step_keys:
-            # skip output events from failed steps
-            continue
-
-        output_handles_from_previous_run.add(
-            StepOutputHandle(
-                record.dagster_event.step_key, record.dagster_event.event_specific_data.value_name
-            )
-        )
+        step_output_handle = step_output_handle_from_storage_event(record)
+        if step_output_handle and step_output_handle.step_key not in failed_step_keys:
+            output_handles_from_previous_run.add(step_output_handle)
 
     return output_handles_from_previous_run
 
