@@ -123,6 +123,18 @@ userDeployments:
       securityContext: {}
       resources: {}
       replicaCount: 1
+      livenessProbe:
+        initialDelaySeconds: 1
+        periodSeconds: 20
+        timeoutSeconds: 3
+        successThreshold: 1
+        failureThreshold: 3
+      startupProbe:
+        initialDelaySeconds: 1
+        periodSeconds: 10
+        timeoutSeconds: 3
+        successThreshold: 1
+        failureThreshold: 3
 
 ####################################################################################################
 # Pipeline Run: Configuration for user code containers.
