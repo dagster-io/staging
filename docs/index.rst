@@ -12,6 +12,7 @@
    sections/api/apidocs/internals
    sections/api/apidocs/loggers
    sections/api/apidocs/modes-resources
+   sections/api/apidocs/object-managers
    sections/api/apidocs/partitions
    sections/api/apidocs/pipeline
    sections/api/apidocs/presets
