@@ -13,7 +13,6 @@ from dagster import (
     seven,
     solid,
 )
-from dagster.core.definitions.events import AssetStoreOperationType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.storage.asset_store import mem_asset_store
 from dagster.core.storage.fs_object_manager import custom_path_fs_object_manager, fs_object_manager
@@ -90,17 +89,9 @@ def test_default_object_manager_reexecution():
             pipeline_def, result.run_id, instance=instance, step_selection=["solid_b.compute"],
         )
 
-        # re-execution should yield asset_store_operation events instead of intermediate events
-        get_asset_events = list(
-            filter(
-                lambda evt: evt.is_asset_store_operation
-                and AssetStoreOperationType(evt.event_specific_data.op)
-                == AssetStoreOperationType.GET_ASSET,
-                re_result.event_list,
-            )
-        )
-        assert len(get_asset_events) == 1
-        assert get_asset_events[0].event_specific_data.step_key == "solid_a.compute"
+        loaded_input_events = list(filter(lambda evt: evt.is_loaded_input, re_result.event_list,))
+        assert len(loaded_input_events) == 1
+        assert loaded_input_events[0].event_specific_data.upstream_step_key == "solid_a.compute"
 
 
 def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
