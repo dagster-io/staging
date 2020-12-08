@@ -45,7 +45,7 @@ def get_retry_steps_from_execution_plan(instance, execution_plan, parent_run_id)
 
     to_retry = []
 
-    execution_deps = execution_plan.execution_deps()
+    execution_deps = execution_plan.get_executable_step_deps()
     for step in execution_plan.topological_steps():
         if parent_run.step_keys_to_execute and step.key not in parent_run.step_keys_to_execute:
             continue
