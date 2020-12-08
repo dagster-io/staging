@@ -1,6 +1,6 @@
 import time
 
-from dagster.daemon.controller import all_daemons_healthy
+from dagster.daemon.controller import DAEMON_HEARTBEAT_TOLERANCE_SECONDS, all_daemons_healthy
 
 from .utils import setup_instance, start_daemon
 
@@ -24,5 +24,5 @@ def test_heartbeat(tmpdir,):
             time.sleep(5)
             assert all_daemons_healthy(instance) is True
 
-        time.sleep(5)
+        time.sleep(DAEMON_HEARTBEAT_TOLERANCE_SECONDS + 5)
         assert all_daemons_healthy(instance) is False
