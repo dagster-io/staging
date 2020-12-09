@@ -35,7 +35,7 @@ export interface RepositorySchedulesListQuery_repositoryOrError_Repository_pipel
   mode: string;
   name: string;
   pipelineName: string;
-  scheduleState: RepositorySchedulesListQuery_repositoryOrError_Repository_pipelines_schedules_scheduleState | null;
+  scheduleState: RepositorySchedulesListQuery_repositoryOrError_Repository_pipelines_schedules_scheduleState;
 }
 
 export interface RepositorySchedulesListQuery_repositoryOrError_Repository_pipelines {
