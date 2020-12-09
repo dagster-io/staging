@@ -42,7 +42,7 @@ def _helm_namespace_helper(helm_chart_fn, request):
         else:
             should_cleanup = not request.config.getoption("--no-cleanup")
 
-        with test_namespace(should_cleanup) as namespace:
+        with get_helm_test_namespace(should_cleanup) as namespace:
             with helm_test_resources(namespace, should_cleanup):
                 docker_image = get_test_project_docker_image()
                 with helm_chart_fn(namespace, docker_image, should_cleanup):
@@ -83,7 +83,7 @@ def helm_namespace_for_k8s_run_launcher(
 
 
 @contextmanager
-def test_namespace(should_cleanup=True):
+def get_helm_test_namespace(should_cleanup=True):
     # Will be something like dagster-test-3fcd70 to avoid ns collisions in shared test environment
     namespace = get_test_namespace()
 

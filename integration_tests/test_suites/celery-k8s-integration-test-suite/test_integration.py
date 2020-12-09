@@ -14,11 +14,14 @@ from dagster.utils import merge_dicts
 from dagster.utils.yaml_utils import merge_yamls
 from dagster_celery_k8s.launcher import CeleryK8sRunLauncher
 from dagster_k8s.test import wait_for_job_and_get_raw_logs
+from dagster_k8s_test_infra.integration_utils import image_pull_policy
 from dagster_test.test_project import (
     ReOriginatedExternalPipelineForTest,
     get_test_project_environments_path,
     get_test_project_external_pipeline,
 )
+
+IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 
 
 def get_celery_engine_config(dagster_docker_image, job_namespace):
@@ -28,7 +31,7 @@ def get_celery_engine_config(dagster_docker_image, job_namespace):
                 "config": {
                     "job_image": dagster_docker_image,
                     "job_namespace": job_namespace,
-                    "image_pull_policy": "Always",
+                    "image_pull_policy": image_pull_policy(),
                     "env_config_maps": ["dagster-pipeline-env"],
                 }
             }
@@ -38,7 +41,7 @@ def get_celery_engine_config(dagster_docker_image, job_namespace):
 
 @pytest.mark.integration
 @pytest.mark.skipif(sys.version_info < (3, 5), reason="Very slow on Python 2")
-def test_execute_on_celery_k8s(  # pylint: disable=redefined-outer-name
+def test_execute_on_celery_k8s_foobar(  # pylint: disable=redefined-outer-name
     dagster_docker_image, dagster_instance, helm_namespace
 ):
     run_config = merge_dicts(
