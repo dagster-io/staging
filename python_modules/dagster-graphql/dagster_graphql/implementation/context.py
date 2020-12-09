@@ -1,3 +1,6 @@
+import queue
+import threading
+
 from dagster import check
 from dagster.core.host_representation import PipelineSelector, RepositoryLocation
 from dagster.core.host_representation.external import ExternalPipeline
@@ -18,10 +21,15 @@ class DagsterGraphQLContext:
         self._workspace = workspace
         self._repository_locations = {}
 
-        self._location_state_events = Subject()
-        self._location_state_subscriber = LocationStateSubscriber(
-            self._location_state_events_handler
+        self._events_queue = queue.Queue()
+        self._events_queue_thread = threading.Thread(
+            target=self._process_queue_thread, args=[self._events_queue],
         )
+        self._events_queue_thread.daemon = True
+        self._events_queue_thread.start()
+
+        self._location_state_events = Subject()
+        self._location_state_subscriber = LocationStateSubscriber(self._events_queue.put)
 
         for handle in self._workspace.repository_location_handles:
             check.invariant(
@@ -54,20 +62,23 @@ class DagsterGraphQLContext:
     def location_state_events(self):
         return self._location_state_events
 
-    def _location_state_events_handler(self, event):
-        # If the server was updated or we were not able to reconnect, we immediately reload the
-        # location handle
-        if event.event_type in (
-            LocationStateChangeEventType.LOCATION_UPDATED,
-            LocationStateChangeEventType.LOCATION_ERROR,
-        ):
-            # In case of an updated location, reload the handle to get updated repository data and
-            # re-attach a subscriber
-            # In case of a location error, just reload the handle in order to update the workspace
-            # with the correct error messages
-            self.reload_repository_location(event.location_name)
+    def _process_queue_thread(self, event_queue):
+        while True:
+            event = event_queue.get(block=True)  # doesn't block
 
-        self._location_state_events.on_next(event)
+            # If the server was updated or we were not able to reconnect, we immediately reload the
+            # location handle
+            if event.event_type in (
+                LocationStateChangeEventType.LOCATION_UPDATED,
+                LocationStateChangeEventType.LOCATION_ERROR,
+            ):
+                # In case of an updated location, reload the handle to get updated repository data and
+                # re-attach a subscriber
+                # In case of a location error, just reload the handle in order to update the workspace
+                # with the correct error messages
+                self.reload_repository_location(event.location_name)
+
+            self._location_state_events.on_next(event)
 
     def repository_location_errors(self):
         return self._workspace.repository_location_errors
