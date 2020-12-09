@@ -130,6 +130,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
 
     def cleanup(self):
         self._watch_thread_shutdown_event.set()
+        self._watch_thread.join()
 
     @property
     def port(self):
