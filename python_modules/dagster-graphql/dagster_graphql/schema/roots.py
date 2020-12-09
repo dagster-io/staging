@@ -830,6 +830,7 @@ class DauphinPipelineRunsFilter(dauphin.InputObjectType):
 
     # Currently you may choose one of the following
     run_id = dauphin.Field(dauphin.String)
+    runIds = dauphin.List(dauphin.String)
     pipeline_name = dauphin.Field(dauphin.String)
     tags = dauphin.List(dauphin.NonNull(DauphinExecutionTag))
     statuses = dauphin.List(dauphin.NonNull(DauphinPipelineRunStatus))
@@ -850,7 +851,7 @@ class DauphinPipelineRunsFilter(dauphin.InputObjectType):
         else:
             statuses = None
 
-        run_ids = [self.run_id] if self.run_id else []
+        run_ids = self.runIds if self.runIds else [self.run_id] if self.run_id else []
         return PipelineRunsFilter(
             run_ids=run_ids,
             pipeline_name=self.pipeline_name,
