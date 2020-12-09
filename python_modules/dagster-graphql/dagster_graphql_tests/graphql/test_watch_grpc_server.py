@@ -30,7 +30,7 @@ class TestSubscribeToGrpcServerEvents(
         timeout = 30
         while not len(events) > 0:
             if time.time() - start_time > timeout:
-                break
+                raise Exception("Timed out waiting for LocationStateChangeEvent")
             time.sleep(1)
 
         assert len(events) == 1
