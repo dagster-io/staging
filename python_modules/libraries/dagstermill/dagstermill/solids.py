@@ -245,6 +245,9 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None):
                 ],
             )
 
+            compute_context.log.info("HERE!!!")
+            compute_context.log.info(str(output_notebook))
+            compute_context.log.info(str(executed_notebook_file_handle))
             if output_notebook is not None:
                 yield Output(executed_notebook_file_handle, output_notebook)
 
@@ -303,7 +306,7 @@ def define_dagstermill_solid(
     output_defs = check.opt_list_param(output_defs, "output_defs", of_type=OutputDefinition)
     required_resource_keys = check.opt_set_param(
         required_resource_keys, "required_resource_keys", of_type=str
-    )
+    ).add("file_manager")
 
     return SolidDefinition(
         name=name,
