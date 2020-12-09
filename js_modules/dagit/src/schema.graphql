@@ -474,6 +474,7 @@ type JobState {
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
   ticks(limit: Int): [JobTick!]!
+  lastRequestedRuns: [PipelineRun!]!
   runningCount: Int!
 }
 

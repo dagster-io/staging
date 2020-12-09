@@ -37,6 +37,8 @@ RUN_KEY_TAG = "{prefix}run_key".format(prefix=SYSTEM_TAG_PREFIX)
 
 PRIORITY_TAG = "{prefix}priority".format(prefix=SYSTEM_TAG_PREFIX)
 
+TICK_ID_TAG = f"{HIDDEN_TAG_PREFIX}tick_id"
+
 
 class TagType(Enum):
     # Custom tag provided by a user
