@@ -35,26 +35,16 @@ export interface RepositorySensorsFragment_sensors_sensorState_jobSpecificData_S
 
 export type RepositorySensorsFragment_sensors_sensorState_jobSpecificData = RepositorySensorsFragment_sensors_sensorState_jobSpecificData_SensorJobData | RepositorySensorsFragment_sensors_sensorState_jobSpecificData_ScheduleJobData;
 
-export interface RepositorySensorsFragment_sensors_sensorState_runs_tags {
-  __typename: "PipelineTag";
-  key: string;
-  value: string;
-}
-
-export interface RepositorySensorsFragment_sensors_sensorState_runs {
+export interface RepositorySensorsFragment_sensors_sensorState_lastRequestedRuns {
   __typename: "PipelineRun";
   id: string;
   runId: string;
-  pipelineName: string;
   status: PipelineRunStatus;
-  tags: RepositorySensorsFragment_sensors_sensorState_runs_tags[];
 }
 
 export interface RepositorySensorsFragment_sensors_sensorState_ticks_runs {
   __typename: "PipelineRun";
   id: string;
-  runId: string;
-  status: PipelineRunStatus;
 }
 
 export interface RepositorySensorsFragment_sensors_sensorState_ticks_error_cause {
@@ -75,6 +65,7 @@ export interface RepositorySensorsFragment_sensors_sensorState_ticks {
   id: string;
   status: JobTickStatus;
   timestamp: number;
+  skipReason: string | null;
   runs: RepositorySensorsFragment_sensors_sensorState_ticks_runs[];
   error: RepositorySensorsFragment_sensors_sensorState_ticks_error | null;
 }
@@ -87,8 +78,7 @@ export interface RepositorySensorsFragment_sensors_sensorState {
   status: JobStatus;
   repositoryOrigin: RepositorySensorsFragment_sensors_sensorState_repositoryOrigin;
   jobSpecificData: RepositorySensorsFragment_sensors_sensorState_jobSpecificData | null;
-  runs: RepositorySensorsFragment_sensors_sensorState_runs[];
-  runsCount: number;
+  lastRequestedRuns: RepositorySensorsFragment_sensors_sensorState_lastRequestedRuns[];
   ticks: RepositorySensorsFragment_sensors_sensorState_ticks[];
   runningCount: number;
 }

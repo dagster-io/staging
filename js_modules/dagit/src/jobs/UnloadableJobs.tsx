@@ -1,27 +1,23 @@
 import {useMutation} from '@apollo/client';
 import {Button, Callout, Intent, Colors, Switch, Tooltip} from '@blueprintjs/core';
 import * as React from 'react';
-import {Link} from 'react-router-dom';
 
 import {useConfirmation} from 'src/CustomConfirmationProvider';
 import {TickTag} from 'src/JobTick';
+import {JobRunStatus} from 'src/JobUtils';
 import {RepositoryOriginInformation} from 'src/RepositoryInformation';
-import {RunStatus} from 'src/runs/RunStatusDots';
-import {titleForRun} from 'src/runs/RunUtils';
 import {STOP_SCHEDULE_MUTATION, displayScheduleMutationErrors} from 'src/schedules/ScheduleRow';
 import {humanCronString} from 'src/schedules/humanCronString';
 import {StopSchedule} from 'src/schedules/types/StopSchedule';
 import {displaySensorMutationErrors, STOP_SENSOR_MUTATION} from 'src/sensors/SensorMutations';
-import {JobStateFragment} from 'src/sensors/types/JobStateFragment';
 import {StopSensor} from 'src/sensors/types/StopSensor';
+import {JobStateFragment} from 'src/types/JobStateFragment';
 import {JobType, JobStatus} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
 import {ButtonLink} from 'src/ui/ButtonLink';
 import {Group} from 'src/ui/Group';
 import {Table} from 'src/ui/Table';
 import {Heading} from 'src/ui/Text';
-
-const NUM_RUNS_TO_DISPLAY = 10;
 
 export const UnloadableJobs: React.FunctionComponent<{
   jobStates: JobStateFragment[];
@@ -70,9 +66,8 @@ export const UnloadableSensors: React.FunctionComponent<{
           <tr>
             <th style={{maxWidth: '60px'}}></th>
             <th>Sensor Name</th>
-            <th></th>
             <th style={{width: '100px'}}>Last Tick</th>
-            <th>Latest Runs</th>
+            <th>Last Requested</th>
           </tr>
         </thead>
         <tbody>
@@ -100,7 +95,8 @@ export const UnloadableSchedules: React.FunctionComponent<{
             <th>Schedule Name</th>
             <th style={{width: '150px'}}>Schedule</th>
             <th style={{width: '100px'}}>Last Tick</th>
-            <th>Latest Runs</th>
+            <th>Last Requested</th>
+            <th>Partition Status</th>
           </tr>
         </thead>
         <tbody>
@@ -175,7 +171,7 @@ export const UnloadableScheduleInfo = () => {
 };
 
 export const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) => {
-  const {id, name, status, repositoryOrigin, runs, ticks} = sensorState;
+  const {id, name, status, repositoryOrigin, ticks} = sensorState;
 
   const [stopSensor, {loading: toggleOffInFlight}] = useMutation<StopSensor>(STOP_SENSOR_MUTATION, {
     onCompleted: displaySensorMutationErrors,
@@ -219,7 +215,6 @@ export const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) =
           </Callout>
         )}
       </td>
-      <td></td>
       <td>
         {latestTick ? (
           <TickTag tick={latestTick} jobType={JobType.SENSOR} />
@@ -229,32 +224,7 @@ export const SensorStateRow = ({sensorState}: {sensorState: JobStateFragment}) =
       </td>
       <td>
         <div style={{display: 'flex'}}>
-          {runs.length ? (
-            runs.map((run) => {
-              return (
-                <div
-                  style={{
-                    cursor: 'pointer',
-                    marginRight: '4px',
-                  }}
-                  key={run.runId}
-                >
-                  <Link to={`/instance/runs/${run.runId}`}>
-                    <Tooltip
-                      position={'top'}
-                      content={titleForRun(run)}
-                      wrapperTagName="div"
-                      targetTagName="div"
-                    >
-                      <RunStatus status={run.status} />
-                    </Tooltip>
-                  </Link>
-                </div>
-              );
-            })
-          ) : (
-            <span style={{color: Colors.GRAY4}}>None</span>
-          )}
+          <JobRunStatus jobState={sensorState} />
         </div>
       </td>
     </tr>
@@ -272,16 +242,7 @@ export const ScheduleStateRow: React.FunctionComponent<{
   );
   const [showRepositoryOrigin, setShowRepositoryOrigin] = React.useState(false);
   const confirm = useConfirmation();
-  const {
-    id,
-    name,
-    ticks,
-    status,
-    repositoryOrigin,
-    runs,
-    runsCount,
-    jobSpecificData,
-  } = scheduleState;
+  const {id, name, ticks, status, repositoryOrigin, jobSpecificData} = scheduleState;
   const latestTick = ticks.length > 0 ? ticks[0] : null;
   const cronSchedule =
     jobSpecificData && jobSpecificData.__typename === 'ScheduleJobData'
@@ -349,39 +310,10 @@ export const ScheduleStateRow: React.FunctionComponent<{
       </td>
       <td>{latestTick ? <TickTag tick={latestTick} jobType={JobType.SCHEDULE} /> : null}</td>
       <td>
-        <div style={{display: 'flex'}}>
-          {runs.map((run) => {
-            return (
-              <div
-                style={{
-                  cursor: 'pointer',
-                  marginRight: '4px',
-                }}
-                key={run.runId}
-              >
-                <Link to={`/instance/runs/${run.runId}`}>
-                  <Tooltip
-                    position={'top'}
-                    content={titleForRun(run)}
-                    wrapperTagName="div"
-                    targetTagName="div"
-                  >
-                    <RunStatus status={run.status} />
-                  </Tooltip>
-                </Link>
-              </div>
-            );
-          })}
-          {runsCount > NUM_RUNS_TO_DISPLAY && (
-            <Link
-              to={`/instance/runs/?q=${encodeURIComponent(`tag:dagster/schedule_name=${name}`)}`}
-              style={{verticalAlign: 'top'}}
-            >
-              {' '}
-              +{runsCount - NUM_RUNS_TO_DISPLAY} more
-            </Link>
-          )}
-        </div>
+        <JobRunStatus jobState={scheduleState} />
+      </td>
+      <td>
+        <div style={{display: 'flex'}}></div>
       </td>
     </tr>
   );

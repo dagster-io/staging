@@ -128,7 +128,8 @@ export const SchedulesTable: React.FunctionComponent<SchedulesTableProps> = (pro
             <th>Pipeline</th>
             <th style={{width: '150px'}}>Schedule</th>
             <th style={{width: '100px'}}>Last Tick</th>
-            <th>Latest Runs</th>
+            <th>Last Requested</th>
+            <th>Partition Status</th>
             <th>Execution Params</th>
           </tr>
         </thead>
