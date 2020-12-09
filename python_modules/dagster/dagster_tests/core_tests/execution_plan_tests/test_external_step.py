@@ -153,7 +153,7 @@ def initialize_step_context(scratch_dir, instance):
         pass
     pipeline_context = initialization_manager.get_context()
 
-    step_context = pipeline_context.for_step(plan.get_step_by_key("return_two.compute"))
+    step_context = pipeline_context.for_step(plan.get_step_by_key("return_two"))
     return step_context
 
 

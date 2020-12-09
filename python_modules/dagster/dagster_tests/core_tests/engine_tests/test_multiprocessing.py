@@ -390,7 +390,7 @@ def test_crash_multiprocessing():
         assert (
             "Crashy output to stdout"
             in instance.compute_log_manager.read_logs_file(
-                result.run_id, "sys_exit.compute", ComputeIOType.STDOUT
+                result.run_id, "sys_exit", ComputeIOType.STDOUT
             ).data
         )
 
