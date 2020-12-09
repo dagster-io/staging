@@ -44,7 +44,7 @@ def define_cluster_provider_fixture(additional_kind_images=None):
     def _cluster_provider(request):
         from .kind import kind_cluster_exists, kind_cluster, kind_load_images
 
-        if IS_BUILDKITE:
+        if IS_BUILDKITE or True:
             print("Installing ECR credentials...")
             check_output("aws ecr get-login --no-include-email --region us-west-1 | sh", shell=True)
 

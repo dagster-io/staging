@@ -36,13 +36,13 @@ def _helm_namespace_helper(helm_chart_fn, request):
 
     else:
         # Never bother cleaning up on Buildkite
-        if IS_BUILDKITE:
+        if IS_BUILDKITE or True:
             should_cleanup = False
         # Otherwise, always clean up unless --no-cleanup specified
         else:
             should_cleanup = not request.config.getoption("--no-cleanup")
 
-        with test_namespace(should_cleanup) as namespace:
+        with get_helm_test_namespace(should_cleanup) as namespace:
             with helm_test_resources(namespace, should_cleanup):
                 docker_image = get_test_project_docker_image()
                 with helm_chart_fn(namespace, docker_image, should_cleanup):
@@ -83,7 +83,7 @@ def helm_namespace_for_k8s_run_launcher(
 
 
 @contextmanager
-def test_namespace(should_cleanup=True):
+def get_helm_test_namespace(should_cleanup=True):
     # Will be something like dagster-test-3fcd70 to avoid ns collisions in shared test environment
     namespace = get_test_namespace()
 
@@ -120,10 +120,19 @@ def helm_test_resources(namespace, should_cleanup=True):
         )
         kube_api = kubernetes.client.CoreV1Api()
 
+        data = {
+            "TEST_ENV_VAR": "foobar",
+            "AWS_ACCOUNT_ID": os.getenv("AWS_ACCOUNT_ID"),
+            "AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID"),
+            "AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY"),
+        }
+
+        print("WHAT IS THE CONFIGMAP: " + repr(data))
+
         configmap = kubernetes.client.V1ConfigMap(
             api_version="v1",
             kind="ConfigMap",
-            data={"TEST_ENV_VAR": "foobar"},
+            data=data,
             metadata=kubernetes.client.V1ObjectMeta(name=TEST_CONFIGMAP_NAME),
         )
         kube_api.create_namespaced_config_map(namespace=namespace, body=configmap)
@@ -208,6 +217,23 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config):
             for pod_name in pod_names:
                 print("Waiting for Celery worker pod %s" % pod_name)
                 wait_for_pod(pod_name, namespace=namespace)
+
+            if helm_config.get("rabbitmq", {"enabled": True}).get("enabled"):
+                while True:
+                    print("Waiting for rabbitmq pod to be ready...")
+                    pods = kube_api.list_namespaced_pod(namespace=namespace)
+                    pod_names = [
+                        p.metadata.name for p in pods.items if "rabbitmq" in p.metadata.name
+                    ]
+                    if pod_names:
+                        assert len(pod_names) == 1
+                        print("Waiting for pod: " + str(pod_names[0]))
+
+                        wait_for_pod(pod_names[0], namespace=namespace)
+                        print("Done waiting for rabbitmq pod to be ready")
+                        break
+                    time.sleep(1)
+
         else:
             assert (
                 len(pod_names) == 0

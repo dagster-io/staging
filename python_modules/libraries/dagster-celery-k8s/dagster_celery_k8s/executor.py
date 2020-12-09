@@ -172,6 +172,7 @@ class CeleryK8sJobExecutor(Executor):
         self._retries = check.inst_param(retries, "retries", Retries)
         self.broker = check.opt_str_param(broker, "broker", default=broker_url)
         self.backend = check.opt_str_param(backend, "backend", default=result_backend)
+
         self.include = check.opt_list_param(include, "include", of_type=str)
         self.config_source = dict_wrapper(
             dict(DEFAULT_CONFIG, **check.opt_dict_param(config_source, "config_source"))

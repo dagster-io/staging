@@ -121,6 +121,8 @@ def execute_run_command(input_json):
 
 def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_stream_fn):
 
+    click.echo("OH HI")
+
     # we need to send but the fact that we have loaded the args so the calling
     # process knows it is safe to clean up the temp input file
     write_stream_fn(ExecuteRunArgsLoadComplete())
@@ -140,12 +142,21 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
 
     try:
         for event in execute_run_iterator(recon_pipeline, pipeline_run, instance):
+            click.echo("THE EVENT: " + str(event))
             write_stream_fn(event)
     except KeyboardInterrupt:
+        click.echo(
+            "KEYBOARD INTERRUPT: " + str(serializable_error_info_from_exc_info(sys.exc_info()))
+        )
+
         instance.report_engine_event(
             message="Pipeline execution terminated by interrupt", pipeline_run=pipeline_run,
         )
     except DagsterSubprocessError as err:
+        click.echo(
+            "SUBPROCESS ERROR: " + str(serializable_error_info_from_exc_info(sys.exc_info()))
+        )
+
         if not all(
             [err_info.cls_name == "KeyboardInterrupt" for err_info in err.subprocess_error_infos]
         ):
@@ -156,6 +167,8 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
                 EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
             )
     except Exception:  # pylint: disable=broad-except
+        click.echo("EXCEPTION: " + str(serializable_error_info_from_exc_info(sys.exc_info())))
+
         instance.report_engine_event(
             "An exception was thrown during execution that is likely a framework error, "
             "rather than an error in user code.",
@@ -163,6 +176,8 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
             EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
         )
     finally:
+        click.echo("IT IS THE END! ")
+
         instance.report_engine_event(
             "Process for pipeline exited (pid: {pid}).".format(pid=pid), pipeline_run,
         )

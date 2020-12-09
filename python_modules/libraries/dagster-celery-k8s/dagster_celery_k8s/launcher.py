@@ -129,6 +129,9 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         self.retries = Retries.from_config(retries)
         self._instance_ref = None
 
+        print("BROKER IN LAUNCHER: " + str(self.broker))
+        print("BACKEND IN LAUNCHER: " + str(self.backend))
+
     @classmethod
     def config_type(cls):
         """Include all arguments required for DagsterK8sJobConfig along with additional arguments

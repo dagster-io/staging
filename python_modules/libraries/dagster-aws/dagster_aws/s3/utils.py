@@ -1,3 +1,5 @@
+import os
+
 import boto3
 from botocore import __version__ as botocore_version
 from botocore.config import Config
@@ -38,7 +40,6 @@ def construct_s3_client(
 
     s3_client = boto3.resource(  # pylint:disable=C0103
         "s3",
-        region_name=region_name,
         use_ssl=True,
         endpoint_url=endpoint_url,
         config=construct_boto_client_retry_config(max_attempts),
