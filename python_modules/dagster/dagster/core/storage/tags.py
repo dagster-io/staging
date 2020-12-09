@@ -37,6 +37,8 @@ RUN_KEY_TAG = "{prefix}run_key".format(prefix=SYSTEM_TAG_PREFIX)
 
 PRIORITY_TAG = "{prefix}priority".format(prefix=SYSTEM_TAG_PREFIX)
 
+TICK_ID_TAG = f"{HIDDEN_TAG_PREFIX}tick_id"
+
 
 class TagType(Enum):
     # Custom tag provided by a user
@@ -67,3 +69,21 @@ def check_tags(obj, name):
             not tag.startswith(SYSTEM_TAG_PREFIX),
             desc="User attempted to set tag with reserved system prefix: {tag}".format(tag=tag),
         )
+
+
+def build_tick_id_tag(tick_id, timestamp):
+    check.str_param(tick_id, "tick_id")
+    check.float_param(timestamp, "timestamp")
+    return f"{tick_id}:{str(timestamp)}"
+
+
+def parse_tick_id_tag(tick_id_tag_value):
+    check.str_param(tick_id_tag_value, "tick_id_tag_value")
+    parts = tick_id_tag_value.split(":")
+    if len(parts) != 2:
+        return tick_id_tag_value, None
+    tick_id, timestamp_str = parts
+    try:
+        return tick_id, float(timestamp_str)
+    except TypeError:
+        return tick_id, None

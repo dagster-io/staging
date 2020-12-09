@@ -39,7 +39,7 @@ from dagster.core.scheduler import (
 )
 from dagster.core.scheduler.job import JobTickData, JobTickStatus, JobType
 from dagster.core.storage.pipeline_run import PipelineRun
-from dagster.core.storage.tags import check_tags
+from dagster.core.storage.tags import TICK_ID_TAG, build_tick_id_tag, check_tags
 from dagster.core.telemetry import telemetry_wrapper
 from dagster.core.test_utils import mock_system_timezone
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -314,6 +314,10 @@ class _ScheduleLaunchContext:
         self._instance = instance
         self._tick = tick  # placeholder for the current tick
         self._stream = stream
+
+    @property
+    def tick(self):
+        return self._tick
 
     def update_state(self, status, **kwargs):
         self._tick = self._tick.with_status(status=status, **kwargs)
@@ -664,6 +668,7 @@ def _launch_run(
     pipeline_tags = external_pipeline.tags or {}
     check_tags(pipeline_tags, "pipeline_tags")
     tags = merge_dicts(pipeline_tags, schedule_tags)
+    tags[TICK_ID_TAG] = build_tick_id_tag(str(tick_context.tick_id), tick_context.timestamp)
 
     # Enter the run in the DB with the information we have
     possibly_invalid_pipeline_run = instance.create_run(
