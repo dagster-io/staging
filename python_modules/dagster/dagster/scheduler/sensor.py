@@ -20,7 +20,7 @@ from dagster.core.host_representation.external_data import (
 from dagster.core.instance import DagsterInstance
 from dagster.core.scheduler.job import JobStatus, JobTickData, JobTickStatus, SensorJobData
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
-from dagster.core.storage.tags import RUN_KEY_TAG, check_tags
+from dagster.core.storage.tags import RUN_KEY_TAG, TICK_ID_TAG, check_tags
 from dagster.utils import merge_dicts
 from dagster.utils.error import serializable_error_info_from_exc_info
 
@@ -34,6 +34,14 @@ class SensorLaunchContext:
         self._logger = logger
         self._job_state = job_state
         self._tick = tick
+
+    @property
+    def tick_id(self):
+        return self._tick.tick_id
+
+    @property
+    def timestamp(self):
+        return self._tick.timestamp
 
     @property
     def status(self):
@@ -332,6 +340,7 @@ def _create_sensor_run(
     tags = merge_dicts(
         merge_dicts(pipeline_tags, run_request.tags), PipelineRun.tags_for_sensor(external_sensor),
     )
+    tags[TICK_ID_TAG] = f"{context.tick_id}:{context.timestamp}"
     if run_request.run_key:
         tags[RUN_KEY_TAG] = run_request.run_key
 
