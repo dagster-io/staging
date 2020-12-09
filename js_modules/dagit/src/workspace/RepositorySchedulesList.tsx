@@ -95,8 +95,7 @@ export const RepositorySchedulesList: React.FC<Props> = (props) => {
       <tbody>
         {schedules.map((schedule) => {
           const {cronSchedule, mode, name, pipelineName, scheduleState} = schedule;
-          const runs = scheduleState?.runs;
-          const status = scheduleState?.status;
+          const {runs, status} = scheduleState;
 
           return (
             <tr key={`${pipelineName}-${name}`}>
