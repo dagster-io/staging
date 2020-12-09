@@ -397,6 +397,9 @@ class AssetStoreContext(
         Returns:
             List[str, ...]: A list of identifiers, i.e. run id, step key, and output name
         """
+        if self.mapping_key:
+            return [self.source_run_id, self.step_key, self.output_name, self.mapping_key]
+
         return [self.source_run_id, self.step_key, self.output_name]
 
     @staticmethod
