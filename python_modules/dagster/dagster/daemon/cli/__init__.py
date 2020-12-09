@@ -34,10 +34,20 @@ def health_check_command():
             sys.exit(1)
 
 
+@click.command(
+    name="wipe-heartbeats", help="Wipe all heartbeats from storage.",
+)
+def wipe_heartbeats_command():
+    with DagsterInstance.get() as instance:
+        instance.wipe_daemon_heartbeats()
+        click.echo("Daemon heartbeats wiped")
+
+
 def create_dagster_daemon_cli():
     commands = {
         "run": run_command,
         "health-check": health_check_command,
+        "wipe-heartbeats": wipe_heartbeats_command,
     }
 
     @click.group(commands=commands)
