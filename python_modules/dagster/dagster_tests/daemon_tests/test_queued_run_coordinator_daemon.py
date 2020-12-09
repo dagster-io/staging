@@ -6,9 +6,22 @@ from dagster.core.storage.tags import PRIORITY_TAG
 from dagster.core.test_utils import create_run_for_test, instance_for_test
 from dagster.daemon.run_coordinator.queued_run_coordinator_daemon import (
     IN_PROGRESS_STATUSES,
+    NON_IN_PROGRESS_STATUSES,
     QueuedRunCoordinatorDaemon,
 )
 from dagster_tests.api_tests.utils import get_foo_pipeline_handle
+
+
+def test_in_progress_statuses():
+    """
+    If this fails, then the dequeuer's statuses are out of sync with all PipelineRunStatuses.
+    """
+    for status in PipelineRunStatus:
+        in_progress = status in IN_PROGRESS_STATUSES
+        non_in_progress = status in NON_IN_PROGRESS_STATUSES
+        assert in_progress != non_in_progress  # should be in exactly one of the two
+
+    assert len(IN_PROGRESS_STATUSES) + len(NON_IN_PROGRESS_STATUSES) == len(PipelineRunStatus)
 
 
 @pytest.fixture()

@@ -10,9 +10,20 @@ from dagster.daemon.types import DaemonType
 from dagster.utils.backcompat import experimental
 from dagster.utils.external import external_pipeline_from_run
 
+# All run statuses that indicate a run is using compute resources
 IN_PROGRESS_STATUSES = [
-    PipelineRunStatus.NOT_STARTED,
+    PipelineRunStatus.STARTING,
     PipelineRunStatus.STARTED,
+]
+
+# This serves as an explicit list of run statuses that are not considered for concurrency limits.
+# This and the enum above should cover all run statuses.
+NON_IN_PROGRESS_STATUSES = [
+    PipelineRunStatus.QUEUED,
+    PipelineRunStatus.NOT_STARTED,
+    PipelineRunStatus.SUCCESS,
+    PipelineRunStatus.FAILURE,
+    PipelineRunStatus.MANAGED,
 ]
 
 
