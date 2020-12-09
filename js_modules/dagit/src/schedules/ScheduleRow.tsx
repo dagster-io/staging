@@ -17,11 +17,10 @@ import {Link} from 'react-router-dom';
 
 import {showCustomAlert} from 'src/CustomAlertProvider';
 import {TickTag} from 'src/JobTick';
+import {JobRunStatus} from 'src/JobUtils';
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
-import {RunStatus} from 'src/runs/RunStatusDots';
-import {DagsterTag} from 'src/runs/RunTag';
-import {titleForRun} from 'src/runs/RunUtils';
 import {ReconcileButton} from 'src/schedules/ReconcileButton';
+import {SchedulePartitionStatus} from 'src/schedules/SchedulePartitionStatus';
 import {humanCronString} from 'src/schedules/humanCronString';
 import {ScheduleFragment} from 'src/schedules/types/ScheduleFragment';
 import {
@@ -36,8 +35,6 @@ import {JobStatus, JobType} from 'src/types/globalTypes';
 import {Code} from 'src/ui/Text';
 import {RepoAddress} from 'src/workspace/types';
 import {workspacePathFromAddress} from 'src/workspace/workspacePath';
-
-const NUM_RUNS_TO_DISPLAY = 10;
 
 const errorDisplay = (status: JobStatus, runningScheduleCount: number) => {
   if (status === JobStatus.STOPPED && runningScheduleCount === 0) {
@@ -145,7 +142,7 @@ export const ScheduleRow: React.FC<{
     <Link to={workspacePathFromAddress(repoAddress, `/schedules/${name}`)}>{name}</Link>
   );
 
-  const {id, status, runs, runsCount, ticks, runningCount: runningScheduleCount} = scheduleState;
+  const {id, status, ticks, runningCount: runningScheduleCount} = scheduleState;
 
   const latestTick = ticks.length > 0 ? ticks[0] : null;
 
@@ -200,58 +197,18 @@ export const ScheduleRow: React.FC<{
         )}
       </td>
       <td>
-        <div style={{display: 'flex'}}>
-          {runs.map((run) => {
-            const [partition] = run.tags
-              .filter((tag) => tag.key === DagsterTag.Partition)
-              .map((tag) => tag.value);
-            const runLabel = partition ? (
-              <>
-                <div>Run id: {titleForRun(run)}</div>
-                <div>Partition: {partition}</div>
-              </>
-            ) : (
-              titleForRun(run)
-            );
-            return (
-              <div
-                style={{
-                  cursor: 'pointer',
-                  marginRight: '4px',
-                }}
-                key={run.runId}
-              >
-                <Link to={`/instance/runs/${run.runId}`}>
-                  <Tooltip
-                    position={'top'}
-                    content={runLabel}
-                    wrapperTagName="div"
-                    targetTagName="div"
-                  >
-                    <RunStatus status={run.status} />
-                  </Tooltip>
-                </Link>
-              </div>
-            );
-          })}
-        </div>
-        {runsCount > NUM_RUNS_TO_DISPLAY && (
-          <Link
-            to={workspacePathFromAddress(repoAddress, `/schedules/${name}`)}
-            style={{verticalAlign: 'top'}}
-          >
-            {' '}
-            +{runsCount - NUM_RUNS_TO_DISPLAY} more
-          </Link>
-        )}
+        <JobRunStatus jobState={scheduleState} />
+      </td>
+      <td>
+        <SchedulePartitionStatus schedule={schedule} />
       </td>
       <td>
         <div style={{display: 'flex', alignItems: 'center'}}>
           <div>{`Mode: ${mode}`}</div>
-          <Popover
-            content={
-              <Menu>
-                {schedule.partitionSet?.name ? (
+          {schedule.partitionSet ? (
+            <Popover
+              content={
+                <Menu>
                   <MenuItem
                     text="View Partition History..."
                     icon="multi-select"
@@ -261,13 +218,22 @@ export const ScheduleRow: React.FC<{
                       `/pipelines/${pipelineName}/partitions`,
                     )}
                   />
-                ) : null}
-              </Menu>
-            }
-            position="bottom"
-          >
-            <Button small minimal icon="chevron-down" style={{marginLeft: '4px'}} />
-          </Popover>
+                  <MenuItem
+                    text="Launch Partition Backfill..."
+                    icon="add"
+                    target="_blank"
+                    href={workspacePathFromAddress(
+                      repoAddress,
+                      `/pipelines/${pipelineName}/partitions`,
+                    )}
+                  />
+                </Menu>
+              }
+              position="bottom"
+            >
+              <Button small minimal icon="chevron-down" style={{marginLeft: '4px'}} />
+            </Popover>
+          ) : null}
         </div>
       </td>
     </tr>

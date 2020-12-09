@@ -1,11 +1,10 @@
 import {useMutation} from '@apollo/client';
-import {Colors, Switch, Tooltip} from '@blueprintjs/core';
+import {Colors, Switch} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 
 import {TickTag} from 'src/JobTick';
-import {RunStatus} from 'src/runs/RunStatusDots';
-import {titleForRun} from 'src/runs/RunUtils';
+import {JobRunStatus} from 'src/JobUtils';
 import {
   displaySensorMutationErrors,
   START_SENSOR_MUTATION,
@@ -27,11 +26,8 @@ interface RowProps {
 
 const SensorRow = (props: RowProps) => {
   const {repoAddress, sensor} = props;
-  const {
-    name,
-    pipelineName,
-    sensorState: {runs, status, ticks},
-  } = sensor;
+  const {name, pipelineName, sensorState} = sensor;
+  const {status, ticks} = sensorState;
   const latestTick = ticks.length ? ticks[0] : null;
 
   const sensorSelector = {
@@ -85,32 +81,7 @@ const SensorRow = (props: RowProps) => {
       </td>
       <td>
         <div style={{display: 'flex'}}>
-          {runs.length ? (
-            runs.map((run) => {
-              return (
-                <div
-                  style={{
-                    cursor: 'pointer',
-                    marginRight: '4px',
-                  }}
-                  key={run.runId}
-                >
-                  <Link to={`/instance/runs/${run.runId}`}>
-                    <Tooltip
-                      position={'top'}
-                      content={titleForRun(run)}
-                      wrapperTagName="div"
-                      targetTagName="div"
-                    >
-                      <RunStatus status={run.status} />
-                    </Tooltip>
-                  </Link>
-                </div>
-              );
-            })
-          ) : (
-            <span style={{color: Colors.GRAY4}}>None</span>
-          )}
+          <JobRunStatus jobState={sensorState} />
         </div>
       </td>
     </tr>
@@ -134,7 +105,7 @@ export const SensorsTable = (props: Props) => {
             <th>Sensor Name</th>
             <th>Pipeline</th>
             <th style={{width: '100px'}}>Last Tick</th>
-            <th>Latest runs</th>
+            <th>Last Requested</th>
           </tr>
         </thead>
         <tbody>
