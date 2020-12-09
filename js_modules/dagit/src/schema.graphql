@@ -1014,7 +1014,7 @@ type PipelineRunLogsSubscriptionSuccess {
   messages: [PipelineRunEvent!]!
 }
 
-union PipelineRunEvent = ExecutionStepFailureEvent | ExecutionStepInputEvent | ExecutionStepOutputEvent | ExecutionStepSkippedEvent | ExecutionStepStartEvent | ExecutionStepSuccessEvent | ExecutionStepUpForRetryEvent | ExecutionStepRestartEvent | LogMessageEvent | PipelineFailureEvent | PipelineInitFailureEvent | PipelineStartEvent | PipelineEnqueuedEvent | PipelineDequeuedEvent | PipelineStartingEvent | PipelineSuccessEvent | ObjectStoreOperationEvent | AssetStoreOperationEvent | StepExpectationResultEvent | StepMaterializationEvent | EngineEvent | HookCompletedEvent | HookSkippedEvent | HookErroredEvent
+union PipelineRunEvent = ExecutionStepFailureEvent | ExecutionStepInputEvent | ExecutionStepOutputEvent | ExecutionStepSkippedEvent | ExecutionStepStartEvent | ExecutionStepSuccessEvent | ExecutionStepUpForRetryEvent | ExecutionStepRestartEvent | LogMessageEvent | PipelineFailureEvent | PipelineInitFailureEvent | PipelineStartEvent | PipelineEnqueuedEvent | PipelineDequeuedEvent | PipelineStartingEvent | PipelineSuccessEvent | HandledOutputEvent | LoadedInputEvent | ObjectStoreOperationEvent | AssetStoreOperationEvent | StepExpectationResultEvent | StepMaterializationEvent | EngineEvent | HookCompletedEvent | HookSkippedEvent | HookErroredEvent
 
 type ExecutionStepFailureEvent implements MessageEvent & StepEvent {
   runId: String!
@@ -1192,6 +1192,30 @@ type PipelineSuccessEvent implements MessageEvent & PipelineEvent {
   stepKey: String
   solidHandleID: String
   pipelineName: String!
+}
+
+type HandledOutputEvent implements MessageEvent & StepEvent {
+  runId: String!
+  message: String!
+  timestamp: String!
+  level: LogLevel!
+  stepKey: String
+  solidHandleID: String
+  outputName: String!
+  managerKey: String!
+}
+
+type LoadedInputEvent implements MessageEvent & StepEvent {
+  runId: String!
+  message: String!
+  timestamp: String!
+  level: LogLevel!
+  stepKey: String
+  solidHandleID: String
+  inputName: String!
+  managerKey: String!
+  upstreamOutputName: String
+  upstreamStepKey: String
 }
 
 type ObjectStoreOperationEvent implements MessageEvent & StepEvent {
