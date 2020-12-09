@@ -9,6 +9,8 @@ from dagster.core.scheduler.job import (
     SensorJobData,
 )
 from dagster.core.storage.pipeline_run import PipelineRunsFilter
+from dagster.core.storage.tags import TICK_ID_TAG, parse_tick_id_tag
+from dagster.utils import merge_dicts
 from dagster_graphql import dauphin
 
 
@@ -61,6 +63,7 @@ class DauphinJobState(dauphin.ObjectType):
     runs = dauphin.Field(dauphin.non_null_list("PipelineRun"), limit=dauphin.Int())
     runsCount = dauphin.NonNull(dauphin.Int)
     ticks = dauphin.Field(dauphin.non_null_list("JobTick"), limit=dauphin.Int())
+    lastRequested = dauphin.Field("JobLastRequested")
     runningCount = dauphin.NonNull(dauphin.Int)  # remove with cron scheduler
 
     def __init__(self, job_state):
@@ -97,6 +100,7 @@ class DauphinJobState(dauphin.ObjectType):
             filters = PipelineRunsFilter.for_sensor(self._job_state)
         else:
             filters = PipelineRunsFilter.for_schedule(self._job_state)
+
         return [
             graphene_info.schema.type_named("PipelineRun")(r)
             for r in graphene_info.context.instance.get_runs(
@@ -118,6 +122,38 @@ class DauphinJobState(dauphin.ObjectType):
             ticks = ticks[:limit]
 
         return [graphene_info.schema.type_named("JobTick")(graphene_info, tick) for tick in ticks]
+
+    def resolve_lastRequested(self, graphene_info):
+        if self._job_state.job_type == JobType.SENSOR:
+            filters = PipelineRunsFilter.for_sensor(self._job_state)
+        else:
+            filters = PipelineRunsFilter.for_schedule(self._job_state)
+
+        runs = graphene_info.context.instance.get_runs(filters=filters, limit=1)
+        if not runs:
+            return None
+
+        reference_run = runs[0]  # last requested run
+        if TICK_ID_TAG not in reference_run.tags:
+            return graphene_info.schema.type_named("JobLastRequested")(
+                timestamp=None,
+                runs=[graphene_info.schema.type_named("PipelineRun")(reference_run)],
+            )
+
+        tick_tag_value = reference_run.tags[TICK_ID_TAG]
+        _, timestamp = parse_tick_id_tag(tick_tag_value)
+
+        return graphene_info.schema.type_named("JobLastRequested")(
+            timestamp=timestamp,
+            runs=[
+                graphene_info.schema.type_named("PipelineRun")(r)
+                for r in graphene_info.context.instance.get_runs(
+                    filters=PipelineRunsFilter(
+                        tags=merge_dicts(filters.tags, {TICK_ID_TAG: tick_tag_value})
+                    )
+                )
+            ],
+        )
 
     def resolve_runningCount(self, graphene_info):
         if self._job_state.job_type == JobType.SENSOR:
@@ -175,6 +211,14 @@ class DauphinJobStates(dauphin.ObjectType):
         name = "JobStates"
 
     results = dauphin.non_null_list("JobState")
+
+
+class DauphinJobLastRequested(dauphin.ObjectType):
+    class Meta:
+        name = "JobLastRequested"
+
+    timestamp = dauphin.Float()
+    runs = dauphin.non_null_list("PipelineRun")
 
 
 DauphinJobType = dauphin.Enum.from_enum(JobType)
