@@ -22,6 +22,7 @@ from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.output_manager import OutputManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.system_config.objects import EnvironmentConfig
+from dagster.core.types.dagster_type import DagsterType
 
 
 class SystemExecutionContextData(
@@ -293,15 +294,18 @@ class SystemStepExecutionContext(SystemExecutionContext):
         else:
             return self.pipeline_run.run_id
 
-    def get_output_context(self, step_output_handle):
+    def get_output_context(self, step_output_handle, dagster_type=None):
         return get_output_context(
             self.execution_plan,
             self.environment_config,
             step_output_handle,
             self._get_source_run_id(step_output_handle),
+            dagster_type,
         )
 
-    def for_input_manager(self, input_name, input_config, input_metadata, source_handle=None):
+    def for_input_manager(
+        self, input_name, input_config, input_metadata, source_handle=None, dagster_type=None
+    ):
         return InputContext(
             input_name=input_name,
             input_config=input_config,
@@ -309,6 +313,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             pipeline_name=self.pipeline_def.name,
             solid_def=self.solid_def,
             upstream_output=self.get_output_context(source_handle) if source_handle else None,
+            dagster_type=dagster_type,
         )
 
     def get_output_manager(self, step_output_handle):
@@ -407,7 +412,8 @@ class HookContext(SystemExecutionContext):
 
 class OutputContext(
     namedtuple(
-        "_OutputContext", "step_key name metadata run_id pipeline_name config solid_def version"
+        "_OutputContext",
+        "step_key name metadata run_id pipeline_name config solid_def version dagster_type",
     )
 ):
     """
@@ -421,6 +427,7 @@ class OutputContext(
         config (Optional[Any]): The configuration for the output.
         solid_def (Optional[SolidDefinition]): The definition of the solid that produced the output.
         version (Optional[str]): (Experimental) The version of the output.
+        dagster_type (Optional[DagsterType]): The type of this output.
     """
 
     def get_run_scoped_output_identifier(self):
@@ -445,7 +452,7 @@ class OutputContext(
 class InputContext(
     namedtuple(
         "_InputContext",
-        "input_name pipeline_name solid_def input_config input_metadata upstream_output",
+        "input_name pipeline_name solid_def input_config input_metadata upstream_output dagster_type",
     )
 ):
     """
@@ -460,6 +467,7 @@ class InputContext(
             InputDefinition that we're loading for.
         upstream_output (Optional[OutputContext]): Info about the output that produced the object
             we're loading.
+        dagster_type (Optional[DagsterType]): The type of this input.
     """
 
     def __new__(
@@ -471,6 +479,7 @@ class InputContext(
         input_config=None,
         input_metadata=None,
         upstream_output=None,
+        dagster_type=None,
     ):
 
         return super(InputContext, cls).__new__(
@@ -481,6 +490,7 @@ class InputContext(
             input_config=input_config,
             input_metadata=input_metadata,
             upstream_output=check.opt_inst_param(upstream_output, "upstream_output", OutputContext),
+            dagster_type=check.opt_inst_param(dagster_type, "dagster_type", DagsterType),
         )
 
 
@@ -493,7 +503,9 @@ def _step_output_version(execution_plan, step_output_handle):
     )
 
 
-def get_output_context(execution_plan, environment_config, step_output_handle, run_id):
+def get_output_context(
+    execution_plan, environment_config, step_output_handle, run_id, dagster_type
+):
     """
     Args:
         run_id (str): The run ID of the run that produced the output, not necessarily the run that
@@ -505,6 +517,7 @@ def get_output_context(execution_plan, environment_config, step_output_handle, r
     check.inst_param(environment_config, "environment_config", EnvironmentConfig)
     check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
     check.opt_str_param(run_id, "run_id")
+    check.opt_inst_param(dagster_type, "dagster_type", DagsterType)
 
     step = execution_plan.get_step_by_key(step_output_handle.step_key)
     # get config
@@ -525,4 +538,5 @@ def get_output_context(execution_plan, environment_config, step_output_handle, r
         solid_def=step.solid.definition,
         pipeline_name=execution_plan.pipeline.get_definition().name,
         config=output_config,
+        dagster_type=dagster_type,
     )

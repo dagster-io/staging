@@ -5,6 +5,7 @@ from abc import ABCMeta, abstractmethod
 
 import six
 from dagster import check
+from dagster.core.storage.object_manager import ObjectManager
 from dagster.core.types.marshal import PickleSerializationStrategy, SerializationStrategy
 from dagster.utils import mkdir_p
 

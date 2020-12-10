@@ -230,3 +230,7 @@ def test_error_message():
         execute_pipeline(
             repro, run_config={"storage": {"filesystem": {}}},
         )
+
+
+# test intermediate storage -> object manager migration
+# def test_object_manager_intermediate_storage():
