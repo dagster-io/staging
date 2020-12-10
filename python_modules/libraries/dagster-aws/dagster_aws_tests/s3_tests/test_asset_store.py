@@ -83,6 +83,7 @@ def test_s3_asset_store_execution(mock_s3_bucket):
         pipeline_def.name,
         pipeline_def.solid_def_named("return_one"),
         run_id,
+        execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
     )
     assert asset_store.get_asset(context) == 1
 
@@ -103,6 +104,7 @@ def test_s3_asset_store_execution(mock_s3_bucket):
         pipeline_def.name,
         pipeline_def.solid_def_named("add_one"),
         run_id,
+        execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
     )
 
     assert get_step_output(add_one_step_events, "add_one")
