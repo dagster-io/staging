@@ -6,7 +6,7 @@ from dagster.core.errors import DagsterInvariantViolationError, DagsterRunNotFou
 from dagster.core.events import DagsterEvent, DagsterEventType
 from dagster.core.events.log import EventRecord
 from dagster.core.execution.context.system import SystemExecutionContext
-from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.storage.asset_store import mem_asset_store
 
