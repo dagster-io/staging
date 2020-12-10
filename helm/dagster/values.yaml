@@ -65,7 +65,7 @@ dagit:
     httpGet:
       path: "/dagit_info"
       port: 80
-    # initialDelaySeconds: 60
+    initialDelaySeconds: 60
     periodSeconds: 20
     timeoutSeconds: 3
     successThreshold: 1
