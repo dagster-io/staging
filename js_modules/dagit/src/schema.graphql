@@ -400,6 +400,7 @@ type ExecutionStepOutput {
 
 enum StepKind {
   COMPUTE
+  UNRESOLVED
 }
 
 type Asset {
