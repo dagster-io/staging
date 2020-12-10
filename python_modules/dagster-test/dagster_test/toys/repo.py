@@ -7,6 +7,7 @@ from dagster_test.toys.log_file import log_file_pipeline
 from dagster_test.toys.log_spew import log_spew
 from dagster_test.toys.longitudinal import longitudinal_pipeline
 from dagster_test.toys.many_events import many_events
+from dagster_test.toys.mappable import mappable_pipeline
 from dagster_test.toys.retries import retry_pipeline
 from dagster_test.toys.sleepy import sleepy_pipeline
 from dagster_test.toys.unreliable import unreliable_pipeline
@@ -30,6 +31,7 @@ def toys_repository():
             retry_pipeline,
             branch_pipeline,
             unreliable_pipeline,
+            mappable_pipeline,
         ]
         + get_toys_schedules()
         + get_toys_sensors()
