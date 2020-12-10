@@ -77,12 +77,13 @@ def test_s3_asset_store_execution(mock_s3_bucket):
     asset_store = PickledObjectS3AssetStore(mock_s3_bucket.name, s3_prefix="dagster")
     step_output_handle = StepOutputHandle("return_one")
     context = AssetStoreContext(
-        step_output_handle.step_key,
-        step_output_handle.output_name,
-        {},
-        pipeline_def.name,
-        pipeline_def.solid_def_named("return_one"),
-        run_id,
+        step_key=step_output_handle.step_key,
+        output_name=step_output_handle.output_name,
+        asset_metadata={},
+        pipeline_name=pipeline_def.name,
+        solid_def=pipeline_def.solid_def_named("return_one"),
+        dagster_type=execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
+        source_run_id=run_id,
     )
     assert asset_store.get_asset(context) == 1
 
@@ -97,12 +98,13 @@ def test_s3_asset_store_execution(mock_s3_bucket):
 
     step_output_handle = StepOutputHandle("add_one")
     context = AssetStoreContext(
-        step_output_handle.step_key,
-        step_output_handle.output_name,
-        {},
-        pipeline_def.name,
-        pipeline_def.solid_def_named("add_one"),
-        run_id,
+        step_key=step_output_handle.step_key,
+        output_name=step_output_handle.output_name,
+        asset_metadata={},
+        pipeline_name=pipeline_def.name,
+        solid_def=pipeline_def.solid_def_named("add_one"),
+        dagster_type=execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
+        source_run_id=run_id,
     )
 
     assert get_step_output(add_one_step_events, "add_one")

@@ -3,6 +3,7 @@ import pickle
 
 import pytest
 from dagster import (
+    Any,
     DagsterInstance,
     DagsterInvariantViolationError,
     ModeDefinition,
@@ -308,6 +309,7 @@ def test_versioned_asset_store():
             asset_metadata={},
             pipeline_name="fake",
             solid_def=get_fake_solid(),
+            dagster_type=Any,
             source_run_id=None,
             version="version1",
         )
@@ -320,6 +322,7 @@ def test_versioned_asset_store():
             asset_metadata={},
             pipeline_name="fake",
             solid_def=get_fake_solid(),
+            dagster_type=Any,
             source_run_id=None,
             version="version2",
         )
