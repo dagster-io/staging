@@ -3,6 +3,7 @@ from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.init import InitResourceContext
 from dagster.core.execution.context.system import get_output_context
 from dagster.core.execution.plan.outputs import StepOutputHandle
+from dagster.core.execution.plan.step import ExecutionStep
 from dagster.core.storage.asset_store import AssetStoreContext
 from dagster.utils.backcompat import experimental
 
@@ -96,6 +97,10 @@ def resolve_step_versions_helper(execution_plan):
     step_versions = {}  # step_key (str) -> version (str)
 
     for step in execution_plan.get_all_steps_in_topo_order():
+        # do not compute versions for unresolved steps
+        if not isinstance(step, ExecutionStep):
+            continue
+
         input_version_dict = {
             input_name: step_input.source.compute_version(step_versions)
             for input_name, step_input in step.step_input_dict.items()
@@ -131,6 +136,7 @@ def resolve_step_output_versions_helper(execution_plan):
     return {
         StepOutputHandle(step.key, output_name): join_and_hash(output_name, step_versions[step.key])
         for step in execution_plan.steps
+        if isinstance(step, ExecutionStep)
         for output_name in step.step_output_dict.keys()
     }
 
