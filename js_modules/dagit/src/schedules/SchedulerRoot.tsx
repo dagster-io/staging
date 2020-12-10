@@ -7,22 +7,20 @@ import {Loading} from 'src/Loading';
 import {PythonErrorInfo} from 'src/PythonErrorInfo';
 import {REPOSITORY_INFO_FRAGMENT} from 'src/RepositoryInformation';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
-import {UnloadableJobs} from 'src/jobs/UnloadableJobs';
+import {UnloadableSchedules} from 'src/jobs/UnloadableJobs';
 import {SCHEDULE_FRAGMENT, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
 import {SCHEDULER_FRAGMENT, SchedulerInfo} from 'src/schedules/SchedulerInfo';
 import {SchedulesTable} from 'src/schedules/SchedulesTable';
-import {InstanceJobsRootQuery} from 'src/schedules/types/InstanceJobsRootQuery';
-import {SENSOR_FRAGMENT} from 'src/sensors/SensorFragment';
-import {SensorsTable} from 'src/sensors/SensorsTable';
+import {SchedulerRootQuery} from 'src/schedules/types/SchedulerRootQuery';
 import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
 import {Page} from 'src/ui/Page';
 import {PageHeader} from 'src/ui/PageHeader';
 import {Subheading} from 'src/ui/Text';
 
-export const InstanceJobsRoot = () => {
+export const SchedulerRoot = () => {
   useDocumentTitle('Scheduler');
-  const queryResult = useQuery<InstanceJobsRootQuery>(INSTANCE_JOBS_ROOT_QUERY, {
+  const queryResult = useQuery<SchedulerRootQuery>(SCHEDULER_ROOT_QUERY, {
     variables: {},
     fetchPolicy: 'cache-and-network',
   });
@@ -43,9 +41,6 @@ export const InstanceJobsRoot = () => {
             }
 
             const unloadableJobs = unloadableJobStatesOrError.results;
-            const hasSensors = repositoriesOrError.nodes.some(
-              (repository) => repository.sensors.length,
-            );
             const hasSchedules = repositoriesOrError.nodes.some(
               (repository) => repository.schedules.length,
             );
@@ -72,35 +67,11 @@ export const InstanceJobsRoot = () => {
               </Group>
             ) : null;
 
-            const sensorDefinitionsSection = hasSensors ? (
-              <Group direction="column" spacing={12}>
-                <Box
-                  flex={{justifyContent: 'space-between', alignItems: 'flex-end'}}
-                  padding={{bottom: 12}}
-                  border={{side: 'bottom', width: 1, color: Colors.LIGHT_GRAY3}}
-                >
-                  <Subheading>Sensors</Subheading>
-                </Box>
-                {repositoriesOrError.nodes.map((repository) =>
-                  repository.sensors.length ? (
-                    <Group direction="column" spacing={12} key={repository.name}>
-                      <strong>{`${repository.name}@${repository.location.name}`}</strong>
-                      <SensorsTable
-                        repoAddress={{name: repository.name, location: repository.location.name}}
-                        sensors={repository.sensors}
-                      />
-                    </Group>
-                  ) : null,
-                )}
-              </Group>
-            ) : null;
-
             return (
               <Group direction="column" spacing={32}>
                 <SchedulerInfo schedulerOrError={scheduler} />
                 {scheduleDefinitionsSection}
-                {sensorDefinitionsSection}
-                <UnloadableJobs jobStates={unloadableJobs} />
+                <UnloadableSchedules scheduleStates={unloadableJobs} />
               </Group>
             );
           }}
@@ -110,8 +81,8 @@ export const InstanceJobsRoot = () => {
   );
 };
 
-const INSTANCE_JOBS_ROOT_QUERY = gql`
-  query InstanceJobsRootQuery {
+const SCHEDULER_ROOT_QUERY = gql`
+  query SchedulerRootQuery {
     repositoriesOrError {
       __typename
       ... on RepositoryConnection {
@@ -123,10 +94,6 @@ const INSTANCE_JOBS_ROOT_QUERY = gql`
             id
             ...ScheduleFragment
           }
-          sensors {
-            id
-            ...SensorFragment
-          }
         }
       }
       ...PythonErrorFragment
@@ -134,7 +101,7 @@ const INSTANCE_JOBS_ROOT_QUERY = gql`
     scheduler {
       ...SchedulerFragment
     }
-    unloadableJobStatesOrError {
+    unloadableJobStatesOrError(jobType: SCHEDULE) {
       ... on JobStates {
         results {
           id
@@ -149,6 +116,5 @@ const INSTANCE_JOBS_ROOT_QUERY = gql`
   ${SCHEDULE_FRAGMENT}
   ${SCHEDULER_FRAGMENT}
   ${PythonErrorInfo.fragments.PythonErrorFragment}
-  ${SENSOR_FRAGMENT}
   ${JOB_STATE_FRAGMENT}
 `;
