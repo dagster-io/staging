@@ -30,8 +30,8 @@ class UserDeployment(BaseModel):
     securityContext: Optional[SecurityContext]
     resources: Optional[Resources]
     replicaCount: int
-    livenessProbe: Optional[LivenessProbe]
-    startupProbe: Optional[StartupProbe]
+    livenessProbe: LivenessProbe
+    startupProbe: StartupProbe
 
 
 class UserDeployments(BaseModel):
