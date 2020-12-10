@@ -391,7 +391,7 @@ class ExecutionPlan(
         return deps
 
     def get_steps_to_execute_in_topo_order(self):
-        return [step for step_level in self.get_all_steps_by_level() for step in step_level]
+        return [step for step_level in self.get_steps_to_execute_by_level() for step in step_level]
 
     def get_steps_to_execute_by_level(self):
         return [
