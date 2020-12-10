@@ -18,7 +18,7 @@ export const InstanceRoot = () => {
         <Route path="/instance/assets/(/?.*)" component={AssetEntryRoot} />
         <Route path="/instance/runs" exact component={RunsRoot} />
         <Route path="/instance/runs/:runId" exact component={RunRoot} />
-        <Route path="/instance/scheduler" exact component={InstanceJobsRoot} />
+        <Route path="/instance/jobs" exact component={InstanceJobsRoot} />
         <Route path="/instance/snapshots/:pipelinePath/:tab?" component={SnapshotRoot} />
         <Route
           path="/instance/:tab"
