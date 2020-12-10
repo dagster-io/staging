@@ -213,7 +213,6 @@ def test_error_notebook():
             pass
 
     assert "Someone set up us the bomb" in str(exc.value)
-
     with exec_for_test("define_error_pipeline", raise_on_error=False) as result:
         assert not result.success
         assert result.step_event_list[1].event_type.value == "STEP_MATERIALIZATION"
