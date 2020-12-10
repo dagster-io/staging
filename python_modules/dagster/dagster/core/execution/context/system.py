@@ -299,6 +299,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             self.environment_config,
             step_output_handle,
             self._get_source_run_id(step_output_handle),
+            log_manager=self._log_manager,
         )
 
     def for_input_manager(self, input_name, input_config, input_metadata, source_handle=None):
@@ -309,6 +310,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             pipeline_name=self.pipeline_def.name,
             solid_def=self.solid_def,
             upstream_output=self.get_output_context(source_handle) if source_handle else None,
+            log_manager=self._log_manager,
         )
 
     def get_output_manager(self, step_output_handle):
@@ -408,22 +410,50 @@ class HookContext(SystemExecutionContext):
 class OutputContext(
     namedtuple(
         "_OutputContext",
-        "step_key name mapping_key metadata run_id pipeline_name config solid_def version",
+        "step_key name run_id pipeline_name metadata mapping_key config solid_def log version",
     )
 ):
     """
     Attributes:
         step_key (str): The step_key for the compute step that produced the output.
         name (str): The name of the output that produced the output.
-        mapping_key (Optional[str]): The key that identifies a unique mapped output. None for regular outputs.
-        metadata (Dict[str, Any]): A dict of the metadata that is assigned to the
-            OutputDefinition that produced the output.
         run_id (str): The id of the run that produced the output.
         pipeline_name (str): The name of the pipeline definition.
+        metadata (Optional[Dict[str, Any]]): A dict of the metadata that is assigned to the
+            OutputDefinition that produced the output.
+        mapping_key (Optional[str]): The key that identifies a unique mapped output. None for regular outputs.
         config (Optional[Any]): The configuration for the output.
         solid_def (Optional[SolidDefinition]): The definition of the solid that produced the output.
+        log (Optional[DagsterLogmanager]): The log manager to use for this output.
         version (Optional[str]): (Experimental) The version of the output.
     """
+
+    def __new__(
+        cls,
+        step_key,
+        name,
+        run_id,
+        pipeline_name,
+        metadata=None,
+        mapping_key=None,
+        config=None,
+        solid_def=None,
+        log_manager=None,
+        version=None,
+    ):
+        return super(OutputContext, cls).__new__(
+            cls,
+            step_key=check.str_param(step_key, "step_key"),
+            name=check.str_param(name, "name"),
+            run_id=check.str_param(run_id, "run_id"),
+            pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+            metadata=check.opt_dict_param(metadata, "metadata"),
+            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
+            config=config,
+            solid_def=check.opt_inst_param(solid_def, "solid_def", SolidDefinition),
+            log=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
+            version=check.opt_str_param(version, "version"),
+        )
 
     def get_run_scoped_output_identifier(self):
         """Utility method to get a collection of identifiers that as a whole represent a unique
@@ -450,7 +480,7 @@ class OutputContext(
 class InputContext(
     namedtuple(
         "_InputContext",
-        "input_name pipeline_name solid_def input_config input_metadata upstream_output",
+        "input_name pipeline_name solid_def input_config input_metadata upstream_output log",
     )
 ):
     """
@@ -465,6 +495,7 @@ class InputContext(
             InputDefinition that we're loading for.
         upstream_output (Optional[OutputContext]): Info about the output that produced the object
             we're loading.
+        log (Optional[DagsterLogManager]): The log manager to use for this input.
     """
 
     def __new__(
@@ -476,6 +507,7 @@ class InputContext(
         input_config=None,
         input_metadata=None,
         upstream_output=None,
+        log_manager=None,
     ):
 
         return super(InputContext, cls).__new__(
@@ -486,6 +518,7 @@ class InputContext(
             input_config=input_config,
             input_metadata=input_metadata,
             upstream_output=check.opt_inst_param(upstream_output, "upstream_output", OutputContext),
+            log=check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
         )
 
 
@@ -498,7 +531,9 @@ def _step_output_version(execution_plan, step_output_handle):
     )
 
 
-def get_output_context(execution_plan, environment_config, step_output_handle, run_id):
+def get_output_context(
+    execution_plan, environment_config, step_output_handle, run_id, log_manager=None
+):
     """
     Args:
         run_id (str): The run ID of the run that produced the output, not necessarily the run that
@@ -524,11 +559,12 @@ def get_output_context(execution_plan, environment_config, step_output_handle, r
     return OutputContext(
         step_key=step_output_handle.step_key,
         name=step_output_handle.output_name,
-        mapping_key=step_output_handle.mapping_key,
         metadata=execution_plan.get_step_output(step_output_handle).output_def.metadata,
         run_id=run_id,
-        version=_step_output_version(execution_plan, step_output_handle),
-        solid_def=step.solid.definition,
         pipeline_name=execution_plan.pipeline.get_definition().name,
+        mapping_key=step_output_handle.mapping_key,
         config=output_config,
+        solid_def=step.solid.definition,
+        log_manager=log_manager,
+        version=_step_output_version(execution_plan, step_output_handle),
     )
