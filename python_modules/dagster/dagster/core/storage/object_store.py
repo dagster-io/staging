@@ -5,6 +5,7 @@ from abc import ABCMeta, abstractmethod
 
 import six
 from dagster import check
+from dagster.core.storage.object_manager import ObjectManager
 from dagster.core.types.marshal import PickleSerializationStrategy, SerializationStrategy
 from dagster.utils import mkdir_p
 
@@ -183,3 +184,12 @@ class FilesystemObjectStore(ObjectStore):  # pylint: disable=no-init
     def key_for_paths(self, path_fragments):
         """Joins path fragments into a key using the object-store specific path separator."""
         return os.path.join(*path_fragments)
+
+
+# class ObjectManagerFileSystemObjectStoreAdapter(ObjectManager):
+#     def handle_output(self, context, obj):
+
+#         return super().handle_output(context, obj)
+
+#     def load_input(self, context):
+#         return super().load_input(context)

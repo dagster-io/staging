@@ -6,8 +6,10 @@ from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOpe
 from dagster.core.errors import DagsterObjectStoreError
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.storage.asset_store import mem_asset_store
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 
+from .object_manager import ObjectManager
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
 from .type_storage import TypeStoragePluginRegistry
 
@@ -257,6 +259,54 @@ def _object_store_operation_error_message(
             else ""
         ),
     )
+
+
+class ObjectManagerIntermediateStorage(IntermediateStorage):
+    """
+    Adapter for deprecating intermediate storage in favor of object manager
+    Will be removed when the intermediate storage deprecation cycle is finished
+    """
+
+    def __init__(self, object_manager):
+        self.object_manager = check.inst_param(object_manager, "object_manager", ObjectManager)
+
+    def get_intermediate(self, context, dagster_type=None, step_output_handle=None):
+        # TODO: take dagster_type.serialization_strategy
+        # if dagster_type.serialization_strategy:
+        #     key = self.object_store.key_for_paths([self.root] + paths)
+
+        #     obj, uri = self.object_store.get_object(
+        #         key, serialization_strategy=dagster_type.serialization_strategy
+        #     )
+
+        input_context = context.for_input_manager(
+            input_name=None,
+            input_config=None,
+            input_metadata=dagster_type.serialization_strategy,
+            source_handle=step_output_handle,
+        )
+        return self.object_manager.load_input(input_context)
+
+    def set_intermediate(
+        self, context, dagster_type=None, step_output_handle=None, value=None, version=None
+    ):
+        # TODO: take dagster_type.serialization_strategy
+        output_context = context.get_output_context(step_output_handle)
+        # TODO: check event
+        return self.object_manager.handle_output(output_context, value)
+
+    def has_intermediate(self, context, step_output_handle):
+        raise NotImplementedError("should not reach")
+
+    def copy_intermediate_from_run(self, context, run_id, step_output_handle):
+        raise NotImplementedError("should not reach")
+
+    @property
+    def is_persistent(self):
+        """is not persistent if the object_manager is mem_object_manager, is persistent otherwise."""
+        # TODO: update to mem_object_manager once the asset_store -> object_manager is done
+        # pylint: disable=comparison-with-callable
+        return self.object_manager != mem_asset_store
 
 
 def build_in_mem_intermediates_storage(run_id, type_storage_plugin_registry=None):
