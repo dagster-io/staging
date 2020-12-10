@@ -264,7 +264,9 @@
                 "image",
                 "dagsterApiGrpcArgs",
                 "port",
-                "replicaCount"
+                "replicaCount",
+                "livenessProbe",
+                "startupProbe"
             ]
         },
         "UserDeployments": {
