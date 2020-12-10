@@ -4,6 +4,7 @@ from dagster import check
 from dagster.core.definitions import AssetMaterialization, Materialization, OutputDefinition
 from dagster.serdes import whitelist_for_serdes
 
+from .handle import UnresolvedStepHandle
 from .objects import TypeCheckData
 
 
@@ -74,3 +75,38 @@ class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name map
             output_name=check.str_param(output_name, "output_name"),
             mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
         )
+
+
+class UnresolvedStepOutputHandle(
+    namedtuple(
+        "_UnresolvedStepOutputHandle",
+        "unresolved_step_handle output_name mapping_step_key mapping_output_name",
+    )
+):
+    """
+    Placeholding that will resolve to StepOutputHandle for each mapped output once the
+    upstream mapping step has completed.
+    """
+
+    def __new__(cls, unresolved_step_handle, output_name, mapping_step_key, mapping_output_name):
+        return super(UnresolvedStepOutputHandle, cls).__new__(
+            cls,
+            unresolved_step_handle=check.inst_param(
+                unresolved_step_handle, "unresolved_step_handle", UnresolvedStepHandle
+            ),
+            output_name=check.str_param(output_name, "output_name"),
+            # this could be a set of resolution keys to support multiple mapping operations
+            mapping_step_key=check.str_param(mapping_step_key, "mapping_step_key"),
+            mapping_output_name=check.str_param(mapping_step_key, "mapping_step_key"),
+        )
+
+    def resolve(self, map_key):
+        """Return a resolved StepOutputHandle"""
+        return StepOutputHandle(
+            self.unresolved_step_handle.resolve(map_key).to_key(), self.output_name
+        )
+
+    @property
+    def preview_form(self):
+        """Return a StepOutputHandle with a [?] step key"""
+        return StepOutputHandle(self.unresolved_step_handle.to_key(), self.output_name)
