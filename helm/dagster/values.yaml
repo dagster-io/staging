@@ -88,7 +88,7 @@ dagit:
 ####################################################################################################
 userDeployments:
   # Whether launching user deployments is enabled.
-  enabled: false
+  enabled: true
   # List of unique deployments
   deployments:
     - name: "k8s-example-user-code-1"
@@ -108,7 +108,8 @@ userDeployments:
       #   - "-a"
       #   - "define_demo_execution_repo"
       dagsterApiGrpcArgs:
-        - ""
+        - "-f"
+        - "/example_project/example_repo/repo.py"
       port: 3030
       env:
         YOUR_ENV_VAR: ""
