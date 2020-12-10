@@ -33,7 +33,8 @@ from .inputs import (
     StepInput,
     StepInputSource,
 )
-from .objects import ExecutionStep, StepOutputHandle
+from .outputs import StepOutputHandle
+from .step import ExecutionStep
 
 
 class _PlanBuilder:
