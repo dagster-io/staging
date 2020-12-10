@@ -1,6 +1,10 @@
+from datetime import datetime
+
 from dagster import check
 from dagster.core.host_representation import ExternalSensor, SensorSelector
-from dagster.core.scheduler.job import JobState
+from dagster.core.scheduler.job import JobState, JobStatus
+from dagster.daemon.controller import DEFAULT_DAEMON_INTERVAL_SECONDS
+from dagster.utils import datetime_as_float
 from dagster_graphql import dauphin
 from dagster_graphql.implementation.fetch_sensors import start_sensor, stop_sensor
 from dagster_graphql.schema.errors import (
@@ -21,6 +25,7 @@ class DauphinSensor(dauphin.ObjectType):
     solidSelection = dauphin.List(dauphin.String)
     mode = dauphin.NonNull(dauphin.String)
     sensorState = dauphin.NonNull("JobState")
+    futureTick = dauphin.Field("FutureJobTick")
 
     def resolve_id(self, _):
         return "%s:%s" % (self.name, self.pipelineName)
@@ -46,6 +51,21 @@ class DauphinSensor(dauphin.ObjectType):
 
     def resolve_sensorState(self, graphene_info):
         return graphene_info.schema.type_named("JobState")(self._sensor_state)
+
+    def resolve_futureTick(self, graphene_info):
+        if self._sensor_state.status != JobStatus.RUNNING:
+            return None
+
+        latest_tick = graphene_info.context.instance.get_latest_job_tick(
+            self._sensor_state.job_origin_id
+        )
+        if not latest_tick:
+            return None
+
+        future_timestamp = latest_tick.timestamp + DEFAULT_DAEMON_INTERVAL_SECONDS
+        if future_timestamp < datetime_as_float(datetime.now()):
+            return None
+        return graphene_info.schema.type_named("FutureJobTick")(future_timestamp)
 
 
 class DauphinSensorOrError(dauphin.Union):
