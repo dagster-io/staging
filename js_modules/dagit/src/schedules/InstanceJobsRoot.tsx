@@ -21,7 +21,7 @@ import {PageHeader} from 'src/ui/PageHeader';
 import {Subheading} from 'src/ui/Text';
 
 export const InstanceJobsRoot = () => {
-  useDocumentTitle('Scheduler');
+  useDocumentTitle('Jobs');
   const queryResult = useQuery<InstanceJobsRootQuery>(INSTANCE_JOBS_ROOT_QUERY, {
     variables: {},
     fetchPolicy: 'cache-and-network',
@@ -29,7 +29,7 @@ export const InstanceJobsRoot = () => {
 
   return (
     <Page>
-      <PageHeader text="Scheduler" />
+      <PageHeader text="Jobs" />
       <Group direction="vertical" spacing={12}>
         <Loading queryResult={queryResult} allowStaleData={true}>
           {(result) => {
@@ -51,25 +51,28 @@ export const InstanceJobsRoot = () => {
             );
 
             const scheduleDefinitionsSection = hasSchedules ? (
-              <Group direction="vertical" spacing={12}>
-                <Box
-                  flex={{justifyContent: 'space-between', alignItems: 'flex-end'}}
-                  padding={{bottom: 8}}
-                  border={{side: 'bottom', width: 1, color: Colors.LIGHT_GRAY3}}
-                >
-                  <Subheading>Schedules</Subheading>
-                  <SchedulerTimezoneNote schedulerOrError={scheduler} />
-                </Box>
-                {repositoriesOrError.nodes.map((repository) => (
-                  <Group direction="vertical" spacing={12} key={repository.name}>
-                    <strong>{`${repository.name}@${repository.location.name}`}</strong>
-                    <SchedulesTable
-                      repoAddress={{name: repository.name, location: repository.location.name}}
-                      schedules={repository.schedules}
-                    />
-                  </Group>
-                ))}
-              </Group>
+              <Box padding={{top: 16}}>
+                <Group direction="vertical" spacing={12}>
+                  <Box
+                    flex={{justifyContent: 'space-between', alignItems: 'flex-end'}}
+                    padding={{bottom: 8}}
+                    border={{side: 'bottom', width: 1, color: Colors.LIGHT_GRAY3}}
+                  >
+                    <Subheading>Schedules</Subheading>
+                    <SchedulerTimezoneNote schedulerOrError={scheduler} />
+                  </Box>
+                  <SchedulerInfo schedulerOrError={scheduler} />
+                  {repositoriesOrError.nodes.map((repository) => (
+                    <Group direction="vertical" spacing={12} key={repository.name}>
+                      <strong>{`${repository.name}@${repository.location.name}`}</strong>
+                      <SchedulesTable
+                        repoAddress={{name: repository.name, location: repository.location.name}}
+                        schedules={repository.schedules}
+                      />
+                    </Group>
+                  ))}
+                </Group>
+              </Box>
             ) : null;
 
             const sensorDefinitionsSection = hasSensors ? (
@@ -97,7 +100,6 @@ export const InstanceJobsRoot = () => {
 
             return (
               <Group direction="vertical" spacing={32}>
-                <SchedulerInfo schedulerOrError={scheduler} />
                 {scheduleDefinitionsSection}
                 {sensorDefinitionsSection}
                 <UnloadableJobs jobStates={unloadableJobs} />

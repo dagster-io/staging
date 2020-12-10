@@ -77,9 +77,8 @@ export const ScheduleRoot: React.FC<Props> = (props) => {
             href: workspacePathFromAddress(repoAddress),
           },
           {
-            icon: 'time',
-            text: 'Schedules',
-            href: workspacePathFromAddress(repoAddress, '/schedules'),
+            text: 'Jobs',
+            href: workspacePathFromAddress(repoAddress, '/jobs'),
           },
         ];
 

@@ -2,6 +2,7 @@ import {IBreadcrumbProps} from '@blueprintjs/core';
 import * as React from 'react';
 import {Redirect, Route, Switch} from 'react-router-dom';
 
+import {JobsRoot} from 'src/jobs/JobsRoot';
 import {TopNav} from 'src/nav/TopNav';
 import {SchedulesRoot} from 'src/schedules/SchedulesRoot';
 import {SensorsRoot} from 'src/sensors/SensorsRoot';
@@ -28,8 +29,7 @@ export const WorkspaceRepoRoot: React.FC<Props> = (props) => {
   const tabs = [
     {text: 'Pipelines', href: workspacePathFromAddress(repoAddress, '/pipelines')},
     {text: 'Solids', href: workspacePathFromAddress(repoAddress, '/solids')},
-    {text: 'Schedules', href: workspacePathFromAddress(repoAddress, '/schedules')},
-    {text: 'Sensors', href: workspacePathFromAddress(repoAddress, '/sensors')},
+    {text: 'Jobs', href: workspacePathFromAddress(repoAddress, '/jobs')},
   ];
 
   const activeTab = () => {
@@ -40,6 +40,8 @@ export const WorkspaceRepoRoot: React.FC<Props> = (props) => {
         return 'Sensors';
       case 'solids':
         return 'Solids';
+      case 'jobs':
+        return 'Jobs';
       default:
         return 'Pipelines';
     }
@@ -65,6 +67,10 @@ export const WorkspaceRepoRoot: React.FC<Props> = (props) => {
           <Route
             path="/workspace/:repoPath/sensors"
             render={() => <SensorsRoot repoAddress={repoAddress} />}
+          />
+          <Route
+            path="/workspace/:repoPath/jobs"
+            render={() => <JobsRoot repoAddress={repoAddress} />}
           />
           <Route
             path="/workspace/:repoPath/solids/:name?"
