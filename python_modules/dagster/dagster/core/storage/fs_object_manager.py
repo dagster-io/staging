@@ -195,3 +195,51 @@ def custom_path_fs_object_manager(init_context):
             sample_data()
     """
     return CustomPathPickledObjectFilesystemObjectManager(init_context.resource_config["base_dir"])
+
+
+class ObjectStoreBackcompatObjectManager(PickledObjectFilesystemObjectManager):
+    """Adapter for deprecating Object Store and Serialization Strategy, in favor of Object Manager
+
+    Args:
+        base_dir (Optional[str]): base directory where all the step outputs which use this asset
+            store will be stored in.
+    """
+
+    def __init__(self, base_dir=None):
+        self.base_dir = check.opt_str_param(base_dir, "base_dir")
+        self.write_mode = "wb"
+        self.read_mode = "rb"
+
+    def handle_output(self, context, obj):
+        check.inst_param(context, "context", OutputContext)
+
+        filepath = self._get_path(context)
+        # Ensure path exists
+        mkdir_p(os.path.dirname(filepath))
+
+        serialization_strategy = context.dagster_type.serialization_strategy
+        if serialization_strategy:
+            serialization_strategy.serialize_to_file(value=obj, write_path=filepath)
+            return
+
+        with open(filepath, self.write_mode) as write_obj:
+            pickle.dump(obj, write_obj, PICKLE_PROTOCOL)
+
+    def load_input(self, context):
+        check.inst_param(context, "context", InputContext)
+
+        filepath = self._get_path(context.upstream_output)
+        serialization_strategy = context.dagster_type.serialization_strategy
+        if serialization_strategy:
+            return serialization_strategy.deserialize_from_file(read_path=filepath)
+
+        with open(filepath, self.read_mode) as read_obj:
+            return pickle.load(read_obj)
+
+    @property
+    def name(self):
+        return "filesystem"
+
+    def has_object(self, context):
+        filepath = self._get_path(context)
+        return os.path.exists(filepath)

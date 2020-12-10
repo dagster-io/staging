@@ -12,13 +12,17 @@ from dagster import (
     check,
     execute_pipeline,
     pipeline,
+    seven,
     solid,
 )
 from dagster.core.definitions.events import ObjectStoreOperationType
 from dagster.core.errors import DagsterObjectStoreError
+from dagster.core.execution.context.system import InputContext, OutputContext
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.fs_object_manager import ObjectStoreBackcompatObjectManager
 from dagster.core.storage.intermediate_storage import build_fs_intermediate_storage
+from dagster.core.storage.mem_object_manager import InMemoryBackcompatObjectManager
 from dagster.core.storage.type_storage import TypeStoragePlugin, TypeStoragePluginRegistry
 from dagster.core.types.dagster_type import String as RuntimeString
 from dagster.core.types.dagster_type import create_any_type, resolve_dagster_type
@@ -225,3 +229,75 @@ def test_error_message():
         execute_pipeline(
             repro, run_config={"storage": {"filesystem": {}}},
         )
+
+
+# Test intermediate storage backcompat layer
+
+
+def get_fake_solid():
+    @solid
+    def fake_solid(_):
+        pass
+
+    return fake_solid
+
+
+def test_in_memory_backcompat_object_manager():
+    object_manager = InMemoryBackcompatObjectManager()
+    run_id = make_new_run_id()
+    output_context = OutputContext(
+        step_key="return_one",
+        name="result",
+        mapping_key=None,
+        metadata={},
+        run_id=run_id,
+        solid_def=get_fake_solid(),
+        pipeline_name="fake",
+        config=None,
+        dagster_type=int,
+        version=None,
+    )
+    object_manager.handle_output(output_context, obj=1)
+    assert object_manager.has_object(output_context)
+    input_context = InputContext(
+        input_name="foo",
+        pipeline_name="fake",
+        solid_def=get_fake_solid(),
+        input_config=None,
+        input_metadata=None,
+        upstream_output=output_context,
+        dagster_type=int,
+    )
+    assert object_manager.load_input(input_context) == 1
+    assert object_manager.name == "memory"
+
+
+def test_object_store_backcompat_object_manager():
+    with seven.TemporaryDirectory() as tmpdir_path:
+        object_manager = ObjectStoreBackcompatObjectManager(base_dir=tmpdir_path)
+        run_id = make_new_run_id()
+        output_context = OutputContext(
+            step_key="return_one",
+            name="result",
+            mapping_key=None,
+            metadata={},
+            run_id=run_id,
+            solid_def=get_fake_solid(),
+            pipeline_name="fake",
+            config=None,
+            dagster_type=resolve_dagster_type(int),
+            version=None,
+        )
+        object_manager.handle_output(output_context, obj=1)
+        assert object_manager.has_object(output_context)
+        input_context = InputContext(
+            input_name="foo",
+            pipeline_name="fake",
+            solid_def=get_fake_solid(),
+            input_config=None,
+            input_metadata=None,
+            upstream_output=output_context,
+            dagster_type=resolve_dagster_type(int),
+        )
+        assert object_manager.load_input(input_context) == 1
+        assert object_manager.name == "filesystem"
