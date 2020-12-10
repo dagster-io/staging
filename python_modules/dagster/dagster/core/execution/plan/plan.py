@@ -1,4 +1,4 @@
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict, defaultdict, namedtuple
 
 from dagster import check
 from dagster.core.definitions import (
@@ -13,7 +13,7 @@ from dagster.core.definitions import (
 from dagster.core.definitions.composition import MappedInputPlaceholder
 from dagster.core.definitions.dependency import DependencyStructure
 from dagster.core.errors import DagsterExecutionStepNotFoundError, DagsterInvariantViolationError
-from dagster.core.execution.plan.handle import StepHandle
+from dagster.core.execution.plan.handle import DynamicStepHandle, StepHandle, UnresolvedStepHandle
 from dagster.core.execution.resolve_versions import (
     resolve_step_output_versions_helper,
     resolve_step_versions_helper,
@@ -23,18 +23,21 @@ from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
-from .compute import create_compute_step
+from .compute import create_compute_step, create_unresolved_step
 from .inputs import (
     FromConfig,
     FromDefaultValue,
+    FromDynamicStepOutput,
     FromMultipleSources,
     FromRootInputManager,
     FromStepOutput,
+    FromUnresolvedStepOutput,
     StepInput,
     StepInputSource,
+    UnresolvedStepInput,
 )
-from .outputs import StepOutputHandle
-from .step import ExecutionStep
+from .outputs import StepOutputHandle, UnresolvedStepOutputHandle
+from .step import ExecutionStep, UnresolvedExecutionStep
 
 
 class _PlanBuilder:
@@ -91,7 +94,7 @@ class _PlanBuilder:
 
     def set_output_handle(self, key, val):
         check.inst_param(key, "key", SolidOutputHandle)
-        check.inst_param(val, "val", StepOutputHandle)
+        check.inst_param(val, "val", (StepOutputHandle, UnresolvedStepOutputHandle))
         self.step_output_map[key] = val
 
     def build(self):
@@ -134,6 +137,7 @@ class _PlanBuilder:
 
             ### 1. INPUTS
             # Create and add execution plan steps for solid inputs
+            has_unresolved_input = False
             step_inputs = []
             for input_name, input_def in solid.definition.input_dict.items():
                 step_input_source = get_step_input_source(
@@ -151,22 +155,46 @@ class _PlanBuilder:
                 if step_input_source is None:
                     continue
 
-                check.inst_param(step_input_source, "step_input_source", StepInputSource)
-                step_inputs.append(
-                    StepInput(
-                        name=input_name,
-                        dagster_type=input_def.dagster_type,
-                        source=step_input_source,
+                if isinstance(step_input_source, (FromDynamicStepOutput, FromUnresolvedStepOutput)):
+                    has_unresolved_input = True
+                    step_inputs.append(
+                        UnresolvedStepInput(
+                            name=input_name,
+                            dagster_type=input_def.dagster_type,
+                            source=step_input_source,
+                        )
                     )
-                )
+                else:
+                    check.inst_param(step_input_source, "step_input_source", StepInputSource)
+                    step_inputs.append(
+                        StepInput(
+                            name=input_name,
+                            dagster_type=input_def.dagster_type,
+                            source=step_input_source,
+                        )
+                    )
 
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
             if isinstance(solid.definition, SolidDefinition):
-                solid_compute_step = create_compute_step(
-                    self.pipeline_name, self.environment_config, solid, step_inputs, handle
-                )
-                self.add_step(solid_compute_step)
+                if has_unresolved_input:
+                    step = create_unresolved_step(
+                        solid=solid,
+                        solid_handle=handle,
+                        step_inputs=step_inputs,
+                        environment_config=self.environment_config,
+                        pipeline_name=self.pipeline_name,
+                    )
+                else:
+                    step = create_compute_step(
+                        solid=solid,
+                        solid_handle=handle,
+                        step_inputs=step_inputs,
+                        environment_config=self.environment_config,
+                        pipeline_name=self.pipeline_name,
+                    )
+
+                self.add_step(step)
 
             ### 2b. RECURSE
             # Recurse over the solids contained in an instance of GraphDefinition
@@ -197,7 +225,16 @@ class _PlanBuilder:
                     output_def.name, handle
                 )
                 step = self.get_step_by_solid_handle(resolved_handle)
-                step_output_handle = StepOutputHandle(step.key, resolved_output_def.name)
+                if isinstance(step, ExecutionStep):
+                    step_output_handle = StepOutputHandle(step.key, resolved_output_def.name)
+                else:
+                    step_output_handle = UnresolvedStepOutputHandle(
+                        step.handle,
+                        resolved_output_def.name,
+                        step.resolved_by_step_key,
+                        step.resolved_by_output_name,
+                    )
+
                 self.set_output_handle(output_handle, step_output_handle)
 
 
@@ -223,6 +260,19 @@ def get_step_input_source(
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
         step_output_handle = plan_builder.get_output_handle(solid_output_handle)
+        if isinstance(step_output_handle, UnresolvedStepOutputHandle):
+            return FromUnresolvedStepOutput(
+                unresolved_step_output_handle=step_output_handle,
+                input_def=input_def,
+                config_data=input_config,
+            )
+
+        if solid_output_handle.output_def.is_dynamic:
+            return FromDynamicStepOutput(
+                step_output_handle=step_output_handle,
+                input_def=input_def,
+                config_data=input_config,
+            )
 
         return FromStepOutput(
             step_output_handle=step_output_handle,
@@ -290,16 +340,21 @@ def get_step_input_source(
     )
 
 
+StepHandleUnion = (StepHandle, UnresolvedStepHandle, DynamicStepHandle)
+
+
 class ExecutionPlan(
     namedtuple(
         "_ExecutionPlan",
-        "pipeline step_dict executable_map artifacts_persisted step_handles_to_execute environment_config",
+        "pipeline step_dict executable_map resolvable_map artifacts_persisted step_handles_to_execute environment_config",
     )
 ):
     def __new__(
         cls, pipeline, step_dict, step_handles_to_execute, artifacts_persisted, environment_config,
     ):
-        check.list_param(step_handles_to_execute, "step_handles_to_execute", of_type=StepHandle)
+        check.list_param(
+            step_handles_to_execute, "step_handles_to_execute", of_type=StepHandleUnion,
+        )
         missing_steps = [
             step_handle.to_key()
             for step_handle in step_handles_to_execute
@@ -314,17 +369,25 @@ class ExecutionPlan(
             )
 
         executable_map = {}
+        resolvable_map = defaultdict(list)
         for handle in step_handles_to_execute:
             step = step_dict[handle]
-            executable_map[step.key] = step.handle
+            if isinstance(step, ExecutionStep):
+                executable_map[step.key] = step.handle
+            else:
+                resolvable_map[step.resolved_by_step_key].append(step.handle)
 
         return super(ExecutionPlan, cls).__new__(
             cls,
             pipeline=check.inst_param(pipeline, "pipeline", IPipeline),
             step_dict=check.dict_param(
-                step_dict, "step_dict", key_type=StepHandle, value_type=ExecutionStep,
+                step_dict,
+                "step_dict",
+                key_type=StepHandleUnion,
+                value_type=(ExecutionStep, UnresolvedExecutionStep),
             ),
             executable_map=executable_map,
+            resolvable_map=resolvable_map,
             artifacts_persisted=check.bool_param(artifacts_persisted, "artifacts_persisted"),
             step_handles_to_execute=step_handles_to_execute,
             environment_config=check.inst_param(
@@ -335,10 +398,6 @@ class ExecutionPlan(
     @property
     def steps(self):
         return list(self.step_dict.values())
-
-    @property
-    def executable_steps(self):
-        return [self.get_step_by_key(key) for key in self.executable_map]
 
     @property
     def step_keys_to_execute(self):
@@ -392,7 +451,7 @@ class ExecutionPlan(
         return deps
 
     def get_steps_to_execute_in_topo_order(self):
-        return [step for step_level in self.get_all_steps_by_level() for step in step_level]
+        return [step for step_level in self.get_steps_to_execute_by_level() for step in step_level]
 
     def get_steps_to_execute_by_level(self):
         return [
@@ -414,9 +473,62 @@ class ExecutionPlan(
 
         return deps
 
+    def resolve(self, resolved_by_step_key, mappings):
+        """Resolve UnresolvedExecutionSteps that depend on resolved_by_step_key, with the mapped output results"""
+        check.str_param(resolved_by_step_key, "resolved_by_step_key")
+        check.dict_param(mappings, "mappings", key_type=str, value_type=list)
+
+        resolved_steps = []
+        for unresolved_step_handle in self.resolvable_map[resolved_by_step_key]:
+            # don't resolve steps we are not executing
+            if unresolved_step_handle in self.step_handles_to_execute:
+                unresolved_step = self.step_dict[unresolved_step_handle]
+                resolved_steps += unresolved_step.resolve(resolved_by_step_key, mappings)
+
+        # update internal structures
+        for step in resolved_steps:
+            self.step_dict[step.handle] = step
+            self.executable_map[step.key] = step.handle
+
+        executable_keys = set(self.executable_map.keys())
+        resolved_step_deps = {}
+        for step in resolved_steps:
+            # respect the plans step_handles_to_execute by intersecting against the executable keys
+            resolved_step_deps[step.key] = step.get_execution_dependency_keys().intersection(
+                executable_keys
+            )
+
+        return resolved_step_deps
+
     def build_subset_plan(self, step_keys_to_execute):
         check.list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
         step_handles_to_execute = [StepHandle.from_key(key) for key in step_keys_to_execute]
+
+        bad_keys = []
+        for handle in step_handles_to_execute:
+            # if it is an exact match, pull it in
+            if handle in self.step_dict:
+                pass
+            elif isinstance(handle, DynamicStepHandle) and handle.unresolved_form in self.step_dict:
+                unresolved_step = self.step_dict[handle.unresolved_form]
+                # self.step_dict updated as side effect
+                self.resolve(
+                    unresolved_step.resolved_by_step_key,
+                    {unresolved_step.resolved_by_output_name: [handle.mapping_key]},
+                )
+                check.invariant(
+                    handle in self.step_dict,
+                    f"Handle did not resolve as expected, not found in step dict {handle}",
+                )
+            else:
+                bad_keys.append(handle.to_key())
+
+        if bad_keys:
+            raise DagsterExecutionStepNotFoundError(
+                f"Can not build subset plan from unknown step{'s' if len(bad_keys)> 1 else ''}: {', '.join(bad_keys)}",
+                step_keys=bad_keys,
+            )
+
         return ExecutionPlan(
             self.pipeline,
             self.step_dict,

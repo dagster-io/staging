@@ -14,6 +14,7 @@ from dagster.core.storage.input_manager import InputManager
 from dagster.serdes import whitelist_for_serdes
 
 from .objects import TypeCheckData
+from .outputs import StepOutputHandle, UnresolvedStepOutputHandle
 
 
 @whitelist_for_serdes
@@ -123,8 +124,6 @@ class FromStepOutput(
     """This step input source is the output of a previous step"""
 
     def __new__(cls, step_output_handle, input_def, config_data, fan_in):
-        from .outputs import StepOutputHandle
-
         return super(FromStepOutput, cls).__new__(
             cls,
             step_output_handle=check.inst_param(
@@ -334,3 +333,128 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
         return join_and_hash(
             *[inner_source.compute_version(step_versions) for inner_source in self.sources]
         )
+
+
+class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type source")):
+    """Holds information for how to resolve a StepInput once the upstream mapping is done"""
+
+    def __new__(
+        cls, name, dagster_type, source,
+    ):
+        from dagster import DagsterType
+
+        return super(UnresolvedStepInput, cls).__new__(
+            cls,
+            name=check.str_param(name, "name"),
+            dagster_type=check.inst_param(dagster_type, "dagster_type", DagsterType),
+            source=check.inst_param(
+                source, "source", (FromDynamicStepOutput, FromUnresolvedStepOutput)
+            ),
+        )
+
+    @property
+    def resolved_by_step_key(self):
+        return self.source.resolved_by_step_key
+
+    @property
+    def resolved_by_output_name(self):
+        return self.source.resolved_by_output_name
+
+    def resolve(self, map_key):
+        return StepInput(
+            name=self.name, dagster_type=self.dagster_type, source=self.source.resolve(map_key),
+        )
+
+    def get_step_output_handle_dependencies(self):
+        """Return StepOutputHandles with unresolved step keys"""
+
+        return [self.source.preview_output_handle_dep()]
+
+
+class FromDynamicStepOutput(
+    namedtuple("_FromDynamicStepOutput", "step_output_handle input_def config_data"),
+):
+    """This step input source will be a mapped item from a dynamic step output"""
+
+    def __new__(cls, step_output_handle, input_def, config_data):
+        check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
+        # should we model this is a different type instead?
+        check.invariant(step_output_handle.mapping_key is None)
+
+        return super(FromDynamicStepOutput, cls).__new__(
+            cls,
+            step_output_handle=step_output_handle,
+            input_def=check.inst_param(input_def, "input_def", InputDefinition),
+            config_data=config_data,
+        )
+
+    @property
+    def resolved_by_step_key(self):
+        return self.step_output_handle.step_key
+
+    @property
+    def resolved_by_output_name(self):
+        return self.step_output_handle.output_name
+
+    def resolve(self, mapping_key):
+        check.str_param(mapping_key, "mapping_key")
+        return FromStepOutput(
+            step_output_handle=StepOutputHandle(
+                step_key=self.step_output_handle.step_key,
+                output_name=self.step_output_handle.output_name,
+                mapping_key=mapping_key,
+            ),
+            input_def=self.input_def,
+            config_data=self.config_data,
+            fan_in=False,
+        )
+
+    def preview_output_handle_dep(self):
+        return self.step_output_handle
+
+    def required_resource_keys(self):
+        return {self.input_def.manager_key} if self.input_def.manager_key else set()
+
+
+class FromUnresolvedStepOutput(
+    namedtuple("_FromUnresolvedStepOutput", "unresolved_step_output_handle input_def config_data"),
+):
+    """
+    This step input source is from a step that is not yet resolved,
+    for example downstream from a dynamic step.
+    """
+
+    def __new__(cls, unresolved_step_output_handle, input_def, config_data):
+        return super(FromUnresolvedStepOutput, cls).__new__(
+            cls,
+            unresolved_step_output_handle=check.inst_param(
+                unresolved_step_output_handle,
+                "unresolved_step_output_handle",
+                UnresolvedStepOutputHandle,
+            ),
+            input_def=check.inst_param(input_def, "input_def", InputDefinition),
+            config_data=config_data,
+        )
+
+    @property
+    def resolved_by_step_key(self):
+        return self.unresolved_step_output_handle.resolved_by_step_key
+
+    @property
+    def resolved_by_output_name(self):
+        return self.unresolved_step_output_handle.resolved_by_output_name
+
+    def resolve(self, mapping_key):
+        check.str_param(mapping_key, "mapping_key")
+        return FromStepOutput(
+            step_output_handle=self.unresolved_step_output_handle.resolve(mapping_key),
+            input_def=self.input_def,
+            config_data=self.config_data,
+            fan_in=False,
+        )
+
+    def preview_output_handle_dep(self):
+        return self.unresolved_step_output_handle.preview_form
+
+    def required_resource_keys(self):
+        return {self.input_def.manager_key} if self.input_def.manager_key else set()
