@@ -172,7 +172,9 @@ def resolve_memoized_execution_plan(execution_plan):
         resource_def = mode_def.resource_defs[manager_key]
         resource_context = InitResourceContext(resource_config, pipeline_def, resource_def, "")
         object_manager = resource_def.resource_fn(resource_context)
-        context = get_output_context(execution_plan, environment_config, step_output_handle, None)
+        context = get_output_context(
+            execution_plan, environment_config, step_output_handle, None, None
+        )
         if not object_manager.has_asset(AssetStoreContext.from_output_context(context)):
             step_keys_to_execute.append(step_output_handle.step_key)
 
