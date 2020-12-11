@@ -97,7 +97,11 @@ def launch_background_worker(subprocess_args, env):
     )
 
 
-@click.command(name="start", help="Start a dagster celery worker.")
+@click.command(
+    name="start",
+    help="Start a dagster celery worker.",
+    context_settings={"ignore_unknown_options": True},
+)
 @click.option(
     "--name",
     "-n",
