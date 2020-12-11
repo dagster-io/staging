@@ -14,11 +14,12 @@ from dagster import (
     seven,
 )
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
-from dagster.core.errors import DagsterIncompleteExecutionPlanError, DagsterSubprocessError
+from dagster.core.errors import DagsterSubprocessError, DagsterUnknownStepStateError
 from dagster.core.events import DagsterEventType
 from dagster.core.test_utils import instance_for_test, instance_for_test_tempdir
 from dagster.utils import send_interrupt
 from dagster_celery_tests.repo import COMPOSITE_DEPTH
+from dagster_celery_tests.utils import start_celery_worker
 
 from .utils import (  # isort:skip
     execute_eagerly_on_celery,
@@ -30,7 +31,7 @@ from .utils import (  # isort:skip
 
 
 @skip_ci
-def test_execute_on_celery(dagster_celery_worker):
+def test_execute_on_celery_default(dagster_celery_worker):
     with execute_pipeline_on_celery("test_pipeline") as result:
         assert result.result_for_solid("simple").output_value() == 1
         assert len(result.step_event_list) == 4
@@ -69,13 +70,6 @@ def test_execute_diamond_pipeline_on_celery(dagster_celery_worker):
 def test_execute_parallel_pipeline_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("test_parallel_pipeline") as result:
         assert len(result.solid_result_list) == 11
-
-
-@skip_ci
-@pytest.mark.skip
-def test_execute_more_parallel_pipeline_on_celery():
-    with execute_pipeline_on_celery("test_more_parallel_pipeline") as result:
-        assert len(result.solid_result_list) == 501
 
 
 @skip_ci
@@ -122,55 +116,58 @@ def test_execute_fails_pipeline_on_celery(dagster_celery_worker):
         assert result.result_for_solid("should_never_execute").skipped
 
 
-@skip_ci
-# Requires having a dagster-celery worker running locally with --concurrency=1
-def test_terminate_pipeline_on_celery():
-    with seven.TemporaryDirectory() as tempdir:
-        pipeline_def = ReconstructablePipeline.for_file(REPO_FILE, "interrupt_pipeline")
+@pytest.mark.skip("Celery termination currently flaky")
+def test_terminate_pipeline_on_celery(rabbitmq):
+    with start_celery_worker():
+        with seven.TemporaryDirectory() as tempdir:
+            pipeline_def = ReconstructablePipeline.for_file(REPO_FILE, "interrupt_pipeline")
 
-        with instance_for_test_tempdir(tempdir) as instance:
-            run_config = {
-                "intermediate_storage": {"filesystem": {"config": {"base_dir": tempdir}}},
-                "execution": {"celery": {}},
-            }
+            with instance_for_test_tempdir(tempdir) as instance:
+                run_config = {
+                    "intermediate_storage": {"filesystem": {"config": {"base_dir": tempdir}}},
+                    "execution": {"celery": {}},
+                }
 
-            results = []
-            result_types = []
-            interrupt_thread = None
+                results = []
+                result_types = []
+                interrupt_thread = None
 
-            try:
-                for result in execute_pipeline_iterator(
-                    pipeline=pipeline_def, run_config=run_config, instance=instance,
-                ):
-                    # Interrupt once the first step starts
-                    if result.event_type == DagsterEventType.STEP_START and not interrupt_thread:
-                        interrupt_thread = Thread(target=send_interrupt, args=())
-                        interrupt_thread.start()
+                try:
+                    for result in execute_pipeline_iterator(
+                        pipeline=pipeline_def, run_config=run_config, instance=instance,
+                    ):
+                        # Interrupt once the first step starts
+                        if (
+                            result.event_type == DagsterEventType.STEP_START
+                            and not interrupt_thread
+                        ):
+                            interrupt_thread = Thread(target=send_interrupt, args=())
+                            interrupt_thread.start()
 
-                    results.append(result)
-                    result_types.append(result.event_type)
+                        results.append(result)
+                        result_types.append(result.event_type)
 
-                assert False
-            except DagsterIncompleteExecutionPlanError:
-                pass
+                    assert False
+                except DagsterUnknownStepStateError:
+                    pass
 
-            interrupt_thread.join()
+                interrupt_thread.join()
 
-            # At least one step succeeded (the one that was running when the interrupt fired)
-            assert DagsterEventType.STEP_SUCCESS in result_types
+                # At least one step succeeded (the one that was running when the interrupt fired)
+                assert DagsterEventType.STEP_SUCCESS in result_types
 
-            # At least one step was revoked (and there were no step failure events)
-            revoke_steps = [
-                result
-                for result in results
-                if result.event_type == DagsterEventType.ENGINE_EVENT
-                and "was revoked." in result.message
-            ]
+                # At least one step was revoked (and there were no step failure events)
+                revoke_steps = [
+                    result
+                    for result in results
+                    if result.event_type == DagsterEventType.ENGINE_EVENT
+                    and "was revoked." in result.message
+                ]
 
-            assert len(revoke_steps) > 0
+                assert len(revoke_steps) > 0
 
-            # The overall pipeline failed
-            assert DagsterEventType.PIPELINE_FAILURE in result_types
+                # The overall pipeline failed
+                assert DagsterEventType.PIPELINE_FAILURE in result_types
 
 
 def test_execute_eagerly_on_celery():
@@ -242,12 +239,6 @@ def test_execute_eagerly_diamond_pipeline_subset_on_celery():
 def test_execute_eagerly_parallel_pipeline_on_celery():
     with execute_eagerly_on_celery("test_parallel_pipeline") as result:
         assert len(result.solid_result_list) == 11
-
-
-@pytest.mark.skip
-def test_execute_eagerly_more_parallel_pipeline_on_celery():
-    with execute_eagerly_on_celery("test_more_parallel_pipeline") as result:
-        assert len(result.solid_result_list) == 501
 
 
 def test_execute_eagerly_composite_pipeline_on_celery():
