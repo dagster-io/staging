@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractmethod, abstractproperty
+from abc import abstractmethod, abstractproperty
 
 import six
 from dagster import check
@@ -6,13 +6,33 @@ from dagster.core.definitions.events import ObjectStoreOperation, ObjectStoreOpe
 from dagster.core.errors import DagsterObjectStoreError
 from dagster.core.execution.context.system import SystemExecutionContext
 from dagster.core.execution.plan.objects import StepOutputHandle
+from dagster.core.storage.object_manager import ObjectManager
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
 from .type_storage import TypeStoragePluginRegistry
 
 
-class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class IntermediateStorage(ObjectManager):  # pylint: disable=no-init
+    def handle_output(self, context, obj):
+        self.set_intermediate(
+            context=context.step_context,  # TODO output_context -> step_output
+            dagster_type=context.dagster_type,
+            step_output_handle=StepOutputHandle(context.step_key, context.name),
+            value=obj,
+            version=context.version,
+        )
+
+    def load_input(self, context):
+        res = self.get_intermediate(
+            context=context.step_context,  # TODO input_context -> step_output
+            dagster_type=context.dagster_type,
+            step_output_handle=StepOutputHandle(
+                context.upstream_output.step_key, context.upstream_output.name
+            ),
+        )
+        return res.obj
+
     @abstractmethod
     def get_intermediate(self, context, dagster_type=None, step_output_handle=None):
         pass
