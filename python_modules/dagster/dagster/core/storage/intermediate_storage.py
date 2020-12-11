@@ -9,6 +9,8 @@ from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.storage.object_manager import ObjectManager
 from dagster.core.types.dagster_type import DagsterType, resolve_dagster_type
 
+from .mem_object_manager import InMemoryBackcompatObjectManager
+from .object_manager import ObjectManager
 from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStore
 from .type_storage import TypeStoragePluginRegistry
 
@@ -54,6 +56,82 @@ class IntermediateStorage(ObjectManager):  # pylint: disable=no-init
     @abstractproperty
     def is_persistent(self):
         pass
+
+
+class ObjectManagerIntermediateStorage(IntermediateStorage):
+    """Adapter for deprecating intermediate storage in favor of object manager."""
+
+    def __init__(self, object_manager):
+        self.object_manager = check.inst_param(object_manager, "object_manager", ObjectManager)
+
+    def get_intermediate(self, context, dagster_type=None, step_output_handle=None):
+        # dagster_type is used to pass serialization_strategy for backcompat
+        dagster_type = resolve_dagster_type(dagster_type)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(dagster_type, "dagster_type", DagsterType)
+
+        input_context = context.for_input_manager(
+            input_name=None,
+            input_config=None,
+            input_metadata=None,
+            source_handle=step_output_handle,
+            dagster_type=dagster_type,
+        )
+
+        try:
+            return self.object_manager.load_input(input_context)
+        except Exception as error:  # pylint: disable=broad-except
+            six.raise_from(
+                # TODO: to create DagsterObjectManagerError
+                DagsterObjectStoreError(
+                    _object_store_operation_error_message(
+                        step_output_handle=step_output_handle,
+                        op=ObjectStoreOperationType.GET_OBJECT,
+                        object_store_name=self.object_manager.name,
+                    )
+                ),
+                error,
+            )
+
+    def set_intermediate(
+        self, context, dagster_type=None, step_output_handle=None, value=None, version=None
+    ):
+        # dagster_type is used to pass serialization_strategy for backcompat
+        dagster_type = resolve_dagster_type(dagster_type)
+        check.opt_inst_param(context, "context", SystemExecutionContext)
+        check.inst_param(dagster_type, "dagster_type", DagsterType)
+
+        output_context = context.get_output_context(step_output_handle)
+        # TODO: check event
+        try:
+            return self.object_manager.handle_output(output_context, value)
+        except Exception as error:  # pylint: disable=broad-except
+            six.raise_from(
+                # TODO: to create DagsterObjectManagerError
+                DagsterObjectStoreError(
+                    _object_store_operation_error_message(
+                        step_output_handle=step_output_handle,
+                        op=ObjectStoreOperationType.SET_OBJECT,
+                        object_store_name=self.object_manager.name,
+                    )
+                ),
+                error,
+            )
+
+    def has_intermediate(self, context, step_output_handle):
+        output_context = context.get_output_context(step_output_handle)
+        return self.object_manager.has_object(output_context)
+
+    def copy_intermediate_from_run(self, context, run_id, step_output_handle):
+        raise NotImplementedError("should not reach")
+
+    @property
+    def is_persistent(self):
+        """is not persistent if the object_manager is mem_object_manager, is persistent otherwise."""
+        if isinstance(self.object_manager, InMemoryBackcompatObjectManager):
+            return False
+        else:
+            return True
 
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
@@ -255,7 +333,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
 
 
 def _object_store_operation_error_message(
-    op, step_output_handle, object_store_name, serialization_strategy_name
+    op, step_output_handle, object_store_name, serialization_strategy_name=None
 ):
     if ObjectStoreOperationType(op) == ObjectStoreOperationType.GET_OBJECT:
         op_name = "retriving"

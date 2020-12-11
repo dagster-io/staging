@@ -10,7 +10,7 @@ from dagster import (
     lambda_solid,
     reconstructable,
 )
-from dagster.core.execution.api import create_execution_plan, execute_plan
+from dagster.core.execution.api import create_execution_plan, execute_plan, scoped_pipeline_context
 from dagster.core.execution.plan.objects import StepOutputHandle
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.intermediate_storage import build_fs_intermediate_storage
@@ -70,12 +70,24 @@ def test_using_file_system_for_subplan():
         )
     )
 
+    # TODO yuhan: need to rebuild the right intermediate
     intermediate_storage = build_fs_intermediate_storage(
         instance.intermediates_directory, pipeline_run.run_id
     )
     assert get_step_output(return_one_step_events, "return_one")
-    assert intermediate_storage.has_intermediate(None, StepOutputHandle("return_one"))
-    assert intermediate_storage.get_intermediate(None, Int, StepOutputHandle("return_one")).obj == 1
+
+    with scoped_pipeline_context(
+        execution_plan.build_subset_plan(["return_one"]), run_config, pipeline_run, instance,
+    ) as context:
+        # TODO SystemExecutionContext
+        step_context = context.for_step(execution_plan.get_step_by_key("return_one"))
+        assert intermediate_storage.has_intermediate(step_context, StepOutputHandle("return_one"))
+        assert (
+            intermediate_storage.get_intermediate(
+                step_context, Int, StepOutputHandle("return_one")
+            ).obj
+            == 1
+        )
 
     add_one_step_events = list(
         execute_plan(
