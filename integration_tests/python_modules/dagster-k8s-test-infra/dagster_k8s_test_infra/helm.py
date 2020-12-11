@@ -197,11 +197,12 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config):
         pods = kubernetes.client.CoreV1Api().list_namespaced_pod(namespace=namespace)
         pod_names = [p.metadata.name for p in pods.items if "celery-workers" in p.metadata.name]
         if helm_config.get("celery", {}).get("enabled"):
-            extra_worker_queues = helm_config.get("celery").get("extraWorkerQueues", [])
-            for queue in extra_worker_queues:
+            worker_queues = helm_config.get("celery").get("workerQueues", [])
+            for queue in worker_queues:
                 num_pods_for_queue = len(
                     [pod_name for pod_name in pod_names if queue.get("name") in pod_name]
                 )
+                print("asdf QUEUE: ", queue)
                 assert queue.get("replicaCount") == num_pods_for_queue
 
             print("Waiting for celery workers")
@@ -282,7 +283,10 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
             "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "replicaCount": 1,
-            "extraWorkerQueues": [{"name": "extra-queue-1", "replicaCount": 1},],
+            "workerQueues": [
+                {"name": "dagster", "replicaCount": 2},
+                {"name": "extra-queue-1", "replicaCount": 1},
+            ],
             "livenessProbe": {
                 "initialDelaySeconds": 15,
                 "periodSeconds": 10,
@@ -397,7 +401,10 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
             "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "replicaCount": 1,
-            "extraWorkerQueues": [{"name": "extra-queue-1", "replicaCount": 1},],
+            "workerQueues": [
+                {"name": "dagster", "replicaCount": 2},
+                {"name": "extra-queue-1", "replicaCount": 1},
+            ],
             "livenessProbe": {
                 "initialDelaySeconds": 15,
                 "periodSeconds": 10,
@@ -466,7 +473,10 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
             "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "replicaCount": 1,
-            "extraWorkerQueues": [{"name": "extra-queue-1", "replicaCount": 1},],
+            "workerQueues": [
+                {"name": "dagster", "replicaCount": 2},
+                {"name": "extra-queue-1", "replicaCount": 1},
+            ],
             "livenessProbe": {
                 "initialDelaySeconds": 15,
                 "periodSeconds": 10,
