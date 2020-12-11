@@ -145,16 +145,7 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
         instance.report_engine_event(
             message="Pipeline execution terminated by interrupt", pipeline_run=pipeline_run,
         )
-    except DagsterSubprocessError as err:
-        if not all(
-            [err_info.cls_name == "KeyboardInterrupt" for err_info in err.subprocess_error_infos]
-        ):
-            instance.report_engine_event(
-                "An exception was thrown during execution that is likely a framework error, "
-                "rather than an error in user code.",
-                pipeline_run,
-                EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
-            )
+        instance.report_run_failed(pipeline_run)
     except Exception:  # pylint: disable=broad-except
         instance.report_engine_event(
             "An exception was thrown during execution that is likely a framework error, "
@@ -162,6 +153,7 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
             pipeline_run,
             EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
         )
+        instance.report_run_failed(pipeline_run)
     finally:
         instance.report_engine_event(
             "Process for pipeline exited (pid: {pid}).".format(pid=pid), pipeline_run,

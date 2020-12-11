@@ -14,7 +14,6 @@ from dagster.core.definitions.sensor import SensorExecutionContext
 from dagster.core.errors import (
     DagsterInvalidSubsetError,
     DagsterRunNotFoundError,
-    DagsterSubprocessError,
     PartitionExecutionError,
     ScheduleExecutionError,
     SensorExecutionError,
@@ -41,7 +40,6 @@ from dagster.core.snap.execution_plan_snapshot import (
     ExecutionPlanSnapshotErrorData,
     snapshot_from_execution_plan,
 )
-from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.grpc.types import ExecutionPlanSnapshotArgs
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from dagster.serdes.ipc import IPCErrorMessage
@@ -57,34 +55,6 @@ class RunInSubprocessComplete:
 
 class StartRunInSubprocessSuccessful:
     """Sentinel passed over multiprocessing Queue when launch is successful in subprocess."""
-
-
-def _core_execute_run(recon_pipeline, pipeline_run, instance):
-    check.inst_param(recon_pipeline, "recon_pipeline", ReconstructablePipeline)
-    check.inst_param(pipeline_run, "pipeline_run", PipelineRun)
-    check.inst_param(instance, "instance", DagsterInstance)
-
-    try:
-        yield from execute_run_iterator(recon_pipeline, pipeline_run, instance)
-    except DagsterSubprocessError as err:
-        if not all(
-            [err_info.cls_name == "KeyboardInterrupt" for err_info in err.subprocess_error_infos]
-        ):
-            yield instance.report_engine_event(
-                "An exception was thrown during execution that is likely a framework error, "
-                "rather than an error in user code.",
-                pipeline_run,
-                EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
-            )
-            instance.report_run_failed(pipeline_run)
-    except Exception:  # pylint: disable=broad-except
-        yield instance.report_engine_event(
-            "An exception was thrown during execution that is likely a framework error, "
-            "rather than an error in user code.",
-            pipeline_run,
-            EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
-        )
-        instance.report_run_failed(pipeline_run)
 
 
 def _run_in_subprocess(
@@ -141,7 +111,7 @@ def _run_in_subprocess(
     # https://amir.rachum.com/blog/2017/03/03/generator-cleanup/
     closed = False
     try:
-        for event in _core_execute_run(recon_pipeline, pipeline_run, instance):
+        for event in execute_run_iterator(recon_pipeline, pipeline_run, instance):
             run_event_handler(event)
     except KeyboardInterrupt:
         run_event_handler(
@@ -149,6 +119,18 @@ def _run_in_subprocess(
                 message="Pipeline execution terminated by interrupt", pipeline_run=pipeline_run,
             )
         )
+        instance.report_run_failed(pipeline_run)
+        raise
+    except Exception:  # pylint: disable=broad-except
+        run_event_handler(
+            instance.report_engine_event(
+                "An exception was thrown during execution that is likely a framework error, "
+                "rather than an error in user code.",
+                pipeline_run,
+                EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
+            )
+        )
+        instance.report_run_failed(pipeline_run)
         raise
     except GeneratorExit:
         closed = True
