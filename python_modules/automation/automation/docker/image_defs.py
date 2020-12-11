@@ -131,6 +131,14 @@ def k8s_celery_worker_editable_cm(cwd):
         yield
 
 
+@contextlib.contextmanager
+def user_code_example_cm(cwd):
+    with copy_directories(
+        ["examples/deploy_k8s/example_project",], cwd,
+    ):
+        yield
+
+
 # Some images have custom build context manager functions, listed here
 CUSTOM_BUILD_CONTEXTMANAGERS = {
     "buildkite-integration-base": buildkite_integration_cm,
@@ -139,6 +147,7 @@ CUSTOM_BUILD_CONTEXTMANAGERS = {
     "k8s-dagit-editable": k8s_dagit_editable_cm,
     "k8s-dagit-example": k8s_dagit_example_cm,
     "k8s-celery-worker-editable": k8s_celery_worker_editable_cm,
+    "user-code-example": user_code_example_cm,
 }
 
 
