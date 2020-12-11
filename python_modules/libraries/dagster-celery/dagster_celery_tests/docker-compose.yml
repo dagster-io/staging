@@ -1,0 +1,15 @@
+version: "3.7"
+
+services:
+  dagster-celery-rabbitmq:
+    image: rabbitmq:3.8.2
+    container_name: dagster-celery-rabbitmq
+    ports:
+      - "5672:5672"
+    networks:
+      - dagster
+
+networks:
+  dagster:
+    driver: bridge
+    name: dagster
