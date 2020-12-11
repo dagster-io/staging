@@ -76,7 +76,12 @@ def _core_execute_run(recon_pipeline, pipeline_run, instance):
                 pipeline_run,
                 EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
             )
-            instance.report_run_failed(pipeline_run)
+            yield instance.report_run_failed(pipeline_run)
+    except KeyboardInterrupt:
+        yield instance.report_engine_event(
+            message="Pipeline execution terminated by interrupt", pipeline_run=pipeline_run,
+        )
+        yield instance.report_run_failed(pipeline_run)
     except Exception:  # pylint: disable=broad-except
         yield instance.report_engine_event(
             "An exception was thrown during execution that is likely a framework error, "
@@ -84,7 +89,7 @@ def _core_execute_run(recon_pipeline, pipeline_run, instance):
             pipeline_run,
             EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
         )
-        instance.report_run_failed(pipeline_run)
+        yield instance.report_run_failed(pipeline_run)
 
 
 def _run_in_subprocess(
@@ -143,13 +148,6 @@ def _run_in_subprocess(
     try:
         for event in _core_execute_run(recon_pipeline, pipeline_run, instance):
             run_event_handler(event)
-    except KeyboardInterrupt:
-        run_event_handler(
-            instance.report_engine_event(
-                message="Pipeline execution terminated by interrupt", pipeline_run=pipeline_run,
-            )
-        )
-        raise
     except GeneratorExit:
         closed = True
         raise
