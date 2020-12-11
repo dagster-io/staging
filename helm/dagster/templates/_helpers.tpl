@@ -81,6 +81,12 @@ dagit -h 0.0.0.0 -p 80 -w /dagster-workspace/workspace.yaml
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
+{{- define "dagster.workerQueues" }}
+{{- include .Values.celery.extraWorkerQueues . }}
+- name: "dagster"
+  replicaCount: {{- .Values.celery.replicaCount -}}
+{{- end }}
+
 {{- define "dagster.flower.fullname" -}}
 {{- $name := default "flower" .Values.flower.nameOverride -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
