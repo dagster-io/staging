@@ -300,6 +300,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             self.environment_config,
             step_output_handle,
             self._get_source_run_id(step_output_handle),
+            self,
         )
 
     def for_input_manager(
@@ -313,11 +314,15 @@ class SystemStepExecutionContext(SystemExecutionContext):
             pipeline_name=self.pipeline_def.name,
             solid_def=self.solid_def,
             upstream_output=self.get_output_context(source_handle) if source_handle else None,
+            step_context=self,
         )
 
     def get_output_manager(self, step_output_handle):
         step_output = self.execution_plan.get_step_output(step_output_handle)
-        output_manager = getattr(self.resources, step_output.output_def.manager_key)
+        if self.using_asset_store(step_output_handle):
+            output_manager = getattr(self.resources, step_output.output_def.manager_key)
+        else:
+            output_manager = self.intermediate_storage
         return check.inst(output_manager, OutputManager)
 
     def using_asset_store(self, step_output_handle):
@@ -412,7 +417,7 @@ class HookContext(SystemExecutionContext):
 class OutputContext(
     namedtuple(
         "_OutputContext",
-        "step_key name mapping_key metadata run_id pipeline_name config solid_def dagster_type version",
+        "step_key name mapping_key metadata run_id pipeline_name config solid_def dagster_type version step_context",
     )
 ):
     """
@@ -455,7 +460,7 @@ class OutputContext(
 class InputContext(
     namedtuple(
         "_InputContext",
-        "input_name pipeline_name solid_def input_config input_metadata upstream_output dagster_type",
+        "input_name pipeline_name solid_def input_config input_metadata upstream_output dagster_type step_context",
     )
 ):
     """
@@ -483,6 +488,7 @@ class InputContext(
         input_metadata=None,
         upstream_output=None,
         dagster_type=None,
+        step_context=None,  # TODO yuhan: bad workaround
     ):
 
         return super(InputContext, cls).__new__(
@@ -496,6 +502,7 @@ class InputContext(
             dagster_type=check.inst_param(
                 resolve_dagster_type(dagster_type), "dagster_type", DagsterType
             ),  # this allows the user to mock the context with unresolved dagster type
+            step_context=step_context,
         )
 
 
@@ -508,7 +515,9 @@ def _step_output_version(execution_plan, step_output_handle):
     )
 
 
-def get_output_context(execution_plan, environment_config, step_output_handle, run_id):
+def get_output_context(
+    execution_plan, environment_config, step_output_handle, run_id, step_context
+):
     """
     Args:
         run_id (str): The run ID of the run that produced the output, not necessarily the run that
@@ -542,4 +551,5 @@ def get_output_context(execution_plan, environment_config, step_output_handle, r
         pipeline_name=execution_plan.pipeline.get_definition().name,
         config=output_config,
         dagster_type=execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
+        step_context=step_context,  # TODO yuhan: bad workaround
     )
