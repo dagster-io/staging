@@ -12,8 +12,7 @@ from dagster.core.test_utils import instance_for_test
 BUILDKITE = os.getenv("BUILDKITE")
 
 skip_ci = pytest.mark.skipif(
-    bool(BUILDKITE),
-    reason="Tests hang forever on buildkite for reasons we don't currently understand",
+    BUILDKITE, reason="Tests hang forever on buildkite for reasons we don't currently understand",
 )
 
 REPO_FILE = os.path.join(os.path.dirname(__file__), "repo.py")
