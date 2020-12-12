@@ -30,7 +30,6 @@ from .utils import (  # isort:skip
 )
 
 
-@skip_ci
 def test_execute_on_celery_default(dagster_celery_worker):
     with execute_pipeline_on_celery("test_pipeline") as result:
         assert result.result_for_solid("simple").output_value() == 1
