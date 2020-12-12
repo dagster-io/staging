@@ -206,6 +206,8 @@ def worker_start_command(
     ),
 )
 def worker_list_command(config_yaml=None):
+
+    print("CONFIG YAML: " + str(config_yaml))
     app = get_app(config_yaml)
 
     print(app.control.inspect(timeout=1).active())  # pylint: disable=print-call

@@ -9,6 +9,7 @@ from dagster import check
 from dagster.seven import mock
 from dagster.utils import file_relative_path
 from dagster_celery.cli import main
+from dagster_celery.defaults import broker_url
 
 from .utils import skip_ci
 
@@ -40,11 +41,15 @@ def pythonpath(path):
         sys.path = old_sys_path
 
 
-def start_worker(name, args=None, exit_code=0, exception_str=""):
+def start_worker(name, broker_yaml=None, args=None, exit_code=0, exception_str=""):
     args = check.opt_list_param(args, "args")
     runner = CliRunner()
     result = runner.invoke(
-        main, ["worker", "start", "-A", "dagster_celery.app", "-d", "--name", name] + args
+        main,
+        ["worker", "start", "-A", "dagster_celery.app", "-d"]
+        + (["-y", broker_yaml] if broker_yaml else [])
+        + ["--name", name]
+        + args,
     )
     assert result.exit_code == exit_code, str(result.exception)
     if exception_str:
@@ -66,7 +71,7 @@ def check_for_worker(name, args=None, present=True):
     runner = CliRunner()
     args = check.opt_list_param(args, "args")
     result = runner.invoke(main, ["worker", "list"] + args)
-    assert result.exit_code == 0, str(result.exception)
+    assert result.exit_code == 0, str(result.exception) + "\n" + str(result.output)
     retry_count = 0
     while retry_count < 10 and (
         not "{name}@".format(name=name) in result.output
@@ -75,8 +80,10 @@ def check_for_worker(name, args=None, present=True):
     ):
         time.sleep(1)
         result = runner.invoke(main, ["worker", "list"] + args)
-        assert result.exit_code == 0, str(result.exception)
+        assert result.exit_code == 0, str(result.exception) + "\n" + str(result.output)
         retry_count += 1
+
+    print("OUTPUT: " + str(result.output))
     return (
         "{name}@".format(name=name) in result.output
         if present
@@ -96,20 +103,30 @@ def test_invoke_entrypoint():
     assert "Start a dagster celery worker" in result.output
 
 
-@skip_ci
-def test_start_worker(rabbitmq):
-    with cleanup_worker("dagster_test_worker"):
-        start_worker("dagster_test_worker")
-        assert check_for_worker("dagster_test_worker")
+CONFIG_YAML = """
+execution:
+  celery:
+    broker: "{broker_url}"
+""".format(
+    broker_url=broker_url
+)
+
+
+def test_start_worker_default(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml]
+    with cleanup_worker("dagster_test_worker", args):
+        start_worker("dagster_test_worker", broker_yaml)
+        assert check_for_worker("dagster_test_worker", args)
 
 
 @skip_ci
-def test_start_worker_too_many_queues(rabbitmq):
+def test_start_worker_too_many_queues(rabbitmq, broker_yaml):
     args = ["-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
 
     with cleanup_worker("dagster_test_worker"):
         start_worker(
             "dagster_test_worker",
+            broker_yaml,
             args=args,
             exit_code=1,
             exception_str=(
@@ -120,12 +137,12 @@ def test_start_worker_too_many_queues(rabbitmq):
 
 
 @skip_ci
-def test_start_worker_addargs(rabbitmq):
+def test_start_worker_addargs(rabbitmq, broker_yaml):
     args = ["--", "--uid", "42"]
 
     with cleanup_worker("dagster_test_worker"):
         start_worker(
-            "dagster_test_worker", args=args,
+            "dagster_test_worker", broker_yaml, args=args,
         )
 
         # Omitting check that uid is actually 42 to avoid a heavy test dependency on psutil
