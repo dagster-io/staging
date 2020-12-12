@@ -11,12 +11,11 @@ from dagster.core.test_utils import instance_for_test_tempdir
 from dagster_celery import celery_executor
 from dagster_celery.tags import DAGSTER_CELERY_RUN_PRIORITY_TAG
 
-from .utils import execute_eagerly_on_celery, execute_on_thread, skip_ci, start_celery_worker
+from .utils import execute_eagerly_on_celery, execute_on_thread, start_celery_worker
 
 celery_mode_defs = [ModeDefinition(executor_defs=default_executors + [celery_executor])]
 
 
-@skip_ci
 def test_eager_priority_pipeline():
     with execute_eagerly_on_celery("simple_priority_pipeline") as result:
         assert result.success
@@ -35,7 +34,6 @@ def test_eager_priority_pipeline():
         ]
 
 
-@skip_ci
 def test_run_priority_pipeline(rabbitmq):
     with seven.TemporaryDirectory() as tempdir:
         with instance_for_test_tempdir(tempdir) as instance:

@@ -3,7 +3,6 @@ import signal
 import subprocess
 from contextlib import contextmanager
 
-import pytest
 from dagster import execute_pipeline, seven
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.instance import DagsterInstance
@@ -11,10 +10,6 @@ from dagster.core.test_utils import instance_for_test
 
 BUILDKITE = os.getenv("BUILDKITE")
 
-skip_ci = pytest.mark.skipif(
-    bool(BUILDKITE),
-    reason="Tests hang forever on buildkite for reasons we don't currently understand",
-)
 
 REPO_FILE = os.path.join(os.path.dirname(__file__), "repo.py")
 
@@ -85,10 +80,11 @@ def execute_on_thread(pipeline_name, done, instance_ref, tempdir=None, tags=None
 
 
 @contextmanager
-def start_celery_worker(queue=None):
+def start_celery_worker(queue=None, yaml_file=None):
     process = subprocess.Popen(
         ["dagster-celery", "worker", "start", "-A", "dagster_celery.app"]
         + (["-q", queue] if queue else [])
+        + (["-y", yaml_file] if yaml_file else [])
         + (["--", "--concurrency", "1"])
     )
 
@@ -96,7 +92,10 @@ def start_celery_worker(queue=None):
         yield
     finally:
         os.kill(process.pid, signal.SIGINT)
-        subprocess.check_output(["dagster-celery", "worker", "terminate"])
+        process.wait()
+        subprocess.check_output(
+            ["dagster-celery", "worker", "terminate"] + (["-y", yaml_file] if yaml_file else [])
+        )
 
 
 def events_of_type(result, event_type):

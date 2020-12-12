@@ -24,13 +24,11 @@ from dagster_celery_tests.utils import start_celery_worker
 from .utils import (  # isort:skip
     execute_eagerly_on_celery,
     execute_pipeline_on_celery,
-    skip_ci,
     events_of_type,
     REPO_FILE,
 )
 
 
-@skip_ci
 def test_execute_on_celery_default(dagster_celery_worker):
     with execute_pipeline_on_celery("test_pipeline") as result:
         assert result.result_for_solid("simple").output_value() == 1
@@ -41,7 +39,6 @@ def test_execute_on_celery_default(dagster_celery_worker):
         assert len(events_of_type(result, "STEP_SUCCESS")) == 1
 
 
-@skip_ci
 def test_execute_serial_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("test_serial_pipeline") as result:
         assert result.result_for_solid("simple").output_value() == 1
@@ -54,7 +51,6 @@ def test_execute_serial_on_celery(dagster_celery_worker):
         assert len(events_of_type(result, "STEP_SUCCESS")) == 2
 
 
-@skip_ci
 def test_execute_diamond_pipeline_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("test_diamond_pipeline") as result:
         assert result.result_for_solid("emit_values").output_values == {
@@ -66,13 +62,11 @@ def test_execute_diamond_pipeline_on_celery(dagster_celery_worker):
         assert result.result_for_solid("subtract").output_value() == -1
 
 
-@skip_ci
 def test_execute_parallel_pipeline_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("test_parallel_pipeline") as result:
         assert len(result.solid_result_list) == 11
 
 
-@skip_ci
 def test_execute_composite_pipeline_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("composite_pipeline") as result:
         assert result.success
@@ -97,7 +91,6 @@ def test_execute_composite_pipeline_on_celery(dagster_celery_worker):
         )
 
 
-@skip_ci
 def test_execute_optional_outputs_pipeline_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("test_optional_outputs") as result:
         assert len(result.solid_result_list) == 4
@@ -105,7 +98,6 @@ def test_execute_optional_outputs_pipeline_on_celery(dagster_celery_worker):
         assert sum([int(x.success) for x in result.solid_result_list]) == 2
 
 
-@skip_ci
 def test_execute_fails_pipeline_on_celery(dagster_celery_worker):
     with execute_pipeline_on_celery("test_fails") as result:
         assert len(result.solid_result_list) == 2  # fail & skip

@@ -4,9 +4,12 @@ import time
 
 import docker
 import pytest
+import yaml
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import setup_default_app
-from dagster import file_relative_path
+from dagster import file_relative_path, seven
+from dagster.core.test_utils import environ
+from dagster_celery.defaults import broker_url
 from dagster_celery.make_app import make_app
 from dagster_celery.tasks import create_task
 from dagster_test.test_project import build_and_tag_test_image, get_test_project_docker_image
@@ -15,9 +18,19 @@ IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 
 
 @pytest.fixture(scope="session")
+def broker_yaml():  # pylint: disable=redefined-outer-name
+    with seven.TemporaryDirectory() as temp_dir:
+        file_path = os.path.join(temp_dir, "broker.yaml")
+        with open(file_path, "w") as fd:
+            yaml.dump({"broker": broker_url}, fd, default_flow_style=False)
+            yield file_path
+
+
+@pytest.fixture(scope="session")
 def rabbitmq():  # pylint: disable=redefined-outer-name
     if IS_BUILDKITE:
-        yield
+        with environ({"TEST_BROKER": os.getenv("DAGSTER_CELERY_BROKER_HOST", "localhost")}):
+            yield
         return
 
     docker_compose_file = file_relative_path(__file__, "../docker-compose.yaml")

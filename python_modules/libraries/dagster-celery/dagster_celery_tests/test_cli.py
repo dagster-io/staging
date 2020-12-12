@@ -3,14 +3,19 @@ import sys
 import time
 from contextlib import contextmanager
 
+import pytest
 # pylint: disable=unused-argument
 from click.testing import CliRunner
 from dagster import check
 from dagster.seven import mock
 from dagster.utils import file_relative_path
 from dagster_celery.cli import main
+from dagster_celery.defaults import broker_url
 
-from .utils import skip_ci
+skip_ci = pytest.mark.skipif(
+    bool(os.getenv("BUILDKITE")),
+    reason="Skipping in BK because broker_yaml required for workers in Buildkite to reach broker",
+)
 
 
 def assert_called(mck):
@@ -40,11 +45,15 @@ def pythonpath(path):
         sys.path = old_sys_path
 
 
-def start_worker(name, args=None, exit_code=0, exception_str=""):
+def start_worker(name, broker_yaml=None, args=None, exit_code=0, exception_str=""):
     args = check.opt_list_param(args, "args")
     runner = CliRunner()
     result = runner.invoke(
-        main, ["worker", "start", "-A", "dagster_celery.app", "-d", "--name", name] + args
+        main,
+        ["worker", "start", "-A", "dagster_celery.app", "-d"]
+        + (["-y", broker_yaml] if broker_yaml else [])
+        + ["--name", name]
+        + args,
     )
     assert result.exit_code == exit_code, str(result.exception)
     if exception_str:
@@ -66,7 +75,7 @@ def check_for_worker(name, args=None, present=True):
     runner = CliRunner()
     args = check.opt_list_param(args, "args")
     result = runner.invoke(main, ["worker", "list"] + args)
-    assert result.exit_code == 0, str(result.exception)
+    assert result.exit_code == 0, str(result.exception) + "\n" + str(result.output)
     retry_count = 0
     while retry_count < 10 and (
         not "{name}@".format(name=name) in result.output
@@ -75,8 +84,9 @@ def check_for_worker(name, args=None, present=True):
     ):
         time.sleep(1)
         result = runner.invoke(main, ["worker", "list"] + args)
-        assert result.exit_code == 0, str(result.exception)
+        assert result.exit_code == 0, str(result.exception) + "\n" + str(result.output)
         retry_count += 1
+
     return (
         "{name}@".format(name=name) in result.output
         if present
@@ -96,20 +106,29 @@ def test_invoke_entrypoint():
     assert "Start a dagster celery worker" in result.output
 
 
-@skip_ci
-def test_start_worker(rabbitmq):
-    with cleanup_worker("dagster_test_worker"):
-        start_worker("dagster_test_worker")
-        assert check_for_worker("dagster_test_worker")
+CONFIG_YAML = """
+execution:
+  celery:
+    broker: "{broker_url}"
+""".format(
+    broker_url=broker_url
+)
 
 
-@skip_ci
-def test_start_worker_too_many_queues(rabbitmq):
-    args = ["-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
+def test_start_worker_default(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml]
+    with cleanup_worker("dagster_test_worker", args):
+        start_worker("dagster_test_worker", broker_yaml)
+        assert check_for_worker("dagster_test_worker", args)
 
-    with cleanup_worker("dagster_test_worker"):
+
+def test_start_worker_too_many_queues(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml, "-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
+
+    with cleanup_worker("dagster_test_worker", ["-y", broker_yaml]):
         start_worker(
             "dagster_test_worker",
+            broker_yaml,
             args=args,
             exit_code=1,
             exception_str=(
@@ -119,18 +138,17 @@ def test_start_worker_too_many_queues(rabbitmq):
         )
 
 
-@skip_ci
-def test_start_worker_addargs(rabbitmq):
-    args = ["--", "--uid", "42"]
+def test_start_worker_addargs(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml, "--", "--uid", "42"]
 
-    with cleanup_worker("dagster_test_worker"):
+    # Omitting check that uid is actually 42 to avoid a heavy test dependency on psutil
+    with cleanup_worker("dagster_test_worker", ["-y", broker_yaml]):
         start_worker(
-            "dagster_test_worker", args=args,
+            "dagster_test_worker", broker_yaml, args=args,
         )
 
-        # Omitting check that uid is actually 42 to avoid a heavy test dependency on psutil
 
-
+#
 @skip_ci
 def test_start_worker_config_from_empty_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "empty.yaml")]
@@ -139,6 +157,7 @@ def test_start_worker_config_from_empty_yaml(rabbitmq):
         assert check_for_worker("dagster_test_worker")
 
 
+# Skipping in BK because broker_yaml required for workers in Buildkite to reach broker
 @skip_ci
 def test_start_worker_config_from_partial_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "partial.yaml")]
@@ -147,6 +166,7 @@ def test_start_worker_config_from_partial_yaml(rabbitmq):
         assert check_for_worker("dagster_test_worker")
 
 
+# Skipping in BK because broker_yaml required for workers in Buildkite to reach broker
 @skip_ci
 def test_start_worker_config_from_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "engine_config.yaml")]
