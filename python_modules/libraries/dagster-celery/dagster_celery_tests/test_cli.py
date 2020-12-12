@@ -3,14 +3,15 @@ import sys
 import time
 from contextlib import contextmanager
 
+import pytest
+
 # pylint: disable=unused-argument
 from click.testing import CliRunner
 from dagster import check
 from dagster.seven import mock
 from dagster.utils import file_relative_path
 from dagster_celery.cli import main
-
-from .utils import skip_ci
+from dagster_celery.defaults import broker_url
 
 
 def assert_called(mck):
@@ -44,7 +45,7 @@ def start_worker(name, args=None, exit_code=0, exception_str=""):
     args = check.opt_list_param(args, "args")
     runner = CliRunner()
     result = runner.invoke(
-        main, ["worker", "start", "-A", "dagster_celery.app", "-d", "--name", name] + args
+        main, ["worker", "start", "-A", "dagster_celery.app", "-d", "--name", name] + args,
     )
     assert result.exit_code == exit_code, str(result.exception)
     if exception_str:
@@ -77,6 +78,7 @@ def check_for_worker(name, args=None, present=True):
         result = runner.invoke(main, ["worker", "list"] + args)
         assert result.exit_code == 0, str(result.exception)
         retry_count += 1
+
     return (
         "{name}@".format(name=name) in result.output
         if present
@@ -96,18 +98,17 @@ def test_invoke_entrypoint():
     assert "Start a dagster celery worker" in result.output
 
 
-@skip_ci
-def test_start_worker(rabbitmq):
-    with cleanup_worker("dagster_test_worker"):
-        start_worker("dagster_test_worker")
-        assert check_for_worker("dagster_test_worker")
+def test_start_worker_default(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml]
+    with cleanup_worker("dagster_test_worker", args):
+        start_worker("dagster_test_worker", args)
+        assert check_for_worker("dagster_test_worker", args)
 
 
-@skip_ci
-def test_start_worker_too_many_queues(rabbitmq):
-    args = ["-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
+def test_start_worker_too_many_queues(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml, "-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
 
-    with cleanup_worker("dagster_test_worker"):
+    with cleanup_worker("dagster_test_worker", ["-y", broker_yaml]):
         start_worker(
             "dagster_test_worker",
             args=args,
@@ -119,16 +120,20 @@ def test_start_worker_too_many_queues(rabbitmq):
         )
 
 
-@skip_ci
-def test_start_worker_addargs(rabbitmq):
-    args = ["--", "--uid", "42"]
+def test_start_worker_addargs(rabbitmq, broker_yaml):
+    args = ["-y", broker_yaml, "--", "--uid", "42"]
 
-    with cleanup_worker("dagster_test_worker"):
+    # Omitting check that uid is actually 42 to avoid a heavy test dependency on psutil
+    with cleanup_worker("dagster_test_worker", ["-y", broker_yaml]):
         start_worker(
             "dagster_test_worker", args=args,
         )
 
-        # Omitting check that uid is actually 42 to avoid a heavy test dependency on psutil
+
+skip_ci = pytest.mark.skipif(
+    bool(os.getenv("BUILDKITE")),
+    reason="Skipping in BK because broker_yaml required for workers in Buildkite to reach broker",
+)
 
 
 @skip_ci
@@ -136,7 +141,7 @@ def test_start_worker_config_from_empty_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "empty.yaml")]
     with cleanup_worker("dagster_test_worker", args=args):
         start_worker("dagster_test_worker", args=args)
-        assert check_for_worker("dagster_test_worker")
+        assert check_for_worker("dagster_test_worker", args=args)
 
 
 @skip_ci
@@ -144,7 +149,7 @@ def test_start_worker_config_from_partial_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "partial.yaml")]
     with cleanup_worker("dagster_test_worker", args=args):
         start_worker("dagster_test_worker", args=args)
-        assert check_for_worker("dagster_test_worker")
+        assert check_for_worker("dagster_test_worker", args=args)
 
 
 @skip_ci
@@ -153,7 +158,7 @@ def test_start_worker_config_from_yaml(rabbitmq):
 
     with cleanup_worker("dagster_test_worker", args=args):
         start_worker("dagster_test_worker", args=args)
-        assert check_for_worker("dagster_test_worker")
+        assert check_for_worker("dagster_test_worker", args=args)
 
 
 @mock.patch("dagster_celery.cli.launch_background_worker")
