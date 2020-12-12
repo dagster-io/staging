@@ -4,14 +4,28 @@ import time
 
 import docker
 import pytest
+import yaml
 from celery.contrib.testing import worker
 from celery.contrib.testing.app import setup_default_app
-from dagster import file_relative_path
+from dagster import file_relative_path, seven
+from dagster.core.test_utils import environ
+from dagster_celery.defaults import broker_url
 from dagster_celery.make_app import make_app
 from dagster_celery.tasks import create_task
 from dagster_test.test_project import build_and_tag_test_image, get_test_project_docker_image
 
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
+
+
+@pytest.fixture(scope="session")
+def broker_yaml():  # pylint: disable=redefined-outer-name
+    with seven.TemporaryDirectory() as temp_dir:
+        file_path = os.path.join(temp_dir, "broker.yaml")
+        with open(file_path, "w") as fd:
+            yaml.dump({"broker": broker_url}, fd, default_flow_style=False)
+            with environ({"TEST_BROKER": broker_url}):
+                print("FILE PATH: " + file_path)
+                yield file_path
 
 
 @pytest.fixture(scope="session")
@@ -68,7 +82,7 @@ def dagster_celery_app(rabbitmq):  # pylint: disable=redefined-outer-name, unuse
 
 # pylint doesn't understand pytest fixtures
 @pytest.fixture(scope="function")
-def dagster_celery_worker(dagster_celery_app):  # pylint: disable=redefined-outer-name
+def dagster_celery_worker(dagster_celery_app, broker_yaml):  # pylint: disable=redefined-outer-name
     with worker.start_worker(dagster_celery_app, perform_ping_check=False) as w:
         yield w
 
