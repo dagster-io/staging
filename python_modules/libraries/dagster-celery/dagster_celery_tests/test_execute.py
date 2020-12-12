@@ -14,7 +14,7 @@ from dagster import (
     seven,
 )
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
-from dagster.core.errors import DagsterSubprocessError, DagsterUnknownStepStateError
+from dagster.core.errors import DagsterIncompleteExecutionPlanError, DagsterSubprocessError
 from dagster.core.events import DagsterEventType
 from dagster.core.test_utils import instance_for_test, instance_for_test_tempdir
 from dagster.utils import send_interrupt
@@ -116,7 +116,6 @@ def test_execute_fails_pipeline_on_celery(dagster_celery_worker):
         assert result.result_for_solid("should_never_execute").skipped
 
 
-@pytest.mark.skip("Celery termination currently flaky")
 def test_terminate_pipeline_on_celery(rabbitmq):
     with start_celery_worker():
         with seven.TemporaryDirectory() as tempdir:
@@ -148,7 +147,7 @@ def test_terminate_pipeline_on_celery(rabbitmq):
                         result_types.append(result.event_type)
 
                     assert False
-                except DagsterUnknownStepStateError:
+                except DagsterIncompleteExecutionPlanError:
                     pass
 
                 interrupt_thread.join()
