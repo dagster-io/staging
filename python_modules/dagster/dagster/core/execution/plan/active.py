@@ -66,14 +66,14 @@ class ActiveExecution:
             return
 
         # Requested termination is the only time we should be exiting incomplete without an exception
-        if not self.is_complete:
+        if not self.is_complete or self._abandoned:
             pending_action = (
                 self._executable + self._pending_abandon + self._pending_retry + self._pending_skip
             )
             raise DagsterIncompleteExecutionPlanError(
                 "Execution of pipeline finished without completing the execution plan, "
                 "likely as a result of a termination request."
-                "{pending_str}{in_flight_str}{action_str}{retry_str}".format(
+                "{pending_str}{in_flight_str}{action_str}{retry_str}{abandoned_str}".format(
                     in_flight_str="\nSteps still in flight: {}".format(self._in_flight)
                     if self._in_flight
                     else "",
@@ -85,6 +85,9 @@ class ActiveExecution:
                     else "",
                     retry_str="\nSteps waiting to retry: {}".format(self._waiting_to_retry.keys())
                     if self._waiting_to_retry
+                    else "",
+                    abandoned_str="\nSteps abandonded: {}".format(self._abandoned)
+                    if self._abandoned
                     else "",
                 )
             )
