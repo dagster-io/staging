@@ -6,6 +6,7 @@ from dagster.core.test_utils import create_run_for_test
 from dagster.utils import merge_dicts
 from dagster.utils.yaml_utils import merge_yamls
 from dagster_k8s.test import wait_for_job_and_get_raw_logs
+from dagster_k8s_test_infra.integration_utils import image_pull_policy
 from dagster_test.test_project import (
     ReOriginatedExternalPipelineForTest,
     get_test_project_environments_path,
@@ -21,7 +22,7 @@ def get_celery_engine_config(dagster_docker_image, job_namespace):
                 "config": {
                     "job_image": dagster_docker_image,
                     "job_namespace": job_namespace,
-                    "image_pull_policy": "Always",
+                    "image_pull_policy": image_pull_policy(),
                     "env_config_maps": ["dagster-pipeline-env"],
                 }
             }

@@ -5,6 +5,7 @@ import sys
 import kubernetes
 import pytest
 from dagster_k8s.test import wait_for_job_and_get_raw_logs
+from dagster_k8s_test_infra.integration_utils import image_pull_policy
 from kubernetes.stream import stream
 from marks import mark_user_code_deployment
 
@@ -40,7 +41,7 @@ def test_execute_on_celery_k8s(  # pylint: disable=redefined-outer-name,unused-a
         "execution": {
             "celery-k8s": {
                 "config": {
-                    "image_pull_policy": "Always",
+                    "image_pull_policy": image_pull_policy(),
                     "env_config_maps": ["dagster-pipeline-env"],
                     "job_namespace": namespace,
                 }
