@@ -10,3 +10,7 @@
   base_image:
     name: buildkite-integration-base
     source: aws
+3.9.1:
+  base_image:
+    name: buildkite-integration-base
+    source: aws
