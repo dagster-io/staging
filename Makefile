@@ -42,6 +42,9 @@ install_dev_python_modules:
 # https://stackoverflow.com/a/31526029/11295366
 	pip --no-cache-dir install pyspark\>=3.0.0 $(QUIET)
 
+# This is to ensure we can build Pandas on 3.9
+	pip install Cython==0.29.21
+
 # Need to do this for 3.9 compat
 # See: https://github.com/numpy/numpy/issues/17784,
 	pip install --only-binary=:all: numpy==1.19.4
