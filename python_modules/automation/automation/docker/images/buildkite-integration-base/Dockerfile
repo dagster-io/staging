@@ -37,7 +37,7 @@ ENV LANG=en_US.UTF-8 \
     #   echo "deb http://http.us.debian.org/debian stretch main contrib non-free" > /etc/apt/sources.list.d/91-debian-stretch.list
     #   apt-get update -yqq
     #   apt-cache policy openjdk-8-jdk-headless
-    JAVA_DEBIAN_VERSION=8u232-b09-1~deb9u1 \
+    JAVA_DEBIAN_VERSION=8u252-b09-1~deb9u1 \
     SBT_VERSION=1.2.8 \
     PYSPARK_VERSION=2.4.4 \
     KUBECTL_VERSION=v1.16.4 \
