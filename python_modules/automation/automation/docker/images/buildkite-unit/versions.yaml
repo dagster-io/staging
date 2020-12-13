@@ -10,3 +10,6 @@
   docker_args:
     BASE_IMAGE: python:3.8.3-slim
     PYTHON_VERSION: 3.8.3
+3.9.1:
+  docker_args:
+    BASE_IMAGE: python:3.9.1-slim
