@@ -5,6 +5,7 @@ import pytest
 from dagster import pipeline, reconstructable
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.host_representation import InProcessRepositoryLocationOrigin, RepositoryHandle
+from dagster.core.origin import RepositoryPythonOrigin
 from dagster.core.test_utils import create_run_for_test, environ, instance_for_test
 from dagster.utils.hosted_user_process import external_pipeline_from_recon_pipeline
 from dagster_celery_k8s.config import get_celery_engine_config
@@ -182,6 +183,103 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     assert method_name == "create_namespaced_job"
     job_resources = kwargs["body"].spec.template.spec.containers[0].resources
     assert job_resources == expected_resources
+
+
+def test_user_defined_k8s_config_use_config_container(kubeconfig_file, monkeypatch):
+    # Construct a K8s run launcher in a fake k8s environment.
+    mock_k8s_client_batch_api = mock.MagicMock()
+    celery_k8s_run_launcher = CeleryK8sRunLauncher(
+        instance_config_map="dagster-instance",
+        postgres_password_secret="dagster-postgresql-secret",
+        dagster_home="/opt/dagster/dagster_home",
+        load_incluster_config=False,
+        kubeconfig_file=kubeconfig_file,
+        k8s_client_batch_api=mock_k8s_client_batch_api,
+    )
+
+    # Create fake external pipeline and patch origin to have a container image.
+    monkeypatch.setattr(RepositoryPythonOrigin, "container_image", "my_image:tag")
+    recon_pipeline = reconstructable(fake_pipeline)
+    recon_repo = recon_pipeline.repository
+    location_origin = InProcessRepositoryLocationOrigin(recon_repo)
+    location_handle = location_origin.create_handle()
+    repo_def = recon_repo.get_definition()
+    repo_handle = RepositoryHandle(
+        repository_name=repo_def.name,
+        repository_location_handle=location_handle,
+    )
+    fake_external_pipeline = external_pipeline_from_recon_pipeline(
+        recon_pipeline,
+        solid_selection=None,
+        repository_handle=repo_handle,
+    )
+
+    # Launch the run in a fake Dagster instance.
+    with instance_for_test() as instance:
+        celery_k8s_run_launcher.register_instance(instance)
+        pipeline_name = "demo_pipeline"
+        run_config = {"execution": {"celery-k8s": {"config": {"job_image": "fake-image-name"}}}}
+        run = create_run_for_test(
+            instance,
+            pipeline_name=pipeline_name,
+            run_config=run_config,
+        )
+        celery_k8s_run_launcher.launch_run(run, fake_external_pipeline)
+
+    # Check that user defined k8s config was passed down to the k8s job.
+    mock_method_calls = mock_k8s_client_batch_api.method_calls
+    assert len(mock_method_calls) > 0
+    _, _args, kwargs = mock_method_calls[0]
+    assert kwargs["body"].spec.template.spec.containers[0].image == "fake-image-name"
+
+
+def test_user_defined_k8s_config_use_origin_container(kubeconfig_file, monkeypatch):
+    # Construct a K8s run launcher in a fake k8s environment.
+    mock_k8s_client_batch_api = mock.MagicMock()
+    celery_k8s_run_launcher = CeleryK8sRunLauncher(
+        instance_config_map="dagster-instance",
+        postgres_password_secret="dagster-postgresql-secret",
+        dagster_home="/opt/dagster/dagster_home",
+        load_incluster_config=False,
+        kubeconfig_file=kubeconfig_file,
+        k8s_client_batch_api=mock_k8s_client_batch_api,
+    )
+
+    # Create fake external pipeline and patch origin to have a container image.
+    monkeypatch.setattr(RepositoryPythonOrigin, "container_image", "my_image:tag")
+
+    recon_pipeline = reconstructable(fake_pipeline)
+    recon_repo = recon_pipeline.repository
+    location_origin = InProcessRepositoryLocationOrigin(recon_repo)
+    location_handle = location_origin.create_handle()
+    repo_def = recon_repo.get_definition()
+    repo_handle = RepositoryHandle(
+        repository_name=repo_def.name,
+        repository_location_handle=location_handle,
+    )
+    fake_external_pipeline = external_pipeline_from_recon_pipeline(
+        recon_pipeline,
+        solid_selection=None,
+        repository_handle=repo_handle,
+    )
+
+    # Launch the run in a fake Dagster instance.
+    with instance_for_test() as instance:
+        celery_k8s_run_launcher.register_instance(instance)
+        pipeline_name = "demo_pipeline"
+        run_config = {"execution": {"celery-k8s": {}}}
+        run = create_run_for_test(
+            instance,
+            pipeline_name=pipeline_name,
+            run_config=run_config,
+        )
+        celery_k8s_run_launcher.launch_run(run, fake_external_pipeline)
+
+    # Check that user defined k8s config was passed down to the k8s job.
+    mock_method_calls = mock_k8s_client_batch_api.method_calls
+    assert len(mock_method_calls) > 0
+    _, _args, kwargs = mock_method_calls[0]
+    assert kwargs["body"].spec.template.spec.containers[0].image == "my_image:tag"
 
 
 @pipeline
