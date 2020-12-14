@@ -10,11 +10,8 @@ from dagster import (
     pipeline,
     solid,
 )
-from dagster.core.errors import (
-    DagsterIncompleteExecutionPlanError,
-    DagsterInvalidConfigError,
-    DagsterUnknownStepStateError,
-)
+from dagster.check import CheckError
+from dagster.core.errors import DagsterInvalidConfigError, DagsterUnknownStepStateError
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.execution.plan.plan import should_skip_step
@@ -331,7 +328,9 @@ def test_executor_not_created_for_execute_plan():
 def test_incomplete_execution_plan():
     plan = create_execution_plan(define_diamond_pipeline())
 
-    with pytest.raises(DagsterIncompleteExecutionPlanError):
+    with pytest.raises(
+        CheckError, match="Execution plan should always be complete before exiting normally"
+    ):
         with plan.start(retries=Retries(RetryMode.DISABLED)) as active_execution:
 
             steps = active_execution.get_steps_to_execute()
