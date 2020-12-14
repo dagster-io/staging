@@ -3,6 +3,7 @@ import os
 import yaml
 from defines import TOX_MAP, SupportedPython, SupportedPythons
 from images import publish_test_images, test_image_depends_fn
+from integration import integration_tests
 from module_build_spec import ModuleBuildSpec
 from step_builder import StepBuilder, wait_step
 from utils import (
@@ -630,16 +631,17 @@ def python_steps():
         .build(),
     ]
 
-    for m in DAGSTER_PACKAGES_WITH_CUSTOM_TESTS:
-        steps += m.get_tox_build_steps()
+    # for m in DAGSTER_PACKAGES_WITH_CUSTOM_TESTS:
+    #     steps += m.get_tox_build_steps()
 
-    steps += extra_library_tests()
+    # steps += extra_library_tests()
 
     # https://github.com/dagster-io/dagster/issues/2785
-    steps += pipenv_smoke_tests()
-    steps += version_equality_checks()
-    steps += next_docs_build_tests()
-    steps += examples_tests()
+    # steps += pipenv_smoke_tests()
+    # steps += version_equality_checks()
+    # steps += next_docs_build_tests()
+    # steps += examples_tests()
+    steps += integration_tests()
 
     return steps
 
