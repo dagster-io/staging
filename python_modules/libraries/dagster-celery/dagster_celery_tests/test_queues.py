@@ -10,7 +10,7 @@ from .utils import execute_on_thread, start_celery_worker
 celery_mode_defs = [ModeDefinition(executor_defs=default_executors + [celery_executor])]
 
 
-def test_multiqueue(rabbitmq, broker_yaml):  # pylint: disable=unused-argument
+def test_multiqueue(rabbitmq):  # pylint: disable=unused-argument
     with instance_for_test() as instance:
 
         done = threading.Event()
@@ -22,6 +22,6 @@ def test_multiqueue(rabbitmq, broker_yaml):  # pylint: disable=unused-argument
             execute_thread.start()
             time.sleep(1)
             assert not done.is_set()
-            with start_celery_worker(queue="fooqueue", yaml_file=broker_yaml):
+            with start_celery_worker(queue="fooqueue"):
                 execute_thread.join()
                 assert done.is_set()
