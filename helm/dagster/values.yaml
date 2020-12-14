@@ -58,9 +58,8 @@ dagit:
   # Liveness probe detects when to restart dagit.
   # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes
   livenessProbe:
-    httpGet:
-      path: "/dagit_info"
-      port: 80
+    tcpSocket:
+      port: "http"
     # initialDelaySeconds: 60
     periodSeconds: 20
     timeoutSeconds: 3
@@ -72,9 +71,8 @@ dagit:
   # If on kubernetes < v1.16, then comment out `startupProbe` lines and comment in
   # `initialDelaySeconds: 60` under `livenessProbe`
   startupProbe:
-    httpGet:
-      path: "/dagit_info"
-      port: 80
+    tcpSocket:
+      port: "http"
     initialDelaySeconds: 1
     periodSeconds: 10
     timeoutSeconds: 3
