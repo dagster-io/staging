@@ -75,6 +75,10 @@ data:
         load_incluster_config: {{ .Values.k8sRunLauncher.loadInclusterConfig }}
         kubeconfig_file: {{ .Values.k8sRunLauncher.kubeconfigFile }}
         job_namespace: {{ .Values.k8sRunLauncher.jobNamespace | default .Release.Namespace }}
+        {{- with $.Values.imagePullSecrets }}
+        image_pull_secrets:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
         service_account_name: {{ include "dagster.serviceAccountName" . }}
         {{- if .Values.k8sRunLauncher.image }}
         job_image: "{{- .Values.k8sRunLauncher.image.repository -}}:{{- .Values.k8sRunLauncher.image.tag -}}"
