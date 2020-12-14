@@ -175,6 +175,13 @@ scheduler:
     - ""
 
 ####################################################################################################
+# Telemetry: Allow aggregated usage statistics to be uploaded. No solid definitions (including
+# generated context) or pipeline definitions (including modes and resources) will be uploaded.
+####################################################################################################
+telemetry:
+  enabled: true
+
+####################################################################################################
 # PostgreSQL: Configuration values for postgresql
 #
 # https://github.com/kubernetes/charts/blob/master/stable/postgresql/README.md
