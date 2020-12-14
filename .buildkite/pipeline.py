@@ -38,7 +38,7 @@ def integration_suite_extra_cmds_fn(version):
 
 def integration_tests():
     tests = []
-    tests += publish_test_images()
+    # tests += publish_test_images()
     tests += ModuleBuildSpec(
         os.path.join("integration_tests", "python_modules", "dagster-k8s-test-infra"),
         supported_pythons=SupportedPythons,
