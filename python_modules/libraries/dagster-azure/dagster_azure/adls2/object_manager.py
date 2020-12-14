@@ -1,9 +1,8 @@
 import logging
 import pickle
 
-from dagster import Field, ObjectManager, Selector, StringSource, check, object_manager
+from dagster import Field, ObjectManager, StringSource, check, object_manager
 from dagster.utils import PICKLE_PROTOCOL
-from dagster_azure.adls2.resources import _adls2_resource_from_config
 from dagster_azure.adls2.utils import ResourceNotFoundError
 
 _LEASE_DURATION = 60  # One minute
@@ -23,7 +22,16 @@ class PickledObjectADLS2ObjectManager(ObjectManager):
 
     def _get_path(self, context):
         run_id, step_key, output_name = context.get_run_scoped_output_identifier()
-        return "/".join([self.prefix, "storage", run_id, "files", step_key, output_name,])
+        return "/".join(
+            [
+                self.prefix,
+                "storage",
+                run_id,
+                "files",
+                step_key,
+                output_name,
+            ]
+        )
 
     def _rm_object(self, key):
         check.str_param(key, "key")
@@ -80,17 +88,8 @@ class PickledObjectADLS2ObjectManager(ObjectManager):
     config_schema={
         "adls2_file_system": Field(StringSource, description="ADLS Gen2 file system name"),
         "adls2_prefix": Field(StringSource, is_required=False, default_value="dagster"),
-        "storage_account": Field(StringSource, description="The storage account name."),
-        "credential": Field(
-            Selector(
-                {
-                    "sas": Field(StringSource, description="SAS token for the account."),
-                    "key": Field(StringSource, description="Shared Access Key for the account"),
-                }
-            ),
-            description="The credentials with which to authenticate.",
-        ),
     },
+    required_resource_keys={"adls2"},
 )
 def adls2_object_manager(init_context):
     """Persistent object manager using Azure Data Lake Storage Gen2 for storage.
@@ -107,7 +106,9 @@ def adls2_object_manager(init_context):
         pipeline_def = PipelineDefinition(
             mode_defs=[
                 ModeDefinition(
-                    resource_defs={'object_manager': adls2_object_manager, ...},
+                    resource_defs={
+                        'object_manager': adls2_object_manager,
+                        'adls2': adls2_resource, ...},
                 ), ...
             ], ...
         )
@@ -121,12 +122,10 @@ def adls2_object_manager(init_context):
                 config:
                     adls2_file_system: my-cool-file-system
                     adls2_prefix: good/prefix-for-files-
-                    storage_account: my_azure_storage_account_name
-                    credential: key_or_sas_token
     """
-    # TODO: Add adls2 client resource once resource dependencies are enabled.
-    adls2_client = _adls2_resource_from_config(init_context.resource_config).adls2_client
-    blob_client = _adls2_resource_from_config(init_context.resource_config).blob_client
+    adls_resource = init_context.resources.adls2
+    adls2_client = adls_resource.adls2_client
+    blob_client = adls_resource.blob_client
     pickled_object_manager = PickledObjectADLS2ObjectManager(
         init_context.resource_config["adls2_file_system"],
         adls2_client,
