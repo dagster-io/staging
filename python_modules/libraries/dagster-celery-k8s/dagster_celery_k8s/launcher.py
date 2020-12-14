@@ -166,12 +166,14 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
         if job_image:
             env_vars = {"DAGSTER_CURRENT_IMAGE": job_image}
             if job_image_from_executor_config:
-                raise DagsterInvariantViolationError(
+
+                job_image = job_image_from_executor_config
+                self._instance.report_engine_event(
                     "You have specified a job_image {job_image_from_executor_config} in your executor configuration, "
-                    "but also {job_image} in your user-code deployment. You cannot specify a job_image "
-                    "in your executor config when using user-code deployments because the job image is "
-                    "pulled from the deployment. To resolve this error, remove the job_image "
-                    "configuration from your executor configuration (which is a part of your run configuration)"
+                    "but also {job_image} in your user-code deployment. Using the job image {job_image_from_executor_config} "
+                    "from executor configuration as it takes precedence.",
+                    run,
+                    cls=self.__class__,
                 )
         else:
             if not job_image_from_executor_config:
