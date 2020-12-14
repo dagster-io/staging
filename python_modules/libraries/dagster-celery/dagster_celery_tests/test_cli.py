@@ -4,7 +4,6 @@ import time
 from contextlib import contextmanager
 
 import pytest
-
 # pylint: disable=unused-argument
 from click.testing import CliRunner
 from dagster import check
@@ -98,17 +97,17 @@ def test_invoke_entrypoint():
     assert "Start a dagster celery worker" in result.output
 
 
-def test_start_worker_default(rabbitmq, broker_yaml):
-    args = ["-y", broker_yaml]
+def test_start_worker_default(rabbitmq):
+    args = []
     with cleanup_worker("dagster_test_worker", args):
         start_worker("dagster_test_worker", args)
         assert check_for_worker("dagster_test_worker", args)
 
 
-def test_start_worker_too_many_queues(rabbitmq, broker_yaml):
-    args = ["-y", broker_yaml, "-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
+def test_start_worker_too_many_queues(rabbitmq):
+    args = ["-q", "1", "-q", "2", "-q", "3", "-q", "4", "-q", "5"]
 
-    with cleanup_worker("dagster_test_worker", ["-y", broker_yaml]):
+    with cleanup_worker("dagster_test_worker"):
         start_worker(
             "dagster_test_worker",
             args=args,
@@ -120,23 +119,16 @@ def test_start_worker_too_many_queues(rabbitmq, broker_yaml):
         )
 
 
-def test_start_worker_addargs(rabbitmq, broker_yaml):
-    args = ["-y", broker_yaml, "--", "--uid", "42"]
+def test_start_worker_addargs(rabbitmq):
+    args = ["--", "--uid", "42"]
 
     # Omitting check that uid is actually 42 to avoid a heavy test dependency on psutil
-    with cleanup_worker("dagster_test_worker", ["-y", broker_yaml]):
+    with cleanup_worker("dagster_test_worker"):
         start_worker(
             "dagster_test_worker", args=args,
         )
 
 
-skip_ci = pytest.mark.skipif(
-    bool(os.getenv("BUILDKITE")),
-    reason="Skipping in BK because broker_yaml required for workers in Buildkite to reach broker",
-)
-
-
-@skip_ci
 def test_start_worker_config_from_empty_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "empty.yaml")]
     with cleanup_worker("dagster_test_worker", args=args):
@@ -144,7 +136,6 @@ def test_start_worker_config_from_empty_yaml(rabbitmq):
         assert check_for_worker("dagster_test_worker", args=args)
 
 
-@skip_ci
 def test_start_worker_config_from_partial_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "partial.yaml")]
     with cleanup_worker("dagster_test_worker", args=args):
@@ -152,7 +143,6 @@ def test_start_worker_config_from_partial_yaml(rabbitmq):
         assert check_for_worker("dagster_test_worker", args=args)
 
 
-@skip_ci
 def test_start_worker_config_from_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "engine_config.yaml")]
 

@@ -17,17 +17,6 @@ from dagster_test.test_project import build_and_tag_test_image, get_test_project
 IS_BUILDKITE = os.getenv("BUILDKITE") is not None
 
 
-# File that can be passed in as the -y argument to create a celery worker
-# with the right rabbitmq host
-@pytest.fixture(scope="session")
-def broker_yaml():  # pylint: disable=redefined-outer-name
-    with seven.TemporaryDirectory() as temp_dir:
-        file_path = os.path.join(temp_dir, "broker.yaml")
-        with open(file_path, "w") as fd:
-            yaml.dump({"broker": broker_url}, fd, default_flow_style=False)
-            yield file_path
-
-
 @pytest.fixture(scope="session")
 def rabbitmq():  # pylint: disable=redefined-outer-name
     if IS_BUILDKITE:

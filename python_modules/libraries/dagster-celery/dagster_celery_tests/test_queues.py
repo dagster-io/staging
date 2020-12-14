@@ -22,6 +22,6 @@ def test_multiqueue(rabbitmq, broker_yaml):  # pylint: disable=unused-argument
             execute_thread.start()
             time.sleep(1)
             assert not done.is_set()
-            with start_celery_worker(queue="fooqueue", yaml_file=broker_yaml):
+            with start_celery_worker(queue="fooqueue"):
                 execute_thread.join()
                 assert done.is_set()
