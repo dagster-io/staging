@@ -20,7 +20,16 @@ class PickledObjectGCSObjectManager(ObjectManager):
 
     def _get_path(self, context):
         run_id, step_key, name = context.get_run_scoped_output_identifier()
-        return "/".join([self.prefix, "storage", run_id, "files", step_key, name,])
+        return "/".join(
+            [
+                self.prefix,
+                "storage",
+                run_id,
+                "files",
+                step_key,
+                name,
+            ]
+        )
 
     def _rm_object(self, key):
         check.str_param(key, "key")
@@ -68,6 +77,7 @@ class PickledObjectGCSObjectManager(ObjectManager):
         "gcs_bucket": Field(StringSource),
         "gcs_prefix": Field(StringSource, is_required=False, default_value="dagster"),
     },
+    required_resource_keys={"gcs"},
 )
 def gcs_object_manager(init_context):
     """Persistent object manager using GCS for storage.
@@ -84,7 +94,7 @@ def gcs_object_manager(init_context):
         pipeline_def = PipelineDefinition(
             mode_defs=[
                 ModeDefinition(
-                    resource_defs={'object_manager': gcs_object_manager, ...},
+                    resource_defs={'object_manager': gcs_object_manager, 'gcs': gcs_resource, ...},
                 ), ...
             ], ...
         )
@@ -99,8 +109,7 @@ def gcs_object_manager(init_context):
                     gcs_bucket: my-cool-bucket
                     gcs_prefix: good/prefix-for-files-
     """
-    # TODO: Add gcs client resource once resource dependencies are enabled.
-    client = storage.Client()
+    client = init_context.resources.gcs
     pickled_object_manager = PickledObjectGCSObjectManager(
         init_context.resource_config["gcs_bucket"],
         client,
