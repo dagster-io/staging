@@ -35,6 +35,7 @@ def test_user_defined_k8s_config_in_run_tags(kubeconfig_file):
     tags = {"dagster-k8s/config": user_defined_k8s_config_json}
 
     # Create fake external pipeline.
+
     recon_pipeline = reconstructable(fake_pipeline)
     recon_repo = recon_pipeline.repository
     repo_def = recon_repo.get_definition()
