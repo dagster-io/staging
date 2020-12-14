@@ -208,7 +208,12 @@ def _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name
         stdout, stderr = p.communicate(six.ensure_binary(helm_config_yaml))
         print("Helm install completed with stdout: ", stdout)
         print("Helm install completed with stderr: ", stderr)
-        assert p.returncode == 0
+        if p.returncode != 0:
+            raise RuntimeError(
+                "Stdout: {}\n\nStderr: {}\n\n".format(
+                    stdout.decode("utf-8"), stderr.decode("utf-8"),
+                )
+            )
 
         # Wait for Dagit pod to be ready (won't actually stay up w/out js rebuild)
         kube_api = kubernetes.client.CoreV1Api()
