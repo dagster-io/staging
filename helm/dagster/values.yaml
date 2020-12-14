@@ -138,18 +138,24 @@ userDeployments:
       securityContext: {}
       resources: {}
       replicaCount: 1
-      livenessProbe:
-        initialDelaySeconds: 1
-        periodSeconds: 20
-        timeoutSeconds: 3
-        successThreshold: 1
-        failureThreshold: 3
-      startupProbe:
-        initialDelaySeconds: 1
-        periodSeconds: 10
-        timeoutSeconds: 3
-        successThreshold: 1
-        failureThreshold: 3
+      # Liveness Probe and Startup Probe are optional. Defaults are shown below.
+      # Note that Startup Probe is only available as a kubernetes v1.16+ feature.
+      # livenessProbe:
+        # exec:
+        #   command: ["dagster", "api", "grpc-health-check", "-p", "3030"]
+        # initialDelaySeconds: 0
+        # periodSeconds: 10
+        # timeoutSeconds: 1
+        # successThreshold: 1
+        # failureThreshold: 3
+      # startupProbe:
+        # exec:
+        #   command: ["dagster", "api", "grpc-health-check", "-p", "3030"]
+        # initialDelaySeconds: 0
+        # periodSeconds: 10
+        # timeoutSeconds: 1
+        # successThreshold: 1
+        # failureThreshold: 3
 
       service:
         annotations: {}
