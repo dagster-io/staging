@@ -367,9 +367,16 @@ class SolidOutputHandle(namedtuple("_SolidOutputHandle", "solid output_def")):
     def __eq__(self, other):
         return self.solid.name == other.solid.name and self.output_def.name == other.output_def.name
 
+    def describe(self):
+        return f"{self.solid_name}:{self.output_def.name}"
+
     @property
     def solid_name(self):
         return self.solid.name
+
+    @property
+    def is_dynamic(self):
+        return self.output_def.is_dynamic
 
 
 class InputToOutputHandleDict(defaultdict):
@@ -446,12 +453,62 @@ class DependencyStructure:
         # solid_name => output_handle => list[input_handle]
         self._solid_output_index = defaultdict(lambda: defaultdict(list))
 
+        # solid_name => dynamic output_handle
+        self._solid_dynamic_index = {}
+
+        def _set_dynamic(input_handle, output_handle):
+
+            if not input_handle.solid.definition.input_supports_dynamic_output_dep(
+                input_handle.input_name
+            ):
+                raise DagsterInvalidDefinitionError(
+                    f'Solid "{input_handle.solid_name}" can not be downstream of dynamic output '
+                    f'"{output_handle.describe()}" since it is internally mapped to a solid downstream of '
+                    f"a dynamic output."
+                )
+
+            if self._solid_dynamic_index.get(input_handle.solid_name) is None:
+                self._solid_dynamic_index[input_handle.solid_name] = output_handle
+                return
+
+            if self._solid_dynamic_index[input_handle.solid_name] != output_handle:
+                raise DagsterInvalidDefinitionError(
+                    f'Solid "{input_handle.solid_name}" can not be downstream of more than one dynamic outputs, '
+                    f'is downstream of both "{output_handle.describe()}" and '
+                    f'"{self._solid_dynamic_index[input_handle.solid_name].describe()}"'
+                )
+
         for input_handle, output_handle_or_list in self._handle_dict.items():
-            output_handle_list = (
-                [x for x in output_handle_or_list if isinstance(x, SolidOutputHandle)]
-                if isinstance(output_handle_or_list, list)
-                else [output_handle_or_list]
-            )
+            if isinstance(output_handle_or_list, list):  # fan-in dep
+                output_handle_list = []
+                for handle in output_handle_or_list:
+                    if not isinstance(handle, SolidOutputHandle):
+                        continue
+
+                    if handle.is_dynamic:
+                        raise DagsterInvalidDefinitionError(
+                            "Currently, items in a fan-in dependency can not be downstream of dynamic outputs. "
+                            f'Problematic dependency on dynamic output "{handle.describe()}".'
+                        )
+                    if self._solid_dynamic_index.get(handle.solid_name):
+                        raise DagsterInvalidDefinitionError(
+                            "Currently, items in a fan-in dependency can not be downstream of dynamic outputs. "
+                            f'Problematic dependency on output "{handle.describe()}", downstream of '
+                            f'"{self._solid_dynamic_index[handle.solid_name].describe()}".'
+                        )
+
+                    output_handle_list.append(handle)
+
+            else:  # singular dep
+                output_handle = output_handle_or_list
+                if output_handle.is_dynamic:
+                    _set_dynamic(input_handle, output_handle)
+
+                if self._solid_dynamic_index.get(output_handle.solid_name):
+                    _set_dynamic(input_handle, self._solid_dynamic_index[output_handle.solid_name])
+
+                output_handle_list = [output_handle]
+
             self._solid_input_index[input_handle.solid.name][input_handle] = output_handle_list
             for output_handle in output_handle_list:
                 self._solid_output_index[output_handle.solid.name][output_handle].append(
@@ -532,6 +589,9 @@ class DependencyStructure:
 
     def items(self):
         return self._handle_dict.items()
+
+    def get_upstream_dynamic_handle_for_solid(self, solid_name):
+        return self._solid_dynamic_index.get(solid_name)
 
     def debug_str(self):
         if not self.items():
