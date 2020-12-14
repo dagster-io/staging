@@ -63,10 +63,10 @@ def helm_namespace_for_user_deployments(
 
 
 @pytest.fixture(scope="session")
-def helm_namespace_for_run_coordinator(
+def helm_namespace_for_daemon(
     cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    with _helm_namespace_helper(helm_chart_for_run_coordinator, request) as namespace:
+    with _helm_namespace_helper(helm_chart_for_daemon, request) as namespace:
         yield namespace
 
 
@@ -349,6 +349,7 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
         "postgresqlPassword": "test",
         "postgresqlDatabase": "test",
         "postgresqlUser": "test",
+        "dagsterDaemon": {"enabled": False,},
     }
 
     with _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name="helm_chart"):
@@ -482,7 +483,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
 
 
 @contextmanager
-def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True):
+def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
     check.str_param(namespace, "namespace")
     check.str_param(docker_image, "docker_image")
     check.bool_param(should_cleanup, "should_cleanup")
@@ -550,10 +551,11 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
         "dagsterDaemon": {
             "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "queuedRunCoordinator": {"enabled": True},
         },
     }
 
     with _helm_chart_helper(
-        namespace, should_cleanup, helm_config, helm_install_name="helm_chart_for_run_coordinator"
+        namespace, should_cleanup, helm_config, helm_install_name="helm_chart_for_daemon"
     ):
         yield
