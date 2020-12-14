@@ -12,20 +12,20 @@ import yaml
 from dagster import check
 from dagster.utils import git_repository_root
 from dagster_k8s.utils import wait_for_pod
-from dagster_test.test_project import get_test_project_docker_image
 
 from .integration_utils import IS_BUILDKITE, check_output, get_test_namespace, image_pull_policy
 
 TEST_AWS_CONFIGMAP_NAME = "test-aws-env-configmap"
 TEST_CONFIGMAP_NAME = "test-env-configmap"
 TEST_SECRET_NAME = "test-env-secret"
+TEST_K8S_CONFIGMAP_NAME = "test-k8s-env-configmap"
 
 # By default, dagster.workers.fullname is ReleaseName-celery-workers
 CELERY_WORKER_NAME_PREFIX = "dagster-celery-workers"
 
 
 @contextmanager
-def _helm_namespace_helper(helm_chart_fn, request):
+def _helm_namespace_helper(docker_image, helm_chart_fn, request):
     """If an existing Helm chart namespace is specified via pytest CLI with the argument
     --existing-helm-namespace, we will use that chart.
 
@@ -47,8 +47,7 @@ def _helm_namespace_helper(helm_chart_fn, request):
             should_cleanup = not request.config.getoption("--no-cleanup")
 
         with get_helm_test_namespace(should_cleanup) as namespace:
-            with helm_test_resources(namespace, should_cleanup):
-                docker_image = get_test_project_docker_image()
+            with helm_test_resources(namespace, docker_image, should_cleanup):
                 with helm_chart_fn(namespace, docker_image, should_cleanup):
                     print("Helm chart successfully installed in namespace %s" % namespace)
                     yield namespace
@@ -56,33 +55,37 @@ def _helm_namespace_helper(helm_chart_fn, request):
 
 @pytest.fixture(scope="session")
 def helm_namespace_for_user_deployments(
-    cluster_provider, request
+    dagster_docker_image, cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    with _helm_namespace_helper(helm_chart_for_user_deployments, request) as namespace:
+    with _helm_namespace_helper(
+        dagster_docker_image, helm_chart_for_user_deployments, request
+    ) as namespace:
         yield namespace
 
 
 @pytest.fixture(scope="session")
-def helm_namespace_for_run_coordinator(
-    cluster_provider, request
+def helm_namespace_for_daemon(
+    dagster_docker_image, cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    with _helm_namespace_helper(helm_chart_for_run_coordinator, request) as namespace:
+    with _helm_namespace_helper(dagster_docker_image, helm_chart_for_daemon, request) as namespace:
         yield namespace
 
 
 @pytest.fixture(scope="session")
 def helm_namespace(
-    cluster_provider, request
+    dagster_docker_image, cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    with _helm_namespace_helper(helm_chart, request) as namespace:
+    with _helm_namespace_helper(dagster_docker_image, helm_chart, request) as namespace:
         yield namespace
 
 
 @pytest.fixture(scope="session")
 def helm_namespace_for_k8s_run_launcher(
-    cluster_provider, request
+    dagster_docker_image, cluster_provider, request
 ):  # pylint: disable=unused-argument, redefined-outer-name
-    with _helm_namespace_helper(helm_chart_for_k8s_run_launcher, request) as namespace:
+    with _helm_namespace_helper(
+        dagster_docker_image, helm_chart_for_k8s_run_launcher, request
+    ) as namespace:
         yield namespace
 
 
@@ -111,7 +114,7 @@ def get_helm_test_namespace(should_cleanup=True):
 
 
 @contextmanager
-def helm_test_resources(namespace, should_cleanup=True):
+def helm_test_resources(namespace, image, should_cleanup=True):
     """Create a couple of resources to test Helm interaction w/ pre-existing resources.
     """
     check.str_param(namespace, "namespace")
@@ -131,6 +134,19 @@ def helm_test_resources(namespace, should_cleanup=True):
             metadata=kubernetes.client.V1ObjectMeta(name=TEST_CONFIGMAP_NAME),
         )
         kube_api.create_namespaced_config_map(namespace=namespace, body=configmap)
+
+        k8s_configmap = kubernetes.client.V1ConfigMap(
+            api_version="v1",
+            kind="ConfigMap",
+            data={
+                "DAGSTER_K8S_PIPELINE_RUN_IMAGE": image,
+                "DAGSTER_K8S_PIPELINE_RUN_NAMESPACE": namespace,
+                "DAGSTER_K8S_PIPELINE_RUN_IMAGE_PULL_POLICY": image_pull_policy(),
+                "DAGSTER_K8S_PIPELINE_RUN_ENV_CONFIGMAP": "dagster-pipeline-env",
+            },
+            metadata=kubernetes.client.V1ObjectMeta(name=TEST_K8S_CONFIGMAP_NAME),
+        )
+        kube_api.create_namespaced_config_map(namespace=namespace, body=k8s_configmap)
 
         if not IS_BUILDKITE:
             aws_data = {
@@ -344,11 +360,12 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                 "failureThreshold": 3,
             },
         },
-        "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
+        "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
         "postgresqlDatabase": "test",
         "postgresqlUser": "test",
+        "dagsterDaemon": {"enabled": False,},
     }
 
     with _helm_chart_helper(namespace, should_cleanup, helm_config, helm_install_name="helm_chart"):
@@ -382,7 +399,7 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
         },
         "celery": {"enabled": False},
         "k8sRunLauncher": {"enabled": True, "jobNamespace": namespace},
-        "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
+        "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
         "postgresqlDatabase": "test",
@@ -468,7 +485,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
                 "worker_concurrency": 1,
             },
         },
-        "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
+        "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
         "postgresqlDatabase": "test",
@@ -482,7 +499,7 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
 
 
 @contextmanager
-def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True):
+def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
     check.str_param(namespace, "namespace")
     check.str_param(docker_image, "docker_image")
     check.bool_param(should_cleanup, "should_cleanup")
@@ -503,6 +520,8 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
                         "define_demo_execution_repo",
                     ],
                     "port": 3030,
+                    "env_config_maps": [TEST_K8S_CONFIGMAP_NAME],
+                    "env": {"BUILDKITE": os.getenv("BUILDKITE")},
                 }
             ],
         },
@@ -542,7 +561,7 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
                 "worker_concurrency": 1,
             },
         },
-        "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
+        "scheduler": {"k8sEnabled": False, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
         "postgresqlDatabase": "test",
@@ -550,10 +569,13 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
         "dagsterDaemon": {
             "enabled": True,
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
+            "queuedRunCoordinator": {"enabled": True},
+            "envConfigMaps": [TEST_K8S_CONFIGMAP_NAME],
+            "env": {"BUILDKITE": os.getenv("BUILDKITE")},
         },
     }
 
     with _helm_chart_helper(
-        namespace, should_cleanup, helm_config, helm_install_name="helm_chart_for_run_coordinator"
+        namespace, should_cleanup, helm_config, helm_install_name="helm_chart_for_daemon"
     ):
         yield
