@@ -301,12 +301,12 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
             "env_config_maps": [TEST_CONFIGMAP_NAME],
             "env_secrets": [TEST_SECRET_NAME],
             "livenessProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
                 "failureThreshold": 3,
             },
             "startupProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "failureThreshold": 6,
                 "periodSeconds": 10,
             },
@@ -362,12 +362,12 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
             "env_config_maps": [TEST_CONFIGMAP_NAME],
             "env_secrets": [TEST_SECRET_NAME],
             "livenessProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
                 "failureThreshold": 3,
             },
             "startupProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "failureThreshold": 6,
                 "periodSeconds": 10,
             },
@@ -416,12 +416,12 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
             "env_config_maps": [TEST_CONFIGMAP_NAME],
             "env_secrets": [TEST_SECRET_NAME],
             "livenessProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
                 "failureThreshold": 3,
             },
             "startupProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "failureThreshold": 6,
                 "periodSeconds": 10,
             },
@@ -497,12 +497,12 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
             "env_config_maps": [TEST_CONFIGMAP_NAME],
             "env_secrets": [TEST_SECRET_NAME],
             "livenessProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
                 "failureThreshold": 3,
             },
             "startupProbe": {
-                "tcpSocket": {"port": "http"},
+                "httpGet": {"path": "/dagit_info", "port": 80},
                 "failureThreshold": 6,
                 "periodSeconds": 10,
             },
