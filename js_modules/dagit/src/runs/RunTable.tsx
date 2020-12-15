@@ -9,10 +9,9 @@ import {PythonErrorInfo} from 'src/PythonErrorInfo';
 import {TokenizingFieldValue} from 'src/TokenizingField';
 import {RunActionsMenu, RunBulkActionsMenu} from 'src/runs/RunActionsMenu';
 import {RunStatusTagWithStats} from 'src/runs/RunStatusTag';
-import {RunTag} from 'src/runs/RunTag';
+import {RunTags} from 'src/runs/RunTags';
 import {RunComponentFragments, RunElapsed, RunTime, titleForRun} from 'src/runs/RunUtils';
-import {RunTableRunFragment, RunTableRunFragment_tags} from 'src/runs/types/RunTableRunFragment';
-import {Box} from 'src/ui/Box';
+import {RunTableRunFragment} from 'src/runs/types/RunTableRunFragment';
 import {Group} from 'src/ui/Group';
 import {Table} from 'src/ui/Table';
 import {FontFamily} from 'src/ui/styles';
@@ -188,26 +187,6 @@ const RunRow: React.FunctionComponent<{
     </Row>
   );
 };
-
-const RunTags: React.FC<{
-  tags: RunTableRunFragment_tags[];
-  onSetFilter: (search: TokenizingFieldValue[]) => void;
-}> = React.memo(({tags, onSetFilter}) => {
-  if (!tags.length) {
-    return null;
-  }
-  const onClick = (tag: RunTableRunFragment_tags) => {
-    onSetFilter([{token: 'tag', value: `${tag.key}=${tag.value}`}]);
-  };
-
-  return (
-    <Box flex={{direction: 'row', wrap: 'wrap'}}>
-      {tags.map((tag, idx) => (
-        <RunTag tag={tag} key={idx} onClick={onClick} />
-      ))}
-    </Box>
-  );
-});
 
 const Row = styled.tr<{
   highlighted: boolean;
