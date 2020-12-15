@@ -1,4 +1,4 @@
-import {gql, useMutation, useQuery} from '@apollo/client';
+import { gql, useMutation, useQuery } from '@apollo/client';
 import {
   Callout,
   Checkbox,
@@ -9,19 +9,19 @@ import {
   Spinner,
   InputGroup,
 } from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
+import { IconNames } from '@blueprintjs/icons';
 import * as React from 'react';
 
-import {showCustomAlert} from 'src/CustomAlertProvider';
-import {SharedToaster} from 'src/DomUtils';
-import {filterByQuery} from 'src/GraphQueryImpl';
-import {GraphQueryInput} from 'src/GraphQueryInput';
-import {PipelineRunTag} from 'src/LocalStorage';
-import {PythonErrorInfo} from 'src/PythonErrorInfo';
-import {LaunchButton} from 'src/execute/LaunchButton';
-import {TagContainer, TagEditor} from 'src/execute/TagEditor';
-import {GaantChartMode} from 'src/gaant/GaantChart';
-import {buildLayout} from 'src/gaant/GaantChartLayout';
+import { showCustomAlert } from 'src/CustomAlertProvider';
+import { SharedToaster } from 'src/DomUtils';
+import { filterByQuery } from 'src/GraphQueryImpl';
+import { GraphQueryInput } from 'src/GraphQueryInput';
+import { PipelineRunTag } from 'src/LocalStorage';
+import { PythonErrorInfo } from 'src/PythonErrorInfo';
+import { LaunchButton } from 'src/execute/LaunchButton';
+import { TagContainer, TagEditor } from 'src/execute/TagEditor';
+import { GaantChartMode } from 'src/gaant/GaantChart';
+import { buildLayout } from 'src/gaant/GaantChartLayout';
 import {
   GridColumn,
   GridFloatingContainer,
@@ -30,13 +30,13 @@ import {
   TopLabel,
   TopLabelTilted,
 } from 'src/partitions/RunMatrixUtils';
-import {LaunchPartitionBackfill} from 'src/partitions/types/LaunchPartitionBackfill';
-import {PartitionsBackfillSelectorQuery} from 'src/partitions/types/PartitionsBackfillSelectorQuery';
-import {PipelineRunStatus} from 'src/types/globalTypes';
-import {ButtonLink} from 'src/ui/ButtonLink';
-import {Group} from 'src/ui/Group';
-import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
-import {RepoAddress} from 'src/workspace/types';
+import { LaunchPartitionBackfill } from 'src/partitions/types/LaunchPartitionBackfill';
+import { PartitionsBackfillSelectorQuery } from 'src/partitions/types/PartitionsBackfillSelectorQuery';
+import { PipelineRunStatus } from 'src/types/globalTypes';
+import { ButtonLink } from 'src/ui/ButtonLink';
+import { Group } from 'src/ui/Group';
+import { repoAddressToSelector } from 'src/workspace/repoAddressToSelector';
+import { RepoAddress } from 'src/workspace/types';
 
 const DEFAULT_RUN_LAUNCHER_NAME = 'DefaultRunLauncher';
 
@@ -117,7 +117,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
   pipelineName: string;
   onLaunch?: (backfillId: string, stepQuery: string) => void;
   repoAddress: RepoAddress;
-}> = ({partitionSetName, pipelineName, onLaunch, repoAddress}) => {
+}> = ({ partitionSetName, pipelineName, onLaunch, repoAddress }) => {
   const repositorySelector = repoAddressToSelector(repoAddress);
   const [currentSelectionRange, setCurrentSelectionRange] = React.useState<
     SelectionRange | undefined
@@ -142,7 +142,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
       mounted.current = false;
     };
   }, [onLaunch]);
-  const {loading, data} = useQuery<PartitionsBackfillSelectorQuery>(
+  const { loading, data } = useQuery<PartitionsBackfillSelectorQuery>(
     PARTITIONS_BACKFILL_SELECTOR_QUERY,
     {
       variables: {
@@ -159,7 +159,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
 
   if (!data || loading) {
     return (
-      <div style={{width: '100%', margin: '40px auto'}}>
+      <div style={{ width: '100%', margin: '40px auto' }}>
         <Spinner size={40} />
       </div>
     );
@@ -266,7 +266,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
       : partitionsWithLastRunSuccess
     : partitionNames;
   const solidsFiltered = filterByQuery(solids, query);
-  const layout = buildLayout({nodes: solidsFiltered.all, mode: GaantChartMode.FLAT});
+  const layout = buildLayout({ nodes: solidsFiltered.all, mode: GaantChartMode.FLAT });
   const stepRows = layout.boxes.map((box) => ({
     x: box.x,
     name: box.node.name,
@@ -284,7 +284,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
     : [];
 
   const onPartitionMouseDown = (name: string) => {
-    setCurrentSelectionRange({start: name, end: name});
+    setCurrentSelectionRange({ start: name, end: name });
   };
 
   const onPartitionMouseUp = (_: string) => {
@@ -307,8 +307,8 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
     if (!currentSelectionRange) {
       return;
     }
-    const {start} = currentSelectionRange;
-    setCurrentSelectionRange({start, end: name});
+    const { start } = currentSelectionRange;
+    setCurrentSelectionRange({ start, end: name });
   };
 
   const selectedString = partitionsToText(selected, partitionNames);
@@ -316,12 +316,12 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
   return (
     <div>
       <div className={Classes.DIALOG_BODY}>
-        <div style={{display: 'flex', alignItems: 'center', marginBottom: 4}}>
-          <strong style={{display: 'block'}}>Partitions</strong>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+          <strong style={{ display: 'block' }}>Partitions</strong>
           <Checkbox
             label="Select All"
             disabled={!selectablePartitions.length}
-            style={{marginBottom: 0, marginLeft: 10}}
+            style={{ marginBottom: 0, marginLeft: 10 }}
             checked={selected.length === selectablePartitions.length}
             onClick={() =>
               setSelected(
@@ -345,9 +345,9 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
             }
           }}
         />
-        <div style={{display: 'flex', marginTop: 10}}>
+        <div style={{ display: 'flex', marginTop: 10 }}>
           <div>
-            <strong style={{display: 'block', marginBottom: 4}}>Step Subset</strong>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Step Subset</strong>
             <GraphQueryInput
               small
               disabled={options.fromFailure}
@@ -358,9 +358,9 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
               onChange={setQuery}
             />
           </div>
-          <div style={{marginLeft: 20}}>
-            <strong style={{display: 'block', marginBottom: 4}}>Options</strong>
-            <div style={{display: 'flex'}}>
+          <div style={{ marginLeft: 20 }}>
+            <strong style={{ display: 'block', marginBottom: 4 }}>Options</strong>
+            <div style={{ display: 'flex' }}>
               <Checkbox
                 label="Re-execute From Last Run"
                 disabled={partitionsWithLastRunSuccess.length === 0}
@@ -370,12 +370,12 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
                   setQuery('');
                   setOptions(
                     options.reexecute
-                      ? {...options, reexecute: false, fromFailure: false}
-                      : {...options, reexecute: true},
+                      ? { ...options, reexecute: false, fromFailure: false }
+                      : { ...options, reexecute: true },
                   );
                 }}
               />
-              <div style={{width: 20}} />
+              <div style={{ width: 20 }} />
               <Checkbox
                 label="Re-execute From Failure"
                 checked={options.fromFailure}
@@ -383,7 +383,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
                 onChange={() => {
                   setSelected([]);
                   setQuery('');
-                  setOptions({...options, reexecute: true, fromFailure: !options.fromFailure});
+                  setOptions({ ...options, reexecute: true, fromFailure: !options.fromFailure });
                 }}
               />
             </div>
@@ -398,16 +398,16 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
             justifyContent: 'space-between',
           }}
         >
-          <strong style={{display: 'block', marginBottom: 4}}>Preview</strong>
-          <div style={{color: Colors.GRAY3}}>Click or drag to edit selected partitions</div>
+          <strong style={{ display: 'block', marginBottom: 4 }}>Preview</strong>
+          <div style={{ color: Colors.GRAY3 }}>Click or drag to edit selected partitions</div>
         </div>
-        <div style={{display: 'flex', border: `1px solid ${Colors.LIGHT_GRAY1}`}}>
+        <div style={{ display: 'flex', border: `1px solid ${Colors.LIGHT_GRAY1}` }}>
           {query && (
             <GridFloatingContainer floating={true}>
               <GridColumn disabled>
                 <TopLabel></TopLabel>
                 {stepRows.map((step) => (
-                  <LeftLabel style={{paddingLeft: step.x}} key={step.name}>
+                  <LeftLabel style={{ paddingLeft: step.x }} key={step.name}>
                     {step.name}
                   </LeftLabel>
                 ))}
@@ -415,11 +415,11 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
             </GridFloatingContainer>
           )}
           <GridScrollContainer>
-            <div style={{display: 'flex', paddingLeft: 10}}>
+            <div style={{ display: 'flex', paddingLeft: 10 }}>
               {partitionNames.map((partitionName, idx) => (
                 <GridColumn
                   key={partitionName}
-                  style={{zIndex: partitionNames.length - idx, userSelect: 'none'}}
+                  style={{ zIndex: partitionNames.length - idx, userSelect: 'none' }}
                   disabled={!selectablePartitions.includes(partitionName)}
                   focused={selected.includes(partitionName)}
                   multiselectFocused={currentRangeSelection.includes(partitionName)}
@@ -432,26 +432,23 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
                   </TopLabelTilted>
                   {!options.reexecute ? (
                     <div
-                      className={`square ${
-                        selectablePartitions.includes(partitionName) ? 'missing' : 'disabled'
-                      }`}
+                      className={`square ${selectablePartitions.includes(partitionName) ? 'missing' : 'disabled'
+                        }`}
                     />
                   ) : options.fromFailure ? (
                     <div
-                      className={`square ${
-                        selectablePartitions.includes(partitionName) ? 'failure' : 'disabled'
-                      }`}
+                      className={`square ${selectablePartitions.includes(partitionName) ? 'failure' : 'disabled'
+                        }`}
                     />
                   ) : (
-                    stepRows.map((step) => (
-                      <div
-                        key={`${partitionName}:${step.name}`}
-                        className={`square ${
-                          selectablePartitions.includes(partitionName) ? 'missing' : 'disabled'
-                        }`}
-                      />
-                    ))
-                  )}
+                        stepRows.map((step) => (
+                          <div
+                            key={`${partitionName}:${step.name}`}
+                            className={`square ${selectablePartitions.includes(partitionName) ? 'missing' : 'disabled'
+                              }`}
+                          />
+                        ))
+                      )}
                 </GridColumn>
               ))}
             </div>
@@ -459,7 +456,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
         </div>
 
         {usingDefaultRunLauncher && (
-          <div style={{marginTop: 10}}>
+          <div style={{ marginTop: 10 }}>
             <Callout intent={Intent.WARNING}>
               Using the default run launcher <code>{DEFAULT_RUN_LAUNCHER_NAME}</code> for launching
               backfills is not advised, as queueing runs is not currently supported. Check your
@@ -470,7 +467,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
         )}
       </div>
       <div className={Classes.DIALOG_FOOTER}>
-        <div style={{display: 'flex', alignItems: 'center', justifyContent: 'flex-end'}}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
           <TagEditor
             tags={tags}
             onChange={setTags}
@@ -478,23 +475,23 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
             onRequestClose={() => setTagEditorOpen(false)}
           />
           {tags.length ? (
-            <div style={{border: '1px solid #ececec', borderBottom: 'none'}}>
+            <div style={{ border: '1px solid #ececec', borderBottom: 'none' }}>
               <TagContainer tags={tags} onRequestEdit={() => setTagEditorOpen(true)} />
             </div>
           ) : (
-            <ButtonLink
-              color="#106ba3"
-              onClick={() => setTagEditorOpen(true)}
-              style={{margin: '9px  9px 0 9px'}}
-            >
-              + Add tags to backfill runs
-            </ButtonLink>
-          )}
+              <ButtonLink
+                color="#106ba3"
+                onClick={() => setTagEditorOpen(true)}
+                style={{ margin: '9px  9px 0 9px' }}
+              >
+                + Add tags to backfill runs
+              </ButtonLink>
+            )}
           <LaunchBackfillButton
             partitionNames={selected}
             partitionSetName={partitionSet.name}
             reexecutionSteps={
-              !options.fromFailure ? stepRows.map((step) => `${step.name}.compute`) : undefined
+              !options.fromFailure ? stepRows.map((step) => step.name) : undefined
             }
             fromFailure={options.fromFailure}
             tags={tags}
@@ -527,77 +524,77 @@ const LaunchBackfillButton: React.FC<{
   onError,
   repoAddress,
 }) => {
-  const repositorySelector = repoAddressToSelector(repoAddress);
-  const mounted = React.useRef(true);
-  const [launchBackfill] = useMutation<LaunchPartitionBackfill>(LAUNCH_PARTITION_BACKFILL_MUTATION);
-  React.useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, [onSuccess]);
-  const onLaunch = async () => {
-    const {data} = await launchBackfill({
-      variables: {
-        backfillParams: {
-          selector: {
-            partitionSetName,
-            repositorySelector,
+    const repositorySelector = repoAddressToSelector(repoAddress);
+    const mounted = React.useRef(true);
+    const [launchBackfill] = useMutation<LaunchPartitionBackfill>(LAUNCH_PARTITION_BACKFILL_MUTATION);
+    React.useEffect(() => {
+      mounted.current = true;
+      return () => {
+        mounted.current = false;
+      };
+    }, [onSuccess]);
+    const onLaunch = async () => {
+      const { data } = await launchBackfill({
+        variables: {
+          backfillParams: {
+            selector: {
+              partitionSetName,
+              repositorySelector,
+            },
+            partitionNames,
+            reexecutionSteps,
+            fromFailure,
+            tags,
           },
-          partitionNames,
-          reexecutionSteps,
-          fromFailure,
-          tags,
         },
-      },
-    });
+      });
 
-    if (!mounted.current) {
-      return;
-    }
+      if (!mounted.current) {
+        return;
+      }
 
-    if (data && data.launchPartitionBackfill.__typename === 'PartitionBackfillSuccess') {
-      onSuccess?.(data.launchPartitionBackfill.backfillId);
-    } else {
-      onError?.(data);
-    }
-  };
+      if (data && data.launchPartitionBackfill.__typename === 'PartitionBackfillSuccess') {
+        onSuccess?.(data.launchPartitionBackfill.backfillId);
+      } else {
+        onError?.(data);
+      }
+    };
 
-  const title = partitionNames.length
-    ? partitionNames.length === 1
-      ? 'Launch 1 run'
-      : `Launch ${partitionNames.length} runs`
-    : 'Launch';
-  const subtitle = reexecutionSteps
-    ? reexecutionSteps.length === 1
-      ? ' (1 selected step)'
-      : ` (${reexecutionSteps.length} selected steps)`
-    : '';
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'flex-end',
-        alignItems: 'center',
-        marginTop: 10,
-      }}
-    >
-      <LaunchButton
-        config={{
-          title: `${title}${subtitle}`,
-          icon: 'send-to',
-          disabled: !partitionNames.length,
-          tooltip: partitionNames.length
-            ? partitionNames.length === 1
-              ? 'Launch 1 run'
-              : `Launch ${partitionNames.length} runs`
-            : 'Select runs to launch',
-          onClick: onLaunch,
+    const title = partitionNames.length
+      ? partitionNames.length === 1
+        ? 'Launch 1 run'
+        : `Launch ${partitionNames.length} runs`
+      : 'Launch';
+    const subtitle = reexecutionSteps
+      ? reexecutionSteps.length === 1
+        ? ' (1 selected step)'
+        : ` (${reexecutionSteps.length} selected steps)`
+      : '';
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          marginTop: 10,
         }}
-      />
-    </div>
-  );
-};
+      >
+        <LaunchButton
+          config={{
+            title: `${title}${subtitle}`,
+            icon: 'send-to',
+            disabled: !partitionNames.length,
+            tooltip: partitionNames.length
+              ? partitionNames.length === 1
+                ? 'Launch 1 run'
+                : `Launch ${partitionNames.length} runs`
+              : 'Select runs to launch',
+            onClick: onLaunch,
+          }}
+        />
+      </div>
+    );
+  };
 
 const PARTITIONS_BACKFILL_SELECTOR_QUERY = gql`
   query PartitionsBackfillSelectorQuery(

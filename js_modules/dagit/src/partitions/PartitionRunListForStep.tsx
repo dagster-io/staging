@@ -1,26 +1,26 @@
-import {gql, useQuery} from '@apollo/client';
-import {Spinner, NonIdealState, Button, Colors, Tooltip} from '@blueprintjs/core';
-import {IconNames} from '@blueprintjs/icons';
+import { gql, useQuery } from '@apollo/client';
+import { Spinner, NonIdealState, Button, Colors, Tooltip } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import styled from 'styled-components/macro';
 
-import {PythonErrorInfo} from 'src/PythonErrorInfo';
-import {STEP_STATUS_COLORS} from 'src/partitions/RunMatrixUtils';
+import { PythonErrorInfo } from 'src/PythonErrorInfo';
+import { STEP_STATUS_COLORS } from 'src/partitions/RunMatrixUtils';
 import {
   PartitionRunListForStepQuery,
   PartitionRunListForStepQueryVariables,
 } from 'src/partitions/types/PartitionRunListForStepQuery';
-import {RunTable} from 'src/runs/RunTable';
-import {DagsterTag} from 'src/runs/RunTag';
-import {openRunInBrowser} from 'src/runs/RunUtils';
-import {StepEventStatus} from 'src/types/globalTypes';
+import { RunTable } from 'src/runs/RunTable';
+import { DagsterTag } from 'src/runs/RunTag';
+import { openRunInBrowser } from 'src/runs/RunUtils';
+import { StepEventStatus } from 'src/types/globalTypes';
 
 interface StepStats {
   startTime: number | null;
   endTime: number | null;
   status: StepEventStatus | null;
   materializations: Record<string, unknown>[];
-  expectationResults: {success: boolean}[];
+  expectationResults: { success: boolean }[];
 }
 
 interface PartitionRunListForStepProps {
@@ -35,14 +35,14 @@ interface PartitionRunListForStepProps {
 export const PartitionRunListForStep: React.FunctionComponent<PartitionRunListForStepProps> = (
   props,
 ) => {
-  const {data, loading} = useQuery<
+  const { data, loading } = useQuery<
     PartitionRunListForStepQuery,
     PartitionRunListForStepQueryVariables
   >(PARTITION_RUN_LIST_FOR_STEP_QUERY, {
     variables: {
       filter: {
         pipelineName: props.pipelineName,
-        tags: [{key: DagsterTag.Partition, value: props.partitionName}],
+        tags: [{ key: DagsterTag.Partition, value: props.partitionName }],
       },
     },
   });
@@ -63,9 +63,9 @@ export const PartitionRunListForStep: React.FunctionComponent<PartitionRunListFo
     <div>
       <RunTable
         runs={data.pipelineRunsOrError.results}
-        onSetFilter={() => {}}
+        onSetFilter={() => { }}
         additionalColumnHeaders={[
-          <th key="context" style={{maxWidth: 150}}>
+          <th key="context" style={{ maxWidth: 150 }}>
             Step Info
           </th>,
         ]}
@@ -75,12 +75,12 @@ export const PartitionRunListForStep: React.FunctionComponent<PartitionRunListFo
             stats={props.stepStatsByRunId[run.runId] || null}
             onOpenLogs={() =>
               openRunInBrowser(
-                {runId: run.runId, pipelineName: props.pipelineName},
+                { runId: run.runId, pipelineName: props.pipelineName },
                 {
                   openInNewWindow: true,
                   query: {
-                    steps: `${props.stepName}.compute`,
-                    logs: `step:${props.stepName}.compute`,
+                    steps: props.stepName,
+                    logs: `step:${props.stepName}`,
                   },
                 },
               )
@@ -95,9 +95,9 @@ export const PartitionRunListForStep: React.FunctionComponent<PartitionRunListFo
 const StepStatsColumn: React.FunctionComponent<{
   stats: StepStats | null;
   onOpenLogs: () => void;
-}> = ({stats, onOpenLogs}) => {
+}> = ({ stats, onOpenLogs }) => {
   return (
-    <td key="context" style={{maxWidth: 150, borderRight: 0}}>
+    <td key="context" style={{ maxWidth: 150, borderRight: 0 }}>
       {stats ? (
         <div>
           <StatSummaryLine>
@@ -123,8 +123,8 @@ const StepStatsColumn: React.FunctionComponent<{
           </Button>
         </div>
       ) : (
-        <div>No step data.</div>
-      )}
+          <div>No step data.</div>
+        )}
     </td>
   );
 };

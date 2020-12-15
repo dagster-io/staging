@@ -1,12 +1,11 @@
-import {Colors} from '@blueprintjs/core';
+import { Colors } from '@blueprintjs/core';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {Timestamp} from 'src/TimeComponents';
-import {formatStepKey} from 'src/Util';
-import {LogLevel} from 'src/runs/LogLevel';
-import {ColumnWidthsContext} from 'src/runs/LogsScrollingTableHeader';
-import {FontFamily} from 'src/ui/styles';
+import { Timestamp } from 'src/TimeComponents';
+import { LogLevel } from 'src/runs/LogLevel';
+import { ColumnWidthsContext } from 'src/runs/LogsScrollingTableHeader';
+import { FontFamily } from 'src/ui/styles';
 
 const bgcolorForLevel = (level: LogLevel) =>
   ({
@@ -18,7 +17,7 @@ const bgcolorForLevel = (level: LogLevel) =>
     [LogLevel.CRITICAL]: `rgba(206, 17, 38, 0.05)`,
   }[level]);
 
-export const Row = styled.div<{level: LogLevel; highlighted: boolean}>`
+export const Row = styled.div<{ level: LogLevel; highlighted: boolean }>`
   font-size: 0.75em;
   width: 100%;
   height: 100%;
@@ -32,9 +31,9 @@ export const Row = styled.div<{level: LogLevel; highlighted: boolean}>`
   align-items: baseline;
   overflow: hidden;
   border-top: 1px solid ${Colors.LIGHT_GRAY3};
-  background: ${({highlighted, level}) => (highlighted ? '#ffe39f' : bgcolorForLevel(level))};
+  background: ${({ highlighted, level }) => (highlighted ? '#ffe39f' : bgcolorForLevel(level))};
   &:hover {
-    background: ${({highlighted}) => (highlighted ? '#ffe39f' : 'white')};
+    background: ${({ highlighted }) => (highlighted ? '#ffe39f' : 'white')};
   }
   color: ${(props) =>
     ({
@@ -72,29 +71,29 @@ export const StructuredContent = styled.div`
 // Manually implements middle text truncation since we can count on monospace font
 // rendering being fairly consistent.
 //
-export const SolidColumn = (props: {stepKey: string | false | null}) => {
+export const SolidColumn = (props: { stepKey: string | false | null }) => {
   const widths = React.useContext(ColumnWidthsContext);
-  const parts = formatStepKey(props.stepKey).split('.');
+  const parts = String(props.stepKey).split('.');
   return (
-    <SolidColumnContainer style={{width: widths.solid}}>
+    <SolidColumnContainer style={{ width: widths.solid }}>
       {props.stepKey
         ? parts.map((p, idx) => (
-            <div
-              key={idx}
-              data-tooltip={p}
-              data-tooltip-style={SolidColumnTooltipStyle}
-              style={{
-                marginLeft: Math.max(0, idx * 15 - 9),
-                fontWeight: idx === parts.length - 1 ? 600 : 300,
-                paddingRight: 15,
-              }}
-            >
-              {idx > 0 ? '↳' : ''}
-              {p.length > 30 - idx * 2
-                ? `${p.substr(0, 16 - idx * 2)}…${p.substr(p.length - 14)}`
-                : p}
-            </div>
-          ))
+          <div
+            key={idx}
+            data-tooltip={p}
+            data-tooltip-style={SolidColumnTooltipStyle}
+            style={{
+              marginLeft: Math.max(0, idx * 15 - 9),
+              fontWeight: idx === parts.length - 1 ? 600 : 300,
+              paddingRight: 15,
+            }}
+          >
+            {idx > 0 ? '↳' : ''}
+            {p.length > 30 - idx * 2
+              ? `${p.substr(0, 16 - idx * 2)}…${p.substr(p.length - 14)}`
+              : p}
+          </div>
+        ))
         : '-'}
     </SolidColumnContainer>
   );
@@ -117,10 +116,10 @@ const SolidColumnTooltipStyle = JSON.stringify({
 
 // Timestamp Column
 
-export const TimestampColumn = (props: {time: string | false}) => {
+export const TimestampColumn = (props: { time: string | false }) => {
   const widths = React.useContext(ColumnWidthsContext);
   return (
-    <TimestampColumnContainer style={{width: widths.timestamp}}>
+    <TimestampColumnContainer style={{ width: widths.timestamp }}>
       {props.time && <Timestamp ms={Number(props.time)} format="HH:mm:ss.SSS" />}
     </TimestampColumnContainer>
   );
@@ -135,7 +134,7 @@ const TimestampColumnContainer = styled.div`
 export const EventTypeColumn: React.FC = (props) => {
   const widths = React.useContext(ColumnWidthsContext);
   return (
-    <EventTypeColumnContainer style={{width: widths.eventType}}>
+    <EventTypeColumnContainer style={{ width: widths.eventType }}>
       {props.children}
     </EventTypeColumnContainer>
   );

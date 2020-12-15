@@ -1,6 +1,6 @@
 import LRU from 'lru-cache';
 
-import {getJSONForKey} from 'src/LocalStorage';
+import { getJSONForKey } from 'src/LocalStorage';
 
 export const DEFAULT_RESULT_NAME = 'result';
 
@@ -40,9 +40,6 @@ function twoDigit(v: number) {
   return `${v < 10 ? '0' : ''}${v}`;
 }
 
-export function formatStepKey(stepKey: string | null | false) {
-  return (stepKey || '').replace(/\.compute$/, '');
-}
 
 export function formatElapsedTime(msec: number) {
   let text = '';
@@ -147,7 +144,7 @@ export function weakmapMemoize<T extends object, R>(
   };
 }
 
-export function titleOfIO(i: {solid: {name: string}; definition: {name: string}}) {
+export function titleOfIO(i: { solid: { name: string }; definition: { name: string } }) {
   return i.solid.name !== DEFAULT_RESULT_NAME
     ? `${i.solid.name}:${i.definition.name}`
     : i.solid.name;
