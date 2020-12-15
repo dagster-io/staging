@@ -542,7 +542,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                         timestamp=daemon_heartbeat.timestamp,
                         daemon_type=daemon_heartbeat.daemon_type.value,
                         daemon_id=daemon_heartbeat.daemon_id,
-                        info=daemon_heartbeat.info,
+                        info=serialize_dagster_namedtuple(daemon_heartbeat.info),
                     )
                 )
             except db.exc.IntegrityError:
@@ -554,7 +554,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                     .values(  # pylint: disable=no-value-for-parameter
                         timestamp=daemon_heartbeat.timestamp,
                         daemon_id=daemon_heartbeat.daemon_id,
-                        info=daemon_heartbeat.info,
+                        info=serialize_dagster_namedtuple(daemon_heartbeat.info),
                     )
                 )
 
@@ -567,7 +567,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                     timestamp=row.timestamp,
                     daemon_type=DaemonType(row.daemon_type),
                     daemon_id=row.daemon_id,
-                    info=row.info,
+                    info=deserialize_json_to_dagster_namedtuple(row.info),
                 )
                 for row in rows
             }
