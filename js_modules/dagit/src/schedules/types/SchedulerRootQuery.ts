@@ -84,11 +84,6 @@ export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nod
   status: PipelineRunStatus;
 }
 
-export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks_runs {
-  __typename: "PipelineRun";
-  id: string;
-}
-
 export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks_error_cause {
   __typename: "PythonError";
   message: string;
@@ -108,7 +103,7 @@ export interface SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nod
   status: JobTickStatus;
   timestamp: number;
   skipReason: string | null;
-  runs: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks_runs[];
+  runIds: string[];
   error: SchedulerRootQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_scheduleState_ticks_error | null;
 }
 
@@ -235,11 +230,6 @@ export interface SchedulerRootQuery_unloadableJobStatesOrError_JobStates_results
   status: PipelineRunStatus;
 }
 
-export interface SchedulerRootQuery_unloadableJobStatesOrError_JobStates_results_ticks_runs {
-  __typename: "PipelineRun";
-  id: string;
-}
-
 export interface SchedulerRootQuery_unloadableJobStatesOrError_JobStates_results_ticks_error_cause {
   __typename: "PythonError";
   message: string;
@@ -259,7 +249,7 @@ export interface SchedulerRootQuery_unloadableJobStatesOrError_JobStates_results
   status: JobTickStatus;
   timestamp: number;
   skipReason: string | null;
-  runs: SchedulerRootQuery_unloadableJobStatesOrError_JobStates_results_ticks_runs[];
+  runIds: string[];
   error: SchedulerRootQuery_unloadableJobStatesOrError_JobStates_results_ticks_error | null;
 }
 
