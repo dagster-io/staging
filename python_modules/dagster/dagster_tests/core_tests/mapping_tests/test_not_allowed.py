@@ -32,7 +32,9 @@ def test_composite():
 
         @composite_solid(output_defs=[OutputDefinition()])
         def _should_fail():
-            return dynamic_solid()
+
+            for x in dynamic_solid():
+                return x
 
     with pytest.raises(
         DagsterInvalidDefinitionError,
@@ -41,7 +43,14 @@ def test_composite():
 
         @composite_solid(output_defs=[OutputDefinition()])
         def _should_fail():
-            return echo(dynamic_solid())
+            # maybe this?
+            #
+            # items = dynamic_solid()
+            # return items.map(echo)
+
+            for num in dynamic_solid():
+                # force a yield ?
+                return echo(num)
 
 
 def test_fan_in():
@@ -52,7 +61,10 @@ def test_fan_in():
 
         @pipeline
         def _should_fail():
-            echo([dynamic_solid()])
+            numbers = []
+            for num in dynamic_solid():
+                numbers.append(num)
+            echo(numbers)
 
 
 def test_multi_direct():
@@ -62,7 +74,9 @@ def test_multi_direct():
 
         @pipeline
         def _should_fail():
-            add(dynamic_solid(), dynamic_solid())
+            for x in dynamic_solid():
+                for y in dynamic_solid():
+                    add(x, y)
 
 
 def test_multi_indirect():
@@ -72,8 +86,10 @@ def test_multi_indirect():
 
         @pipeline
         def _should_fail():
-            x = echo(dynamic_solid())
-            add(dynamic_solid(), x)
+            for y in dynamic_solid():
+                x = echo(y)
+                for z in dynamic_solid():
+                    add(z, x)
 
 
 def test_multi_composite_out():
@@ -83,11 +99,14 @@ def test_multi_composite_out():
 
         @composite_solid(output_defs=[DynamicOutputDefinition()])
         def composed_echo():
-            return echo(dynamic_solid())
+            for x in dynamic_solid():
+                return echo(x)
 
         @pipeline
         def _should_fail():
-            add(composed_echo(), dynamic_solid())
+            for y in dynamic_solid():
+                for z in composed_echo():
+                    add(z, y)
 
 
 def test_multi_composite_in():
@@ -98,12 +117,14 @@ def test_multi_composite_in():
 
         @composite_solid
         def composed_add(a):
-            add(a, dynamic_solid())
+            for b in dynamic_solid():
+                add(a, b)
 
         @pipeline
         def _should_fail():
-            y = echo(dynamic_solid())
-            composed_add(y)
+            for z in dynamic_solid():
+                y = echo(z)
+                composed_add(y)
 
 
 def test_direct_dep():
@@ -114,7 +135,8 @@ def test_direct_dep():
 
     @pipeline
     def _is_fine():
-        dynamic_add(dynamic_solid())
+        for x in dynamic_solid():
+            dynamic_add(x)
 
     with pytest.raises(
         DagsterInvalidDefinitionError, match="cannot be downstream of more than one dynamic output",
@@ -122,4 +144,6 @@ def test_direct_dep():
 
         @pipeline
         def _should_fail():
-            echo(dynamic_add(dynamic_solid()))
+            for x in dynamic_solid():
+                for y in dynamic_add(x):
+                    echo(y)
