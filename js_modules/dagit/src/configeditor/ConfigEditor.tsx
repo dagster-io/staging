@@ -11,7 +11,6 @@ import 'codemirror/addon/search/search';
 import 'codemirror/addon/search/searchcursor';
 import 'codemirror/keymap/sublime';
 import 'codemirror/lib/codemirror.css';
-import 'codemirror/theme/material.css';
 import 'src/configeditor/codemirror-yaml/lint'; // Patch lint
 import 'src/configeditor/codemirror-yaml/mode'; // eslint-disable-line import/no-duplicates
 
@@ -70,6 +69,11 @@ const CodeMirrorShimStyle = createGlobalStyle`
     bottom: 0;
     height: initial;
     font-family: ${FontFamily.monospace};
+
+    /* Note: Theme overrides */
+    &.cm-s-default .cm-comment {
+      color: #999;
+    }
   }
 
   .CodeMirror-hint,
