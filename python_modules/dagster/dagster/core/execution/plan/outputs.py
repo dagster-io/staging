@@ -80,7 +80,7 @@ class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name map
 class UnresolvedStepOutputHandle(
     namedtuple(
         "_UnresolvedStepOutputHandle",
-        "unresolved_step_handle output_name dynamic_step_key dynamic_output_name",
+        "unresolved_step_handle output_name resolved_by_step_key resolved_by_output_name",
     )
 ):
     """
@@ -88,7 +88,9 @@ class UnresolvedStepOutputHandle(
     upstream dynamic step has completed.
     """
 
-    def __new__(cls, unresolved_step_handle, output_name, dynamic_step_key, dynamic_output_name):
+    def __new__(
+        cls, unresolved_step_handle, output_name, resolved_by_step_key, resolved_by_output_name
+    ):
         return super(UnresolvedStepOutputHandle, cls).__new__(
             cls,
             unresolved_step_handle=check.inst_param(
@@ -96,8 +98,10 @@ class UnresolvedStepOutputHandle(
             ),
             output_name=check.str_param(output_name, "output_name"),
             # this could be a set of resolution keys to support multiple mapping operations
-            dynamic_step_key=check.str_param(dynamic_step_key, "dynamic_step_key"),
-            dynamic_output_name=check.str_param(dynamic_output_name, "dynamic_output_name"),
+            resolved_by_step_key=check.str_param(resolved_by_step_key, "resolved_by_step_key"),
+            resolved_by_output_name=check.str_param(
+                resolved_by_output_name, "resolved_by_output_name"
+            ),
         )
 
     def resolve(self, map_key):

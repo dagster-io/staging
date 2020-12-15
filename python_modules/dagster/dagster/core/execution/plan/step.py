@@ -174,22 +174,22 @@ class UnresolvedExecutionStep(
         return deps
 
     @property
-    def dynamic_step_key(self):
+    def resolved_by_step_key(self):
         keys = set()
         for inp in self.step_inputs:
             if isinstance(inp, UnresolvedStepInput):
-                keys.add(inp.dynamic_step_key)
+                keys.add(inp.resolved_by_step_key)
 
         check.invariant(len(keys) == 1, "Unresolved step expects one and only one dynamic step key")
 
         return list(keys)[0]
 
     @property
-    def dynamic_output_name(self):
+    def resolved_by_output_name(self):
         keys = set()
         for inp in self.step_inputs:
             if isinstance(inp, UnresolvedStepInput):
-                keys.add(inp.dynamic_output_name)
+                keys.add(inp.resolved_by_output_name)
 
         check.invariant(
             len(keys) == 1, "Unresolved step expects one and only one dynamic output name"
@@ -197,16 +197,18 @@ class UnresolvedExecutionStep(
 
         return list(keys)[0]
 
-    def resolve(self, dynamic_step_key, mappings):
+    def resolve(self, resolved_by_step_key, mappings):
         from .compute import _execute_core_compute
 
-        check.invariant(self.dynamic_step_key == dynamic_step_key, "dynamic step key did not match")
+        check.invariant(
+            self.resolved_by_step_key == resolved_by_step_key, "dynamic step key did not match"
+        )
 
         execution_steps = []
         solid = self.solid
 
         for output_name, mapped_keys in mappings.items():
-            if self.dynamic_output_name != output_name:
+            if self.resolved_by_output_name != output_name:
                 continue
 
             for mapped_key in mapped_keys:

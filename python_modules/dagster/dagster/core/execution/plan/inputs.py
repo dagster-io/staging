@@ -353,12 +353,12 @@ class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type 
         )
 
     @property
-    def dynamic_step_key(self):
-        return self.source.dynamic_step_key
+    def resolved_by_step_key(self):
+        return self.source.resolved_by_step_key
 
     @property
-    def dynamic_output_name(self):
-        return self.source.dynamic_output_name
+    def resolved_by_output_name(self):
+        return self.source.resolved_by_output_name
 
     def resolve(self, map_key):
         return StepInput(
@@ -389,11 +389,11 @@ class FromDynamicStepOutput(
         )
 
     @property
-    def dynamic_step_key(self):
+    def resolved_by_step_key(self):
         return self.step_output_handle.step_key
 
     @property
-    def dynamic_output_name(self):
+    def resolved_by_output_name(self):
         return self.step_output_handle.output_name
 
     def resolve(self, map_key):
@@ -434,12 +434,12 @@ class FromUnresolvedStepOutput(
         )
 
     @property
-    def dynamic_step_key(self):
-        return self.unresolved_step_output_handle.dynamic_step_key
+    def resolved_by_step_key(self):
+        return self.unresolved_step_output_handle.resolved_by_step_key
 
     @property
-    def dynamic_output_name(self):
-        return self.unresolved_step_output_handle.dynamic_output_name
+    def resolved_by_output_name(self):
+        return self.unresolved_step_output_handle.resolved_by_output_name
 
     def resolve(self, key):
         return FromStepOutput(
