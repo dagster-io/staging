@@ -3,14 +3,24 @@ from sqlalchemy import create_engine
 
 
 @resource
-def sqlite_database(_):
+def sqlite_domain(_):
+    return "sqlite"
+
+
+@resource(required_resource_keys={"domain"})
+def sqlite_database(init_context):
     class SQLiteDatabase:
         def execute_query(self, query):
-            engine = create_engine("sqlite:///tmp.db")
+            engine = create_engine(f"{init_context.resources.domain}:///tmp.db")
             with engine.connect() as conn:
                 conn.execute(query)
 
     return SQLiteDatabase()
+
+
+@resource
+def postgres_domain(_):
+    return "postgresql"
 
 
 @resource(
@@ -20,7 +30,8 @@ def sqlite_database(_):
         "username": StringSource,
         "password": StringSource,
         "db_name": StringSource,
-    }
+    },
+    required_resource_keys={"domain"},
 )
 def postgres_database(init_context):
     class PostgresDatabase:
@@ -33,7 +44,8 @@ def postgres_database(init_context):
 
         def execute_query(self, query):
             engine = create_engine(
-                f"postgresql://{self.username}:{self.password}@{self.hostname}:{self.port}/{self.db_name}"
+                f"{init_context.resources.domain}://{self.username}:{self.password}@"
+                "{self.hostname}:{self.port}/{self.db_name}"
             )
             with engine.connect() as conn:
                 conn.execute(query)

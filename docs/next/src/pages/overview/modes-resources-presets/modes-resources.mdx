@@ -44,6 +44,8 @@ file:/docs_snippets/docs_snippets/overview/modes_resources/database_resources.py
 
 The <PyObject module="dagster" object="resource" displayText="@resource" /> decorator decorates a function that returns a resource. The resource itself is a plain old python object - it doesn't need to inherit any particular interface or implement any particular functionality. ResourceDefinitions may have a config schema, which enables customizing them at runtime.
 
+Resources can depend upon other resources. If a resource key is included in the `required_resource_keys` set provided to the resource definition, then the body of the resource can access a required resource via the "resources" attribute of its context object. We use a required key when defining the database resources to represent the domain name of where to point our connection.
+
 ## Selecting a Mode
 
 When launching a pipeline via the Dagit Playground, you can select the mode from a dropdown. When launching a pipeline via the CLI, you can select the mode using the "-d" option. E.g.
