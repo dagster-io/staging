@@ -78,7 +78,7 @@ export const SchedulesRoot: React.FC<Props> = (props) => {
               );
             } else {
               schedulesSection = schedules.length > 0 && (
-                <Group direction="vertical" spacing={16}>
+                <Group direction="column" spacing={16}>
                   <SchedulerTimezoneNote schedulerOrError={scheduler} />
                   <SchedulesTable repository={repositoryOrError} />
                 </Group>
@@ -93,7 +93,7 @@ export const SchedulesRoot: React.FC<Props> = (props) => {
           }
 
           return (
-            <Group direction="vertical" spacing={20}>
+            <Group direction="column" spacing={20}>
               <SchedulerInfo schedulerOrError={scheduler} />
               {schedulesSection}
               {unloadableSchedulesSection}

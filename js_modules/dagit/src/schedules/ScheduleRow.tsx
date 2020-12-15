@@ -247,7 +247,7 @@ export const ScheduleRow: React.FC<{
         )}
       </td>
       <td>
-        <Group direction="horizontal" spacing={2} alignItems="center">
+        <Group direction="row" spacing={2} alignItems="center">
           <div>{`Mode: ${mode}`}</div>
           <Popover
             content={
