@@ -1,14 +1,13 @@
-import {shallowCompareKeys} from '@blueprintjs/core/lib/cjs/common/utils';
+import { shallowCompareKeys } from '@blueprintjs/core/lib/cjs/common/utils';
 import React from 'react';
 
-import {filterByQuery} from 'src/GraphQueryImpl';
-import {formatStepKey} from 'src/Util';
-import {GaantChartLayout} from 'src/gaant/Constants';
-import {GaantChartMode} from 'src/gaant/GaantChart';
-import {buildLayout} from 'src/gaant/GaantChartLayout';
-import {PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles} from 'src/partitions/types/PartitionRunMatrixPipelineQuery';
-import {PartitionRunMatrixRunFragment} from 'src/partitions/types/PartitionRunMatrixRunFragment';
-import {StepEventStatus} from 'src/types/globalTypes';
+import { filterByQuery } from 'src/GraphQueryImpl';
+import { GaantChartLayout } from 'src/gaant/Constants';
+import { GaantChartMode } from 'src/gaant/GaantChart';
+import { buildLayout } from 'src/gaant/GaantChartLayout';
+import { PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles } from 'src/partitions/types/PartitionRunMatrixPipelineQuery';
+import { PartitionRunMatrixRunFragment } from 'src/partitions/types/PartitionRunMatrixRunFragment';
+import { StepEventStatus } from 'src/types/globalTypes';
 
 type SolidHandle = PartitionRunMatrixPipelineQuery_pipelineSnapshotOrError_PipelineSnapshot_solidHandles;
 
@@ -21,7 +20,7 @@ type StatusSquareColor =
   | 'MISSING'
   | 'MISSING-SUCCESS';
 
-export const StatusSquareFinalColor: {[key: string]: StatusSquareColor} = {
+export const StatusSquareFinalColor: { [key: string]: StatusSquareColor } = {
   'FAILURE-SUCCESS': 'SUCCESS',
   'SKIPPED-SUCCESS': 'SUCCESS',
   'MISSING-SUCCESS': 'SUCCESS',
@@ -49,7 +48,7 @@ function byStartTimeAsc(a: PartitionRunMatrixRunFragment, b: PartitionRunMatrixR
 
 function buildMatrixData(
   layout: GaantChartLayout,
-  partitions: {name: string; runs: PartitionRunMatrixRunFragment[]}[],
+  partitions: { name: string; runs: PartitionRunMatrixRunFragment[] }[],
   options: DisplayOptions,
 ) {
   // Note this is sorting partition runs in place, I don't think it matters and
@@ -59,9 +58,9 @@ function buildMatrixData(
   const partitionColumns = partitions.map((p) => ({
     name: p.name,
     runs: p.runs,
-    steps: layout.boxes.map(({node}) => {
+    steps: layout.boxes.map(({ node }) => {
       const statuses = p.runs.map(
-        (r) => r.stepStats.find((stats) => formatStepKey(stats.stepKey) === node.name)?.status,
+        (r) => r.stepStats.find((stats) => stats.stepKey === node.name)?.status,
       );
 
       // If there was a successful run, calculate age relative to that run since it's the age of materializations.
@@ -71,8 +70,8 @@ function buildMatrixData(
         lastSuccessIdx !== -1
           ? getStartTime(p.runs[lastSuccessIdx])
           : p.runs.length
-          ? getStartTime(p.runs[p.runs.length - 1])
-          : 0;
+            ? getStartTime(p.runs[p.runs.length - 1])
+            : 0;
 
       // Calculate the box color for this step. CSS classes are in the "previous-final" format, and we'll
       // strip the "previous" half later if the user has that display option disabled.
@@ -90,10 +89,10 @@ function buildMatrixData(
         color = prev.includes(StepEventStatus.FAILURE)
           ? 'FAILURE-SUCCESS'
           : prev.includes(StepEventStatus.SKIPPED)
-          ? 'SKIPPED-SUCCESS'
-          : prev.includes(undefined)
-          ? 'MISSING-SUCCESS'
-          : 'SUCCESS';
+            ? 'SKIPPED-SUCCESS'
+            : prev.includes(undefined)
+              ? 'MISSING-SUCCESS'
+              : 'SUCCESS';
       } else if (statuses.length > 1) {
         color = statuses.includes(StepEventStatus.FAILURE) ? 'FAILURE' : color;
       }
@@ -140,12 +139,12 @@ function buildMatrixData(
     }
   }
 
-  return {stepRows, partitions, partitionColumns};
+  return { stepRows, partitions, partitionColumns };
 }
 
 interface MatrixDataInputs {
   solidHandles: SolidHandle[] | false;
-  partitions: {name: string; runs: PartitionRunMatrixRunFragment[]}[];
+  partitions: { name: string; runs: PartitionRunMatrixRunFragment[] }[];
   stepQuery: string;
   options: DisplayOptions;
 }
@@ -178,10 +177,10 @@ export const useMatrixData = (inputs: MatrixDataInputs) => {
     inputs.solidHandles.map((h) => h.solid),
     inputs.stepQuery,
   );
-  const layout = buildLayout({nodes: solidsFiltered.all, mode: GaantChartMode.FLAT});
+  const layout = buildLayout({ nodes: solidsFiltered.all, mode: GaantChartMode.FLAT });
 
   // Build the matrix of step + partition squares - presorted to match the gaant layout
   const result = buildMatrixData(layout, inputs.partitions, inputs.options);
-  cachedMatrixData.current = {result, inputs};
+  cachedMatrixData.current = { result, inputs };
   return result;
 };
