@@ -64,7 +64,7 @@ def handle_schema_errors(conn, alembic_config, msg=None):
         except Exception:  # pylint: disable=broad-except
             pass
 
-        if db_revision != head_revision:
+        if db_revision and head_revision and (db_revision != head_revision):
             raise DagsterInstanceMigrationRequired(
                 msg=msg,
                 db_revision=db_revision,
