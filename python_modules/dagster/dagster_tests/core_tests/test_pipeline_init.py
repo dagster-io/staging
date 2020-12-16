@@ -91,13 +91,14 @@ def test_clean_event_generator_exit():
         resource_def=resource_def,
         resource_config=None,
         run_id=make_new_run_id(),
+        instance=instance,
     )
     generator = single_resource_event_generator(resource_context, resource_name, resource_def)
     next(generator)
     generator.close()
 
     generator = resource_initialization_event_generator(
-        execution_plan, environment_config, pipeline_run, log_manager, {"a"}
+        execution_plan, environment_config, pipeline_run, log_manager, {"a"}, None
     )
     next(generator)
     generator.close()

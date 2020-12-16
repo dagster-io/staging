@@ -3,13 +3,14 @@ from collections import namedtuple
 from dagster import check
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.resource import ResourceDefinition, ScopedResourcesBuilder
+from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
 
 
 class InitResourceContext(
     namedtuple(
         "InitResourceContext",
-        "resource_config pipeline_def resource_def run_id log_manager resources",
+        "resource_config pipeline_def resource_def run_id instance log_manager resources",
     )
 ):
     """Resource-specific initialization context.
@@ -33,6 +34,7 @@ class InitResourceContext(
         pipeline_def,
         resource_def,
         run_id,
+        instance,
         log_manager=None,
         resource_instance_dict=None,
         required_resource_keys=None,
@@ -50,6 +52,7 @@ class InitResourceContext(
             check.inst_param(pipeline_def, "pipeline_def", PipelineDefinition),
             check.inst_param(resource_def, "resource_def", ResourceDefinition),
             check.str_param(run_id, "run_id"),
+            check.inst_param(instance, "instance", DagsterInstance),
             check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
             resources=scoped_resources_builder.build(required_resource_keys),
         )
@@ -64,5 +67,6 @@ class InitResourceContext(
             pipeline_def=self.pipeline_def,
             resource_def=self.resource_def,
             run_id=self.run_id,
+            instance=self.instance,
             log_manager=self.log_manager,
         )
