@@ -231,6 +231,24 @@ class DagsterTypeCheckError(DagsterUserCodeExecutionError):
     """
 
 
+class DagsterExecutionInputLoadingError(DagsterUserCodeExecutionError):
+    """Indicates an error occurred while loading an input for a step."""
+
+    def __init__(self, *args, **kwargs):
+        self.step_key = check.str_param(kwargs.pop("step_key"), "step_key")
+        self.input_name = check.str_param(kwargs.pop("input_name"), "input_name")
+        super(DagsterExecutionInputLoadingError, self).__init__(*args, **kwargs)
+
+
+class DagsterExecutionOutputHandlingError(DagsterUserCodeExecutionError):
+    """Indicates an error occurred while loading an input for a step."""
+
+    def __init__(self, *args, **kwargs):
+        self.step_key = check.str_param(kwargs.pop("step_key"), "step_key")
+        self.output_name = check.str_param(kwargs.pop("output_name"), "output_name")
+        super(DagsterExecutionOutputHandlingError, self).__init__(*args, **kwargs)
+
+
 class DagsterExecutionStepExecutionError(DagsterUserCodeExecutionError):
     """Indicates an error occurred while executing the body of an execution step."""
 
