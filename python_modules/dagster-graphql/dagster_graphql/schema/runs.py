@@ -7,6 +7,7 @@ from dagster import PipelineRun, check, seven
 from dagster.core.definitions.events import (
     EventMetadataEntry,
     FloatMetadataEntryData,
+    HtmlMetadataEntryData,
     IntMetadataEntryData,
     JsonMetadataEntryData,
     MarkdownMetadataEntryData,
@@ -474,6 +475,7 @@ class DauphinEventJsonMetadataEntry(dauphin.ObjectType):
         interfaces = (DauphinEventMetadataEntry,)
 
     jsonString = dauphin.NonNull(dauphin.String)
+    inline = dauphin.NonNull(dauphin.Boolean)
 
 
 class DauphinEventTextMetadataEntry(dauphin.ObjectType):
@@ -482,6 +484,15 @@ class DauphinEventTextMetadataEntry(dauphin.ObjectType):
         interfaces = (DauphinEventMetadataEntry,)
 
     text = dauphin.NonNull(dauphin.String)
+
+
+class DauphinEventHtmlMetadataEntry(dauphin.ObjectType):
+    class Meta:
+        name = "EventHtmlMetadataEntry"
+        interfaces = (DauphinEventMetadataEntry,)
+
+    html = dauphin.NonNull(dauphin.String)
+    inline = dauphin.NonNull(dauphin.Boolean)
 
 
 class DauphinEventUrlMetadataEntry(dauphin.ObjectType):
@@ -539,12 +550,20 @@ def iterate_metadata_entries(metadata_entries):
                 label=metadata_entry.label,
                 description=metadata_entry.description,
                 jsonString=seven.json.dumps(metadata_entry.entry_data.data),
+                inline=metadata_entry.entry_data.inline,
             )
         elif isinstance(metadata_entry.entry_data, TextMetadataEntryData):
             yield DauphinEventTextMetadataEntry(
                 label=metadata_entry.label,
                 description=metadata_entry.description,
                 text=metadata_entry.entry_data.text,
+            )
+        elif isinstance(metadata_entry.entry_data, HtmlMetadataEntryData):
+            yield DauphinEventHtmlMetadataEntry(
+                label=metadata_entry.label,
+                description=metadata_entry.description,
+                html=metadata_entry.entry_data.html,
+                inline=metadata_entry.entry_data.inline,
             )
         elif isinstance(metadata_entry.entry_data, UrlMetadataEntryData):
             yield DauphinEventUrlMetadataEntry(

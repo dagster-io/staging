@@ -174,6 +174,15 @@ function itemsForMetadataEntries(
         });
 
         break;
+      case 'EventHtmlMetadataEntry':
+        items.push({
+          text: metadataEntry.label,
+          actionText: '[Show HTML]',
+          action: IStepDisplayActionType.SHOW_IN_MODAL,
+          actionValue: metadataEntry.html,
+        });
+
+        break;
     }
   }
 
@@ -354,12 +363,17 @@ export class RunMetadataProvider extends React.Component<IRunMetadataProviderPro
         }
         ... on EventJsonMetadataEntry {
           jsonString
+          inline
         }
         ... on EventUrlMetadataEntry {
           url
         }
         ... on EventTextMetadataEntry {
           text
+        }
+        ... on EventHtmlMetadataEntry {
+          html
+          inline
         }
         ... on EventMarkdownMetadataEntry {
           mdStr

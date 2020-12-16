@@ -32,6 +32,7 @@ from .events import (
     Failure,
     FloatMetadataEntryData,
     HookExecutionResult,
+    HtmlMetadataEntryData,
     IntMetadataEntryData,
     JsonMetadataEntryData,
     MarkdownMetadataEntryData,

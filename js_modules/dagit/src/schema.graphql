@@ -1530,12 +1530,20 @@ type EventJsonMetadataEntry implements EventMetadataEntry {
   label: String!
   description: String
   jsonString: String!
+  inline: Boolean!
 }
 
 type EventTextMetadataEntry implements EventMetadataEntry {
   label: String!
   description: String
   text: String!
+}
+
+type EventHtmlMetadataEntry implements EventMetadataEntry {
+  label: String!
+  description: String
+  html: String!
+  inline: Boolean!
 }
 
 type EventUrlMetadataEntry implements EventMetadataEntry {
