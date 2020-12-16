@@ -90,6 +90,9 @@ structured events.
 .. autoclass:: JsonMetadataEntryData
     :members:
 
+.. autoclass:: HtmlMetadataEntryData
+    :members:
+
 .. autoclass:: MarkdownMetadataEntryData
     :members:
 
