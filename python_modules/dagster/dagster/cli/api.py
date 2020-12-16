@@ -153,6 +153,7 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
             message="Pipeline execution terminated by interrupt", pipeline_run=pipeline_run,
         )
         _report_run_failed_if_not_finished(instance, pipeline_run_id)
+        raise
     except Exception:  # pylint: disable=broad-except
         instance.report_engine_event(
             "An exception was thrown during execution that is likely a framework error, "
@@ -161,6 +162,7 @@ def _execute_run_command_body(recon_pipeline, pipeline_run_id, instance, write_s
             EngineEventData.engine_error(serializable_error_info_from_exc_info(sys.exc_info())),
         )
         _report_run_failed_if_not_finished(instance, pipeline_run_id)
+        raise
     finally:
         instance.report_engine_event(
             "Process for pipeline exited (pid: {pid}).".format(pid=pid), pipeline_run,
