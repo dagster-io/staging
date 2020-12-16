@@ -68,8 +68,17 @@ def retry_pg_connection_fn(fn, retry_limit=5, retry_wait=0.2):
             # These are broad, we may want to list out specific exceptions to capture
             psycopg2.DatabaseError,
             psycopg2.OperationalError,
+            psycopg2.ProgrammingError,
             sqlalchemy.exc.OperationalError,
         ) as exc:
+            if (
+                isinstance(exc, psycopg2.ProgrammingError)
+                and exc.pgcode != psycopg2.errorcodes.DUPLICATE_TABLE
+            ):
+                # Only retry on DuplicateTable errors, which can happen when
+                # a DagsterInstance is being created from two different processes
+                raise
+
             logging.warning("Retrying failed database connection")
             if retry_limit == 0:
                 six.raise_from(DagsterPostgresException("too many retries for DB connection"), exc)
