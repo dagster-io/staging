@@ -13,6 +13,7 @@ from dagster.core.definitions import (
     ExpectationResult,
     Failure,
     FloatMetadataEntryData,
+    HtmlMetadataEntryData,
     InputDefinition,
     InputMapping,
     IntMetadataEntryData,
@@ -196,6 +197,7 @@ __all__ = [
     "SolidDefinition",
     "SolidInvocation",
     "TextMetadataEntryData",
+    "HtmlMetadataEntryData",
     "UrlMetadataEntryData",
     # Decorators
     "composite_solid",

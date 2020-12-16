@@ -143,7 +143,7 @@ class EventMetadataEntry(
     Args:
         label (str): Short display label for this metadata entry.
         description (Optional[str]): A human-readable description of this metadata entry.
-        entry_data (Union[(Union[TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData]):
+        entry_data (Union[(Union[TextMetadataEntryData, HtmlMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData]):
             Typed metadata entry data. The different types allow for customized display in tools
             like dagit.
     """
@@ -178,6 +178,30 @@ class EventMetadataEntry(
             description (Optional[str]): A human-readable description of this metadata entry.
         """
         return EventMetadataEntry(label, description, TextMetadataEntryData(text))
+
+    @staticmethod
+    def html(html, label, description=None, inline=False):
+        """Static constructor for a metadata entry containing html as
+        :py:class:`HtmlMetadataEntryData`. For example:
+
+        .. code-block:: python
+
+            @solid
+            def emit_metadata_solid(context, df):
+                yield AssetMaterialization(
+                    asset_key="my_dataset",
+                    metadata_entries=[
+                        EventMetadataEntry.html("<div><h2>Preview</h2><svg>...</svg></div>", "html_metadata")
+                    ],
+                )
+
+        Args:
+            html (Optional[str]): The html of this metadata entry.
+            label (str): Short display label for this metadata entry.
+            description (Optional[str]): A human-readable description of this metadata entry.
+            inline (Optional[bool]): Pass true to display content inline in the log message.
+        """
+        return EventMetadataEntry(label, description, HtmlMetadataEntryData(html, inline))
 
     @staticmethod
     def url(url, label, description=None):
@@ -251,7 +275,7 @@ class EventMetadataEntry(
         )
 
     @staticmethod
-    def json(data, label, description=None):
+    def json(data, label, description=None, inline=False):
         """Static constructor for a metadata entry containing JSON data as
         :py:class:`JsonMetadataEntryData`. For example:
 
@@ -273,8 +297,9 @@ class EventMetadataEntry(
             data (Optional[Dict[str, Any]]): The JSON data contained by this metadata entry.
             label (str): Short display label for this metadata entry.
             description (Optional[str]): A human-readable description of this metadata entry.
+            inline (Optional[bool]): Pass true to display content inline in the log message.
         """
-        return EventMetadataEntry(label, description, JsonMetadataEntryData(data))
+        return EventMetadataEntry(label, description, JsonMetadataEntryData(data, inline))
 
     @staticmethod
     def md(md_str, label, description=None):
@@ -366,6 +391,23 @@ class TextMetadataEntryData(namedtuple("_TextMetadataEntryData", "text"), Persis
 
 
 @whitelist_for_persistence
+class HtmlMetadataEntryData(namedtuple("_HtmlMetadataEntryData", "html inline"), Persistable):
+    """Container class for html metadata entry data.
+
+    Args:
+        html (Optional[str]): The html data.
+        inline (Optional[bool]): True to show data inline in the logs
+    """
+
+    def __new__(cls, html, inline):
+        return super(HtmlMetadataEntryData, cls).__new__(
+            cls,
+            check.opt_str_param(html, "html", default=""),
+            check.opt_bool_param(inline, "inline", default=False),
+        )
+
+
+@whitelist_for_persistence
 class UrlMetadataEntryData(namedtuple("_UrlMetadataEntryData", "url"), Persistable):
     """Container class for URL metadata entry data.
 
@@ -394,16 +436,19 @@ class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path"), Persis
 
 
 @whitelist_for_persistence
-class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data"), Persistable):
+class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data inline"), Persistable):
     """Container class for JSON metadata entry data.
 
     Args:
         data (Optional[Dict[str, Any]]): The JSON data.
+        inline (Optional[bool]): Pass true to display content inline in the log message.
     """
 
-    def __new__(cls, data):
+    def __new__(cls, data, inline):
         return super(JsonMetadataEntryData, cls).__new__(
-            cls, check.opt_dict_param(data, "data", key_type=str)
+            cls,
+            check.opt_dict_param(data, "data", key_type=str),
+            check.opt_bool_param(inline, "inline", default=False),
         )
 
 
@@ -459,6 +504,7 @@ class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value"), Persist
 
 EntryDataUnion = (
     TextMetadataEntryData,
+    HtmlMetadataEntryData,
     UrlMetadataEntryData,
     PathMetadataEntryData,
     JsonMetadataEntryData,

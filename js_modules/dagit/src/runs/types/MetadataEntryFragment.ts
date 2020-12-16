@@ -20,6 +20,7 @@ export interface MetadataEntryFragment_EventJsonMetadataEntry {
   label: string;
   description: string | null;
   jsonString: string;
+  inline: boolean;
 }
 
 export interface MetadataEntryFragment_EventUrlMetadataEntry {
@@ -34,6 +35,14 @@ export interface MetadataEntryFragment_EventTextMetadataEntry {
   label: string;
   description: string | null;
   text: string;
+}
+
+export interface MetadataEntryFragment_EventHtmlMetadataEntry {
+  __typename: "EventHtmlMetadataEntry";
+  label: string;
+  description: string | null;
+  html: string;
+  inline: boolean;
 }
 
 export interface MetadataEntryFragment_EventMarkdownMetadataEntry {
@@ -65,4 +74,4 @@ export interface MetadataEntryFragment_EventIntMetadataEntry {
   intValue: number;
 }
 
-export type MetadataEntryFragment = MetadataEntryFragment_EventPathMetadataEntry | MetadataEntryFragment_EventJsonMetadataEntry | MetadataEntryFragment_EventUrlMetadataEntry | MetadataEntryFragment_EventTextMetadataEntry | MetadataEntryFragment_EventMarkdownMetadataEntry | MetadataEntryFragment_EventPythonArtifactMetadataEntry | MetadataEntryFragment_EventFloatMetadataEntry | MetadataEntryFragment_EventIntMetadataEntry;
+export type MetadataEntryFragment = MetadataEntryFragment_EventPathMetadataEntry | MetadataEntryFragment_EventJsonMetadataEntry | MetadataEntryFragment_EventUrlMetadataEntry | MetadataEntryFragment_EventTextMetadataEntry | MetadataEntryFragment_EventHtmlMetadataEntry | MetadataEntryFragment_EventMarkdownMetadataEntry | MetadataEntryFragment_EventPythonArtifactMetadataEntry | MetadataEntryFragment_EventFloatMetadataEntry | MetadataEntryFragment_EventIntMetadataEntry;
