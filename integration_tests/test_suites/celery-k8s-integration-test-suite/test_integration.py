@@ -195,6 +195,8 @@ def _test_termination(dagster_instance, run_config):
         dagster_instance, pipeline_name=pipeline_name, run_config=run_config, mode="default",
     )
 
+    print("Waiting for run " + str(run.run_id) + " to terminate ")  # pylint: disable=print-call
+
     dagster_instance.launch_run(
         run.run_id,
         ReOriginatedExternalPipelineForTest(get_test_project_external_pipeline(pipeline_name)),
