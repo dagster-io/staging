@@ -1,3 +1,4 @@
+import os
 import sys
 import weakref
 
@@ -170,7 +171,14 @@ class CeleryK8sRunLauncher(RunLauncher, ConfigurableClass):
 
         job_name = get_job_name_from_run_id(run.run_id)
         pod_name = job_name
+
+        print("RUN CONFIG: " + str(run.run_config))
+
+        print("ENVIRON: " + str(os.environ))
+
         exc_config = _get_validated_celery_k8s_executor_config(run.run_config)
+
+        print("VALIDATED CONFIG: " + str(exc_config))
 
         job_image = None
         pipeline_origin = None

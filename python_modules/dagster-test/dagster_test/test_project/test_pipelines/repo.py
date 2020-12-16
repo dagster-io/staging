@@ -320,7 +320,7 @@ def define_schedules():
     def frequent_celery(_):
         from dagster_celery_k8s.config import get_celery_engine_config
 
-        additional_env_config_maps = ["test-aws-env-configmap"]  # if not IS_BUILDKITE else []
+        additional_env_config_maps = ["test-aws-env-configmap"] if not IS_BUILDKITE else []
 
         return merge_dicts(
             merge_yamls(
