@@ -2,11 +2,16 @@ from collections import namedtuple
 
 from dagster import check
 from dagster.core.definitions.resource import ResourceDefinition, ScopedResourcesBuilder
+from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.pipeline_run import PipelineRun
 
 
 class InitResourceContext(
-    namedtuple("InitResourceContext", "resource_config resource_def run_id log_manager resources",)
+    namedtuple(
+        "InitResourceContext",
+        "resource_config resource_def pipeline_run log_manager resources instance_for_backwards_compat",
+    )
 ):
     """Resource-specific initialization context.
 
@@ -26,10 +31,11 @@ class InitResourceContext(
         cls,
         resource_config,
         resource_def,
-        run_id,
+        pipeline_run,
         log_manager=None,
         resource_instance_dict=None,
         required_resource_keys=None,
+        instance_for_backwards_compat=None,
     ):
         check.opt_dict_param(resource_instance_dict, "resource_instance_dict")
         required_resource_keys = check.opt_set_param(
@@ -42,19 +48,28 @@ class InitResourceContext(
             cls,
             resource_config,
             check.inst_param(resource_def, "resource_def", ResourceDefinition),
-            check.str_param(run_id, "run_id"),
+            check.inst_param(pipeline_run, "pipeline_run", PipelineRun),
             check.opt_inst_param(log_manager, "log_manager", DagsterLogManager),
             resources=scoped_resources_builder.build(required_resource_keys),
+            # Used internally for adapting intermediate storage defs to resources, for backcompat
+            instance_for_backwards_compat=check.opt_inst_param(
+                instance_for_backwards_compat, "instance_for_backwards_compat", DagsterInstance
+            ),
         )
 
     @property
     def log(self):
         return self.log_manager
 
+    @property
+    def run_id(self):
+        return self.pipeline_run.run_id
+
     def replace_config(self, config):
         return InitResourceContext(
             resource_config=config,
             resource_def=self.resource_def,
-            run_id=self.run_id,
+            pipeline_run=self.pipeline_run,
             log_manager=self.log_manager,
+            instance_for_backwards_compat=self.instance_for_backwards_compat,
         )
