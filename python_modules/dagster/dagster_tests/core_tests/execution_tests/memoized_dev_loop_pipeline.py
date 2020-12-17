@@ -8,7 +8,7 @@ from dagster import (
     repository,
     solid,
 )
-from dagster.core.storage.asset_store import versioned_filesystem_asset_store
+from dagster.core.storage.memoizable_object_manager import versioned_filesystem_object_manager
 
 
 @solid(
@@ -37,7 +37,7 @@ def take_string_1_asset(context, _string_input):
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            "only_mode", resource_defs={"object_manager": versioned_filesystem_asset_store}
+            "only_mode", resource_defs={"object_manager": versioned_filesystem_object_manager}
         )
     ]
 )
