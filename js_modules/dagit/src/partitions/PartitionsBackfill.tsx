@@ -32,7 +32,6 @@ import {
 } from 'src/partitions/RunMatrixUtils';
 import {LaunchPartitionBackfill} from 'src/partitions/types/LaunchPartitionBackfill';
 import {PartitionsBackfillSelectorQuery} from 'src/partitions/types/PartitionsBackfillSelectorQuery';
-import {PipelineRunStatus} from 'src/types/globalTypes';
 import {ButtonLink} from 'src/ui/ButtonLink';
 import {Group} from 'src/ui/Group';
 import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
@@ -126,7 +125,7 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
   const [tagEditorOpen, setTagEditorOpen] = React.useState<boolean>(false);
   const [tags, setTags] = React.useState<PipelineRunTag[]>([]);
   const [query, setQuery] = React.useState<string>('');
-  const [options, setOptions] = React.useState<BackfillOptions>({
+  const [options] = React.useState<BackfillOptions>({
     reexecute: false,
     fromFailure: false,
   });
@@ -250,17 +249,13 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
     return <span />;
   }
   const partitionNames = runPartitions.map((x) => x.name);
-  const partitionsWithLastRunSuccess = runPartitions
-    .filter((x) => x.runs.length && x.runs[0].status === PipelineRunStatus.SUCCESS)
-    .map((x) => x.name);
-  const partitionsWithLastRunFailure = runPartitions
-    .filter((x) => x.runs.length && x.runs[0].status === PipelineRunStatus.FAILURE)
-    .map((x) => x.name);
-  const selectablePartitions = options.reexecute
-    ? options.fromFailure
-      ? partitionsWithLastRunFailure
-      : partitionsWithLastRunSuccess
-    : partitionNames;
+  // const partitionsWithLastRunSuccess = runPartitions
+  //   .filter((x) => x.runs.length && x.runs[0].status === PipelineRunStatus.SUCCESS)
+  //   .map((x) => x.name);
+  // const partitionsWithLastRunFailure = runPartitions
+  //   .filter((x) => x.runs.length && x.runs[0].status === PipelineRunStatus.FAILURE)
+  //   .map((x) => x.name);
+  const selectablePartitions = partitionNames;
   const solidsFiltered = filterByQuery(solids, query);
   const layout = buildLayout({nodes: solidsFiltered.all, mode: GaantChartMode.FLAT});
   const stepRows = layout.boxes.map((box) => ({
@@ -353,36 +348,6 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
               placeholder="Type a Step Subset"
               onChange={setQuery}
             />
-          </div>
-          <div style={{marginLeft: 20}}>
-            <strong style={{display: 'block', marginBottom: 4}}>Options</strong>
-            <div style={{display: 'flex'}}>
-              <Checkbox
-                label="Re-execute From Last Run"
-                disabled={partitionsWithLastRunSuccess.length === 0}
-                checked={options.reexecute}
-                onChange={() => {
-                  setSelected([]);
-                  setQuery('');
-                  setOptions(
-                    options.reexecute
-                      ? {...options, reexecute: false, fromFailure: false}
-                      : {...options, reexecute: true},
-                  );
-                }}
-              />
-              <div style={{width: 20}} />
-              <Checkbox
-                label="Re-execute From Failure"
-                checked={options.fromFailure}
-                disabled={partitionsWithLastRunFailure.length === 0 || !options.reexecute}
-                onChange={() => {
-                  setSelected([]);
-                  setQuery('');
-                  setOptions({...options, reexecute: true, fromFailure: !options.fromFailure});
-                }}
-              />
-            </div>
           </div>
         </div>
         <div
@@ -610,11 +575,6 @@ export const PARTITIONS_BACKFILL_SELECTOR_QUERY = gql`
           ... on Partitions {
             results {
               name
-              runs(limit: 1) {
-                id
-                runId
-                status
-              }
             }
           }
           ... on PythonError {

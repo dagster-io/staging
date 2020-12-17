@@ -4,23 +4,15 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { RepositorySelector, PipelineSelector, PipelineRunStatus } from "./../../types/globalTypes";
+import { RepositorySelector, PipelineSelector } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: PartitionsBackfillSelectorQuery
 // ====================================================
 
-export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs {
-  __typename: "PipelineRun";
-  id: string;
-  runId: string;
-  status: PipelineRunStatus;
-}
-
 export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results {
   __typename: "Partition";
   name: string;
-  runs: PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs[];
 }
 
 export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions {
