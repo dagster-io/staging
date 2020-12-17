@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import glob
 import os
 
 import click
@@ -378,7 +379,32 @@ def execute_logs_command(schedule_name, cli_args, print_fn, instance=None):
                     external_repo.get_external_schedule(schedule_name).get_external_origin_id()
                 )
             )
-            print_fn(logs_path)
+
+            logs_directory = os.path.dirname(logs_path)
+            result_files = glob.glob("{}/*.result".format(logs_directory))
+            most_recent_log = max(result_files, key=os.path.getctime) if result_files else None
+
+            output = ""
+
+            title = "Scheduler Logs:"
+            output += "{title}\n{sep}\n{info}\n".format(
+                title=title, sep="=" * len(title), info=logs_path,
+            )
+
+            title = (
+                "Schedule Execution Logs:"
+                "\nEvent logs from schedule execution. "
+                "Errors that caused schedule executions to not run or fail can be found here. "
+            )
+            most_recent_info = (
+                "\nMost recent execution log: {}".format(most_recent_log) if most_recent_log else ""
+            )
+            info = "All execution logs: {}{}".format(logs_directory, most_recent_info)
+            output += "\n{title}\n{sep}\n{info}\n".format(
+                title=title, sep="=" * len(title), info=info,
+            )
+
+            print_fn(output)
 
 
 @click.command(name="restart", help="Restart a running schedule")
