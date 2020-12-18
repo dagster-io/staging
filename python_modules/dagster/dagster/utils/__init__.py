@@ -426,10 +426,10 @@ def pop_captured_interrupt():
 
 # Executes the next() function within an instance of the supplied context manager class
 # (leaving the context before yielding each result)
-def iterate_with_context(context_manager_class, iterator):
+def iterate_with_context(context, iterator):
     while True:
         # Allow interrupts during user code so that we can terminate slow/hanging steps
-        with context_manager_class():
+        with context():
             try:
                 next_output = next(iterator)
             except StopIteration:
