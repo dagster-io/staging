@@ -21,7 +21,7 @@ export interface Props {
   forceTerminate: ForceTerminate;
   isOpen: boolean;
   onClose: () => void;
-  onComplete: () => void;
+  onComplete: (terminationState: TerminationState) => void;
   selectedIDs: string[];
 }
 
@@ -31,10 +31,12 @@ type Error =
   | Cancel_terminatePipelineExecution_PythonError
   | undefined;
 
+export type TerminationState = {completed: number; errors: {[id: string]: Error}};
+
 type TerminationDialogState = {
   mustForce: boolean;
   step: 'initial' | 'terminating' | 'completed';
-  termination: {completed: number; errors: {[id: string]: Error}};
+  termination: TerminationState;
 };
 
 const initializeState = (forceTerminate: ForceTerminate): TerminationDialogState => {
@@ -125,7 +127,7 @@ export const TerminationDialog = (props: Props) => {
     }
 
     dispatch({type: 'complete'});
-    onComplete();
+    onComplete(state.termination);
   };
 
   const onToggleForce = (event: React.ChangeEvent<HTMLInputElement>) => {
