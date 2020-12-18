@@ -177,18 +177,21 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
   const {refetch} = React.useContext(RunsQueryRefetchContext);
   const [visibleDialog, setVisibleDialog] = React.useState<'none' | 'terminate' | 'delete'>('none');
 
+  const selectedIDs = selected.map((run) => run.runId);
+  const deletionMap = selected.reduce((accum, run) => ({...accum, [run.id]: run.canTerminate}), {});
+
   const unfinishedRuns = selected.filter(
     (r) =>
       r?.status !== PipelineRunStatus.FAILURE &&
       r?.status !== PipelineRunStatus.SUCCESS &&
       r?.status !== PipelineRunStatus.CANCELED,
   );
+
   const terminatableIDs = unfinishedRuns.map((r) => r.id);
   const terminationMap = unfinishedRuns.reduce(
     (accum, run) => ({...accum, [run.id]: run.canTerminate}),
     {},
   );
-  const selectedIDs = selected.map((run) => run.runId);
 
   const closeDialogs = () => {
     setVisibleDialog('none');
@@ -239,8 +242,7 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
         onClose={closeDialogs}
         onComplete={onComplete}
         onTerminateInstead={() => setVisibleDialog('terminate')}
-        selectedIDs={selectedIDs}
-        terminatableIDs={terminatableIDs}
+        selectedRuns={deletionMap}
       />
     </>
   );

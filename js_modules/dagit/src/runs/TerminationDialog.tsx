@@ -157,6 +157,18 @@ export const TerminationDialog = (props: Props) => {
   const progressContent = () => {
     switch (state.step) {
       case 'initial':
+        if (!count) {
+          return (
+            <Group direction="column" spacing={16}>
+              <div>No runs selected for termination.</div>
+              <div>
+                If you opted for termination instead of deletion, your runs may already have
+                completed and can no longer be terminated.
+              </div>
+            </Group>
+          );
+        }
+
         return (
           <Group direction="column" spacing={16}>
             <div>
@@ -224,6 +236,14 @@ export const TerminationDialog = (props: Props) => {
   const buttons = () => {
     switch (state.step) {
       case 'initial':
+        if (!count) {
+          return (
+            <Button intent="none" onClick={onClose}>
+              OK
+            </Button>
+          );
+        }
+
         return (
           <>
             <Button intent="none" onClick={onClose}>
