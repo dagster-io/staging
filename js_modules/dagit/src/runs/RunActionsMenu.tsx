@@ -33,6 +33,7 @@ import {LaunchPipelineReexecution} from 'src/runs/types/LaunchPipelineReexecutio
 import {PipelineEnvironmentYamlQuery} from 'src/runs/types/PipelineEnvironmentYamlQuery';
 import {RunActionMenuFragment} from 'src/runs/types/RunActionMenuFragment';
 import {RunTableRunFragment} from 'src/runs/types/RunTableRunFragment';
+import {PipelineRunStatus} from 'src/types/globalTypes';
 import {useRepositoryForRun} from 'src/workspace/useRepositoryForRun';
 
 export const RunActionsMenu: React.FC<{
@@ -176,8 +177,14 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
   const {refetch} = React.useContext(RunsQueryRefetchContext);
   const [visibleDialog, setVisibleDialog] = React.useState<'none' | 'terminate' | 'delete'>('none');
 
-  const terminatableIDs = selected.filter((r) => r.canTerminate).map((run) => run.runId);
-  const deletableIDs = selected.map((run) => run.runId);
+  const unfinishedRuns = selected.filter(
+    (r) =>
+      r?.status !== PipelineRunStatus.FAILURE &&
+      r?.status !== PipelineRunStatus.SUCCESS &&
+      r?.status !== PipelineRunStatus.CANCELED,
+  );
+  const terminatableIDs = unfinishedRuns.map((r) => r.id);
+  const selectedIDs = selected.map((run) => run.runId);
 
   const closeDialogs = () => {
     setVisibleDialog('none');
@@ -205,8 +212,8 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
             />
             <MenuItem
               icon="trash"
-              text={`Delete ${deletableIDs.length} ${deletableIDs.length === 1 ? 'run' : 'runs'}`}
-              disabled={deletableIDs.length === 0}
+              text={`Delete ${selectedIDs.length} ${selectedIDs.length === 1 ? 'run' : 'runs'}`}
+              disabled={selectedIDs.length === 0}
               onClick={() => {
                 setVisibleDialog('delete');
               }}
@@ -228,7 +235,7 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
         onClose={closeDialogs}
         onComplete={onComplete}
         onTerminateInstead={() => setVisibleDialog('terminate')}
-        selectedIDs={deletableIDs}
+        selectedIDs={selectedIDs}
         terminatableIDs={terminatableIDs}
       />
     </>

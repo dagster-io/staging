@@ -17,8 +17,8 @@ const Template: Story<TerminationDialogProps> = (props) => (
   </ApolloTestProvider>
 );
 
-export const Success = Template.bind({});
-Success.args = {
+export const ForceTermination = Template.bind({});
+ForceTermination.args = {
   isOpen: true,
   onClose: () => {
     console.log('Close!');
