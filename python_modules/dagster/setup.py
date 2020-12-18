@@ -53,8 +53,6 @@ if __name__ == "__main__":
         },
         include_package_data=True,
         install_requires=[
-            # standard python 2/3 compatability things
-            "future",
             "funcsigs",
             "contextlib2>=0.5.4",
             # cli
@@ -82,7 +80,7 @@ if __name__ == "__main__":
             # https://github.com/mhammond/pywin32/issues/1439
             'pywin32 != 226; platform_system=="Windows"',
             "pytz",
-            "docstring-parser==0.7.1",
+            "docstring-parser>=0.7.1",
         ],
         extras_require={"docker": ["docker"],},
         entry_points={
