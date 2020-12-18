@@ -143,6 +143,7 @@ def create_grpc_watch_thread(
             watch_interval,
             max_reconnect_attempts,
         ],
+        name="grpc_server_watch",
     )
     thread.daemon = True
     return shutdown_event, thread
