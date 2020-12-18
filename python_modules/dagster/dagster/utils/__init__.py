@@ -19,7 +19,7 @@ from warnings import warn
 import six
 import yaml
 from dagster import check, seven
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterExecutionInterruptedError, DagsterInvariantViolationError
 from dagster.seven import IS_WINDOWS, TemporaryDirectory, multiprocessing, thread
 from dagster.seven.abc import Mapping
 from six.moves import configparser
@@ -360,13 +360,13 @@ def _replace_interrupt_signal(new_signal_handler):
     setup_windows_interrupt_support()
 
 
-# Wraps code that we don't want a SIGINT to interrupt (but throw a KeyboardInterrupt if a
-# SIGINT was received while it ran). You can also call raise_delayed_interrupts within this
-# context when you reach a checkpoint where it's safe to raise a KeyboardInterrupt, or open a
-# `raise_interrupts_immediately` context during a period in which it's once again safe to raise
-# interrupts.
 @contextlib.contextmanager
-def delay_interrupts():
+def capture_interrupts():
+    if threading.current_thread() != threading.main_thread():
+        # Can't replace signal handlers when not on the main thread, ignore
+        yield
+        return
+
     original_signal_handler = signal.getsignal(signal.SIGINT)
 
     def _new_signal_handler(_signo, _):
@@ -375,59 +375,50 @@ def delay_interrupts():
     signal_replaced = False
 
     try:
-        try:
-            _replace_interrupt_signal(_new_signal_handler)
-            signal_replaced = True
-        except ValueError:
-            # Can't replace signal handlers when not on the main thread, ignore
-            pass
+        _replace_interrupt_signal(_new_signal_handler)
+        signal_replaced = True
         yield
     finally:
         if signal_replaced:
             _replace_interrupt_signal(original_signal_handler)
-            raise_delayed_interrupts()
+            _received_interrupt["received"] = False
 
 
-# Restores the default SIGINT handler behavior within this context. Typically this would be a no-op,
-# but can be used within a delay_interrupts context to temporarily restore normal interrupt handling
-# behavior. Will also immediately raise an interrupt if called inside a `delay_interrupts` context
-# where an interrupt was received.
 @contextlib.contextmanager
-def raise_interrupts_immediately():
-    raise_delayed_interrupts()
+def raise_execution_interrupts():
+    if threading.current_thread() != threading.main_thread():
+        # Can't replace signal handlers when not on the main thread, ignore
+        yield
+        return
+
+    raise_captured_interrupt()
     original_signal_handler = signal.getsignal(signal.SIGINT)
 
     def _new_signal_handler(signo, _):
-        raise KeyboardInterrupt
+        raise DagsterExecutionInterruptedError
 
     signal_replaced = False
 
     try:
-        try:
-            _replace_interrupt_signal(_new_signal_handler)
-            signal_replaced = True
-        except ValueError:
-            # Can't replace signal handlers when not on the main thread, ignore
-            pass
+        _replace_interrupt_signal(_new_signal_handler)
+        signal_replaced = True
         yield
     finally:
         if signal_replaced:
             _replace_interrupt_signal(original_signal_handler)
 
 
-# Call within a `delay_interrupts` context whenever you reach a checkpoint where it's safe to
-# raise any interrupts that were received inside the context.
-def raise_delayed_interrupts():
+def raise_captured_interrupt():
     if _received_interrupt["received"]:
         _received_interrupt["received"] = False
-        raise KeyboardInterrupt
+        raise DagsterExecutionInterruptedError
 
 
-def check_received_delayed_interrupt():
+def check_captured_interrupt():
     return _received_interrupt["received"]
 
 
-def pop_delayed_interrupts():
+def pop_captured_interrupt():
     ret = _received_interrupt["received"]
     _received_interrupt["received"] = False
     return ret
