@@ -19,6 +19,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_step_versions_helper,
 )
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.mem_object_manager import mem_object_manager
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
@@ -483,6 +484,39 @@ class ExecutionPlan(
 
         # Finally, we build and return the execution plan
         return plan_builder.build()
+
+    def can_reexecute(self):
+        """
+        Check if all the border steps of the current run have non-in-memory object managers for reexecution.
+
+        Border steps: all the steps that don't have upstream steps to execute, i.e. indegree is 0).
+        """
+        # pylint: disable=comparison-with-callable
+
+        # exclude full pipeline re-execution
+        if len(self.step_keys_to_execute) == len(self.steps):
+            return
+
+        # intermediate storage backcomopat
+        # https://github.com/dagster-io/dagster/issues/3043
+        if self.artifacts_persisted:
+            return True
+
+        mode_def = self.pipeline_def.get_mode_definition(self.environment_config.mode)
+        for step in self.get_steps_to_execute_by_level()[0]:
+            # check if all its inputs' upstream step outputs have non-in-memory object manager configured
+            for step_input in step.step_inputs:
+                for step_output_handle in step_input.get_step_output_handle_dependencies():
+                    manager_key = self.get_manager_key(step_output_handle)
+                    manager_def = mode_def.resource_defs.get(manager_key)
+                    if (
+                        # no object manager is configured
+                        not manager_def
+                        # object manager is non persistent
+                        or manager_def == mem_object_manager
+                    ):
+                        return False
+        return True
 
 
 def check_asset_store_intermediate_storage(mode_def, environment_config):
