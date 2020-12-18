@@ -4,6 +4,7 @@ from dagster import check
 from dagster.core.definitions import Failure, HookExecutionResult, RetryRequested
 from dagster.core.errors import (
     DagsterError,
+    DagsterExecutionInterruptedError,
     DagsterUserCodeExecutionError,
     HookExecutionError,
     user_code_error_boundary,
@@ -240,7 +241,9 @@ def _dagster_event_sequence_for_step(step_context, retries):
     except DagsterError as dagster_error:
         yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
 
-        if step_context.raise_on_error:
+        if step_context.raise_on_error or isinstance(
+            dagster_error, DagsterExecutionInterruptedError
+        ):
             raise dagster_error
 
     # case (5) in top comment

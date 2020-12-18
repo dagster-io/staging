@@ -192,10 +192,14 @@ class MultiprocessExecutor(Executor):
                 errs = {pid: err for pid, err in errors.items() if err}
 
                 if (
-                    errs
-                    and stopping
+                    stopping
+                    and (not active_iters)
                     and all(
-                        [err_info.cls_name == "KeyboardInterrupt" for err_info in errs.values()]
+                        [
+                            err_info.cls_name == "KeyboardInterrupt"
+                            or err_info.cls_name == "DagsterExecutionInterruptedError"
+                            for err_info in errs.values()
+                        ]
                     )
                 ):
                     yield DagsterEvent.engine_event(
