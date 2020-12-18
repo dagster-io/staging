@@ -177,6 +177,7 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
   const [visibleDialog, setVisibleDialog] = React.useState<'none' | 'terminate' | 'delete'>('none');
 
   const terminatableIDs = selected.filter((r) => r.canTerminate).map((run) => run.runId);
+  const forceTerminate = selected.some((r) => r.canTerminate) ? 'optional' : 'always';
   const deletableIDs = selected.map((run) => run.runId);
 
   const closeDialogs = () => {
@@ -218,6 +219,7 @@ export const RunBulkActionsMenu: React.FunctionComponent<{
         <Button disabled={selected.length === 0} text="Actions" rightIcon="caret-down" small />
       </Popover>
       <TerminationDialog
+        forceTerminate={forceTerminate}
         isOpen={visibleDialog === 'terminate'}
         onClose={closeDialogs}
         onComplete={onComplete}
