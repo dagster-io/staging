@@ -17,8 +17,7 @@ const Template: Story<TerminationDialogProps> = (props) => (
   </ApolloTestProvider>
 );
 
-export const Success = Template.bind({});
-Success.args = {
+const shared = {
   isOpen: true,
   onClose: () => {
     console.log('Close!');
@@ -28,4 +27,22 @@ Success.args = {
     faker.random.uuid().slice(0, 8),
     faker.random.uuid().slice(0, 8),
   ],
+};
+
+export const ForceTerminationOptional = Template.bind({});
+ForceTerminationOptional.args = {
+  forceTerminate: 'optional',
+  ...shared,
+};
+
+export const ForceTerminationAlways = Template.bind({});
+ForceTerminationAlways.args = {
+  forceTerminate: 'always',
+  ...shared,
+};
+
+export const ForceTerminationNever = Template.bind({});
+ForceTerminationNever.args = {
+  forceTerminate: 'never',
+  ...shared,
 };
