@@ -176,20 +176,24 @@ def user_code_error_boundary(error_cls, msg_fn, control_flow_exceptions=None, **
     control_flow_exceptions = tuple(
         check.opt_list_param(control_flow_exceptions, "control_flow_exceptions")
     )
-    try:
-        yield
-    except control_flow_exceptions as cf:
-        # A control flow exception has occurred and should be propagated
-        raise cf
-    except DagsterError as de:
-        # The system has thrown an error that is part of the user-framework contract
-        raise de
-    except Exception as e:  # pylint: disable=W0703
-        # An exception has been thrown by user code and computation should cease
-        # with the error reported further up the stack
-        raise_from(
-            error_cls(msg_fn(), user_exception=e, original_exc_info=sys.exc_info(), **kwargs), e
-        )
+
+    from dagster.utils import raise_execution_interrupts
+
+    with raise_execution_interrupts():
+        try:
+            yield
+        except control_flow_exceptions as cf:
+            # A control flow exception has occurred and should be propagated
+            raise cf
+        except DagsterError as de:
+            # The system has thrown an error that is part of the user-framework contract
+            raise de
+        except Exception as e:  # pylint: disable=W0703
+            # An exception has been thrown by user code and computation should cease
+            # with the error reported further up the stack
+            raise_from(
+                error_cls(msg_fn(), user_exception=e, original_exc_info=sys.exc_info(), **kwargs), e
+            )
 
 
 class DagsterUserCodeExecutionError(DagsterError):
