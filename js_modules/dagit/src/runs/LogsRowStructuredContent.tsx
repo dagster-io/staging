@@ -1,4 +1,5 @@
-import {Colors, Intent, Tag} from '@blueprintjs/core';
+import {Colors, Icon, Intent, Tag} from '@blueprintjs/core';
+import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 
 import {AssetsSupported} from 'src/AssetsSupported';
@@ -18,6 +19,7 @@ import {
 } from 'src/runs/types/LogsRowStructuredFragment';
 import {MetadataEntryFragment} from 'src/runs/types/MetadataEntryFragment';
 import {PythonErrorFragment} from 'src/types/PythonErrorFragment';
+import {Box} from 'src/ui/Box';
 
 interface IStructuredContentProps {
   node: LogsRowStructuredFragment;
@@ -335,10 +337,22 @@ const MaterializationContent: React.FunctionComponent<{
             {
               label: 'asset_key',
               item: (
-                <>
-                  {materialization.assetKey.path.join('.')}
+                <Box flex={{alignItems: 'center'}}>
+                  {materialization.assetKey.path
+                    .map((x, i) => <span key={`${x}_${i}`}>{x}</span>)
+                    .reduce((prev, curr) => (
+                      <>
+                        {prev}
+                        <Icon
+                          icon={IconNames.CHEVRON_RIGHT}
+                          iconSize={12}
+                          color={Colors.DARK_GRAY5}
+                        />
+                        {curr}
+                      </>
+                    ))}
                   {assetDashboardLink}
-                </>
+                </Box>
               ),
             },
           ]}
