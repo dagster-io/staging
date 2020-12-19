@@ -12,9 +12,9 @@ RunsTable = db.Table(
         db.String(255),
         db.ForeignKey("snapshots.snapshot_id", name="fk_runs_snapshot_id_snapshots_snapshot_id"),
     ),
-    db.Column("pipeline_name", db.String),
+    db.Column("pipeline_name", db.String(255)),
     db.Column("status", db.String(63)),
-    db.Column("run_body", db.String),
+    db.Column("run_body", db.Text),
     db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
     db.Column("update_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
 )
@@ -25,7 +25,7 @@ SecondaryIndexMigrationTable = db.Table(
     "secondary_indexes",
     RunStorageSqlMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
-    db.Column("name", db.String, unique=True),
+    db.Column("name", db.String(255), unique=True),
     db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
     db.Column("migration_completed", db.DateTime),
 )
@@ -35,8 +35,8 @@ RunTagsTable = db.Table(
     RunStorageSqlMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
     db.Column("run_id", None, db.ForeignKey("runs.run_id", ondelete="CASCADE")),
-    db.Column("key", db.String),
-    db.Column("value", db.String),
+    db.Column("key", db.String(255)),
+    db.Column("value", db.String(255)),
 )
 
 SnapshotsTable = db.Table(
@@ -54,7 +54,7 @@ DaemonHeartbeatsTable = db.Table(
     db.Column("daemon_type", db.String(255), unique=True, nullable=False),
     db.Column("daemon_id", db.String(255)),
     db.Column("timestamp", db.DateTime, nullable=False),
-    db.Column("info", db.String),
+    db.Column("info", db.String(255)),
 )
 
 db.Index("idx_run_tags", RunTagsTable.c.key, RunTagsTable.c.value)

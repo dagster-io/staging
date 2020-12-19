@@ -178,6 +178,24 @@ def gcp_extra_cmds_fn(_):
     ]
 
 
+def mysql_extra_cmds_fn(_):
+    return [
+        "pushd python_modules/libraries/dagster-mysql/dagster_mysql_tests/",
+        "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit,
+        "docker-compose -f docker-compose-multi.yml up -d",  # clean up in hooks/pre-exit,
+        network_buildkite_container("mysql"),
+        connect_sibling_docker_container("mysql", "test-mysql-db", "MYSQL_TEST_DB_HOST"),
+        network_buildkite_container("mysql_multi"),
+        connect_sibling_docker_container(
+            "mysql_multi", "test-run-storage-db", "MYSQL_TEST_RUN_STORAGE_DB_HOST",
+        ),
+        connect_sibling_docker_container(
+            "mysql_multi", "test-event-log-storage-db", "MYSQL_TEST_EVENT_LOG_STORAGE_DB_HOST",
+        ),
+        "popd",
+    ]
+
+
 def postgres_extra_cmds_fn(_):
     return [
         "pushd python_modules/libraries/dagster-postgres/dagster_postgres_tests/",
@@ -367,6 +385,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         extra_cmds_fn=k8s_extra_cmds_fn,
         depends_on_fn=test_image_depends_fn,
     ),
+    ModuleBuildSpec("python_modules/libraries/dagster-mysql", extra_cmds_fn=mysql_extra_cmds_fn),
     ModuleBuildSpec(
         "python_modules/libraries/dagster-postgres", extra_cmds_fn=postgres_extra_cmds_fn
     ),
