@@ -10,15 +10,15 @@ SqlEventLogStorageTable = db.Table(
     db.Column("event", db.Text, nullable=False),
     db.Column("dagster_event_type", db.Text),
     db.Column("timestamp", db.types.TIMESTAMP),
-    db.Column("step_key", db.String),
-    db.Column("asset_key", db.String),
+    db.Column("step_key", db.String(255)),
+    db.Column("asset_key", db.String(255)),
 )
 
 SecondaryIndexMigrationTable = db.Table(
     "secondary_indexes",
     SqlEventLogStorageMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
-    db.Column("name", db.String, unique=True),
+    db.Column("name", db.String(255), unique=True),
     db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
     db.Column("migration_completed", db.DateTime),
 )
@@ -27,7 +27,7 @@ AssetKeyTable = db.Table(
     "asset_keys",
     SqlEventLogStorageMetadata,
     db.Column("id", db.Integer, primary_key=True, autoincrement=True),
-    db.Column("asset_key", db.String, unique=True),
+    db.Column("asset_key", db.String(255), unique=True),
     db.Column("create_timestamp", db.DateTime, server_default=db.text("CURRENT_TIMESTAMP")),
 )
 
