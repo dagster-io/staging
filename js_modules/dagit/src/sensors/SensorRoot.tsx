@@ -12,7 +12,7 @@ import {SENSOR_FRAGMENT} from 'src/sensors/SensorFragment';
 import {SensorPreviousRuns} from 'src/sensors/SensorPreviousRuns';
 import {SensorTimeline} from 'src/sensors/SensorTimeline';
 import {SensorRootQuery} from 'src/sensors/types/SensorRootQuery';
-import {Group} from 'src/ui/Group';
+import {Page} from 'src/ui/Page';
 import {repoAddressAsString} from 'src/workspace/repoAddressAsString';
 import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
 import {RepoAddress} from 'src/workspace/types';
@@ -78,7 +78,7 @@ export const SensorRoot: React.FC<{
         return (
           <ScrollContainer>
             <TopNav breadcrumbs={breadcrumbs} />
-            <Group direction="column" spacing={24} padding={{vertical: 20, horizontal: 24}}>
+            <Page>
               <SensorDetails
                 repoAddress={repoAddress}
                 sensor={sensorOrError}
@@ -99,7 +99,7 @@ export const SensorRoot: React.FC<{
                 sensor={sensorOrError}
                 highlightedIds={selectedRunIds}
               />
-            </Group>
+            </Page>
           </ScrollContainer>
         );
       }}
