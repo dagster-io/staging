@@ -168,6 +168,7 @@ export const RunActionButtons: React.FC<RunActionButtonsProps> = ({
     <Group direction="row" spacing={8}>
       <Box flex={{direction: 'row'}}>
         <LaunchButtonDropdown
+          count={1}
           small={true}
           primary={primary}
           options={options}
