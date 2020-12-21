@@ -1,8 +1,16 @@
 import sqlalchemy as db
 from dagster import AssetKey
+from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from tqdm import tqdm
+from dagster.core.events.log import EventRecord
 
-from .schema import AssetKeyTable, SqlEventLogStorageTable
+SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
+SECONDARY_INDEX_ASSET_PARTITION = "asset_partitions"
+
+REINDEX_DATA_MIGRATIONS = {
+    SECONDARY_INDEX_ASSET_KEY: migrate_asset_key_data,
+    SECONDARY_INDEX_ASSET_PARTITION: migrate_asset_partitions,
+}
 
 
 def migrate_event_log_data(instance=None):
@@ -31,8 +39,12 @@ def migrate_asset_key_data(event_log_storage, print_fn=lambda _: None):
     Takes in event_log_storage, and a print_fn to keep track of progress.
     """
     from dagster.core.storage.event_log.sql_event_log import AssetAwareSqlEventLogStorage
+    from .schema import AssetKeyTable, SqlEventLogStorageTable
 
     if not isinstance(event_log_storage, AssetAwareSqlEventLogStorage):
+        return
+
+    if event_log_storage.has_secondary_index(SECONDARY_INDEX_ASSET_KEY):
         return
 
     query = (
@@ -54,3 +66,42 @@ def migrate_asset_key_data(event_log_storage, print_fn=lambda _: None):
             except db.exc.IntegrityError:
                 # asset key already present
                 pass
+
+
+def sql_asset_event_generator(conn, cursor=None, batch_size=1000):
+    from .schema import SqlEventLogStorageTable
+
+    while True:
+        query = db.select([SqlEventLogStorageTable.c.id, SqlEventLogStorageTable.c.event]).where(
+            SqlEventLogStorageTable.c.asset_key != None
+        )
+        if cursor:
+            query = query.where(SqlEventLogStorageTable.c.id < cursor)
+        query = query.order_by(SqlEventLogStorageTable.c.id.desc()).limit(batch_size)
+        fetched = conn.execute(query).fetchall()
+
+        for (record_id, event_json) in fetched:
+            cursor = record_id
+            event_record = deserialize_json_to_dagster_namedtuple(event_json)
+            if not isinstance(event_record, EventRecord):
+                continue
+            yield (record_id, event_record)
+
+        if fetched < batch_size:
+            break
+
+
+def migrate_asset_partitions(event_log_storage, print_fn=lambda _: None):
+    from dagster.core.storage.event_log.sql_event_log import AssetAwareSqlEventLogStorage
+
+    if not isinstance(event_log_storage, AssetAwareSqlEventLogStorage):
+        return
+
+    if event_log_storage.has_secondary_index(SECONDARY_INDEX_ASSET_PARTITION):
+        return
+
+    with event_log_storage.connect() as conn:
+        print_fn("Querying event logs.")
+        for record_id, event in tqdm(sql_asset_event_generator(conn)):
+            if event.is_dagster_event and event.dagster_event.partition:
+                event_log_storage.update_event_log_record(record_id, event)

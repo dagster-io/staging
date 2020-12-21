@@ -16,14 +16,11 @@ from dagster.utils import datetime_as_float, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRunStatsSnapshot
 from .base import AssetAwareEventLogStorage, EventLogStorage
-from .migration import migrate_asset_key_data
+from .migration import (
+    SECONDARY_INDEX_ASSET_KEY,
+    REINDEX_DATA_MIGRATIONS,
+)
 from .schema import AssetKeyTable, SecondaryIndexMigrationTable, SqlEventLogStorageTable
-
-SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
-
-REINDEX_DATA_MIGRATIONS = {
-    SECONDARY_INDEX_ASSET_KEY: migrate_asset_key_data,
-}
 
 
 class SqlEventLogStorage(EventLogStorage):
