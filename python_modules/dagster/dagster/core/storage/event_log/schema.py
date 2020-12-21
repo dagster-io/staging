@@ -12,6 +12,7 @@ SqlEventLogStorageTable = db.Table(
     db.Column("timestamp", db.types.TIMESTAMP),
     db.Column("step_key", db.String),
     db.Column("asset_key", db.String),
+    db.Column("partition", db.String),
 )
 
 SecondaryIndexMigrationTable = db.Table(
