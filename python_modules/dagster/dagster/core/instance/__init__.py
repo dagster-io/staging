@@ -889,6 +889,9 @@ class DagsterInstance:
     def get_run_groups(self, filters=None, cursor=None, limit=None):
         return self._run_storage.get_run_groups(filters=filters, cursor=cursor, limit=limit)
 
+    def get_latest_partition_runs(self, partition_set_name):
+        return self._run_storage.get_latest_partition_runs(partition_set_name)
+
     def wipe(self):
         self._run_storage.wipe()
         self._event_storage.wipe()

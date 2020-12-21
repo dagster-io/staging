@@ -12,6 +12,7 @@ from dagster.core.snap import (
 from dagster.utils import frozendict, merge_dicts
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
+from ..tags import PARTITION_NAME_TAG, PARTITION_SET_TAG
 from .base import RunStorage
 
 
@@ -230,6 +231,20 @@ class InMemoryRunStorage(RunStorage):
                 run_groups[root_run_id]["count"] += 1
 
         return run_groups
+
+    def get_latest_partition_runs(self, partition_set_name):
+        partition_runs = {}
+        for _, run in self._runs.items():
+            if not PARTITION_SET_TAG in run.tags:
+                continue
+            if run.tags[PARTITION_SET_TAG] != partition_set_name:
+                continue
+            if not PARTITION_NAME_TAG in run.tags:
+                continue
+
+            partition_name = run.tags[PARTITION_NAME_TAG]
+            partition_runs[partition_name] = run
+        return partition_runs
 
     # Daemon Heartbeats
 
