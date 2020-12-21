@@ -106,6 +106,12 @@ class RunStorage(six.with_metaclass(ABCMeta)):
                 run itself; i.e., if a run has no children, the count will be 0.
         """
 
+    @abstractmethod
+    def get_latest_partition_runs(self, partition_set_name):
+        """
+        returns a dict with partition_name => pipeline_run
+        """
+
         # Note that we could have made the opposite decision here and filtered for root runs
         # matching a given filter, etc., rather than for child runs; so that asking for the last 5
         # run groups would give the last 5 roots and their descendants, rather than the last 5

@@ -24,7 +24,21 @@ class PartitionRunStatus(Enum):
     MISSING = "MISSING"
     PENDING = "PENDING"
 
+    @classmethod
+    def from_pipeline_run_status(cls, pipeline_run_status):
+        if pipeline_run_status == PipelineRunStatus.SUCCESS:
+            return PartitionRunStatus.SUCCESS
+        if pipeline_run_status in (
+            PipelineRunStatus.FAILURE,
+            PipelineRunStatus.CANCELED,
+            PipelineRunStatus.CANCELING,
+        ):
+            return PartitionRunStatus.FAILURE
+        else:
+            return PartitionRunStatus.PENDING
 
+
+@capture_dauphin_error
 def get_partition_sets_or_error(graphene_info, repository_selector, pipeline_name):
     check.inst_param(graphene_info, "graphene_info", ResolveInfo)
     check.inst_param(repository_selector, "repository_selector", RepositorySelector)
@@ -101,6 +115,7 @@ def get_partition_config(graphene_info, repository_handle, partition_set_name, p
         return graphene_info.schema.type_named("PythonError")(result.error)
 
 
+@capture_dauphin_error
 def get_partition_tags(graphene_info, repository_handle, partition_set_name, partition_name):
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
@@ -122,6 +137,7 @@ def get_partition_tags(graphene_info, repository_handle, partition_set_name, par
         return graphene_info.schema.type_named("PythonError")(result.error)
 
 
+@capture_dauphin_error
 def get_partitions(
     graphene_info, repository_handle, partition_set, cursor=None, limit=None, reverse=False
 ):
@@ -174,6 +190,7 @@ def _apply_cursor_limit_reverse(items, cursor, limit, reverse):
     return items[max(start, 0) : end]
 
 
+@capture_dauphin_error
 def get_partition_status(graphene_info, repository_handle, partition_set_name, partition_name):
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
@@ -188,42 +205,27 @@ def get_partition_status(graphene_info, repository_handle, partition_set_name, p
         return PartitionRunStatus.MISSING
 
     run = runs[0]
-    if run.status == PipelineRunStatus.FAILURE:
-        return PartitionRunStatus.FAILURE
-    if run.status == PipelineRunStatus.SUCCESS:
-        return PartitionRunStatus.SUCCESS
-    return PartitionRunStatus.PENDING
+    return PartitionRunStatus.from_pipeline_run_status(run.status)
 
 
-def get_partition_set_status(graphene_info, repository_handle, partition_set_name):
+@capture_dauphin_error
+def get_partition_set_partition_statuses(graphene_info, repository_handle, partition_set_name):
     check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
     check.str_param(partition_set_name, "partition_set_name")
-
     result = graphene_info.context.get_external_partition_names(
         repository_handle, partition_set_name
     )
+    runs_by_partition = graphene_info.context.instance.get_latest_partition_runs(partition_set_name)
 
-    if isinstance(result, ExternalPartitionExecutionErrorData):
-        return graphene_info.schema.type_named("PythonError")(result.error)
-
-    partition_statuses = [
-        get_partition_status(graphene_info, repository_handle, partition_set_name, partition_name)
+    return [
+        graphene_info.schema.type_named("PartitionStatus")(
+            id=partition_name,
+            name=partition_name,
+            status=PartitionRunStatus.from_pipeline_run_status(
+                runs_by_partition[partition_name].status
+            )
+            if runs_by_partition.get(partition_name)
+            else PartitionRunStatus.MISSING,
+        )
         for partition_name in result.partition_names
     ]
-
-    if any(
-        [partition_status == PartitionRunStatus.FAILURE for partition_status in partition_statuses]
-    ):
-        return PartitionRunStatus.FAILURE
-
-    if all(
-        [partition_status == PartitionRunStatus.SUCCESS for partition_status in partition_statuses]
-    ):
-        return PartitionRunStatus.SUCCESS
-
-    if any(
-        [partition_status == PartitionRunStatus.MISSING for partition_status in partition_statuses]
-    ):
-        return PartitionRunStatus.MISSING
-
-    return PartitionRunStatus.PENDING
