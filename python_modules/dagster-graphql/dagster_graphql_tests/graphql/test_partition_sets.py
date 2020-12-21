@@ -114,7 +114,6 @@ GET_PARTITION_SET_STATUS_QUERY = """
     query PartitionSetQuery($repositorySelector: RepositorySelector!, $partitionSetName: String!) {
         partitionSetOrError(repositorySelector: $repositorySelector, partitionSetName: $partitionSetName) {
             ...on PartitionSet {
-                status
                 partitionsOrError {
                     ... on Partitions {
                         results {
@@ -273,9 +272,6 @@ class TestPartitionSetRuns(ExecutingGraphQLContextTestMatrix):
             else:
                 assert partition["status"] == "MISSING"
 
-        partition_set_status = result.data["partitionSetOrError"]["status"]
-        assert partition_set_status == "MISSING"
-
         result = execute_dagster_graphql_and_finish_runs(
             graphql_context,
             LAUNCH_PARTITION_BACKFILL_MUTATION,
@@ -307,6 +303,3 @@ class TestPartitionSetRuns(ExecutingGraphQLContextTestMatrix):
         assert len(partitions) == 10
         for partition in partitions:
             assert partition["status"] == "SUCCESS"
-
-        partition_set_status = result.data["partitionSetOrError"]["status"]
-        assert partition_set_status == "SUCCESS"
