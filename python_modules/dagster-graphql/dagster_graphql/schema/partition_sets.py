@@ -7,7 +7,7 @@ from dagster_graphql.implementation.fetch_partition_sets import (
     PartitionRunStatus,
     get_partition_by_name,
     get_partition_config,
-    get_partition_set_status,
+    get_partition_set_partition_statuses,
     get_partition_status,
     get_partition_tags,
     get_partitions,
@@ -92,6 +92,7 @@ class DauphinPartition(dauphin.ObjectType):
         )
 
     def resolve_status(self, graphene_info):
+        # consider the partitionStatuses field on PartitionSet if fetching status in bulk
         return get_partition_status(
             graphene_info,
             self._external_repository_handle,
@@ -122,7 +123,7 @@ class DauphinPartitionSet(dauphin.ObjectType):
         reverse=dauphin.Boolean(),
     )
     partition = dauphin.Field("Partition", partition_name=dauphin.NonNull(dauphin.String))
-    status = dauphin.NonNull("PartitionRunStatus")
+    partitionStatusesOrError = dauphin.NonNull("PartitionStatusesOrError")
 
     def __init__(self, external_repository_handle, external_partition_set):
         self._external_repository_handle = check.inst_param(
@@ -157,8 +158,8 @@ class DauphinPartitionSet(dauphin.ObjectType):
             partition_name,
         )
 
-    def resolve_status(self, graphene_info):
-        return get_partition_set_status(
+    def resolve_partitionStatusesOrError(self, graphene_info):
+        return get_partition_set_partition_statuses(
             graphene_info, self._external_repository_handle, self._external_partition_set.name
         )
 
@@ -212,6 +213,28 @@ class DauphinPartitionRunConfigOrError(dauphin.Union):
     class Meta:
         name = "PartitionRunConfigOrError"
         types = (DauphinPartitionRunConfig, DauphinPythonError)
+
+
+class DauphinPartitionStatus(dauphin.ObjectType):
+    class Meta:
+        name = "PartitionStatus"
+
+    id = dauphin.NonNull(dauphin.String)
+    name = dauphin.NonNull(dauphin.String)
+    status = dauphin.NonNull("PartitionRunStatus")
+
+
+class DauphinPartitionStatuses(dauphin.ObjectType):
+    class Meta:
+        name = "PartitionStatuses"
+
+    results = dauphin.non_null_list("PartitionStatus")
+
+
+class DauphinPartitionStatusesOrError(dauphin.Union):
+    class Meta:
+        name = "PartitionStatusesOrError"
+        types = (DauphinPartitionStatuses, DauphinPythonError)
 
 
 DauphinPartitionRunStatus = dauphin.Enum.from_enum(PartitionRunStatus)

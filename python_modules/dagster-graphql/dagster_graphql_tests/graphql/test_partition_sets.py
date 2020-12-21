@@ -114,7 +114,14 @@ GET_PARTITION_SET_STATUS_QUERY = """
     query PartitionSetQuery($repositorySelector: RepositorySelector!, $partitionSetName: String!) {
         partitionSetOrError(repositorySelector: $repositorySelector, partitionSetName: $partitionSetName) {
             ...on PartitionSet {
-                status
+                partitionStatusesOrError {
+                    ... on PartitionStatuses {
+                        results {
+                            name
+                            status
+                        }
+                    }
+                }
                 partitionsOrError {
                     ... on Partitions {
                         results {
@@ -273,8 +280,15 @@ class TestPartitionSetRuns(ExecutingGraphQLContextTestMatrix):
             else:
                 assert partition["status"] == "MISSING"
 
-        partition_set_status = result.data["partitionSetOrError"]["status"]
-        assert partition_set_status == "MISSING"
+        partitionStatuses = result.data["partitionSetOrError"]["partitionStatusesOrError"][
+            "results"
+        ]
+        assert len(partitionStatuses) == 10
+        for partitionStatus in partitionStatuses:
+            if partitionStatus["name"] in ("2", "3"):
+                assert partitionStatus["status"] == "SUCCESS"
+            else:
+                assert partitionStatus["status"] == "MISSING"
 
         result = execute_dagster_graphql_and_finish_runs(
             graphql_context,
@@ -308,5 +322,9 @@ class TestPartitionSetRuns(ExecutingGraphQLContextTestMatrix):
         for partition in partitions:
             assert partition["status"] == "SUCCESS"
 
-        partition_set_status = result.data["partitionSetOrError"]["status"]
-        assert partition_set_status == "SUCCESS"
+        partitionStatuses = result.data["partitionSetOrError"]["partitionStatusesOrError"][
+            "results"
+        ]
+        assert len(partitionStatuses) == 10
+        for partitionStatus in partitionStatuses:
+            assert partitionStatus["status"] == "SUCCESS"

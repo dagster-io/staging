@@ -17,7 +17,7 @@ from dagster.core.snap import (
     create_execution_plan_snapshot_id,
     create_pipeline_snapshot_id,
 )
-from dagster.core.storage.tags import ROOT_RUN_ID_TAG
+from dagster.core.storage.tags import PARTITION_NAME_TAG, PARTITION_SET_TAG, ROOT_RUN_ID_TAG
 from dagster.daemon.types import DaemonHeartbeat, DaemonType
 from dagster.serdes import deserialize_json_to_dagster_namedtuple, serialize_dagster_namedtuple
 from dagster.seven import JSONDecodeError
@@ -467,6 +467,70 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         query = db.delete(RunsTable).where(RunsTable.c.run_id == run_id)
         with self.connect() as conn:
             conn.execute(query)
+
+    def get_latest_partition_runs(self, partition_set_name):
+        partition_set_subquery = (
+            db.select(
+                [RunTagsTable.c.run_id.label("run_id"), RunTagsTable.c.value.label("partition_set")]
+            )
+            .where(RunTagsTable.c.key == PARTITION_SET_TAG)
+            .where(RunTagsTable.c.value == partition_set_name,)
+        ).alias("partition_set_subquery")
+        partition_name_subquery = (
+            db.select(
+                [RunTagsTable.c.run_id.label("run_id"), RunTagsTable.c.value.label("partition")]
+            )
+            .where(RunTagsTable.c.key == PARTITION_NAME_TAG)
+            .alias("partition_name_subquery")
+        )
+
+        partition_runs_query = (
+            db.select(
+                [
+                    partition_name_subquery.c.partition.label("partition"),
+                    RunsTable.c.id.label("id"),
+                    RunsTable.c.run_body.label("run_body"),
+                ]
+            )
+            .select_from(
+                partition_set_subquery.join(
+                    RunsTable, RunsTable.c.run_id == partition_set_subquery.c.run_id,
+                ).join(
+                    partition_name_subquery,
+                    partition_set_subquery.c.run_id == partition_name_subquery.c.run_id,
+                )
+            )
+            .alias("partition_runs_query")
+        )
+
+        max_id_query = (
+            db.select(
+                [
+                    partition_runs_query.c.partition.label("partition"),
+                    db.func.max(partition_runs_query.c.id).label("id"),
+                ]
+            )
+            .group_by(partition_runs_query.c.partition)
+            .alias("max_id_query")
+        )
+
+        query = db.select(
+            [
+                partition_runs_query.c.run_body,
+                partition_runs_query.c.id,
+                partition_runs_query.c.partition,
+            ]
+        ).select_from(
+            partition_runs_query.join(max_id_query, max_id_query.c.id == partition_runs_query.c.id)
+        )
+
+        with self.connect() as conn:
+            result = conn.execute(query)
+            runs_by_partition = {
+                run.tags[PARTITION_NAME_TAG]: run for run in self._rows_to_runs(result)
+            }
+
+        return runs_by_partition
 
     def has_pipeline_snapshot(self, pipeline_snapshot_id):
         check.str_param(pipeline_snapshot_id, "pipeline_snapshot_id")
