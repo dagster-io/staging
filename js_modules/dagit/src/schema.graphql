@@ -527,6 +527,7 @@ type PartitionSet {
   partitionsOrError(cursor: String, limit: Int, reverse: Boolean): PartitionsOrError!
   partition(partitionName: String!): Partition
   status: PartitionRunStatus!
+  partitionStatuses: [PartitionStatus!]!
 }
 
 union PartitionsOrError = Partitions | PythonError
@@ -576,6 +577,12 @@ enum PartitionRunStatus {
   FAILURE
   MISSING
   PENDING
+}
+
+type PartitionStatus {
+  id: String!
+  name: String!
+  status: PartitionRunStatus!
 }
 
 type FutureJobTicks {
