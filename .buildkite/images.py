@@ -81,3 +81,7 @@ def publish_test_images():
 
 def test_image_depends_fn(version):
     return ["dagster-test-images-{version}".format(version=TOX_MAP[version])]
+
+
+def core_test_image_depends_fn(version):
+    return ["dagster-core-test-images-{version}".format(version=TOX_MAP[version])]
