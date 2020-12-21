@@ -67,6 +67,7 @@ class SqlEventLogStorage(EventLogStorage):
 
         dagster_event_type = None
         asset_key_str = None
+        partition = None
         step_key = event.step_key
 
         if event.is_dagster_event:
@@ -75,6 +76,8 @@ class SqlEventLogStorage(EventLogStorage):
             if event.dagster_event.asset_key:
                 check.inst_param(event.dagster_event.asset_key, "asset_key", AssetKey)
                 asset_key_str = event.dagster_event.asset_key.to_string()
+            if event.dagster_event.partition:
+                partition = event.dagster_event.partition
 
         # https://stackoverflow.com/a/54386260/324449
         return SqlEventLogStorageTable.insert().values(  # pylint: disable=no-value-for-parameter
@@ -84,6 +87,7 @@ class SqlEventLogStorage(EventLogStorage):
             timestamp=utc_datetime_from_timestamp(event.timestamp),
             step_key=step_key,
             asset_key=asset_key_str,
+            partition=partition,
         )
 
     def store_asset_key(self, conn, event):
