@@ -25,14 +25,11 @@ export const SchedulePartitionStatus: React.FC<{
   repoAddress: RepoAddress;
   schedule: ScheduleFragment;
 }> = ({repoAddress, schedule}) => {
-  if (
-    !schedule.partitionSet ||
-    schedule.partitionSet.partitionsOrError.__typename !== 'Partitions'
-  ) {
+  if (!schedule.partitionSet) {
     return <div>&mdash;</div>;
   }
 
-  const partitions = schedule.partitionSet.partitionsOrError.results;
+  const partitions = schedule.partitionSet.partitionStatuses;
   const partitionsByType = {};
   partitions.forEach((partition) => {
     partitionsByType[partition.status] = [...(partitionsByType[partition.status] || []), partition];
