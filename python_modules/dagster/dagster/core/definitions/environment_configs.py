@@ -5,15 +5,15 @@ from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
 from dagster.config.field import check_opt_field_param
 from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
+from dagster.core.definitions.definition_config_schema import (
+    convert_user_facing_definition_config_schema,
+)
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.storage.input_manager import IInputManagerDefinition
 from dagster.core.storage.output_manager import IOutputManagerDefinition
 from dagster.core.storage.system_storage import default_intermediate_storage_defs
 from dagster.core.types.dagster_type import ALL_RUNTIME_BUILTINS, construct_dagster_type_dictionary
 from dagster.utils import check, ensure_single_item
-from dagster.core.definitions.definition_config_schema import (
-    convert_user_facing_definition_config_schema,
-)
 
 from .configurable import ConfigurableDefinition
 from .definition_config_schema import IDefinitionConfigSchema
@@ -190,8 +190,6 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
         has_upstream = input_has_upstream(dependency_structure, inp_handle, solid, name)
         if inp.manager_key:
             input_field = get_input_manager_input_field(solid, inp, resource_defs, has_upstream)
-        elif inp.dagster_type.loader and not has_upstream:
-            input_field = get_type_loader_input_field(solid, name, inp)
         else:
             input_field = None
 
@@ -225,15 +223,6 @@ def get_input_manager_input_field(solid, input_def, resource_defs, has_upstream)
 
     input_manager = resource_defs[input_def.manager_key]
     return input_manager.get_input_config_schema(input_def, has_upstream)
-
-
-def get_type_loader_input_field(solid, input_name, input_def):
-    return Field(
-        input_def.dagster_type.loader.schema_type,
-        is_required=(
-            not solid.definition.input_has_default(input_name) and not input_def.manager_key
-        ),
-    )
 
 
 def get_outputs_field(solid, handle, resource_defs):
