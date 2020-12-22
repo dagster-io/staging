@@ -1,7 +1,6 @@
 import copy
 import os
 import pickle
-import sys
 import uuid
 
 import nbformat
@@ -17,12 +16,12 @@ from dagster import (
     seven,
 )
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
+from dagster.core.errors import user_code_error_boundary
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
 from dagster.core.storage.file_manager import FileHandle
 from dagster.serdes import pack_value
 from dagster.utils import mkdir_p, safe_tempfile_path
-from future.utils import raise_from
 from papermill.engines import papermill_engines
 from papermill.iorw import load_notebook_node, write_ipynb
 from papermill.parameterize import _find_first_tagged_cell_index
@@ -173,13 +172,22 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                 write_ipynb(nb_no_parameters, parameterized_notebook_path)
 
                 try:
-                    papermill_engines.register("dagstermill", DagstermillNBConvertEngine)
-                    papermill.execute_notebook(
-                        input_path=parameterized_notebook_path,
-                        output_path=executed_notebook_path,
-                        engine_name="dagstermill",
-                        log_output=True,
-                    )
+                    with user_code_error_boundary(
+                        DagstermillExecutionError,
+                        lambda: (
+                            "Error occurred during the execution of Dagstermill solid "
+                            "{solid_name}: {notebook_path}".format(
+                                solid_name=name, notebook_path=notebook_path
+                            )
+                        ),
+                    ):
+                        papermill_engines.register("dagstermill", DagstermillNBConvertEngine)
+                        papermill.execute_notebook(
+                            input_path=parameterized_notebook_path,
+                            output_path=executed_notebook_path,
+                            engine_name="dagstermill",
+                            log_output=True,
+                        )
 
                 except Exception as exc:  # pylint: disable=broad-except
                     try:
@@ -208,17 +216,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                             )
                         ],
                     )
-                    raise_from(
-                        DagstermillExecutionError(
-                            "Error occurred during the execution of Dagstermill solid "
-                            "{solid_name}: {notebook_path}".format(
-                                solid_name=name, notebook_path=notebook_path
-                            ),
-                            user_exception=exc,
-                            original_exc_info=sys.exc_info(),
-                        ),
-                        exc,
-                    )
+                    raise exc
 
             system_compute_context.log.debug(
                 "Notebook execution complete for {name} at {executed_notebook_path}.".format(
