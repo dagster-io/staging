@@ -10,27 +10,17 @@ import { PartitionRunStatus, JobType, JobStatus, PipelineRunStatus, JobTickStatu
 // GraphQL fragment: RepositorySchedulesFragment
 // ====================================================
 
-export interface RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError_PythonError {
-  __typename: "PythonError";
-}
-
-export interface RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError_Partitions_results {
-  __typename: "Partition";
+export interface RepositorySchedulesFragment_schedules_partitionSet_partitionStatuses {
+  __typename: "PartitionStatus";
+  id: string;
   name: string;
   status: PartitionRunStatus;
 }
 
-export interface RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError_Partitions {
-  __typename: "Partitions";
-  results: RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError_Partitions_results[];
-}
-
-export type RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError = RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError_PythonError | RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError_Partitions;
-
 export interface RepositorySchedulesFragment_schedules_partitionSet {
   __typename: "PartitionSet";
   name: string;
-  partitionsOrError: RepositorySchedulesFragment_schedules_partitionSet_partitionsOrError;
+  partitionStatuses: RepositorySchedulesFragment_schedules_partitionSet_partitionStatuses[];
 }
 
 export interface RepositorySchedulesFragment_schedules_scheduleState_repositoryOrigin_repositoryLocationMetadata {

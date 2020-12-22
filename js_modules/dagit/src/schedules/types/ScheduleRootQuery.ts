@@ -35,27 +35,17 @@ export interface ScheduleRootQuery_scheduler_PythonError {
 
 export type ScheduleRootQuery_scheduler = ScheduleRootQuery_scheduler_SchedulerNotDefinedError | ScheduleRootQuery_scheduler_Scheduler | ScheduleRootQuery_scheduler_PythonError;
 
-export interface ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError_PythonError {
-  __typename: "PythonError";
-}
-
-export interface ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError_Partitions_results {
-  __typename: "Partition";
+export interface ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionStatuses {
+  __typename: "PartitionStatus";
+  id: string;
   name: string;
   status: PartitionRunStatus;
 }
 
-export interface ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError_Partitions {
-  __typename: "Partitions";
-  results: ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError_Partitions_results[];
-}
-
-export type ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError = ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError_PythonError | ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError_Partitions;
-
 export interface ScheduleRootQuery_scheduleOrError_Schedule_partitionSet {
   __typename: "PartitionSet";
   name: string;
-  partitionsOrError: ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionsOrError;
+  partitionStatuses: ScheduleRootQuery_scheduleOrError_Schedule_partitionSet_partitionStatuses[];
 }
 
 export interface ScheduleRootQuery_scheduleOrError_Schedule_scheduleState_repositoryOrigin_repositoryLocationMetadata {

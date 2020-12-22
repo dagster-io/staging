@@ -33,13 +33,10 @@ export const SCHEDULE_FRAGMENT = gql`
     mode
     partitionSet {
       name
-      partitionsOrError {
-        ... on Partitions {
-          results {
-            name
-            status
-          }
-        }
+      partitionStatuses {
+        id
+        name
+        status
       }
     }
     scheduleState {
