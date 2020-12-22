@@ -314,6 +314,9 @@ class SystemStepExecutionContext(SystemExecutionContext):
             config=config,
             metadata=metadata,
             upstream_output=self.get_output_context(source_handle) if source_handle else None,
+            upstream_output_manager=self.get_output_manager(source_handle)
+            if source_handle
+            else None,
             dagster_type=dagster_type,
             log_manager=self._log_manager,
             step_context=self,
@@ -504,7 +507,8 @@ class OutputContext(
 class InputContext(
     namedtuple(
         "_InputContext",
-        "name pipeline_name solid_def config metadata upstream_output dagster_type log step_context resource_config",
+        "name pipeline_name solid_def config metadata upstream_output upstream_output_manager "
+        "dagster_type log step_context resource_config",
     )
 ):
     """
@@ -519,6 +523,8 @@ class InputContext(
             InputDefinition that we're loading for.
         upstream_output (Optional[OutputContext]): Info about the output that produced the object
             we're loading.
+        upstream_output_manager (Optional[OutputManager]): The upstream OutputManager responsible for
+            storing the output we're loading.
         dagster_type (Optional[DagsterType]): The type of this input.
         log (Optional[DagsterLogManager]): The log manager to use for this input.
         resource_config (Optional[Dict[str, Any]]): The config associated with the resource that
@@ -534,6 +540,7 @@ class InputContext(
         config=None,
         metadata=None,
         upstream_output=None,
+        upstream_output_manager=None,
         dagster_type=None,
         log_manager=None,
         # This is used internally by the intermediate storage adapter, we don't expect users to mock this.
@@ -549,6 +556,9 @@ class InputContext(
             config=config,
             metadata=metadata,
             upstream_output=check.opt_inst_param(upstream_output, "upstream_output", OutputContext),
+            upstream_output_manager=check.opt_inst_param(
+                upstream_output_manager, "upstream_output_manager", OutputManager
+            ),
             dagster_type=check.inst_param(
                 resolve_dagster_type(dagster_type), "dagster_type", DagsterType
             ),  # this allows the user to mock the context with unresolved dagster type
