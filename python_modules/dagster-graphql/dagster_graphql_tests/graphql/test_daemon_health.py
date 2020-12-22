@@ -1,4 +1,5 @@
 import pytest
+from dagster.core.scheduler import DagsterDaemonScheduler
 from dagster.daemon.types import DaemonHeartbeat, DaemonType
 from dagster.utils.error import SerializableErrorInfo
 from dagster_graphql.test.utils import execute_dagster_graphql
@@ -90,7 +91,9 @@ class TestDaemonHealth(ExecutingGraphQLContextTestMatrix):
                     },
                     "scheduler": {
                         "daemonType": "SCHEDULER",
-                        "required": False,
+                        "required": isinstance(
+                            graphql_context.instance.scheduler, DagsterDaemonScheduler
+                        ),
                         "healthy": None,
                         "lastHeartbeatTime": None,
                     },
