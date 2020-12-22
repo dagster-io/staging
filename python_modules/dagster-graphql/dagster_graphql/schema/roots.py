@@ -997,7 +997,7 @@ class DauphinDaemonStatus(dauphin.ObjectType):
         if daemon_status.last_heartbeat is None:
             last_heartbeat_time = None
         else:
-            last_heartbeat_time = datetime_as_float(daemon_status.last_heartbeat.timestamp)
+            last_heartbeat_time = daemon_status.last_heartbeat.timestamp
 
         super(DauphinDaemonStatus, self).__init__(
             daemonType=daemon_status.daemon_type,
