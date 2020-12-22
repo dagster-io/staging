@@ -17,3 +17,4 @@ class HelmValues(BaseModel):
     flower: subschema.Flower
     ingress: subschema.Ingress
     imagePullSecrets: List[subschema.kubernetes.SecretRef]
+    computeLogManager: subschema.ComputeLogManager
