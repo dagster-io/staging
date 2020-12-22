@@ -352,6 +352,10 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
             "dagit": {"host": "dagit.example.com"},
             "flower": {"flower": "flower.example.com"},
         },
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
+        },
         "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -391,6 +395,10 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
         },
         "celery": {"enabled": False},
         "k8sRunLauncher": {"enabled": True, "jobNamespace": namespace},
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
+        },
         "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -478,6 +486,10 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
                 "worker_concurrency": 1,
             },
         },
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
+        },
         "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -560,6 +572,10 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
                 "worker_concurrency": 1,
             },
             "annotations": {"dagster-integration-tests": "celery-pod-annotation"},
+        },
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
         },
         "scheduler": {"k8sEnabled": False, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
