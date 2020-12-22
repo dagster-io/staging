@@ -209,7 +209,6 @@ def test_notebook_dag():
 
 
 # https://github.com/dagster-io/dagster/issues/3401
-@pytest.mark.skip
 @pytest.mark.notebook_test
 def test_error_notebook():
     with pytest.raises(PapermillExecutionError) as exc:
@@ -304,7 +303,6 @@ def test_resources_notebook():
 
 
 # https://github.com/dagster-io/dagster/issues/3401
-@pytest.mark.skip
 @pytest.mark.notebook_test
 def test_resources_notebook_with_exception():
     result = None
