@@ -517,7 +517,8 @@ class OutputContext(
 class InputContext(
     namedtuple(
         "_InputContext",
-        "name pipeline_name solid_def config metadata upstream_output dagster_type log step_context resource_config resources",
+        "name pipeline_name solid_def config metadata upstream_output dagster_type log "
+        "step_context resource_config resources",
     )
 ):
     """
@@ -557,7 +558,6 @@ class InputContext(
         resource_config=None,
         resources=None,
     ):
-
         return super(InputContext, cls).__new__(
             cls,
             name=check.opt_str_param(name, "name"),

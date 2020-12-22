@@ -39,9 +39,12 @@ class ObjectManagerDefinition(
             version=version,
         )
 
-    @property
-    def input_config_schema(self):
-        return self._input_config_schema
+    def get_input_config_schema(self, input_def):
+        definition_config_schema = convert_user_facing_definition_config_schema(
+            self._input_config_schema
+        )
+
+        return definition_config_schema.config_type if definition_config_schema else None
 
     @property
     def output_config_schema(self):
@@ -54,7 +57,7 @@ class ObjectManagerDefinition(
             description=description or self.description,
             resource_fn=self.resource_fn,
             required_resource_keys=self.required_resource_keys,
-            input_config_schema=self.input_config_schema,
+            input_config_schema=self._input_config_schema,
             output_config_schema=self.output_config_schema,
         )
 

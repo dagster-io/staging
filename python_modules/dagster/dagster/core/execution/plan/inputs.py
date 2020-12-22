@@ -10,11 +10,7 @@ from dagster.core.definitions.events import (
     ObjectStoreOperation,
 )
 from dagster.core.definitions.input import InputDefinition
-from dagster.core.errors import (
-    DagsterExecutionLoadInputError,
-    DagsterTypeLoadingError,
-    user_code_error_boundary,
-)
+from dagster.core.errors import DagsterExecutionLoadInputError, user_code_error_boundary
 from dagster.core.storage.input_manager import InputManager
 from dagster.serdes import whitelist_for_serdes
 
@@ -240,35 +236,6 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
         solid_def=context.solid_def.name,
         solid=context.solid.name,
     )
-
-
-class FromConfig(namedtuple("_FromConfig", "config_data dagster_type input_name"), StepInputSource):
-    """This step input source is configuration to be passed to a type loader"""
-
-    def __new__(cls, config_data, dagster_type, input_name):
-        return super(FromConfig, cls).__new__(
-            cls, config_data=config_data, dagster_type=dagster_type, input_name=input_name
-        )
-
-    def can_load_input_object(self, step_context):
-        return True
-
-    def load_input_object(self, step_context):
-        with user_code_error_boundary(
-            DagsterTypeLoadingError,
-            msg_fn=_generate_error_boundary_msg_for_step_input(step_context, self.input_name),
-        ):
-            return self.dagster_type.loader.construct_from_config_value(
-                step_context, self.config_data
-            )
-
-    def required_resource_keys(self):
-        return (
-            self.dagster_type.loader.required_resource_keys() if self.dagster_type.loader else set()
-        )
-
-    def compute_version(self, step_versions):
-        return self.dagster_type.loader.compute_loaded_input_version(self.config_data)
 
 
 class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource):

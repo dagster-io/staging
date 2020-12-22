@@ -19,6 +19,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_step_versions_helper,
 )
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.input_manager import root_manager_can_load_input_def
 from dagster.core.storage.mem_object_manager import mem_object_manager
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
@@ -26,7 +27,6 @@ from dagster.core.utils import toposort
 
 from .compute import create_compute_step
 from .inputs import (
-    FromConfig,
     FromDefaultValue,
     FromMultipleSources,
     FromRootInputManager,
@@ -206,11 +206,9 @@ def get_step_input_source(
 
     input_handle = solid.input_handle(input_name)
     solid_config = plan_builder.environment_config.solids.get(str(handle))
-    input_config = solid_config.inputs.get(input_name) if solid_config else None
+    input_config = solid_config.inputs[input_name] if input_name in solid_config.inputs else None
 
     input_def = solid.definition.input_def_named(input_name)
-    if input_def.root_manager_key and not dependency_structure.has_deps(input_handle):
-        return FromRootInputManager(input_def=input_def, config_data=input_config)
 
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
@@ -245,12 +243,13 @@ def get_step_input_source(
 
         return FromMultipleSources(sources)
 
-    if solid_config and input_name in solid_config.inputs:
-        return FromConfig(
-            solid_config.inputs[input_name],
-            dagster_type=input_def.dagster_type,
-            input_name=input_name,
-        )
+    if (
+        not dependency_structure.has_deps(input_handle)
+        and root_manager_can_load_input_def(plan_builder.mode_definition.resource_defs, input_def)
+        and solid_config
+        and input_name in solid_config.inputs
+    ):
+        return FromRootInputManager(input_def=input_def, config_data=input_config)
 
     if solid.container_maps_input(input_name):
         parent_name = solid.container_mapped_input(input_name).definition.name

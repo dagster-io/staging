@@ -80,7 +80,9 @@ class InputDefinition:
 
         self._default_value = _check_default_value(self._name, self._dagster_type, default_value)
 
-        self._root_manager_key = check.opt_str_param(root_manager_key, "root_manager_key")
+        self._root_manager_key = check.opt_str_param(
+            root_manager_key, "root_manager_key", default="root_input_manager"
+        )
 
         self._metadata = check.opt_dict_param(metadata, "metadata", key_type=str)
 
