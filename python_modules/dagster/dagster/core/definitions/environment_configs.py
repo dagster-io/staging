@@ -184,12 +184,9 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
     inputs_field_fields = {}
     for name, inp in solid.definition.input_dict.items():
         inp_handle = SolidInputHandle(solid, inp)
+        has_upstream = input_has_upstream(dependency_structure, inp_handle, solid, name)
         if inp.manager_key:
-            input_field = get_input_manager_input_field(solid, inp, resource_defs)
-        elif inp.dagster_type.loader and not input_has_upstream(
-            dependency_structure, inp_handle, solid, name
-        ):
-            input_field = get_type_loader_input_field(solid, name, inp)
+            input_field = get_input_manager_input_field(solid, inp, resource_defs, has_upstream)
         else:
             input_field = None
 
@@ -206,7 +203,7 @@ def input_has_upstream(dependency_structure, input_handle, solid, input_name):
     return dependency_structure.has_deps(input_handle) or solid.container_maps_input(input_name)
 
 
-def get_input_manager_input_field(solid, input_def, resource_defs):
+def get_input_manager_input_field(solid, input_def, resource_defs, has_upstream):
     if input_def.manager_key not in resource_defs:
         raise DagsterInvalidDefinitionError(
             f'Input "{input_def.name}" for solid "{solid.name}" requires manager_key '
@@ -221,20 +218,8 @@ def get_input_manager_input_field(solid, input_def, resource_defs):
             "IInputManagerDefinition"
         )
 
-    input_config_schema = resource_defs[input_def.manager_key].input_config_schema
-    if input_config_schema:
-        return input_config_schema.config_type
-
-    return None
-
-
-def get_type_loader_input_field(solid, input_name, input_def):
-    return Field(
-        input_def.dagster_type.loader.schema_type,
-        is_required=(
-            not solid.definition.input_has_default(input_name) and not input_def.manager_key
-        ),
-    )
+    input_manager = resource_defs[input_def.manager_key]
+    return input_manager.get_input_config_schema(input_def, has_upstream)
 
 
 def get_outputs_field(solid, handle, resource_defs):

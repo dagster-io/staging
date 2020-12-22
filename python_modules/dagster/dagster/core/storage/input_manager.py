@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from functools import update_wrapper
 
 from dagster import check
@@ -10,8 +10,8 @@ from dagster.core.definitions.resource import ResourceDefinition
 
 
 class IInputManagerDefinition:
-    @abstractproperty
-    def input_config_schema(self):
+    @abstractmethod
+    def get_input_config_schema(self, input_def, has_upstream):
         """The schema for per-input configuration for inputs that are managed by this
         input manager"""
 
@@ -29,12 +29,15 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
         config_schema=None,
         description=None,
         input_config_schema=None,
+        input_config_schema_fn=None,
         required_resource_keys=None,
         version=None,
     ):
-        self._input_config_schema = convert_user_facing_definition_config_schema(
-            input_config_schema
-        )
+        if input_config_schema_fn:
+            self._input_config_schema_fn = input_config_schema_fn
+        else:
+            self._input_config_schema_fn = lambda _context, _has_upstream: input_config_schema
+
         super(InputManagerDefinition, self).__init__(
             resource_fn=resource_fn,
             config_schema=config_schema,
@@ -43,9 +46,12 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
             version=version,
         )
 
-    @property
-    def input_config_schema(self):
-        return self._input_config_schema
+    def get_input_config_schema(self, input_def, has_upstream):
+        definition_config_schema = convert_user_facing_definition_config_schema(
+            self._input_config_schema_fn(input_def, has_upstream)
+        )
+
+        return definition_config_schema.config_type if definition_config_schema else None
 
     def copy_for_configured(self, name, description, config_schema, _):
         check.invariant(name is None, "ResourceDefintions do not have names")
@@ -54,7 +60,7 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
             description=description or self.description,
             resource_fn=self.resource_fn,
             required_resource_keys=self.required_resource_keys,
-            input_config_schema=self.input_config_schema,
+            input_config_schema_fn=self._input_config_schema_fn,
         )
 
 
@@ -80,6 +86,7 @@ def input_manager(
     config_schema=None,
     description=None,
     input_config_schema=None,
+    input_config_schema_fn=None,
     required_resource_keys=None,
     version=None,
 ):
@@ -133,6 +140,7 @@ def input_manager(
             description=description,
             version=version,
             input_config_schema=input_config_schema,
+            input_config_schema_fn=input_config_schema_fn,
             required_resource_keys=required_resource_keys,
         )(load_fn)
 
@@ -154,12 +162,14 @@ class _InputManagerDecoratorCallable:
         description=None,
         version=None,
         input_config_schema=None,
+        input_config_schema_fn=None,
         required_resource_keys=None,
     ):
         self.config_schema = config_schema
         self.description = check.opt_str_param(description, "description")
         self.version = check.opt_str_param(version, "version")
         self.input_config_schema = input_config_schema
+        self.input_config_schema_fn = input_config_schema_fn
         self.required_resource_keys = required_resource_keys
 
     def __call__(self, load_fn):
@@ -174,9 +184,51 @@ class _InputManagerDecoratorCallable:
             description=self.description,
             version=self.version,
             input_config_schema=self.input_config_schema,
+            input_config_schema_fn=self.input_config_schema_fn,
             required_resource_keys=self.required_resource_keys,
         )
 
         update_wrapper(input_manager_def, wrapped=load_fn)
 
         return input_manager_def
+
+
+def make_upstream_input_manager(type_loaders):
+    from dagster.core.types.dagster_type import resolve_dagster_type
+
+    # TODO: augment the dict with loaders for builtin types
+    loaders_by_type_name = {
+        resolve_dagster_type(dagster_type).unique_name: loader
+        for dagster_type, loader in type_loaders
+    }
+
+    def config_schema_fn(input_def, has_upstream):
+        if has_upstream:
+            return None
+
+        type_loader = loaders_by_type_name.get(input_def.dagster_type.unique_name)
+
+        # this path would be deprecated and eventually removed
+        if type_loader is None:
+            type_loader = input_def.dagster_type.loader
+
+        return type_loader.schema_type if type_loader else None
+
+    @input_manager(input_config_schema_fn=config_schema_fn)
+    def _input_manager(context, _resource_config):
+        if context.upstream_output:
+            return context.upstream_output_manager.load_input(context)
+        else:
+            type_loader = loaders_by_type_name.get(context.dagster_type.unique_name)
+
+            # this path would be deprecated and eventually removed
+            if type_loader is None:
+                type_loader = context.dagster_type.loader
+
+            return type_loader.construct_from_config_value(context, context.input_config)
+
+    return _input_manager
+
+
+# An input manager that defers to the upstream object manager for loading inputs
+default_input_manager = make_upstream_input_manager([])
