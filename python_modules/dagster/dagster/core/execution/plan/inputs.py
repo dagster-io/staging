@@ -174,22 +174,25 @@ class FromStepOutput(
         source_handle = self.step_output_handle
         if self.input_def.manager_key:
             loader = getattr(step_context.resources, self.input_def.manager_key)
-            return loader.load_input(self.get_load_context(step_context))
+            obj = loader.load_input(self.get_load_context(step_context))
+            manager_key = self.input_def.manager_key
+            metadata = self.input_def.metadata
+        else:
+            object_manager = step_context.get_output_manager(source_handle)
 
-        object_manager = step_context.get_output_manager(source_handle)
+            check.invariant(
+                isinstance(object_manager, InputManager),
+                f'Input "{self.input_def.name}" for step "{step_context.step.key}" is depending on '
+                f'the manager of upstream output "{source_handle.output_name}" from step '
+                f'"{source_handle.step_key}" to load it, but that manager is not an InputManager. '
+                f"Please ensure that the resource returned for resource key "
+                f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
+            )
 
-        check.invariant(
-            isinstance(object_manager, InputManager),
-            f'Input "{self.input_def.name}" for step "{step_context.step.key}" is depending on '
-            f'the manager of upstream output "{source_handle.output_name}" from step '
-            f'"{source_handle.step_key}" to load it, but that manager is not an InputManager. '
-            f"Please ensure that the resource returned for resource key "
-            f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
-        )
-
-        obj = object_manager.load_input(self.get_load_context(step_context))
-
-        output_def = step_context.execution_plan.get_step_output(source_handle).output_def
+            obj = object_manager.load_input(self.get_load_context(step_context))
+            output_def = step_context.execution_plan.get_step_output(source_handle).output_def
+            manager_key = output_def.manager_key
+            metadata = output_def.metadata
 
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
         if isinstance(obj, ObjectStoreOperation):
@@ -200,7 +203,7 @@ class FromStepOutput(
             return AssetStoreOperation(
                 AssetStoreOperationType.GET_ASSET,
                 source_handle,
-                AssetStoreHandle(output_def.manager_key, output_def.metadata),
+                AssetStoreHandle(manager_key, metadata),
                 obj=obj,
             )
 
@@ -298,7 +301,7 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
     def required_resource_keys(self):
         resource_keys = set()
         for source in self.sources:
-            resource_keys.union(source.required_resource_keys())
+            resource_keys = resource_keys.union(source.required_resource_keys())
         return resource_keys
 
     def compute_version(self, step_versions):

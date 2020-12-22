@@ -141,7 +141,6 @@ def test_configured():
 
     assert isinstance(configured_input_manager, InputManagerDefinition)
     assert configured_input_manager.description == my_input_manager.description
-    assert configured_input_manager.input_config_schema == my_input_manager.input_config_schema
     assert (
         configured_input_manager.required_resource_keys == my_input_manager.required_resource_keys
     )
