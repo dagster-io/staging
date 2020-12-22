@@ -521,8 +521,8 @@ class SolidExecutionResult:
         res = manager.load_input(
             context.for_input_manager(
                 input_name=None,
-                input_config=None,
-                input_metadata=None,
+                config=None,
+                metadata=None,
                 dagster_type=self.solid.output_def_named(step_output_data.output_name).dagster_type,
                 source_handle=step_output_handle,
             )
