@@ -323,3 +323,91 @@ def test_input_manager_resource_config():
     )
 
     assert result.success
+
+
+def test_custom_configurable_input_type_old():
+    from dagster import dagster_type_loader, usable_as_dagster_type
+    from dataclasses import dataclass
+
+    @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
+    def file_summary_loader(_, config):
+        return FileSummary(config["num_rows"], config["best_row"])
+
+    @usable_as_dagster_type(loader=file_summary_loader)
+    @dataclass
+    class FileSummary:
+        num_rows: int
+        best_row: str
+
+    @solid
+    def summarize_file(_) -> FileSummary:
+        """Summarize a file"""
+
+    @solid(input_defs=[InputDefinition("file_summary", dagster_type=FileSummary)])
+    def email_file_summary(context, file_summary):
+        """Email a number to someone"""
+        context.log.info(str(file_summary))
+
+    @pipeline
+    def my_pipeline():
+        email_file_summary(summarize_file())
+
+    execute_pipeline(
+        my_pipeline,
+        solid_selection=["email_file_summary"],
+        run_config={
+            "solids": {
+                "email_file_summary": {
+                    "inputs": {"file_summary": {"num_rows": 20, "best_row": "row5"}}
+                }
+            }
+        },
+    )
+
+
+def test_custom_configurable_input_type():
+    from dagster import dagster_type_loader, usable_as_dagster_type
+    from dataclasses import dataclass
+    from dagster.core.storage.input_manager import make_upstream_input_manager
+
+    @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
+    def file_summary_loader(_, config):
+        return FileSummary(config["num_rows"], config["best_row"])
+
+    @usable_as_dagster_type
+    @dataclass
+    class FileSummary:
+        num_rows: int
+        best_row: str
+
+    @solid
+    def summarize_file(_) -> FileSummary:
+        return FileSummary(1, "fds")
+
+    @solid(input_defs=[InputDefinition("file_summary", dagster_type=FileSummary)])
+    def email_file_summary(context, file_summary):
+        context.log.info(str(file_summary))
+
+    input_manager_with_custom_types = make_upstream_input_manager(
+        [(FileSummary, file_summary_loader)]
+    )
+
+    @pipeline(
+        mode_defs=[ModeDefinition(resource_defs={"input_manager": input_manager_with_custom_types})]
+    )
+    def my_pipeline():
+        email_file_summary(summarize_file())
+
+    execute_pipeline(
+        my_pipeline,
+        solid_selection=["email_file_summary"],
+        run_config={
+            "solids": {
+                "email_file_summary": {
+                    "inputs": {"file_summary": {"num_rows": 20, "best_row": "row5"}}
+                }
+            }
+        },
+    )
+
+    execute_pipeline(my_pipeline)

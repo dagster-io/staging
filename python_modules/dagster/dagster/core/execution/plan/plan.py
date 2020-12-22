@@ -26,7 +26,6 @@ from dagster.core.utils import toposort
 
 from .compute import create_compute_step
 from .inputs import (
-    FromConfig,
     FromDefaultValue,
     FromMultipleSources,
     FromRootInputManager,
@@ -244,13 +243,6 @@ def get_step_input_source(
                 )
 
         return FromMultipleSources(sources)
-
-    if solid_config and input_name in solid_config.inputs:
-        return FromConfig(
-            solid_config.inputs[input_name],
-            dagster_type=input_def.dagster_type,
-            input_name=input_name,
-        )
 
     if solid.container_maps_input(input_name):
         parent_name = solid.container_mapped_input(input_name).definition.name
