@@ -492,9 +492,6 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
         },
         "scheduler": {"k8sEnabled": True, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
-        "postgresqlPassword": "test",
-        "postgresqlDatabase": "test",
-        "postgresqlUser": "test",
         "dagsterDaemon": {"enabled": False},
     }
 
