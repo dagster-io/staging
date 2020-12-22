@@ -32,7 +32,7 @@ import {
 } from 'src/partitions/RunMatrixUtils';
 import {LaunchPartitionBackfill} from 'src/partitions/types/LaunchPartitionBackfill';
 import {PartitionsBackfillSelectorQuery} from 'src/partitions/types/PartitionsBackfillSelectorQuery';
-import {PipelineRunStatus} from 'src/types/globalTypes';
+import {PartitionRunStatus} from 'src/types/globalTypes';
 import {ButtonLink} from 'src/ui/ButtonLink';
 import {Group} from 'src/ui/Group';
 import {repoAddressToSelector} from 'src/workspace/repoAddressToSelector';
@@ -246,24 +246,17 @@ export const PartitionsBackfillPartitionSelector: React.FC<{
   } = data;
 
   const solids = pipelineSnapshot.solidHandles.map((h: any) => h.solid);
-  const runPartitions =
-    partitionSet.partitionsOrError.__typename === 'Partitions' &&
-    partitionSet.partitionsOrError.results;
+  const runPartitions = partitionSet.partitionStatuses;
 
   if (!solids || !runPartitions) {
     return <span />;
   }
   const partitionNames = runPartitions.map((x) => x.name);
   const partitionsWithLastRunSuccess = runPartitions
-    .filter((x) => x.runs.length && x.runs[0].status === PipelineRunStatus.SUCCESS)
+    .filter((x) => x.status === PartitionRunStatus.SUCCESS)
     .map((x) => x.name);
   const partitionsWithLastRunFailure = runPartitions
-    .filter(
-      (x) =>
-        x.runs.length &&
-        (x.runs[0].status === PipelineRunStatus.FAILURE ||
-          x.runs[0].status === PipelineRunStatus.CANCELED),
-    )
+    .filter((x) => x.status === PartitionRunStatus.FAILURE)
     .map((x) => x.name);
   const selectablePartitions = options.reexecute
     ? options.fromFailure
@@ -617,22 +610,12 @@ const PARTITIONS_BACKFILL_SELECTOR_QUERY = gql`
       repositorySelector: $repositorySelector
     ) {
       ... on PartitionSet {
-        partitionsOrError {
-          ... on Partitions {
-            results {
-              name
-              runs(limit: 1) {
-                id
-                runId
-                status
-              }
-            }
-          }
-          ... on PythonError {
-            ...PythonErrorFragment
-          }
-        }
         name
+        partitionStatuses {
+          id
+          name
+          status
+        }
       }
       ... on PartitionSetNotFoundError {
         message
@@ -677,7 +660,6 @@ const PARTITIONS_BACKFILL_SELECTOR_QUERY = gql`
       }
     }
   }
-  ${PythonErrorInfo.fragments.PythonErrorFragment}
 `;
 
 const LAUNCH_PARTITION_BACKFILL_MUTATION = gql`

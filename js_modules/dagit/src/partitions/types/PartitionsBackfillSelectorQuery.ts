@@ -4,49 +4,23 @@
 // @generated
 // This file was automatically generated and should not be edited.
 
-import { RepositorySelector, PipelineSelector, PipelineRunStatus } from "./../../types/globalTypes";
+import { RepositorySelector, PipelineSelector, PartitionRunStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL query operation: PartitionsBackfillSelectorQuery
 // ====================================================
 
-export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs {
-  __typename: "PipelineRun";
+export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionStatuses {
+  __typename: "PartitionStatus";
   id: string;
-  runId: string;
-  status: PipelineRunStatus;
-}
-
-export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results {
-  __typename: "Partition";
   name: string;
-  runs: PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results_runs[];
+  status: PartitionRunStatus;
 }
-
-export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions {
-  __typename: "Partitions";
-  results: PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions_results[];
-}
-
-export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_PythonError_cause {
-  __typename: "PythonError";
-  message: string;
-  stack: string[];
-}
-
-export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_PythonError {
-  __typename: "PythonError";
-  message: string;
-  stack: string[];
-  cause: PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_PythonError_cause | null;
-}
-
-export type PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError = PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_Partitions | PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError_PythonError;
 
 export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet {
   __typename: "PartitionSet";
-  partitionsOrError: PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionsOrError;
   name: string;
+  partitionStatuses: PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSet_partitionStatuses[];
 }
 
 export interface PartitionsBackfillSelectorQuery_partitionSetOrError_PartitionSetNotFoundError {
