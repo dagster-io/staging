@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from functools import update_wrapper
 
 from dagster import check
@@ -10,8 +10,8 @@ from dagster.core.definitions.resource import ResourceDefinition
 
 
 class IInputManagerDefinition:
-    @abstractproperty
-    def input_config_schema(self):
+    @abstractmethod
+    def get_input_config_schema(self, input_def, has_upstream):
         """The schema for per-input configuration for inputs that are managed by this
         input manager"""
 
@@ -60,7 +60,7 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
             description=description or self.description,
             resource_fn=self.resource_fn,
             required_resource_keys=self.required_resource_keys,
-            input_config_schema=self.input_config_schema,
+            input_config_schema_fn=self._input_config_schema_fn,
         )
 
 
@@ -231,5 +231,5 @@ def make_upstream_input_manager(type_loaders):
     return _input_manager
 
 
-"""An input manager that defers to the upstream object manager for loading inputs"""
+# An input manager that defers to the upstream object manager for loading inputs
 default_input_manager = make_upstream_input_manager([])

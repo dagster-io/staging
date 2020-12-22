@@ -5,9 +5,6 @@ from dagster.config.config_type import ALL_CONFIG_BUILTINS, Array, ConfigType
 from dagster.config.field import check_opt_field_param
 from dagster.config.field_utils import FIELD_NO_DEFAULT_PROVIDED, Shape, all_optional_type
 from dagster.config.iterate_types import iterate_config_types
-from dagster.core.definitions.definition_config_schema import (
-    convert_user_facing_definition_config_schema,
-)
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.storage.input_manager import IInputManagerDefinition
 from dagster.core.storage.output_manager import IOutputManagerDefinition

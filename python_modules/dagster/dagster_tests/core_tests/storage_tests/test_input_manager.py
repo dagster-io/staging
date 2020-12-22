@@ -153,7 +153,7 @@ def test_custom_configurable_input_type_old():
     from dataclasses import dataclass
 
     @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
-    def file_summary_loader(context, config):
+    def file_summary_loader(_, config):
         return FileSummary(config["num_rows"], config["best_row"])
 
     @usable_as_dagster_type(loader=file_summary_loader)
@@ -166,9 +166,10 @@ def test_custom_configurable_input_type_old():
     def summarize_file(_) -> FileSummary:
         """Summarize a file"""
 
-    @solid
-    def email_file_summary(_, file_summary):
+    @solid(input_defs=[InputDefinition("file_summary", dagster_type=FileSummary)])
+    def email_file_summary(context, file_summary):
         """Email a number to someone"""
+        context.log.info(str(file_summary))
 
     @pipeline
     def my_pipeline():
@@ -180,7 +181,7 @@ def test_custom_configurable_input_type_old():
         run_config={
             "solids": {
                 "email_file_summary": {
-                    "inputs": {"file_summary": {"value": {"num_rows": 20, "best_row": "row5"}}}
+                    "inputs": {"file_summary": {"num_rows": 20, "best_row": "row5"}}
                 }
             }
         },
@@ -193,7 +194,7 @@ def test_custom_configurable_input_type():
     from dagster.core.storage.input_manager import make_upstream_input_manager
 
     @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
-    def file_summary_loader(context, config):
+    def file_summary_loader(_, config):
         return FileSummary(config["num_rows"], config["best_row"])
 
     @usable_as_dagster_type
@@ -207,8 +208,8 @@ def test_custom_configurable_input_type():
         return FileSummary(1, "fds")
 
     @solid(input_defs=[InputDefinition("file_summary", dagster_type=FileSummary)])
-    def email_file_summary(_, file_summary):
-        """Email a number to someone"""
+    def email_file_summary(context, file_summary):
+        context.log.info(str(file_summary))
 
     input_manager_with_custom_types = make_upstream_input_manager(
         [(FileSummary, file_summary_loader)]
