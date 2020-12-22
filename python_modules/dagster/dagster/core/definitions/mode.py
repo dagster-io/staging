@@ -65,6 +65,15 @@ class ModeDefinition(
                 {"object_manager": mem_asset_store}, resource_defs or {}
             )
 
+        if resource_defs and "input_manager" in resource_defs:
+            resource_defs_with_defaults = resource_defs
+        else:
+            from dagster.core.storage.input_manager import default_input_manager
+
+            resource_defs_with_defaults = merge_dicts(
+                {"input_manager": default_input_manager}, resource_defs or {}
+            )
+
         return super(ModeDefinition, cls).__new__(
             cls,
             name=check_valid_name(name) if name else DEFAULT_MODE_NAME,
