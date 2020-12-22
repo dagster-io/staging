@@ -5,7 +5,7 @@ import re
 import subprocess
 
 import pytest
-from dagster import execute_pipeline, pipeline, seven, solid
+from dagster import AssetKey, AssetMaterialization, execute_pipeline, pipeline, seven, solid
 from dagster.core.errors import DagsterInstanceMigrationRequired
 from dagster.core.instance import DagsterInstance
 from dagster.core.storage.event_log.migration import migrate_event_log_data
@@ -201,6 +201,70 @@ def test_0_7_6_postgres_pre_add_pipeline_snapshot(hostname, conn_string):
         new_run = instance.get_run_by_id(new_run_id)
 
         assert new_run.pipeline_snapshot_id
+
+
+def test_0_9_22_postgres_pre_asset_partition(hostname, conn_string):
+    engine = create_engine(conn_string)
+    engine.execute("drop schema public cascade;")
+    engine.execute("create schema public;")
+
+    env = os.environ.copy()
+    env["PGPASSWORD"] = "test"
+    subprocess.check_call(
+        [
+            "psql",
+            "-h",
+            hostname,
+            "-p",
+            "5432",
+            "-U",
+            "test",
+            "-f",
+            file_relative_path(
+                __file__, "snapshot_0_9_22_pre_asset_partition/postgres/pg_dump.txt"
+            ),
+        ],
+        env=env,
+    )
+
+    run_id = "15d2d9b4-8c36-4c00-a9c5-8b233d673161"
+
+    with seven.TemporaryDirectory() as tempdir:
+        with open(file_relative_path(__file__, "dagster.yaml"), "r") as template_fd:
+            with open(os.path.join(tempdir, "dagster.yaml"), "w") as target_fd:
+                template = template_fd.read().format(hostname=hostname)
+                target_fd.write(template)
+
+        instance = DagsterInstance.from_config(tempdir)
+
+        @solid
+        def asset_solid(_):
+            yield AssetMaterialization(
+                asset_key=AssetKey(["path", "to", "asset"]), partition="partition_1"
+            )
+
+        @pipeline
+        def asset_pipeline():
+            asset_solid()
+
+        with pytest.raises(
+            DagsterInstanceMigrationRequired, match=_migration_regex("run", current_revision=None)
+        ):
+            execute_pipeline(asset_pipeline, instance=instance)
+
+        # ensure migration is run
+        instance.upgrade()
+
+        runs = instance.get_runs()
+        assert len(runs) == 1
+        assert runs[0].run_id == run_id
+        run = instance.get_run_by_id(run_id)
+        assert run.run_id == run_id
+
+        result = execute_pipeline(asset_pipeline, instance=instance)
+        assert result.success
+        runs = instance.get_runs()
+        assert len(runs) == 2
 
 
 def _migration_regex(storage_name, current_revision, expected_revision=None):
