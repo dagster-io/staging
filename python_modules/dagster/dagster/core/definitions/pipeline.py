@@ -9,9 +9,12 @@ from dagster.core.errors import (
     DagsterInvalidSubsetError,
     DagsterInvariantViolationError,
 )
-from dagster.core.storage.input_manager import IInputManagerDefinition
+from dagster.core.storage.input_manager import (
+    IInputManagerDefinition,
+    root_manager_can_load_input_def,
+)
 from dagster.core.storage.output_manager import IOutputManagerDefinition
-from dagster.core.types.dagster_type import DagsterTypeKind, construct_dagster_type_dictionary
+from dagster.core.types.dagster_type import construct_dagster_type_dictionary
 from dagster.core.utils import str_format_set
 from dagster.utils.backcompat import experimental_arg_warning
 
@@ -724,8 +727,8 @@ def _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type
 def _validate_inputs(dependency_structure, solid_dict, mode_definitions):
     for solid in solid_dict.values():
         for handle in solid.input_handles():
-            if dependency_structure.has_deps(handle):
-                for mode_def in mode_definitions:
+            for mode_def in mode_definitions:
+                if dependency_structure.has_deps(handle):
                     for source_output_handle in dependency_structure.get_deps_list(handle):
                         output_manager_key = source_output_handle.output_def.manager_key
                         output_manager_def = mode_def.resource_defs[output_manager_key]
@@ -743,24 +746,23 @@ def _validate_inputs(dependency_structure, solid_dict, mode_definitions):
                                 f"to load the input. To address this, assign an ObjectManager to "
                                 f"the upstream output."
                             )
-            else:
-                if (
-                    not handle.input_def.dagster_type.loader
-                    and not handle.input_def.dagster_type.kind == DagsterTypeKind.NOTHING
-                    and not handle.input_def.root_manager_key
-                ):
-                    raise DagsterInvalidDefinitionError(
-                        'Input "{input_name}" in solid "{solid_name}" is not connected to '
-                        "the output of a previous solid and can not be loaded from configuration, "
-                        "creating an impossible to execute pipeline. "
-                        "Possible solutions are:\n"
-                        '  * add a dagster_type_loader for the type "{dagster_type}"\n'
-                        '  * connect "{input_name}" to the output of another solid\n'.format(
-                            solid_name=solid.name,
-                            input_name=handle.input_def.name,
-                            dagster_type=handle.input_def.dagster_type.display_name,
+                else:
+                    input_def = handle.input_def
+                    # Make sure the input manager will be able to provide a config schema for
+                    # the input definition it'll be used on.
+                    if (
+                        not root_manager_can_load_input_def(mode_def.resource_defs, input_def)
+                        and not input_def.has_default_value
+                    ):
+                        raise DagsterInvalidDefinitionError(
+                            f'Input "{input_def.name}" of solid "{solid.name}" is not connected to the '
+                            f"output of a previous solid, and the root input manager configured for"
+                            f"that input does not know how to load it. Possible solutions are:\n"
+                            f"  * Use type_based_root_input_manager to define a root input manager with an "
+                            f'entry for the type "{input_def.dagster_type.display_name}"\n'
+                            f'  * Connect "{input_def.name}" to the output of another solid\n'
+                            f"  * Set a default value on the InputDefinition\n"
                         )
-                    )
 
 
 def _build_all_node_defs(node_defs):

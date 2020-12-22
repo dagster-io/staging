@@ -241,7 +241,7 @@ def test_io_context_logging(capsys):
             StepOutputHandle("logged_solid", "result")
         ).log.debug("test OUTPUT debug logging from logged_solid.")
         context.get_system_context().for_input_manager(
-            "logged_solid", {}, {}, None, source_handle=None
+            "logged_solid", {}, None, {}, None, source_handle=None
         ).log.debug("test INPUT debug logging from logged_solid.")
 
     result = execute_solid(logged_solid)
