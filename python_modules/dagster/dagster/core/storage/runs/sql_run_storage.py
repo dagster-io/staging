@@ -573,12 +573,12 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
             conn.execute(RunsTable.delete())  # pylint: disable=no-value-for-parameter
             conn.execute(RunTagsTable.delete())  # pylint: disable=no-value-for-parameter
             conn.execute(SnapshotsTable.delete())  # pylint: disable=no-value-for-parameter
-            conn.execute(DaemonHeartbeatsTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(DaemonHeartbeatsTable.drop())  # pylint: disable=no-value-for-parameter
 
     def wipe_daemon_heartbeats(self):
         with self.connect() as conn:
             # https://stackoverflow.com/a/54386260/324449
-            conn.execute(DaemonHeartbeatsTable.delete())  # pylint: disable=no-value-for-parameter
+            conn.execute(DaemonHeartbeatsTable.drop())  # pylint: disable=no-value-for-parameter
 
 
 GET_PIPELINE_SNAPSHOT_QUERY_ID = "get-pipeline-snapshot"
