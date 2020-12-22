@@ -344,6 +344,10 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
                 "failureThreshold": 3,
             },
         },
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
+        },
         "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -382,6 +386,10 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
         },
         "celery": {"enabled": False},
         "k8sRunLauncher": {"enabled": True, "jobNamespace": namespace},
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
+        },
         "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -468,6 +476,10 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
                 "worker_concurrency": 1,
             },
         },
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
+        },
         "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
         "postgresqlPassword": "test",
@@ -541,6 +553,10 @@ def helm_chart_for_run_coordinator(namespace, docker_image, should_cleanup=True)
                 "broker_transport_options": {"priority_steps": [9]},
                 "worker_concurrency": 1,
             },
+        },
+        "computeLogManager": {
+            "type": "LocalComputeLogManager",
+            "config": {"localComputeLogManager": {}},
         },
         "scheduler": {"k8sEnabled": "true", "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
