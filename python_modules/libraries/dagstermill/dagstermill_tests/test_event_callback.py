@@ -12,6 +12,9 @@ def test_event_callback_logging():
     events = defaultdict(list)
 
     def _event_callback(record):
+
+        print("CAAAALBACK " + str(record))
+
         assert isinstance(record, EventRecord)
         if record.is_dagster_event:
             events[record.dagster_event.event_type].append(record)

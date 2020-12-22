@@ -6,6 +6,7 @@ import threading
 import time
 from collections import defaultdict
 from contextlib import contextmanager
+from pathlib import Path
 
 import sqlalchemy as db
 from dagster import StringSource, check
@@ -25,6 +26,7 @@ from sqlalchemy.pool import NullPool
 from tqdm import tqdm
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
+from watchdog.observers.api import BaseObserver
 
 from ..schema import SqlEventLogStorageMetadata
 from ..sql_event_log import SqlEventLogStorage
@@ -63,6 +65,9 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
 
         self._watchers = defaultdict(dict)
         self._obs = Observer()
+
+        print("THE OBSERVER IS " + str(self._obs))
+
         self._obs.start()
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
@@ -199,9 +204,12 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
 
     def watch(self, run_id, start_cursor, callback):
         watchdog = SqliteEventLogStorageWatchdog(self, run_id, callback, start_cursor)
+
+        print("SCHEDULING: " + str(self._base_dir))
+
         self._watchers[run_id][callback] = (
             watchdog,
-            self._obs.schedule(watchdog, self._base_dir, True),
+            self._obs.schedule(watchdog, Path(self._base_dir), True),
         )
 
     def end_watch(self, run_id, handler):
@@ -219,11 +227,17 @@ class SqliteEventLogStorageWatchdog(PatternMatchingEventHandler):
         self._run_id = check.str_param(run_id, "run_id")
         self._cb = check.callable_param(callback, "callback")
         self._log_path = event_log_storage.path_for_run_id(run_id)
+
+        print("LOG PATH: " + str(self._log_path))
+
         self._cursor = start_cursor if start_cursor is not None else -1
         super(SqliteEventLogStorageWatchdog, self).__init__(patterns=[self._log_path], **kwargs)
 
     def _process_log(self):
         events = self._event_log_storage.get_logs_for_run(self._run_id, self._cursor)
+
+        print("PROCESSING: GOT " + str(len(events)))
+
         self._cursor += len(events)
         for event in events:
             status = self._cb(event)
@@ -236,5 +250,6 @@ class SqliteEventLogStorageWatchdog(PatternMatchingEventHandler):
                 self._event_log_storage.end_watch(self._run_id, self._cb)
 
     def on_modified(self, event):
+        print("MODIFIED!!! " + str(event))
         check.invariant(event.src_path == self._log_path)
         self._process_log()
