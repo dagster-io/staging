@@ -50,7 +50,7 @@ class SqlEventLogStorage(EventLogStorage):
                     print_fn("Skipping already reindexed summary: {}".format(migration_name))
                     continue
             print_fn("Starting reindex: {}".format(migration_name))
-            migration_fn(self, print_fn)
+            migration_fn()(self, print_fn)
             self.enable_secondary_index(migration_name)
             print_fn("Finished reindexing: {}".format(migration_name))
 

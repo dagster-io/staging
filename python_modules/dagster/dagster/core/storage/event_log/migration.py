@@ -8,8 +8,8 @@ SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
 SECONDARY_INDEX_ASSET_PARTITION = "asset_partitions"
 
 REINDEX_DATA_MIGRATIONS = {
-    SECONDARY_INDEX_ASSET_KEY: migrate_asset_key_data,
-    SECONDARY_INDEX_ASSET_PARTITION: migrate_asset_partitions,
+    SECONDARY_INDEX_ASSET_KEY: lambda: migrate_asset_key_data,
+    SECONDARY_INDEX_ASSET_PARTITION: lambda: migrate_asset_partitions,
 }
 
 
@@ -42,9 +42,6 @@ def migrate_asset_key_data(event_log_storage, print_fn=lambda _: None):
     from .schema import AssetKeyTable, SqlEventLogStorageTable
 
     if not isinstance(event_log_storage, AssetAwareSqlEventLogStorage):
-        return
-
-    if event_log_storage.has_secondary_index(SECONDARY_INDEX_ASSET_KEY):
         return
 
     query = (
@@ -95,9 +92,6 @@ def migrate_asset_partitions(event_log_storage, print_fn=lambda _: None):
     from dagster.core.storage.event_log.sql_event_log import AssetAwareSqlEventLogStorage
 
     if not isinstance(event_log_storage, AssetAwareSqlEventLogStorage):
-        return
-
-    if event_log_storage.has_secondary_index(SECONDARY_INDEX_ASSET_PARTITION):
         return
 
     with event_log_storage.connect() as conn:
