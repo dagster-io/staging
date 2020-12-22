@@ -906,6 +906,7 @@ class DagsterInstance:
         return self._event_storage.get_logs_for_run(run_id)
 
     def watch_event_logs(self, run_id, cursor, cb):
+        print("WATCHING: " + str(self._event_storage))
         return self._event_storage.watch(run_id, cursor, cb)
 
     # asset storage
