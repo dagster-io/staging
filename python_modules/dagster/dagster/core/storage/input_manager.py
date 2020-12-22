@@ -194,54 +194,42 @@ class _InputManagerDecoratorCallable:
         return input_manager_def
 
 
-@input_manager
-def upstream_input_manager(context):
-    """An input manager that defers to the upstream object manager for loading inputs"""
-    return context.upstream_output_manager.load_input(context)
-
-
-def make_upstream_input_manager(type_input_manager_defs):
-    """
-    It likely makes sense to introduce some kind of @loader definition that's not a resource.
-
-    For now, assume that none of given loader definitions have required resources keys or resource
-    config.
-    """
+def make_upstream_input_manager(type_loaders):
     from dagster.core.types.dagster_type import resolve_dagster_type
 
-    input_manager_defs_by_type_name = {
-        resolve_dagster_type(dagster_type).unique_name: input_manager_def
-        for dagster_type, input_manager_def in type_input_manager_defs
+    # TODO: augment the dict with loaders for builtin types
+    loaders_by_type_name = {
+        resolve_dagster_type(dagster_type).unique_name: loader
+        for dagster_type, loader in type_loaders
     }
 
     def config_schema_fn(input_def, has_upstream):
         if has_upstream:
             return None
 
-        type_input_manager_def = input_manager_defs_by_type_name.get(
-            input_def.dagster_type.unique_name
-        )
-        return type_input_manager_def.get_input_config_schema(input_def, has_upstream)
+        type_loader = loaders_by_type_name.get(input_def.dagster_type.unique_name)
 
-    class UpstreamInputManagerWithTypes(InputManager):
-        def __init__(self, input_managers_by_type_name):
-            self.input_managers_by_type_name = input_managers_by_type_name
+        # this path would be deprecated and eventually removed
+        if type_loader is None:
+            type_loader = input_def.dagster_type.loader
 
-        def load_input(self, context):
-            if context.upstream_output:
-                return context.upstream_output_manager.load_input(context)
-            else:
-                return self.input_managers_by_type_name[
-                    context.dagster_type.unique_name
-                ].load_input(context)
+        return type_loader.schema_type if type_loader else None
 
-    def init_input_manager_fn(init_context):
-        input_managers_by_type_name = {
-            type_name: input_manager_def.resource_fn(init_context)
-            for type_name, input_manager_def in input_manager_defs_by_type_name.items()
-        }
-        return UpstreamInputManagerWithTypes(input_managers_by_type_name)
+    @input_manager(input_config_schema_fn=config_schema_fn)
+    def _input_manager(context, _resource_config):
+        if context.upstream_output:
+            return context.upstream_output_manager.load_input(context)
+        else:
+            type_loader = loaders_by_type_name.get(context.dagster_type.unique_name)
 
-    return InputManagerDefinition(
-        resource_fn=init_input_manager_fn, input_config_schema_fn=config_schema_fn
-    )
+            # this path would be deprecated and eventually removed
+            if type_loader is None:
+                type_loader = context.dagster_type.loader
+
+            return type_loader.construct_from_config_value(context, context.input_config)
+
+    return _input_manager
+
+
+"""An input manager that defers to the upstream object manager for loading inputs"""
+default_input_manager = make_upstream_input_manager([])
