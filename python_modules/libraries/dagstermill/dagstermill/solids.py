@@ -28,7 +28,7 @@ from papermill.iorw import load_notebook_node, write_ipynb
 from papermill.parameterize import _find_first_tagged_cell_index
 
 from .engine import DagstermillNBConvertEngine
-from .errors import DagstermillError, DagstermillExecutionError
+from .errors import DagstermillError
 from .serialize import read_value, write_value
 from .translator import RESERVED_INPUT_NAMES, DagsterTranslator
 
@@ -208,17 +208,7 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                             )
                         ],
                     )
-                    raise_from(
-                        DagstermillExecutionError(
-                            "Error occurred during the execution of Dagstermill solid "
-                            "{solid_name}: {notebook_path}".format(
-                                solid_name=name, notebook_path=notebook_path
-                            ),
-                            user_exception=exc,
-                            original_exc_info=sys.exc_info(),
-                        ),
-                        exc,
-                    )
+                    raise
 
             system_compute_context.log.debug(
                 "Notebook execution complete for {name} at {executed_notebook_path}.".format(
