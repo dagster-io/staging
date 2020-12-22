@@ -99,32 +99,32 @@ computeLogManager:
   # ]
   type: LocalComputeLogManager
   config:
-    # This configuration will only be used if the LocalComputeLogManager is selected
+    # This configuration is used since the LocalComputeLogManager is selected by default
     localComputeLogManager: {}
 
-    # This configuration will only be used if the AzureBlobComputeLogManager is selected
-    azureBlobComputeLogManager:
-      storageAccount: ~
-      container: ~
-      secretKey: ~
-      localDir: ~
-      prefix: "dagster"
+    ## Uncomment this configuration if the AzureBlobComputeLogManager is selected
+    # azureBlobComputeLogManager:
+    #   storageAccount: ~
+    #   container: ~
+    #   secretKey: ~
+    #   localDir: ~
+    #   prefix: "dagster"
 
-    # This configuration will only be used if the GCSComputeLogManager is selected
-    gcsComputeLogManager:
-      bucket: ~
-      localDir: ~
-      prefix: "dagster"
+    ## Uncomment this configuration if the GCSComputeLogManager is selected
+    # gcsComputeLogManager:
+    #   bucket: ~
+    #   localDir: ~
+    #   prefix: "dagster"
 
-    # This configuration will only be used if the S3ComputeLogManager is selected
-    s3ComputeLogManager:
-      bucket: ~
-      localDir: ~
-      prefix: "dagster"
-      useSsl: true
-      verify: true
-      verifyCertPath: ~
-      endpointUrl: ~
+    ## Uncomment this configuration if the S3ComputeLogManager is selected
+    # s3ComputeLogManager:
+    #   bucket: ~
+    #   localDir: ~
+    #   prefix: "dagster"
+    #   useSsl: true
+    #   verify: true
+    #   verifyCertPath: ~
+    #   endpointUrl: ~
 
 ####################################################################################################
 # User Code Deployments: Configuration for user code containers to be loaded via GRPC server. For
