@@ -1,4 +1,5 @@
 import os
+from tempfile import TemporaryDirectory
 
 import botocore
 import pyspark
@@ -153,7 +154,7 @@ def test_spark_dataframe_output_csv(spark_config):
     def passthrough():
         passthrough_df(emit())
 
-    with seven.TemporaryDirectory() as tempdir:
+    with TemporaryDirectory() as tempdir:
         file_name = os.path.join(tempdir, "output.csv")
         result = execute_pipeline(
             passthrough,
