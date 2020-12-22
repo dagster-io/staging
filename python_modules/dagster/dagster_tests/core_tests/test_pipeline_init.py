@@ -87,7 +87,10 @@ def test_clean_event_generator_exit():
 
     resource_name, resource_def = next(iter(pipeline_def.get_default_mode().resource_defs.items()))
     resource_context = InitResourceContext(
-        resource_def=resource_def, resource_config=None, run_id=make_new_run_id(),
+        pipeline_def=pipeline_def,
+        resource_def=resource_def,
+        resource_config=None,
+        run_id=make_new_run_id(),
     )
     generator = single_resource_event_generator(resource_context, resource_name, resource_def)
     next(generator)

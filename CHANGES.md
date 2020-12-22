@@ -15,13 +15,14 @@
   with `execute_step`, and `execute_run_with_structured_logs` with `execute_run`.
 - The `.compute` suffix is no longer applied to all step keys.
 - `SolidExecutionResult.compute_output_event_dict` changed to `SolidExecutionResult.compute_output_events_dict`
-- Eliminated `pipeline_def` property from `InitResourceContext`.
+
 
 ## 0.9.22.post0
 
 **Bugfixes**
 
 - [Dask] Pin dask[dataframe] to <=2.30.0 and distributed to <=2.30.1
+
 
 ## 0.9.22
 
@@ -33,8 +34,8 @@
 
 - [Helm/K8s] Fixed whitespacing bug in ingress.yaml Helm template.
 
-## 0.9.21
 
+## 0.9.21
 **Community Contributions**
 
 - Fixed helm chart to only add flower to the K8s ingress when enabled (thanks [@PenguinToast](https://github.com/PenguinToast)!)
@@ -43,6 +44,7 @@
 **Bugfixes**
 
 - [Helm/K8s] Due to Flower being incompatible with Celery 5.0, the Helm chart for Dagster now uses a specific image `mher/flower:0.9.5` for the Flower pod.
+
 
 ## 0.9.20
 
