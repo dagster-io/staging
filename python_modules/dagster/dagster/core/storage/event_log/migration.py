@@ -1,8 +1,8 @@
 import sqlalchemy as db
 from dagster import AssetKey
+from dagster.core.events.log import EventRecord
 from dagster.serdes import deserialize_json_to_dagster_namedtuple
 from tqdm import tqdm
-from dagster.core.events.log import EventRecord
 
 SECONDARY_INDEX_ASSET_KEY = "asset_key_table"
 SECONDARY_INDEX_ASSET_PARTITION = "asset_partitions"
