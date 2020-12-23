@@ -27,7 +27,7 @@ class NotImplementedCheckError(CheckError):
 
 def _param_type_mismatch_exception(
     obj: Any, ttype: Type, param_name: str, additional_message: str = None
-) -> Parameter:
+) -> ParameterCheckError:
     if isinstance(ttype, tuple):
         type_names = sorted([t.__name__ for t in ttype])
         return ParameterCheckError(
@@ -734,14 +734,16 @@ def opt_generator_param(obj: Any, param_name: str) -> Optional[Generator]:
     return obj
 
 
-def list_elem(ddict: Dict, key: str) -> List:
+def list_elem(ddict: Dict, key: str) -> List:  # type: ignore[return]
     dict_param(ddict, "ddict")
     str_param(key, "key")
 
     value = ddict.get(key)
-    if not isinstance(value, list):
-        raise_with_traceback(_element_check_error(key, value, ddict, list))
-    return value
+
+    if isinstance(value, list):
+        return value
+
+    raise_with_traceback(_element_check_error(key, value, ddict, list))
 
 
 def opt_list_elem(ddict: Dict, key: str) -> List:
