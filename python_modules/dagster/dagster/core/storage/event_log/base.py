@@ -119,7 +119,7 @@ class AssetAwareEventLogStorage(six.with_metaclass(ABCMeta)):
         pass
 
     @abstractmethod
-    def get_asset_events(self, asset_key, cursor=None, limit=None):
+    def get_asset_events(self, asset_key, partitions=None, cursor=None, limit=None):
         pass
 
     @abstractmethod
