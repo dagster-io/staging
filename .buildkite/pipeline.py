@@ -645,6 +645,10 @@ def python_steps():
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
+        StepBuilder("mypy dagster")
+        .run("pip install mypy", "mypy python_modules/dagster/dagster",)
+        .on_integration_image(SupportedPython.V3_7)
+        .build(),
         StepBuilder("Validate Library Docs")
         .run("pip install -e python_modules/automation", "dagster-docs validate-libraries")
         .on_integration_image(SupportedPython.V3_7)
