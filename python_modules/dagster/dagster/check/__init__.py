@@ -195,10 +195,12 @@ def opt_callable_param(obj, param_name, default=None):
 
 
 def int_param(obj, param_name):
-    if not isinstance(obj, integer_types):
+    if not isinstance(obj, int):
         raise_with_traceback(_param_type_mismatch_exception(obj, int, param_name))
     return obj
 
+
+def int_value_param(obj, value, param_name):
     if not isinstance(obj, int):
         raise_with_traceback(_param_type_mismatch_exception(obj, int, param_name))
     if obj != value:
@@ -207,6 +209,8 @@ def int_param(obj, param_name):
         )
     return obj
 
+
+def opt_int_param(obj, param_name, default):
     if obj is not None and not isinstance(obj, int):
         raise_with_traceback(_param_type_mismatch_exception(obj, int, param_name))
     return default if obj is None else obj
@@ -696,9 +700,11 @@ def list_elem(ddict, key):
     str_param(key, "key")
 
     value = ddict.get(key)
-    if not isinstance(value, list):
-        raise_with_traceback(_element_check_error(key, value, ddict, list))
-    return value
+
+    if isinstance(value, list):
+        return value
+
+    raise_with_traceback(_element_check_error(key, value, ddict, list))
 
 
 def opt_list_elem(ddict, key):

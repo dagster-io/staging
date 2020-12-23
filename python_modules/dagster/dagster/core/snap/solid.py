@@ -122,6 +122,7 @@ def build_core_solid_def_snap(solid_def):
 # This and _check_solid_def_header_args helps implement a de facto mixin for
 # CompositeSolidDefSnap and SolidDefSnap. Inheritance is quite difficult
 # and counterintuitive in namedtuple land, so went with this scheme instead.
+# Mypy has trouble with this scheme so the namedtuple definitions are not typechecked.
 SOLID_DEF_HEADER_PROPS = (
     "name input_def_snaps output_def_snaps description tags "
     "required_resource_keys config_field_snap"
@@ -182,7 +183,7 @@ def _get_output_snap(solid_def, name):
 
 @whitelist_for_serdes
 class CompositeSolidDefSnap(
-    namedtuple(
+    namedtuple(  # type: ignore
         "_CompositeSolidDefSnap",
         SOLID_DEF_HEADER_PROPS + " dep_structure_snapshot input_mapping_snaps output_mapping_snaps",
     )
@@ -244,7 +245,7 @@ class CompositeSolidDefSnap(
 
 
 @whitelist_for_serdes
-class SolidDefSnap(namedtuple("_SolidDefMeta", SOLID_DEF_HEADER_PROPS)):
+class SolidDefSnap(namedtuple("_SolidDefMeta", SOLID_DEF_HEADER_PROPS)):  # type: ignore
     def __new__(
         cls,
         name,
