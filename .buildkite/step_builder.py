@@ -30,7 +30,7 @@ class BuildkiteQueue(Enum):
 
     DOCKER = "docker-p"
     MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
+    WINDOWS = "buildkite-windows-v5-0-1"
 
     @classmethod
     def contains(cls, value):
@@ -65,28 +65,40 @@ class StepBuilder:
         self._step["commands"] = ["time " + cmd for cmd in commands]
         return self
 
-    def _base_docker_settings(self):
-        return {
+    def on_image(self, image, env=None):
+        self._step["plugins"] = [
+            {
+                DOCKER_PLUGIN: {
+                    "image": image,
+                    "environment": ["BUILDKITE"] + (env or []),
+                    "always-pull": True,
+                    "mount-ssh-agent": True,
+                    "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
+                }
+            }
+        ]
+        return self
+
+    def on_python_image(self, image, env=None):
+        docker_settings = {
+            "image": "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
+                account_id=AWS_ACCOUNT_ID, image=image
+            ),
+            "environment": ["BUILDKITE"] + (env or []),
             "shell": ["/bin/bash", "-xeuc"],
             "always-pull": True,
             "mount-ssh-agent": True,
+            "network": "kind",
+            "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
         }
 
-    def on_python_image(self, image, env=None):
-        settings = self._base_docker_settings()
-        settings["image"] = "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
-            account_id=AWS_ACCOUNT_ID, image=image
-        )
-        settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
-        settings["network"] = "kind"
-        settings["environment"] = ["BUILDKITE"] + (env or [])
         ecr_settings = {
             "login": True,
             "no-include-email": True,
             "account-ids": AWS_ACCOUNT_ID,
             "region": AWS_ECR_REGION,
         }
-        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: settings}]
+        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: docker_settings}]
         return self
 
     def on_unit_image(self, ver, env=None):
