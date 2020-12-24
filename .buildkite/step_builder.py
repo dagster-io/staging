@@ -1,13 +1,7 @@
 import os
-import sys
 from enum import Enum
 
 from defines import INTEGRATION_IMAGE_VERSION, UNIT_IMAGE_VERSION, SupportedPythons
-
-SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
-
-sys.path.append(SCRIPT_PATH)
-
 
 TIMEOUT_IN_MIN = 20
 
@@ -26,7 +20,7 @@ def wait_step():
 class BuildkiteQueue(Enum):
     DOCKER = "docker-p"
     MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
+    WINDOWS = "buildkite-windows-v5-0-1"
 
     @classmethod
     def contains(cls, value):
@@ -59,6 +53,21 @@ class StepBuilder:
 
         self._step["commands"] = ["time " + cmd for cmd in commands]
         return self
+
+    def windows_run(self, *argc):
+        self._step["commands"] = argc
+        return self
+
+    def on_windows_image(self, env=None):
+        # TODO: Move everything up to 3.8.7
+        # if ver != SupportedPython.V3_8:
+        #     raise Exception("Unsupported python version for Windows image {ver}".format(ver=ver))
+        docker_settings = {
+            "image": "python:3.8.7-windowsservercore-1809",
+            "environment": ["BUILDKITE"] + (env or []),
+        }
+        self._step["plugins"] = [{DOCKER_PLUGIN: docker_settings}]
+        return self.on_queue(BuildkiteQueue.WINDOWS)
 
     def _base_docker_settings(self):
         return {
