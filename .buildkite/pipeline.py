@@ -621,6 +621,19 @@ def helm_steps():
     ]
 
 
+def windows_tests():
+    return [
+        StepBuilder("dagster py38-windows-core_tests")
+        .run(
+            "aws ecr get-login --no-include-email --region us-west-2 | sh",
+            "cd python_modules/dagster",
+            "tox -vv -e py38-windows-core_tests",
+        )
+        .on_windows_image(SupportedPython.V3_8)
+        .build()
+    ]
+
+
 def python_steps():
     steps = []
     steps += publish_test_images()
@@ -661,6 +674,7 @@ def python_steps():
     steps += version_equality_checks()
     steps += next_docs_build_tests()
     steps += examples_tests()
+    steps += windows_tests()
 
     return steps
 
