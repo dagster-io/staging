@@ -625,6 +625,20 @@ def helm_steps():
     ]
 
 
+def windows_tests():
+    return [
+        StepBuilder("dagster py38-windows-core_tests")
+        .run(
+            "cd python_modules/dagster",
+            "pip install -r dev-requirements.txt",
+            "tox -vv -e py38-windows-core_tests",
+        )
+        .on_windows_image()
+        .with_timeout(30)
+        .build()
+    ]
+
+
 def python_steps():
     steps = []
     steps += publish_test_images()
@@ -665,6 +679,7 @@ def python_steps():
     steps += version_equality_checks()
     steps += next_docs_build_tests()
     steps += examples_tests()
+    steps += windows_tests()
 
     return steps
 

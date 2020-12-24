@@ -1,13 +1,7 @@
 import os
-import sys
 from enum import Enum
 
-from defines import INTEGRATION_IMAGE_VERSION, UNIT_IMAGE_VERSION, SupportedPythons
-
-SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
-
-sys.path.append(SCRIPT_PATH)
-
+from defines import INTEGRATION_IMAGE_VERSION, UNIT_IMAGE_VERSION, SupportedPython, SupportedPythons
 
 TIMEOUT_IN_MIN = 20
 
@@ -26,7 +20,7 @@ def wait_step():
 class BuildkiteQueue(Enum):
     DOCKER = "docker-p"
     MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
+    WINDOWS = "buildkite-windows-v5-0-1"
 
     @classmethod
     def contains(cls, value):
@@ -50,15 +44,18 @@ class StepBuilder:
             self._step["key"] = key
 
     def run(self, *argc):
-        commands = []
-        for entry in argc:
-            if isinstance(entry, list):
-                commands.extend(entry)
-            else:
-                commands.append(entry)
-
-        self._step["commands"] = ["time " + cmd for cmd in commands]
+        self._step["commands"] = argc
         return self
+
+    def on_windows_image(self, env=None):
+        docker_settings = {
+            "image": "python:{python_version}-windowsservercore-1809".format(
+                python_version=SupportedPython.V3_8
+            ),
+            "environment": ["BUILDKITE"] + (env or []),
+        }
+        self._step["plugins"] = [{DOCKER_PLUGIN: docker_settings}]
+        return self.on_queue(BuildkiteQueue.WINDOWS)
 
     def _base_docker_settings(self):
         return {
