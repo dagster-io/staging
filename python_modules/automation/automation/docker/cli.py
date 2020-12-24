@@ -73,7 +73,7 @@ def build_all(name, dagster_version, timestamp):
 @cli.command()
 @click.option("--name", required=True, help="Name of image to push")
 @click.option("-v", "--python-version", type=click.STRING, required=True)
-@click.option("-v", "--custom-tag", type=click.STRING, required=False)
+@click.option("-t", "--custom-tag", type=click.STRING, required=False)
 def push(name, python_version, custom_tag):
     ensure_ecr_login()
     get_image(name).push(python_version, custom_tag=custom_tag)
