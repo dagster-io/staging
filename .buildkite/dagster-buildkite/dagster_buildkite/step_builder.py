@@ -1,7 +1,7 @@
 import os
 from enum import Enum
 
-from .defines import SupportedPythons
+from .defines import SupportedPython, SupportedPythons
 from .images.versions import INTEGRATION_IMAGE_VERSION, UNIT_IMAGE_VERSION
 
 TIMEOUT_IN_MIN = 20
@@ -17,7 +17,7 @@ AWS_ECR_REGION = "us-west-2"
 class BuildkiteQueue(Enum):
     DOCKER = "docker-p"
     MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
+    WINDOWS = "buildkite-windows-v5-0-1"
 
     @classmethod
     def contains(cls, value):
@@ -41,15 +41,24 @@ class StepBuilder:
             self._step["key"] = key
 
     def run(self, *argc):
-        commands = []
-        for entry in argc:
-            if isinstance(entry, list):
-                commands.extend(entry)
-            else:
-                commands.append(entry)
-
-        self._step["commands"] = ["time " + cmd for cmd in commands]
+        self._step["commands"] = list(argc)
         return self
+
+    def on_windows_image(self, env=None):
+        docker_settings = {
+            "image": "python:{python_version}-windowsservercore-1809".format(
+                python_version=SupportedPython.V3_8
+            ),
+            "environment": ["BUILDKITE"] + (env or []),
+        }
+        ecr_settings = {
+            "login": True,
+            "no-include-email": True,
+            "account-ids": AWS_ACCOUNT_ID,
+            "region": AWS_ECR_REGION,
+        }
+        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: docker_settings}]
+        return self.on_queue(BuildkiteQueue.WINDOWS)
 
     def _base_docker_settings(self):
         return {
