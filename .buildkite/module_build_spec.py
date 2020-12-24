@@ -6,7 +6,7 @@ SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
 
 sys.path.append(SCRIPT_PATH)
 from defines import SupportedPython, SupportedPythons, TOX_MAP  # isort:skip
-from step_builder import StepBuilder  # isort:skip
+from step_builder import BuildkiteQueue, StepBuilder  # isort:skip
 
 
 class ModuleBuildSpec(
@@ -121,7 +121,25 @@ class ModuleBuildSpec(
                 if self.depends_on_fn:
                     step = step.depends_on(self.depends_on_fn(version))
 
-                tests.append(step.build())
+                # tests.append(step.build())
+
+                # Add Windows tests -> no 3.6 Windows image available
+                if version != SupportedPython.V3_6:
+                    windows_step = (
+                        StepBuilder(
+                            "{label} {ver}-windows".format(label=label, ver=TOX_MAP[version])
+                        )
+                        .run(*cmds)
+                        .on_image("python:{version}-windowsservercore".format(version=version))
+                    )
+
+                    if self.retries:
+                        windows_step = windows_step.with_retry(self.retries)
+
+                    if self.depends_on_fn:
+                        windows_step = windows_step.depends_on(self.depends_on_fn(version))
+
+                    tests.append(windows_step.build())
 
         # We expect the tox file to define a pylint testenv, and we'll construct a separate
         # buildkite build step for the pylint testenv.
