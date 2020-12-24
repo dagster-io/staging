@@ -45,6 +45,10 @@ def publish_test_images():
                     "AWS_SECRET_ACCESS_KEY",
                     "BUILDKITE_SECRETS_BUCKET",
                 ],
+                extra_docker_settings={
+                    "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
+                    "network": "kind",
+                },
             )
             .build()
         )
@@ -81,6 +85,10 @@ def publish_test_images():
                     "AWS_SECRET_ACCESS_KEY",
                     "BUILDKITE_SECRETS_BUCKET",
                 ],
+                extra_docker_settings={
+                    "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
+                    "network": "kind",
+                },
             )
             .build()
         )
