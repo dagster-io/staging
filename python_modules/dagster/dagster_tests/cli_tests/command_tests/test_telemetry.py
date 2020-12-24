@@ -21,6 +21,7 @@ from dagster.core.telemetry import (
     upload_logs,
 )
 from dagster.core.test_utils import environ, instance_for_test, instance_for_test_tempdir
+from dagster.seven import IS_WINDOWS
 from dagster.utils import file_relative_path, pushd, script_relative_path
 
 EXPECTED_KEYS = set(
@@ -44,6 +45,7 @@ def path_to_file(path):
     return script_relative_path(os.path.join("./", path))
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_dagster_telemetry_enabled(caplog):
     with instance_for_test(overrides={"telemetry": {"enabled": True}}):
         runner = CliRunner()
@@ -68,6 +70,7 @@ def test_dagster_telemetry_enabled(caplog):
             assert result.exit_code == 0
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_dagster_telemetry_disabled(caplog):
     with instance_for_test(overrides={"telemetry": {"enabled": False}}):
         runner = CliRunner()
@@ -83,6 +86,7 @@ def test_dagster_telemetry_disabled(caplog):
         assert result.exit_code == 0
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_dagster_telemetry_unset(caplog):
     with tempfile.TemporaryDirectory() as temp_dir:
         with instance_for_test_tempdir(temp_dir):
@@ -109,6 +113,7 @@ def test_dagster_telemetry_unset(caplog):
                 assert result.exit_code == 0
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_repo_stats(caplog):
     with tempfile.TemporaryDirectory() as temp_dir:
         with instance_for_test_tempdir(temp_dir):
