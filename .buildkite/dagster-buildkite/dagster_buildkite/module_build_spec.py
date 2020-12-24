@@ -131,46 +131,43 @@ class ModuleBuildSpec(
             extra_cmds_fn,
             depends_on_fn,
             tox_file,
-            tox_env_suffixes,
+            tox_env_suffixes or [""],
             buildkite_label,
             retries,
             upload_coverage,
         )
 
-    def get_tox_build_steps(self):
+    def get_tox_build_steps(self, for_windows: bool = False) -> list:
         package = self.buildkite_label or self.directory.split("/")[-1]
         tests = []
 
-        tox_env_suffixes = self.tox_env_suffixes or [""]
-
         for version in self.supported_pythons:
-            for tox_env_suffix in tox_env_suffixes:
+            for tox_env_suffix in self.tox_env_suffixes:
                 label = package + tox_env_suffix
-
                 extra_cmds = self.extra_cmds_fn(version) if self.extra_cmds_fn else []
 
                 # See: https://github.com/dagster-io/dagster/issues/2512
                 tox_file = "-c %s " % self.tox_file if self.tox_file else ""
-                tox_cmd = "tox -vv {tox_file}-e {ver}{tox_env_suffix}".format(
-                    tox_file=tox_file, tox_env_suffix=tox_env_suffix, ver=TOX_MAP[version]
-                )
+                os_name = "windows" if for_windows else "unix"
+                toxenv = f"{TOX_MAP[version]}-{os_name}{tox_env_suffix}"
+                tox_cmd = f"tox -vv {tox_file} -e {toxenv}"
 
-                cmds = extra_cmds + ["cd {directory}".format(directory=self.directory), tox_cmd]
+                cmds = extra_cmds + [f"cd {self.directory}", tox_cmd]
 
                 if self.upload_coverage:
-                    coverage = ".coverage.{label}.{version}.$BUILDKITE_BUILD_ID".format(
-                        label=label, version=version
-                    )
+                    coverage = f".coverage.{label}.{version}.$BUILDKITE_BUILD_ID"
                     cmds += [
-                        "mv .coverage {file}".format(file=coverage),
-                        "buildkite-agent artifact upload {file}".format(file=coverage),
+                        f"mv .coverage {coverage}",
+                        f"buildkite-agent artifact upload {coverage}",
                     ]
 
-                step = (
-                    StepBuilder("{label} tests ({ver})".format(label=label, ver=TOX_MAP[version]))
-                    .run(*cmds)
-                    .on_integration_image(version, self.env_vars or [])
-                )
+                step = StepBuilder(f"{label} tests ({TOX_MAP[version]})").run(*cmds)
+
+                if for_windows:
+                    step = step.on_windows_image(version, self.env_vars)
+
+                else:
+                    step = step.on_integration_image(version, self.env_vars)
 
                 if self.retries:
                     step = step.with_retry(self.retries)
@@ -182,22 +179,20 @@ class ModuleBuildSpec(
 
         # We expect the tox file to define a pylint testenv, and we'll construct a separate
         # buildkite build step for the pylint testenv.
-        tests.append(
-            StepBuilder("%s pylint" % package)
-            .run("cd {directory}".format(directory=self.directory), "tox -vv -e pylint")
-            .on_integration_image(SupportedPython.V3_7)
-            .build()
-        )
+        if not for_windows:
+            tests.append(
+                StepBuilder(f"{package} pylint")
+                .run(f"cd {self.directory}", "tox -vv -e pylint")
+                .on_integration_image(SupportedPython.V3_7)
+                .build()
+            )
 
         # We expect the tox file to define a mypy testenv, and we'll construct a separate
         # buildkite build step for the mypy testenv.
-        if self.directory not in MYPY_EXCLUDES:
+        if not for_windows and self.directory not in MYPY_EXCLUDES:
             tests.append(
-                StepBuilder("%s mypy" % package)
-                .run(
-                    "pip install mypy",
-                    "mypy --config-file mypy/config {directory}".format(directory=self.directory),
-                )
+                StepBuilder(f"{package} mypy")
+                .run("pip install mypy", f"mypy --config-file mypy/config {self.directory}",)
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
             )
