@@ -1,8 +1,11 @@
+# pylint: disable=print-call
+
 from .defines import DO_COVERAGE
 from .steps.dagit import dagit_steps
 from .steps.dagster import coverage_step, dagster_steps
 from .steps.integration import integration_steps
 from .steps.wait import wait_step
+from .steps.windows import windows_steps
 from .utils import buildkite_yaml_for_steps, is_phab_and_dagit_only
 
 CLI_HELP = """This CLI is used for generating Buildkite YAML.
@@ -22,9 +25,14 @@ def dagster():
             all_steps += [wait_step(), coverage_step()]
 
     buildkite_yaml = buildkite_yaml_for_steps(all_steps)
-    print(buildkite_yaml)  # pylint: disable=print-call
+    print(buildkite_yaml)
 
 
 def integration():
     buildkite_yaml = buildkite_yaml_for_steps(integration_steps())
-    print(buildkite_yaml)  # pylint: disable=print-call
+    print(buildkite_yaml)
+
+
+def windows():
+    windows_yaml = buildkite_yaml_for_steps(windows_steps())
+    print(windows_yaml)

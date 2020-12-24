@@ -1,0 +1,5 @@
+
+if [[ "${BUILDKITE_AGENT_META_DATA_OS}" == "windows" ]]; then
+  git config --system core.longpaths true
+  export BUILDKITE_BUILD_CHECKOUT_PATH="C:\\b\\${BUILDKITE_PIPELINE_SLUG}"
+fi
