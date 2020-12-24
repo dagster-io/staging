@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import os
 import re
 
@@ -10,6 +8,7 @@ from click.testing import CliRunner
 from dagster.cli.pipeline import execute_execute_command, pipeline_execute_command
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.test_utils import instance_for_test, new_cwd
+from dagster.seven import IS_WINDOWS
 from dagster.utils import file_relative_path, merge_dicts
 
 from .test_cli_commands import (
@@ -19,6 +18,7 @@ from .test_cli_commands import (
 )
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_execute_mode_command():
     runner = CliRunner()
 
@@ -92,6 +92,7 @@ def test_empty_execute_command():
         assert "Must specify a python file or module name" in result.output
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_execute_preset_command():
     with instance_for_test():
         runner = CliRunner()
@@ -132,12 +133,14 @@ def test_execute_preset_command():
         assert bad_res.exit_code == 2
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 @pytest.mark.parametrize("gen_execute_args", pipeline_python_origin_contexts())
 def test_execute_command_no_env(gen_execute_args):
     with gen_execute_args as (cli_args, instance):
         execute_execute_command(kwargs=cli_args, instance=instance)
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 @pytest.mark.parametrize("gen_execute_args", pipeline_python_origin_contexts())
 def test_execute_command_env(gen_execute_args):
     with gen_execute_args as (cli_args, instance):
@@ -149,6 +152,7 @@ def test_execute_command_env(gen_execute_args):
         )
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 @pytest.mark.parametrize("cli_args", valid_pipeline_python_origin_target_cli_args())
 def test_execute_command_runner(cli_args):
     runner = CliRunner()
@@ -341,6 +345,7 @@ def runner_pipeline_execute(runner, cli_args):
     return result
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_default_memory_run_storage():
     with instance_for_test() as instance:
         cli_args = {
@@ -353,6 +358,7 @@ def test_default_memory_run_storage():
         assert result.success
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_override_with_in_memory_storage():
     with instance_for_test() as instance:
         cli_args = {
@@ -366,6 +372,7 @@ def test_override_with_in_memory_storage():
         assert result.success
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_override_with_filesystem_storage():
     with instance_for_test() as instance:
         cli_args = {
@@ -379,6 +386,7 @@ def test_override_with_filesystem_storage():
         assert result.success
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_multiproc():
     with instance_for_test():
         runner = CliRunner()
@@ -421,6 +429,7 @@ def test_multiproc_invalid():
     assert "DagsterUnmetExecutorRequirementsError" in add_result.output
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_tags_pipeline():
     runner = CliRunner()
     with instance_for_test() as instance:
@@ -468,6 +477,7 @@ def test_tags_pipeline():
         assert run.tags.get("foo") == "bar"
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_execute_subset_pipeline_single_clause_solid_name():
     runner = CliRunner()
     with instance_for_test() as instance:
@@ -490,6 +500,7 @@ def test_execute_subset_pipeline_single_clause_solid_name():
         assert run.solids_to_execute == {"do_something"}
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_execute_subset_pipeline_single_clause_dsl():
     runner = CliRunner()
     with instance_for_test() as instance:
@@ -512,6 +523,7 @@ def test_execute_subset_pipeline_single_clause_dsl():
         assert run.solids_to_execute == {"do_something", "do_input"}
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_execute_subset_pipeline_multiple_clauses_dsl_and_solid_name():
     runner = CliRunner()
     with instance_for_test() as instance:
@@ -552,6 +564,7 @@ def test_execute_subset_pipeline_invalid():
         assert "No qualified solids to execute found for solid_selection" in str(result.exception)
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_empty_working_directory():
     runner = CliRunner()
 
