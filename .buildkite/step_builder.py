@@ -30,7 +30,7 @@ class BuildkiteQueue(Enum):
 
     DOCKER = "docker-p"
     MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
+    WINDOWS = "buildkite-windows-v5-0-1"
 
     @classmethod
     def contains(cls, value):
@@ -72,11 +72,9 @@ class StepBuilder:
             "mount-ssh-agent": True,
         }
 
-    def on_python_image(self, image, env=None):
+    def on_image(self, image, env=None):
         settings = self._base_docker_settings()
-        settings["image"] = "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
-            account_id=AWS_ACCOUNT_ID, image=image
-        )
+        settings["image"] = image
         settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
         settings["network"] = "kind"
         settings["environment"] = ["BUILDKITE"] + (env or [])
@@ -88,6 +86,14 @@ class StepBuilder:
         }
         self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: settings}]
         return self
+
+    def on_python_image(self, image, env=None):
+        return self.on_image(
+            image="{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
+                account_id=AWS_ACCOUNT_ID, image=image
+            ),
+            env=env,
+        )
 
     def on_unit_image(self, ver, env=None):
         if ver not in SupportedPythons:
