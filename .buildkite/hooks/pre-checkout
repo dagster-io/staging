@@ -1,0 +1,12 @@
+
+case "$(uname -s)" in
+    Linux*)     machine="Linux";;
+    Darwin*)    machine="Mac";;
+    *)          machine="Windows";;
+esac
+echo ${machine}
+
+if [[ "${machine}" == "Windows" ]]; then
+  git config --system core.longpaths true
+  export BUILDKITE_BUILD_CHECKOUT_PATH="C:\\b\\${BUILDKITE_PIPELINE_SLUG}"
+fi
