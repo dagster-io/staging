@@ -26,5 +26,6 @@ def get_image_version(image_name):
 
 COVERAGE_IMAGE_VERSION = get_image_version("buildkite-coverage")
 INTEGRATION_IMAGE_VERSION = get_image_version("buildkite-integration")
+WINDOWS_INTEGRATION_IMAGE_VERSION = get_image_version("buildkite-integration-windows")
 UNIT_IMAGE_VERSION = get_image_version("buildkite-unit")
 TEST_IMAGE_BUILDER_VERSION = get_image_version("buildkite-test-image-builder")
