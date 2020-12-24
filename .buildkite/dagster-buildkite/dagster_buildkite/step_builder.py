@@ -1,27 +1,34 @@
-import os
-from enum import Enum
+from .defines import (
+    AWS_ACCOUNT_ID,
+    AWS_ECR_REGION,
+    AWS_ECR_URL,
+    DOCKER_PLUGIN,
+    ECR_PLUGIN,
+    TIMEOUT_IN_MIN,
+    BuildkiteQueue,
+    SupportedPython,
+    SupportedPythons,
+)
+from .images.versions import (
+    INTEGRATION_IMAGE_VERSION,
+    UNIT_IMAGE_VERSION,
+    WINDOWS_INTEGRATION_IMAGE_VERSION,
+)
 
-from .defines import SupportedPythons
-from .images.versions import INTEGRATION_IMAGE_VERSION, UNIT_IMAGE_VERSION
+DOCKER_SETTINGS = {
+    "shell": ["/bin/bash", "-xeuc"],
+    "always-pull": True,
+    "mount-ssh-agent": True,
+    "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
+    "network": "kind",
+}
 
-TIMEOUT_IN_MIN = 20
-
-DOCKER_PLUGIN = "docker#v3.7.0"
-ECR_PLUGIN = "ecr#v2.2.0"
-
-
-AWS_ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID")
-AWS_ECR_REGION = "us-west-2"
-
-
-class BuildkiteQueue(Enum):
-    DOCKER = "docker-p"
-    MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
-
-    @classmethod
-    def contains(cls, value):
-        return isinstance(value, cls)
+ECR_SETTINGS = {
+    "login": True,
+    "no-include-email": True,
+    "account-ids": AWS_ACCOUNT_ID,
+    "region": AWS_ECR_REGION,
+}
 
 
 class StepBuilder:
@@ -41,63 +48,48 @@ class StepBuilder:
             self._step["key"] = key
 
     def run(self, *argc):
-        commands = []
-        for entry in argc:
-            if isinstance(entry, list):
-                commands.extend(entry)
-            else:
-                commands.append(entry)
-
-        self._step["commands"] = ["time " + cmd for cmd in commands]
+        self._step["commands"] = list(argc)
         return self
-
-    def _base_docker_settings(self):
-        return {
-            "shell": ["/bin/bash", "-xeuc"],
-            "always-pull": True,
-            "mount-ssh-agent": True,
-        }
 
     def on_python_image(self, image, env=None):
-        settings = self._base_docker_settings()
-        settings["image"] = "{account_id}.dkr.ecr.us-west-2.amazonaws.com/{image}".format(
-            account_id=AWS_ACCOUNT_ID, image=image
-        )
-        settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
-        settings["network"] = "kind"
-        settings["environment"] = ["BUILDKITE"] + (env or [])
-        ecr_settings = {
-            "login": True,
-            "no-include-email": True,
-            "account-ids": AWS_ACCOUNT_ID,
-            "region": AWS_ECR_REGION,
+        docker_settings = {
+            "image": f"{AWS_ECR_URL}/{image}",
+            "environment": ["BUILDKITE"] + (env or []),
+            **DOCKER_SETTINGS,
         }
-        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: settings}]
+
+        self._step["plugins"] = [{ECR_PLUGIN: ECR_SETTINGS}, {DOCKER_PLUGIN: docker_settings}]
         return self
 
-    def on_unit_image(self, ver, env=None):
-        if ver not in SupportedPythons:
-            raise Exception("Unsupported python version for unit image {ver}".format(ver=ver))
+    def on_unit_image(self, python_version: str, env=None):
+        if python_version not in SupportedPythons:
+            raise Exception(f"Unsupported python version for unit image {python_version}")
 
-        return self.on_python_image(
-            image="buildkite-unit:py{python_version}-{image_version}".format(
-                python_version=ver, image_version=UNIT_IMAGE_VERSION
-            ),
-            env=env,
-        )
+        image = f"buildkite-unit:py{python_version}-{UNIT_IMAGE_VERSION}"
+        return self.on_python_image(image, env)
 
-    def on_integration_image(self, ver, env=None):
-        if ver not in SupportedPythons:
+    def on_integration_image(self, python_version: str, env=None):
+        if python_version not in SupportedPythons:
+            raise Exception(f"Unsupported python version for integration image {python_version}")
+
+        image = f"buildkite-integration:py{python_version}-{INTEGRATION_IMAGE_VERSION}"
+        return self.on_python_image(image, env)
+
+    def on_windows_image(self, python_version: str, env=None):
+        if python_version != SupportedPython.V3_8:
             raise Exception(
-                "Unsupported python version for integration image {ver}".format(ver=ver)
+                f"Unsupported python version for windows integration image {python_version}"
             )
 
-        return self.on_python_image(
-            image="buildkite-integration:py{python_version}-{image_version}".format(
-                python_version=ver, image_version=INTEGRATION_IMAGE_VERSION
-            ),
-            env=env,
-        )
+        image = f"{AWS_ECR_URL}/buildkite-integration-windows:py{python_version}-{WINDOWS_INTEGRATION_IMAGE_VERSION}"
+
+        docker_settings = {
+            "image": image,
+            "environment": ["BUILDKITE"] + (env or []),
+        }
+
+        self._step["plugins"] = [{ECR_PLUGIN: ECR_SETTINGS}, {DOCKER_PLUGIN: docker_settings}]
+        return self.on_queue(BuildkiteQueue.WINDOWS)
 
     def with_timeout(self, num_minutes):
         self._step["timeout_in_minutes"] = num_minutes
