@@ -76,8 +76,6 @@ if __name__ == "__main__":
             "toposort>=1.0",
             "watchdog>=0.8.3",
             'psutil >= 1.0; platform_system=="Windows"',
-            # https://github.com/mhammond/pywin32/issues/1439
-            'pywin32 != 226; platform_system=="Windows"',
             "pytz",
             "docstring-parser==0.7.1",
         ],
