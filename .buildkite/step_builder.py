@@ -1,13 +1,7 @@
 import os
-import sys
 from enum import Enum
 
 from defines import INTEGRATION_IMAGE_VERSION, UNIT_IMAGE_VERSION, SupportedPythons
-
-SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
-
-sys.path.append(SCRIPT_PATH)
-
 
 TIMEOUT_IN_MIN = 20
 
@@ -16,7 +10,10 @@ ECR_PLUGIN = "ecr#v2.0.0"
 
 
 AWS_ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID")
-AWS_ECR_REGION = "us-west-1"
+
+# We are now using us-west-2 because us-west-1 doesn't have EKS for some reason
+DEPRECATED_AWS_ECR_REGION = "us-west-1"
+AWS_ECR_REGION = "us-west-2"
 
 
 def wait_step():
@@ -26,7 +23,7 @@ def wait_step():
 class BuildkiteQueue(Enum):
     DOCKER = "docker-p"
     MEDIUM = "buildkite-medium-v5-0-1"
-    WINDOWS = "windows-medium"
+    WINDOWS = "buildkite-windows-v5-0-1"
 
     @classmethod
     def contains(cls, value):
@@ -60,28 +57,40 @@ class StepBuilder:
         self._step["commands"] = ["time " + cmd for cmd in commands]
         return self
 
-    def _base_docker_settings(self):
-        return {
-            "shell": ["/bin/bash", "-xeuc"],
-            "always-pull": True,
-            "mount-ssh-agent": True,
+    def windows_run(self, *argc):
+        self._step["commands"] = argc
+        return self
+
+    def on_windows_image(self, env=None):
+        # TODO: Move everything up to 3.8.7
+        # if ver != SupportedPython.V3_8:
+        #     raise Exception("Unsupported python version for Windows image {ver}".format(ver=ver))
+        docker_settings = {
+            "image": "python:3.8.7-windowsservercore-1809",
+            "environment": ["BUILDKITE"] + (env or []),
         }
+        self._step["plugins"] = [{DOCKER_PLUGIN: docker_settings}]
+        return self.on_queue(BuildkiteQueue.WINDOWS)
 
     def on_python_image(self, image, env=None):
-        settings = self._base_docker_settings()
-        settings["image"] = "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
-            account_id=AWS_ACCOUNT_ID, image=image
-        )
-        settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
-        settings["network"] = "kind"
-        settings["environment"] = ["BUILDKITE"] + (env or [])
+        docker_settings = {
+            "image": "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
+                account_id=AWS_ACCOUNT_ID, image=image
+            ),
+            "environment": ["BUILDKITE"] + (env or []),
+            "shell": ["/bin/bash", "-xeuc"],
+            "mount-ssh-agent": True,
+            "network": "kind",
+            "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
+        }
+
         ecr_settings = {
             "login": True,
             "no-include-email": True,
             "account-ids": AWS_ACCOUNT_ID,
-            "region": AWS_ECR_REGION,
+            "region": DEPRECATED_AWS_ECR_REGION,
         }
-        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: settings}]
+        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: docker_settings}]
         return self
 
     def on_unit_image(self, ver, env=None):
