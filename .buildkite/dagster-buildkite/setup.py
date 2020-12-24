@@ -21,6 +21,7 @@ setup(
         "console_scripts": [
             "dagster-buildkite = dagster_buildkite.cli:dagster",
             "dagster-buildkite-integration = dagster_buildkite.cli:integration",
+            "dagster-buildkite-integration = dagster_buildkite.cli:windows",
         ]
     },
 )
