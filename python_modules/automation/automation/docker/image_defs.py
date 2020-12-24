@@ -68,6 +68,14 @@ def buildkite_integration_cm(cwd):
 
 
 @contextlib.contextmanager
+def buildkite_windows_cm(cwd):
+    with copy_directories(
+        ["python_modules/dagster/dev-requirements.txt"], cwd,
+    ):
+        yield
+
+
+@contextlib.contextmanager
 def k8s_example_cm(cwd):
     with copy_directories(
         ["examples/deploy_k8s/example_project",], cwd,
@@ -134,6 +142,7 @@ def k8s_celery_worker_editable_cm(cwd):
 # Some images have custom build context manager functions, listed here
 CUSTOM_BUILD_CONTEXTMANAGERS = {
     "buildkite-integration-base": buildkite_integration_cm,
+    "buildkite-windows": buildkite_windows_cm,
     "k8s-example": k8s_example_cm,
     "k8s-example-editable": k8s_example_editable_cm,
     "k8s-dagit-editable": k8s_dagit_editable_cm,
