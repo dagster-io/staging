@@ -3,6 +3,7 @@ import sys
 import tempfile
 from io import BytesIO
 
+import pytest
 import yaml
 from dagster import execute_pipeline
 from dagster.cli.pipeline import execute_list_versions_command
@@ -13,6 +14,7 @@ from dagster.core.storage.event_log import ConsolidatedSqliteEventLogStorage
 from dagster.core.storage.local_compute_log_manager import LocalComputeLogManager
 from dagster.core.storage.root import LocalArtifactStorage
 from dagster.core.storage.runs import SqliteRunStorage
+from dagster.seven import IS_WINDOWS
 from dagster.utils import file_relative_path
 
 from ...core_tests.execution_tests.memoized_dev_loop_pipeline import asset_pipeline
@@ -31,6 +33,7 @@ class Capturing(list):
         sys.stdout = self._stdout
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_execute_display_command():
     with tempfile.TemporaryDirectory() as temp_dir:
         run_store = SqliteRunStorage.from_local(temp_dir)

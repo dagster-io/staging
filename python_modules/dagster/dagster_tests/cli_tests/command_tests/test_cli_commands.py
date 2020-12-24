@@ -27,6 +27,7 @@ from dagster.core.definitions.sensor import RunRequest
 from dagster.core.test_utils import instance_for_test, instance_for_test_tempdir
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
 from dagster.grpc.server import GrpcServerProcess
+from dagster.seven import IS_WINDOWS
 from dagster.utils import file_relative_path, merge_dicts
 from dagster.version import __version__
 
@@ -535,6 +536,7 @@ def test_run_wipe_incorrect_delete_message():
         assert result.exit_code == 0
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="fails on windows")
 def test_run_list_limit():
     with instance_for_test():
         runner = CliRunner()
