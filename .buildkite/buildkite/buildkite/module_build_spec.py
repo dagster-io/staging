@@ -116,7 +116,7 @@ class ModuleBuildSpec(
                 if self.depends_on_fn:
                     step = step.depends_on(self.depends_on_fn(version))
 
-                tests.append(step.build())
+                # tests.append(step.build())
 
         # We expect the tox file to define a pylint testenv, and we'll construct a separate
         # buildkite build step for the pylint testenv.
