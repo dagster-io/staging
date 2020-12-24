@@ -40,3 +40,6 @@ INTEGRATION_BASE_VERSION = "2020-07-03T094007"
 # and then find the tag of the created images. A string
 # like the following will be in that tag.
 UNIT_IMAGE_VERSION = "2020-12-11T192450"
+
+# For buildkite-windows
+WINDOWS_IMAGE_VERSION = "2020-12-26T212031"

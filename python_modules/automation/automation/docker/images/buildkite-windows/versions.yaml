@@ -1,0 +1,7 @@
+3.8.7:
+  docker_args:
+    BASE_IMAGE: python:3.8.7-windowsservercore-1809
+
+3.7.9:
+  docker_args:
+    BASE_IMAGE: python:3.7.9-windowsservercore-1809
