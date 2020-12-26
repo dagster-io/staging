@@ -3,12 +3,12 @@ import typing
 
 class BuiltinEnum:
 
-    ANY = typing.Any
-    BOOL = typing.NewType("Bool", bool)
-    FLOAT = typing.NewType("Float", float)
-    INT = typing.NewType("Int", int)
-    STRING = typing.NewType("String", str)
-    NOTHING = typing.NewType("Nothing", None)
+    ANY = typing.Any  # type: ignore
+    BOOL = typing.NewType("Bool", bool)  # type: ignore
+    FLOAT = typing.NewType("Float", float)  # type: ignore
+    INT = typing.NewType("Int", int)  # type: ignore
+    STRING = typing.NewType("String", str)  # type: ignore
+    NOTHING = typing.NewType("Nothing", None)  # type: ignore
 
     @classmethod
     def contains(cls, value):
