@@ -30,6 +30,8 @@ class TestRunStorage:
     ```
     """
 
+    __test__ = False
+
     @pytest.fixture(name="storage", params=[])
     def run_storage(self, request):
         with request.param() as s:

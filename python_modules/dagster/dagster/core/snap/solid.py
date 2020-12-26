@@ -182,7 +182,7 @@ def _get_output_snap(solid_def, name):
 
 @whitelist_for_serdes
 class CompositeSolidDefSnap(
-    namedtuple(
+    namedtuple(  # type: ignore
         "_CompositeSolidDefSnap",
         SOLID_DEF_HEADER_PROPS + " dep_structure_snapshot input_mapping_snaps output_mapping_snaps",
     )
@@ -244,7 +244,7 @@ class CompositeSolidDefSnap(
 
 
 @whitelist_for_serdes
-class SolidDefSnap(namedtuple("_SolidDefMeta", SOLID_DEF_HEADER_PROPS)):
+class SolidDefSnap(namedtuple("_SolidDefMeta", SOLID_DEF_HEADER_PROPS)):  # type: ignore
     def __new__(
         cls,
         name,

@@ -131,4 +131,16 @@ class ModuleBuildSpec(
             .on_integration_image(SupportedPython.V3_7)
             .build()
         )
+        # We expect the tox file to define a mypy testenv, and we'll construct a separate
+        # buildkite build step for the mypy testenv.
+        tests.append(
+            StepBuilder("%s mypy" % package)
+            .run(
+                "pip install mypy",
+                "cd {directory}".format(directory=self.directory),
+                "tox -vv -e mypy",
+            )
+            .on_integration_image(SupportedPython.V3_7)
+            .build()
+        )
         return tests
