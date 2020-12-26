@@ -1,0 +1,8 @@
+[mypy]
+ignore_missing_imports = True
+
+[mypy-dagster.seven]
+ignore_errors = True
+
+[mypy-dagster.grpc.__generated__.*]
+ignore_errors = True
