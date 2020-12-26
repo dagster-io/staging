@@ -9,6 +9,52 @@ from defines import SupportedPython, SupportedPythons, TOX_MAP  # isort:skip
 from step_builder import StepBuilder  # isort:skip
 
 
+MYPY_EXCLUDES = [
+    "python_modules/" + directory
+    for directory in [
+        ["dagit", "automation", "dagster-graphql", "dagster-test"]
+        + [
+            "libraries/" + lib
+            for lib in [
+                "dagster-airflow",
+                "dagster-aws",
+                "dagster-aws-pyspark",
+                "dagster-azure",
+                "dagster-bash",
+                "dagster-celery",
+                "dagster-celery-docker",
+                "dagster-celery-k8s",
+                "dagster-cron",
+                "dagster-dask",
+                "dagster-databricks",
+                "dagster-datadog",
+                "dagster-dbt",
+                "dagster-docker",
+                "dagster-flyte",
+                "dagster-gcp",
+                "dagster-ge",
+                "dagster-github",
+                "dagster-k8s",
+                "dagster-pagerduty",
+                "dagster-pandas",
+                "dagster-papertrail",
+                "dagster-postgres",
+                "dagster-prometheus",
+                "dagster-pyspark",
+                "dagster-shell",
+                "dagster-slack",
+                "dagster-snowflake",
+                "dagster-spark",
+                "dagster-ssh",
+                "dagster-twilio",
+                "dagstermill",
+                "lakehouse",
+            ]
+        ]
+    ]
+]
+
+
 class ModuleBuildSpec(
     namedtuple(
         "_ModuleBuildSpec",
@@ -131,4 +177,18 @@ class ModuleBuildSpec(
             .on_integration_image(SupportedPython.V3_7)
             .build()
         )
+
+        # We expect the tox file to define a mypy testenv, and we'll construct a separate
+        # buildkite build step for the mypy testenv.
+        if self.directory in MYPY_EXCLUDES:
+            tests.append(
+                StepBuilder("%s mypy" % package)
+                .run(
+                    "pip install mypy",
+                    "cd {directory}".format(directory=self.directory),
+                    "tox -vv -e mypy",
+                )
+                .on_integration_image(SupportedPython.V3_7)
+                .build()
+            )
         return tests
