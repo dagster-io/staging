@@ -41,6 +41,8 @@ class TestScheduleStorage:
     ```
     """
 
+    __test__ = False
+
     @pytest.fixture(name="storage", params=[])
     def schedule_storage(self, request):
         with request.param() as s:
