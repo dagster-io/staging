@@ -1,3 +1,5 @@
+from typing import List, cast
+
 import six
 from dagster import check
 from dagster.utils import ensure_single_item, frozendict
@@ -27,7 +29,7 @@ from .snap import ConfigSchemaSnapshot, ConfigTypeSnap
 from .stack import EvaluationStack
 from .traversal_context import ValidationContext
 
-VALID_FLOAT_TYPES = tuple(list(six.integer_types) + [float])
+VALID_FLOAT_TYPES = tuple(cast(List[type], list(six.integer_types)) + [float])
 
 
 def is_config_scalar_valid(config_type_snap, config_value):
