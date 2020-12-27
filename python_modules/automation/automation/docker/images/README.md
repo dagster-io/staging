@@ -30,7 +30,7 @@ in the `INTEGRATION_IMAGE_VERSION` variable.
 
 1. Update the git hash in `images/buildkite-integration-snapshot-builder/Dockerfile`.
 2. Ensure you are authed for ECR, e.g. by running
-   `aws ecr get-login-password --region us-west-1 | docker login --username AWS --password-stdin 968703565975.dkr.ecr.us-west-1.amazonaws.com`.
+   `aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 968703565975.dkr.ecr.us-west-2.amazonaws.com`.
 3. Run: `dagster-image build-all --name buildkite-integration-snapshot-builder --dagster-version 0.9.20`
    with the appropriate version set.
 4. Run: `dagster-image snapshot -t integration`
