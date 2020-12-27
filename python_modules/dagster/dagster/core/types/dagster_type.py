@@ -1,7 +1,7 @@
+import typing
 from abc import abstractmethod
 from enum import Enum as PythonEnum
 from functools import partial
-from typing import Dict
 
 import six
 from dagster import check
@@ -730,7 +730,7 @@ _RUNTIME_MAP = {
     BuiltinEnum.NOTHING: Nothing,
 }
 
-_PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY: Dict[type, DagsterType] = {}
+_PYTHON_TYPE_TO_DAGSTER_TYPE_MAPPING_REGISTRY: typing.Dict[type, DagsterType] = {}
 """Python types corresponding to user-defined RunTime types created using @map_to_dagster_type or
 as_dagster_type are registered here so that we can remap the Python types to runtime types."""
 
