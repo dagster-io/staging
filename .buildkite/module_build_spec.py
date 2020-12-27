@@ -53,6 +53,7 @@ MYPY_EXCLUDES = [
         ]
     )
 ]
+print(MYPY_EXCLUDES)
 
 
 class ModuleBuildSpec(
@@ -191,4 +192,6 @@ class ModuleBuildSpec(
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
             )
+        else:
+            print(self.directory)
         return tests
