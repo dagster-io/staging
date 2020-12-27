@@ -1,7 +1,7 @@
 import os
 
 import yaml
-from defines import TOX_MAP, SupportedPython, SupportedPythons
+from defines import COVERAGE_IMAGE_VERSION, TOX_MAP, SupportedPython, SupportedPythons
 from images import core_test_image_depends_fn, publish_test_images, test_image_depends_fn
 from module_build_spec import ModuleBuildSpec
 from step_builder import StepBuilder, wait_step
@@ -26,8 +26,8 @@ def airflow_extra_cmds_fn(version):
         'export AIRFLOW_HOME="/airflow"',
         "mkdir -p $${AIRFLOW_HOME}",
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
-        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com"',
-        "aws ecr get-login --no-include-email --region us-west-1 | sh",
+        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com"',
+        "aws ecr get-login --no-include-email --region us-west-2 | sh",
         r"aws s3 cp s3://\${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json "
         + GCP_CREDS_LOCAL_FILE,
         "export GOOGLE_APPLICATION_CREDENTIALS=" + GCP_CREDS_LOCAL_FILE,
@@ -92,7 +92,7 @@ def deploy_docker_example_extra_cmds_fn(_):
 def celery_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
-        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com"',
+        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com"',
         "pushd python_modules/libraries/dagster-celery",
         # Run the rabbitmq db. We are in docker running docker
         # so this will be a sibling container.
@@ -120,7 +120,7 @@ def celery_docker_extra_cmds_fn(version):
 def docker_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
-        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com"',
+        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com"',
         "pushd python_modules/libraries/dagster-docker/dagster_docker_tests/",
         "docker-compose up -d --remove-orphans",
         network_buildkite_container("postgres"),
@@ -134,9 +134,9 @@ def docker_extra_cmds_fn(version):
 def dagster_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
-        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com"',
-        "aws ecr get-login --no-include-email --region us-west-1 | sh",
-        "export IMAGE_NAME=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com/dagster-core-docker-buildkite:$${BUILDKITE_BUILD_ID}-"
+        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com"',
+        "aws ecr get-login --no-include-email --region us-west-2 | sh",
+        "export IMAGE_NAME=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/buildkite-test-image-core:$${BUILDKITE_BUILD_ID}-"
         + version,
         "pushd python_modules/dagster/dagster_tests",
         "docker-compose up -d --remove-orphans",  # clean up in hooks/pre-exit
@@ -179,7 +179,7 @@ def dbt_extra_cmds_fn(_):
 def k8s_extra_cmds_fn(version):
     return [
         "export DAGSTER_DOCKER_IMAGE_TAG=$${BUILDKITE_BUILD_ID}-" + version,
-        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com"',
+        'export DAGSTER_DOCKER_REPOSITORY="$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com"',
     ]
 
 
@@ -482,7 +482,7 @@ def coverage_step():
             "coveralls",  # add '--merge=coverage.js.json' to report JS coverage
         )
         .on_python_image(
-            "coverage-image:py3.7.8-2020-10-22T213422",
+            "buildkite-coverage:py3.8.7-{version}".format(version=COVERAGE_IMAGE_VERSION),
             [
                 "COVERALLS_REPO_TOKEN",  # exported by /env in ManagedSecretsBucket
                 "CI_NAME",
