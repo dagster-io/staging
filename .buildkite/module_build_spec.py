@@ -53,7 +53,6 @@ MYPY_EXCLUDES = [
         ]
     )
 ]
-print(MYPY_EXCLUDES)
 
 
 class ModuleBuildSpec(
@@ -181,7 +180,7 @@ class ModuleBuildSpec(
 
         # We expect the tox file to define a mypy testenv, and we'll construct a separate
         # buildkite build step for the mypy testenv.
-        if self.directory in MYPY_EXCLUDES:
+        if self.directory not in MYPY_EXCLUDES:
             tests.append(
                 StepBuilder("%s mypy" % package)
                 .run(
@@ -192,6 +191,5 @@ class ModuleBuildSpec(
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
             )
-        else:
-            print(self.directory)
+
         return tests
