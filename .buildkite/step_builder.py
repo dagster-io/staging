@@ -16,7 +16,7 @@ ECR_PLUGIN = "ecr#v2.0.0"
 
 
 AWS_ACCOUNT_ID = os.environ.get("AWS_ACCOUNT_ID")
-AWS_ECR_REGION = "us-west-1"
+AWS_ECR_REGION = "us-west-2"
 
 
 def wait_step():
@@ -69,7 +69,7 @@ class StepBuilder:
 
     def on_python_image(self, image, env=None):
         settings = self._base_docker_settings()
-        settings["image"] = "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
+        settings["image"] = "{account_id}.dkr.ecr.us-west-2.amazonaws.com/{image}".format(
             account_id=AWS_ACCOUNT_ID, image=image
         )
         settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
@@ -80,6 +80,23 @@ class StepBuilder:
             "no-include-email": True,
             "account-ids": AWS_ACCOUNT_ID,
             "region": AWS_ECR_REGION,
+        }
+        self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: settings}]
+        return self
+
+    def on_python_image_west1(self, image, env=None):
+        settings = self._base_docker_settings()
+        settings["image"] = "{account_id}.dkr.ecr.us-west-1.amazonaws.com/{image}".format(
+            account_id=AWS_ACCOUNT_ID, image=image
+        )
+        settings["volumes"] = ["/var/run/docker.sock:/var/run/docker.sock"]
+        settings["network"] = "kind"
+        settings["environment"] = ["BUILDKITE"] + (env or [])
+        ecr_settings = {
+            "login": True,
+            "no-include-email": True,
+            "account-ids": AWS_ACCOUNT_ID,
+            "region": "us-west-1",
         }
         self._step["plugins"] = [{ECR_PLUGIN: ecr_settings}, {DOCKER_PLUGIN: settings}]
         return self
