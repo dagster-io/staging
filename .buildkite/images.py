@@ -15,15 +15,15 @@ def publish_test_images():
             # see .buildkite/images/test_image_builder/Dockerfile
             .run(
                 # credentials
-                "/scriptdir/aws.pex ecr get-login --no-include-email --region us-west-1 | sh",
+                "/scriptdir/aws.pex ecr get-login --no-include-email --region us-west-2 | sh",
                 'export GOOGLE_APPLICATION_CREDENTIALS="/tmp/gcp-key-elementl-dev.json"',
                 "/scriptdir/aws.pex s3 cp s3://$${BUILDKITE_SECRETS_BUCKET}/gcp-key-elementl-dev.json $${GOOGLE_APPLICATION_CREDENTIALS}",
-                "export BASE_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com/buildkite-unit:py"
+                "export BASE_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/buildkite-unit:py"
                 + version
                 + "-"
                 + UNIT_IMAGE_VERSION,
                 # build and tag test image
-                "export TEST_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com/dagster-docker-buildkite:$${BUILDKITE_BUILD_ID}-"
+                "export TEST_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/buildkite-test-image:$${BUILDKITE_BUILD_ID}-"
                 + version,
                 "./python_modules/dagster-test/dagster_test/test_project/build.sh "
                 + version
@@ -34,7 +34,7 @@ def publish_test_images():
                 "docker push $${TEST_IMAGE}",
             )
             .on_python_image(
-                "test-image-builder:v2",
+                "buildkite-test-image-builder:py3.8.7-2020-12-27T210547",
                 [
                     "AIRFLOW_HOME",
                     "AWS_ACCOUNT_ID",
@@ -53,14 +53,14 @@ def publish_test_images():
             # see .buildkite/images/test_image_builder/Dockerfile
             .run(
                 # credentials
-                "/scriptdir/aws.pex ecr get-login --no-include-email --region us-west-1 | sh",
+                "/scriptdir/aws.pex ecr get-login --no-include-email --region us-west-2 | sh",
                 # set the base image
-                "export BASE_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com/buildkite-unit:py"
+                "export BASE_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/buildkite-unit:py"
                 + version
                 + "-"
                 + UNIT_IMAGE_VERSION,
                 # build and tag test image
-                "export TEST_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-1.amazonaws.com/dagster-core-docker-buildkite:$${BUILDKITE_BUILD_ID}-"
+                "export TEST_IMAGE=$${AWS_ACCOUNT_ID}.dkr.ecr.us-west-2.amazonaws.com/buildkite-test-image-core:$${BUILDKITE_BUILD_ID}-"
                 + version,
                 "./python_modules/dagster-test/build_core.sh " + version + " $${TEST_IMAGE}",
                 #
@@ -69,7 +69,7 @@ def publish_test_images():
                 "docker push $${TEST_IMAGE}",
             )
             .on_python_image(
-                "test-image-builder:v2",
+                "buildkite-test-image-builder:py3.8.7-2020-12-27T210547",
                 [
                     "AWS_ACCOUNT_ID",
                     "AWS_ACCESS_KEY_ID",
