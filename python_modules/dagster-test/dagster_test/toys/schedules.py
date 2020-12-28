@@ -115,6 +115,27 @@ def materialization_schedule():
     )
 
 
+def duplicate_schedule():
+    schedule_name = "many_events_partitioned_duplicate"
+    partition_set = PartitionSetDefinition(
+        name="many_events_five_minutely",
+        pipeline_name="many_events",
+        partition_fn=date_partition_range(start=datetime.datetime(2020, 1, 1)),
+        run_config_fn_for_partition=lambda _: {"intermediate_storage": {"filesystem": {}}},
+    )
+
+    def _should_execute(context):
+        return backfill_should_execute(context, partition_set)
+
+    return partition_set.create_schedule_definition(
+        schedule_name=schedule_name,
+        cron_schedule="*/5 * * * *",  # tick every minute
+        partition_selector=backfilling_partition_selector,
+        should_execute=_should_execute,
+        execution_timezone=_toys_tz_info(),
+    )
+
+
 def longitudinal_schedule():
     from .longitudinal import longitudinal_config
 
@@ -149,6 +170,7 @@ def get_toys_schedules():
         backfill_test_schedule(),
         longitudinal_schedule(),
         materialization_schedule(),
+        duplicate_schedule(),
         ScheduleDefinition(
             name="many_events_every_min",
             cron_schedule="* * * * *",
