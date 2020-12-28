@@ -15,6 +15,7 @@ Why not pickle?
 """
 import hashlib
 import importlib
+import inspect
 import sys
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple
@@ -28,7 +29,33 @@ from dagster.utils import compose
 _WHITELIST_MAP = {
     "types": {"tuple": {}, "enum": {}},
     "persistence": {},
+    "serializers": {},
 }
+
+
+class Serializer:
+    @abstractmethod
+    def value_from_storage_dict(self, storage_dict, klass):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def value_to_storage_dict(self, value, whitelist_map):
+        raise NotImplementedError()
+
+
+class DefaultSerializer(Serializer):
+    def value_from_storage_dict(self, storage_dict, klass):
+        return klass.__new__(klass, **storage_dict)
+
+    def value_to_storage_dict(self, value, whitelist_map):
+        base_dict = {
+            key: _pack_value(value, whitelist_map) for key, value in value._asdict().items()
+        }
+        base_dict["__class__"] = value.__class__.__name__
+        return base_dict
+
+
+DEFAULT_SERIALIZER = DefaultSerializer()
 
 
 def create_snapshot_id(snapshot):
@@ -62,15 +89,6 @@ def _get_dunder_new_params(klass):
 
 class SerdesClassUsageError(Exception):
     pass
-
-
-class Persistable(six.with_metaclass(ABCMeta)):
-    def to_storage_value(self):
-        return default_to_storage_value(self, _WHITELIST_MAP)
-
-    @classmethod
-    def from_storage_dict(cls, storage_dict):
-        return default_from_storage_dict(cls, storage_dict)
 
 
 def _check_serdes_tuple_class_invariants(klass):
@@ -135,14 +153,13 @@ def _check_serdes_tuple_class_invariants(klass):
 
 def _whitelist_for_persistence(whitelist_map):
     def __whitelist_for_persistence(klass):
-        check.subclass_param(klass, "klass", Persistable)
         whitelist_map["persistence"][klass.__name__] = klass
         return klass
 
     return __whitelist_for_persistence
 
 
-def _whitelist_for_serdes(whitelist_map):
+def _whitelist_for_serdes(whitelist_map, serializer):
     def __whitelist_for_serdes(klass):
         if issubclass(klass, Enum):
             whitelist_map["types"]["enum"][klass.__name__] = klass
@@ -153,6 +170,7 @@ def _whitelist_for_serdes(whitelist_map):
             if sys.version_info.major >= 3:
                 _check_serdes_tuple_class_invariants(klass)
             whitelist_map["types"]["tuple"][klass.__name__] = klass
+            whitelist_map["serializers"][klass.__name__] = serializer
         else:
             check.failed("Can not whitelist class {klass} for serdes".format(klass=klass))
 
@@ -161,17 +179,28 @@ def _whitelist_for_serdes(whitelist_map):
     return __whitelist_for_serdes
 
 
-def whitelist_for_serdes(klass):
-    check.class_param(klass, "klass")
-    return _whitelist_for_serdes(whitelist_map=_WHITELIST_MAP)(klass)
+def whitelist_for_serdes(serializer):
+    if inspect.isclass(serializer):
+        return _whitelist_for_serdes(whitelist_map=_WHITELIST_MAP, serializer=DEFAULT_SERIALIZER)(
+            serializer
+        )
+    else:
+        check.inst_param(serializer, "serializer", Serializer)
+        return _whitelist_for_serdes(whitelist_map=_WHITELIST_MAP, serializer=serializer)
 
 
-def whitelist_for_persistence(klass):
-    check.class_param(klass, "klass")
-    return compose(
-        _whitelist_for_persistence(whitelist_map=_WHITELIST_MAP),
-        _whitelist_for_serdes(whitelist_map=_WHITELIST_MAP),
-    )(klass)
+def whitelist_for_persistence(serializer):
+    if inspect.isclass(serializer):
+        return compose(
+            _whitelist_for_persistence(whitelist_map=_WHITELIST_MAP),
+            _whitelist_for_serdes(whitelist_map=_WHITELIST_MAP, serializer=DEFAULT_SERIALIZER),
+        )(serializer)
+    else:
+        check.inst_param(serializer, "serializer", Serializer)
+        return compose(
+            _whitelist_for_persistence(whitelist_map=_WHITELIST_MAP),
+            _whitelist_for_serdes(whitelist_map=_WHITELIST_MAP, serializer=serializer),
+        )
 
 
 def pack_value(val):
@@ -188,7 +217,8 @@ def _pack_value(val, whitelist_map):
             "Can only serialize whitelisted namedtuples, received tuple {}".format(val),
         )
         if klass_name in whitelist_map["persistence"]:
-            return val.to_storage_value()
+            serializer = whitelist_map["serializers"][klass_name]
+            return serializer.value_to_storage_dict(val, whitelist_map)
         base_dict = {key: _pack_value(value, whitelist_map) for key, value in val._asdict().items()}
         base_dict["__class__"] = klass_name
         return base_dict
@@ -252,7 +282,8 @@ def _unpack_value(val, whitelist_map):
         unpacked_val = {key: _unpack_value(value, whitelist_map) for key, value in val.items()}
 
         if klass_name in whitelist_map["persistence"]:
-            return klass.from_storage_dict(unpacked_val)
+            serializer = whitelist_map["serializers"][klass_name]
+            return serializer.value_from_storage_dict(unpacked_val, klass)
 
         # Naively implements backwards compatibility by filtering arguments that aren't present in
         # the constructor. If a property is present in the serialized object, but doesn't exist in
@@ -290,16 +321,6 @@ def deserialize_json_to_dagster_namedtuple(json_str):
 
 def _deserialize_json_to_dagster_namedtuple(json_str, whitelist_map):
     return _unpack_value(seven.json.loads(json_str), whitelist_map=whitelist_map)
-
-
-def default_to_storage_value(value, whitelist_map):
-    base_dict = {key: _pack_value(value, whitelist_map) for key, value in value._asdict().items()}
-    base_dict["__class__"] = value.__class__.__name__
-    return base_dict
-
-
-def default_from_storage_dict(cls, storage_dict):
-    return cls.__new__(cls, **storage_dict)
 
 
 @whitelist_for_serdes

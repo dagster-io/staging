@@ -6,7 +6,7 @@ from enum import Enum
 
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
-from dagster.serdes import Persistable, whitelist_for_persistence, whitelist_for_serdes
+from dagster.serdes import DefaultSerializer, whitelist_for_persistence, whitelist_for_serdes
 
 from .utils import DEFAULT_OUTPUT, check_valid_name
 
@@ -32,7 +32,7 @@ def parse_asset_key_string(s):
 
 
 @whitelist_for_persistence
-class AssetKey(namedtuple("_AssetKey", "path"), Persistable):
+class AssetKey(namedtuple("_AssetKey", "path")):
     """ Object representing the structure of an asset key.  Takes in a sanitized string, list of
     strings, or tuple of strings.
 
@@ -132,9 +132,7 @@ class AssetKey(namedtuple("_AssetKey", "path"), Persistable):
 
 
 @whitelist_for_persistence
-class EventMetadataEntry(
-    namedtuple("_EventMetadataEntry", "label description entry_data"), Persistable
-):
+class EventMetadataEntry(namedtuple("_EventMetadataEntry", "label description entry_data")):
     """The standard structure for describing metadata for Dagster events.
 
     Lists of objects of this type can be passed as arguments to Dagster events and will be displayed
@@ -352,7 +350,7 @@ class EventMetadataEntry(
 
 
 @whitelist_for_persistence
-class TextMetadataEntryData(namedtuple("_TextMetadataEntryData", "text"), Persistable):
+class TextMetadataEntryData(namedtuple("_TextMetadataEntryData", "text")):
     """Container class for text metadata entry data.
 
     Args:
@@ -366,7 +364,7 @@ class TextMetadataEntryData(namedtuple("_TextMetadataEntryData", "text"), Persis
 
 
 @whitelist_for_persistence
-class UrlMetadataEntryData(namedtuple("_UrlMetadataEntryData", "url"), Persistable):
+class UrlMetadataEntryData(namedtuple("_UrlMetadataEntryData", "url")):
     """Container class for URL metadata entry data.
 
     Args:
@@ -380,7 +378,7 @@ class UrlMetadataEntryData(namedtuple("_UrlMetadataEntryData", "url"), Persistab
 
 
 @whitelist_for_persistence
-class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path"), Persistable):
+class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path")):
     """Container class for path metadata entry data.
 
     Args:
@@ -394,7 +392,7 @@ class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path"), Persis
 
 
 @whitelist_for_persistence
-class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data"), Persistable):
+class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data")):
     """Container class for JSON metadata entry data.
 
     Args:
@@ -408,7 +406,7 @@ class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data"), Persis
 
 
 @whitelist_for_persistence
-class MarkdownMetadataEntryData(namedtuple("_MarkdownMetadataEntryData", "md_str"), Persistable):
+class MarkdownMetadataEntryData(namedtuple("_MarkdownMetadataEntryData", "md_str")):
     """Container class for markdown metadata entry data.
 
     Args:
@@ -423,7 +421,7 @@ class MarkdownMetadataEntryData(namedtuple("_MarkdownMetadataEntryData", "md_str
 
 @whitelist_for_persistence
 class PythonArtifactMetadataEntryData(
-    namedtuple("_PythonArtifactMetadataEntryData", "module name"), Persistable
+    namedtuple("_PythonArtifactMetadataEntryData", "module name")
 ):
     def __new__(cls, module, name):
         return super(PythonArtifactMetadataEntryData, cls).__new__(
@@ -432,7 +430,7 @@ class PythonArtifactMetadataEntryData(
 
 
 @whitelist_for_persistence
-class FloatMetadataEntryData(namedtuple("_FloatMetadataEntryData", "value"), Persistable):
+class FloatMetadataEntryData(namedtuple("_FloatMetadataEntryData", "value")):
     """Container class for float metadata entry data.
 
     Args:
@@ -446,7 +444,7 @@ class FloatMetadataEntryData(namedtuple("_FloatMetadataEntryData", "value"), Per
 
 
 @whitelist_for_persistence
-class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value"), Persistable):
+class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value")):
     """Container class for int metadata entry data.
 
     Args:
@@ -517,8 +515,7 @@ class DynamicOutput(namedtuple("_DynamicOutput", "value mapping_key output_name"
 
 @whitelist_for_persistence
 class AssetMaterialization(
-    namedtuple("_AssetMaterialization", "asset_key description metadata_entries partition"),
-    Persistable,
+    namedtuple("_AssetMaterialization", "asset_key description metadata_entries partition")
 ):
     """Event indicating that a solid has materialized an asset.
 
@@ -584,10 +581,16 @@ class AssetMaterialization(
         )
 
 
-@whitelist_for_persistence
+class MaterializationSerializer(DefaultSerializer):
+    def value_from_storage_dict(self, storage_dict, klass):
+        # override the default `from_storage_dict` implementation in order to skip the deprecation
+        # warning for historical Materialization events, loaded from event_log storage
+        return Materialization(skip_deprecation_warning=True, **storage_dict)
+
+
+@whitelist_for_persistence(serializer=MaterializationSerializer())
 class Materialization(
-    namedtuple("_Materialization", "label description metadata_entries asset_key partition"),
-    Persistable,
+    namedtuple("_Materialization", "label description metadata_entries asset_key partition")
 ):
     """Event indicating that a solid has materialized a value.
 
@@ -660,16 +663,10 @@ class Materialization(
             asset_key=asset_key,
         )
 
-    @classmethod
-    def from_storage_dict(cls, storage_dict):
-        # override the default `from_storage_dict` implementation in order to skip the deprecation
-        # warning for historical Materialization events, loaded from event_log storage
-        return Materialization.__new__(cls, skip_deprecation_warning=True, **storage_dict)
-
 
 @whitelist_for_persistence
 class ExpectationResult(
-    namedtuple("_ExpectationResult", "success label description metadata_entries"), Persistable
+    namedtuple("_ExpectationResult", "success label description metadata_entries")
 ):
     """Event corresponding to a data quality test.
 
@@ -698,7 +695,7 @@ class ExpectationResult(
 
 
 @whitelist_for_persistence
-class TypeCheck(namedtuple("_TypeCheck", "success description metadata_entries"), Persistable):
+class TypeCheck(namedtuple("_TypeCheck", "success description metadata_entries")):
     """Event corresponding to a successful typecheck.
 
     Events of this type should be returned by user-defined type checks when they need to encapsulate
