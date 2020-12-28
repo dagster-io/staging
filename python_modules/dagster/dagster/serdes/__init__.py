@@ -18,6 +18,7 @@ import importlib
 import sys
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple
+from dataclasses import asdict, is_dataclass
 from enum import Enum
 
 import six
@@ -26,7 +27,7 @@ from dagster import check, seven
 from dagster.utils import compose
 
 _WHITELIST_MAP = {
-    "types": {"tuple": {}, "enum": {}},
+    "types": {"tuple": {}, "enum": {}, "dataclass": {}},
     "persistence": {},
 }
 
@@ -153,6 +154,8 @@ def _whitelist_for_serdes(whitelist_map):
             if sys.version_info.major >= 3:
                 _check_serdes_tuple_class_invariants(klass)
             whitelist_map["types"]["tuple"][klass.__name__] = klass
+        elif is_dataclass(klass):
+            whitelist_map["types"]["dataclass"][klass.__name__] = klass
         else:
             check.failed("Can not whitelist class {klass} for serdes".format(klass=klass))
 
@@ -192,6 +195,18 @@ def _pack_value(val, whitelist_map):
         base_dict = {key: _pack_value(value, whitelist_map) for key, value in val._asdict().items()}
         base_dict["__class__"] = klass_name
         return base_dict
+    if is_dataclass(val):
+        klass_name = val.__class__.__name__
+        check.invariant(
+            klass_name in whitelist_map["types"]["dataclass"],
+            "Can only serialize whitelisted dataclasses, received dataclass {}".format(val),
+        )
+        if klass_name in whitelist_map["persistence"]:
+            return val.to_storage_value()
+        base_dict = {key: _pack_value(value, whitelist_map) for key, value in asdict(val).items()}
+        base_dict["__class__"] = klass_name
+        return base_dict
+
     if isinstance(val, Enum):
         klass_name = val.__class__.__name__
         check.invariant(
@@ -293,7 +308,15 @@ def _deserialize_json_to_dagster_namedtuple(json_str, whitelist_map):
 
 
 def default_to_storage_value(value, whitelist_map):
-    base_dict = {key: _pack_value(value, whitelist_map) for key, value in value._asdict().items()}
+    if is_dataclass(value):
+        base_dict = {key: _pack_value(value, whitelist_map) for key, value in asdict(value).items()}
+    elif isinstance(value, tuple):
+        base_dict = {
+            key: _pack_value(value, whitelist_map) for key, value in value._asdict().items()
+        }
+    else:
+        check.invariant("value must be either dataclass or tuple")
+
     base_dict["__class__"] = value.__class__.__name__
     return base_dict
 

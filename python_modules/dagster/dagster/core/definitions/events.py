@@ -2,7 +2,9 @@ import os
 import re
 import warnings
 from collections import namedtuple
+from dataclasses import dataclass
 from enum import Enum
+from typing import Optional, Union
 
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
@@ -132,29 +134,137 @@ class AssetKey(namedtuple("_AssetKey", "path"), Persistable):
 
 
 @whitelist_for_persistence
-class EventMetadataEntry(
-    namedtuple("_EventMetadataEntry", "label description entry_data"), Persistable
+class TextMetadataEntryData(namedtuple("_TextMetadataEntryData", "text"), Persistable):
+    """Container class for text metadata entry data.
+
+    Args:
+        text (Optional[str]): The text data.
+    """
+
+    def __new__(cls, text):
+        return super(TextMetadataEntryData, cls).__new__(
+            cls, check.opt_str_param(text, "text", default="")
+        )
+
+
+@whitelist_for_persistence
+class UrlMetadataEntryData(namedtuple("_UrlMetadataEntryData", "url"), Persistable):
+    """Container class for URL metadata entry data.
+
+    Args:
+        url (Optional[str]): The URL as a string.
+    """
+
+    def __new__(cls, url):
+        return super(UrlMetadataEntryData, cls).__new__(
+            cls, check.opt_str_param(url, "url", default="")
+        )
+
+
+@whitelist_for_persistence
+class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path"), Persistable):
+    """Container class for path metadata entry data.
+
+    Args:
+        path (Optional[str]): The path as a string.
+    """
+
+    def __new__(cls, path):
+        return super(PathMetadataEntryData, cls).__new__(
+            cls, check.opt_str_param(path, "path", default="")
+        )
+
+
+@whitelist_for_persistence
+class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data"), Persistable):
+    """Container class for JSON metadata entry data.
+
+    Args:
+        data (Optional[Dict[str, Any]]): The JSON data.
+    """
+
+    def __new__(cls, data):
+        return super(JsonMetadataEntryData, cls).__new__(
+            cls, check.opt_dict_param(data, "data", key_type=str)
+        )
+
+
+@whitelist_for_persistence
+class MarkdownMetadataEntryData(namedtuple("_MarkdownMetadataEntryData", "md_str"), Persistable):
+    """Container class for markdown metadata entry data.
+
+    Args:
+        md_str (Optional[str]): The markdown as a string.
+    """
+
+    def __new__(cls, md_str):
+        return super(MarkdownMetadataEntryData, cls).__new__(
+            cls, check.opt_str_param(md_str, "md_str", default="")
+        )
+
+
+@whitelist_for_persistence
+class PythonArtifactMetadataEntryData(
+    namedtuple("_PythonArtifactMetadataEntryData", "module name"), Persistable
 ):
+    def __new__(cls, module, name):
+        return super(PythonArtifactMetadataEntryData, cls).__new__(
+            cls, check.str_param(module, "module"), check.str_param(name, "name")
+        )
+
+
+@whitelist_for_persistence
+class FloatMetadataEntryData(namedtuple("_FloatMetadataEntryData", "value"), Persistable):
+    """Container class for float metadata entry data.
+
+    Args:
+        value (Optional[float]): The float value.
+    """
+
+    def __new__(cls, value):
+        return super(FloatMetadataEntryData, cls).__new__(
+            cls, check.opt_float_param(value, "value")
+        )
+
+
+@whitelist_for_persistence
+class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value"), Persistable):
+    """Container class for int metadata entry data.
+
+    Args:
+        value (Optional[int]): The int value.
+    """
+
+    def __new__(cls, value):
+        return super(IntMetadataEntryData, cls).__new__(cls, check.opt_int_param(value, "value"))
+
+
+@whitelist_for_persistence
+@dataclass(frozen=True)
+class EventMetadataEntry(Persistable):
     """The standard structure for describing metadata for Dagster events.
 
     Lists of objects of this type can be passed as arguments to Dagster events and will be displayed
     in Dagit and other tooling.
 
     Args:
-        label (str): Short display label for this metadata entry.
-        description (Optional[str]): A human-readable description of this metadata entry.
-        entry_data (Union[(Union[TextMetadataEntryData, UrlMetadataEntryData, PathMetadataEntryData, JsonMetadataEntryData, MarkdownMetadataEntryData, FloatMetadataEntryData, IntMetadataEntryData]):
-            Typed metadata entry data. The different types allow for customized display in tools
-            like dagit.
+        label: Short display label for this metadata entry.
+        description: A human-readable description of this metadata entry.
+        entry_data: Typed metadata entry data. The different types allow for customized display in
+            tools like dagit.
     """
 
-    def __new__(cls, label, description, entry_data):
-        return super(EventMetadataEntry, cls).__new__(
-            cls,
-            check.str_param(label, "label"),
-            check.opt_str_param(description, "description"),
-            check.inst_param(entry_data, "entry_data", EntryDataUnion),
-        )
+    label: str
+    description: Optional[str]
+    entry_data: Union[
+        TextMetadataEntryData,
+        UrlMetadataEntryData,
+        PathMetadataEntryData,
+        JsonMetadataEntryData,
+        MarkdownMetadataEntryData,
+        FloatMetadataEntryData,
+        IntMetadataEntryData,
+    ]
 
     @staticmethod
     def text(text, label, description=None):
@@ -349,112 +459,6 @@ class EventMetadataEntry(
         """
 
         return EventMetadataEntry(label, description, IntMetadataEntryData(value))
-
-
-@whitelist_for_persistence
-class TextMetadataEntryData(namedtuple("_TextMetadataEntryData", "text"), Persistable):
-    """Container class for text metadata entry data.
-
-    Args:
-        text (Optional[str]): The text data.
-    """
-
-    def __new__(cls, text):
-        return super(TextMetadataEntryData, cls).__new__(
-            cls, check.opt_str_param(text, "text", default="")
-        )
-
-
-@whitelist_for_persistence
-class UrlMetadataEntryData(namedtuple("_UrlMetadataEntryData", "url"), Persistable):
-    """Container class for URL metadata entry data.
-
-    Args:
-        url (Optional[str]): The URL as a string.
-    """
-
-    def __new__(cls, url):
-        return super(UrlMetadataEntryData, cls).__new__(
-            cls, check.opt_str_param(url, "url", default="")
-        )
-
-
-@whitelist_for_persistence
-class PathMetadataEntryData(namedtuple("_PathMetadataEntryData", "path"), Persistable):
-    """Container class for path metadata entry data.
-
-    Args:
-        path (Optional[str]): The path as a string.
-    """
-
-    def __new__(cls, path):
-        return super(PathMetadataEntryData, cls).__new__(
-            cls, check.opt_str_param(path, "path", default="")
-        )
-
-
-@whitelist_for_persistence
-class JsonMetadataEntryData(namedtuple("_JsonMetadataEntryData", "data"), Persistable):
-    """Container class for JSON metadata entry data.
-
-    Args:
-        data (Optional[Dict[str, Any]]): The JSON data.
-    """
-
-    def __new__(cls, data):
-        return super(JsonMetadataEntryData, cls).__new__(
-            cls, check.opt_dict_param(data, "data", key_type=str)
-        )
-
-
-@whitelist_for_persistence
-class MarkdownMetadataEntryData(namedtuple("_MarkdownMetadataEntryData", "md_str"), Persistable):
-    """Container class for markdown metadata entry data.
-
-    Args:
-        md_str (Optional[str]): The markdown as a string.
-    """
-
-    def __new__(cls, md_str):
-        return super(MarkdownMetadataEntryData, cls).__new__(
-            cls, check.opt_str_param(md_str, "md_str", default="")
-        )
-
-
-@whitelist_for_persistence
-class PythonArtifactMetadataEntryData(
-    namedtuple("_PythonArtifactMetadataEntryData", "module name"), Persistable
-):
-    def __new__(cls, module, name):
-        return super(PythonArtifactMetadataEntryData, cls).__new__(
-            cls, check.str_param(module, "module"), check.str_param(name, "name")
-        )
-
-
-@whitelist_for_persistence
-class FloatMetadataEntryData(namedtuple("_FloatMetadataEntryData", "value"), Persistable):
-    """Container class for float metadata entry data.
-
-    Args:
-        value (Optional[float]): The float value.
-    """
-
-    def __new__(cls, value):
-        return super(FloatMetadataEntryData, cls).__new__(
-            cls, check.opt_float_param(value, "value")
-        )
-
-
-@whitelist_for_persistence
-class IntMetadataEntryData(namedtuple("_IntMetadataEntryData", "value"), Persistable):
-    """Container class for int metadata entry data.
-
-    Args:
-        value (Optional[int]): The int value.
-    """
-
-    def __new__(cls, value):
-        return super(IntMetadataEntryData, cls).__new__(cls, check.opt_int_param(value, "value"))
 
 
 EntryDataUnion = (
