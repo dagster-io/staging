@@ -1,5 +1,6 @@
-from defines import TOX_MAP, UNIT_IMAGE_VERSION, SupportedPythons
-from step_builder import StepBuilder
+from ..defines import TOX_MAP, SupportedPythons
+from ..images.versions import UNIT_IMAGE_VERSION
+from ..step_builder import StepBuilder
 
 
 def publish_test_images():
