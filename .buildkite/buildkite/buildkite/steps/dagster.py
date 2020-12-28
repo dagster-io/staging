@@ -1,24 +1,15 @@
 import os
 
-import yaml
-from defines import COVERAGE_IMAGE_VERSION, TOX_MAP, SupportedPython, SupportedPythons
-from images import core_test_image_depends_fn, publish_test_images, test_image_depends_fn
-from module_build_spec import ModuleBuildSpec
-from step_builder import StepBuilder, wait_step
-from utils import (
-    check_for_release,
-    connect_sibling_docker_container,
-    is_phab_and_dagit_only,
-    network_buildkite_container,
-)
+from ..defines import GCP_CREDS_LOCAL_FILE, TOX_MAP, SupportedPython, SupportedPythons
+from ..images.versions import COVERAGE_IMAGE_VERSION
+from ..module_build_spec import ModuleBuildSpec
+from ..step_builder import StepBuilder
+from ..utils import check_for_release, connect_sibling_docker_container, network_buildkite_container
+from .docs import next_docs_build_tests
+from .helm import helm_steps
+from .test_images import core_test_image_depends_fn, publish_test_images, test_image_depends_fn
 
 SCRIPT_PATH = os.path.dirname(os.path.abspath(__file__))
-
-# https://github.com/dagster-io/dagster/issues/1662
-DO_COVERAGE = True
-
-# GCP tests need appropriate credentials
-GCP_CREDS_LOCAL_FILE = "/tmp/gcp-key-elementl-dev.json"
 
 
 def airflow_extra_cmds_fn(version):
@@ -524,45 +515,6 @@ def pylint_steps():
     ]
 
 
-def next_docs_build_tests():
-    return [
-        StepBuilder("next docs build tests")
-        .run(
-            "pip install -e python_modules/automation",
-            "pip install -r docs-requirements.txt -qqq",
-            "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
-            "cd docs",
-            "make NODE_ENV=production VERSION=master full_docs_build",
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-        StepBuilder("next docs tests")
-        .run(
-            "pip install -e python_modules/automation",
-            "pip install -r docs-requirements.txt -qqq",
-            "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
-            "cd docs",
-            "make buildnext",
-            "cd next",
-            "yarn test",
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-        StepBuilder("documentation coverage")
-        .run(
-            "make install_dev_python_modules",
-            "pip install -e python_modules/automation",
-            "pip install -r docs-requirements.txt -qqq",
-            "cd docs",
-            "make updateindex",
-            "pytest -vv test_doc_build.py",
-            "git diff --exit-code",
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-    ]
-
-
 def version_equality_checks(version=SupportedPython.V3_7):
     return [
         StepBuilder("version equality checks for libraries")
@@ -572,60 +524,7 @@ def version_equality_checks(version=SupportedPython.V3_7):
     ]
 
 
-def dagit_steps():
-    return [
-        StepBuilder("dagit webapp tests")
-        .run(
-            "pip install -r python_modules/dagster/dev-requirements.txt -qqq",
-            "pip install -e python_modules/dagster -qqq",
-            "pip install -e python_modules/dagster-graphql -qqq",
-            "pip install -e python_modules/libraries/dagster-cron -qqq",
-            "pip install -e python_modules/libraries/dagster-slack -qqq",
-            "pip install -e python_modules/dagit -qqq",
-            "pip install -e examples/legacy_examples -qqq",
-            "cd js_modules/dagit",
-            "yarn install",
-            "yarn run ts",
-            "yarn run jest --collectCoverage --watchAll=false",
-            "yarn run check-prettier",
-            "yarn run check-lint",
-            "yarn run download-schema",
-            "yarn run generate-types",
-            "git diff --exit-code",
-            "mv coverage/lcov.info lcov.dagit.$BUILDKITE_BUILD_ID.info",
-            "buildkite-agent artifact upload lcov.dagit.$BUILDKITE_BUILD_ID.info",
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-    ]
-
-
-def helm_steps():
-    base_paths = "'helm/dagster/*.yml' 'helm/dagster/*.yaml'"
-    base_paths_ignored = "':!:helm/dagster/templates/*.yml' ':!:helm/dagster/templates/*.yaml'"
-    return [
-        StepBuilder("yamllint helm")
-        .run(
-            "pip install yamllint",
-            "yamllint -c .yamllint.yaml --strict `git ls-files {base_paths} {base_paths_ignored}`".format(
-                base_paths=base_paths, base_paths_ignored=base_paths_ignored
-            ),
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-        StepBuilder("validate helm schema")
-        .run(
-            "pip install -e python_modules/automation",
-            "dagster-helm schema --command=apply",
-            "git diff --exit-code",
-            "helm lint helm/dagster -f helm/dagster/values.yaml",
-        )
-        .on_integration_image(SupportedPython.V3_7)
-        .build(),
-    ]
-
-
-def python_steps():
+def dagster_steps():
     steps = []
     steps += publish_test_images()
 
@@ -665,34 +564,6 @@ def python_steps():
     steps += version_equality_checks()
     steps += next_docs_build_tests()
     steps += examples_tests()
+    steps += helm_steps()
 
     return steps
-
-
-if __name__ == "__main__":
-    all_steps = dagit_steps()
-    dagit_only = is_phab_and_dagit_only()
-
-    # If we're in a Phabricator diff and are only making dagit changes, skip the
-    # remaining steps since they're not relevant to the diff.
-    if not dagit_only:
-        all_steps += python_steps() + helm_steps()
-
-        if DO_COVERAGE:
-            all_steps += [wait_step(), coverage_step()]
-
-    print(  # pylint: disable=print-call
-        yaml.dump(
-            {
-                "env": {
-                    "CI_NAME": "buildkite",
-                    "CI_BUILD_NUMBER": "$BUILDKITE_BUILD_NUMBER",
-                    "CI_BUILD_URL": "$BUILDKITE_BUILD_URL",
-                    "CI_BRANCH": "$BUILDKITE_BRANCH",
-                    "CI_PULL_REQUEST": "$BUILDKITE_PULL_REQUEST",
-                },
-                "steps": all_steps,
-            },
-            default_flow_style=False,
-        )
-    )
