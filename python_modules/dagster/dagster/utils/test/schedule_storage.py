@@ -30,8 +30,6 @@ class TestScheduleStorage:
     For example:
 
     ```
-    TestScheduleStorage.__test__ = False
-
     class TestMyStorageImplementation(TestScheduleStorage):
         __test__ = True
 

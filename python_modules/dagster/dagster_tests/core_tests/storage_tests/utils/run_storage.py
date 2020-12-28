@@ -19,8 +19,6 @@ class TestRunStorage:
     For example:
 
     ```
-    TestRunStorage.__test__ = False
-
     class TestMyStorageImplementation(TestRunStorage):
         __test__ = True
 
