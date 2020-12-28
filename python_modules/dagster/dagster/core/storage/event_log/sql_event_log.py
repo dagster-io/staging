@@ -514,6 +514,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
         return len(results) > 0
 
     def get_all_asset_keys(self, prefix_path=None):
+        lazy_migrate = False
         if not prefix_path:
             if self.has_secondary_index(SECONDARY_INDEX_ASSET_KEY):
                 query = db.select([AssetKeyTable.c.asset_key])
@@ -523,6 +524,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
                     .where(SqlEventLogStorageTable.c.asset_key != None)
                     .distinct()
                 )
+                lazy_migrate = True
         else:
             if self.has_secondary_index(SECONDARY_INDEX_ASSET_KEY):
                 query = db.select([AssetKeyTable.c.asset_key]).where(
@@ -552,9 +554,29 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
 
         with self.connect() as conn:
             results = conn.execute(query).fetchall()
+            if lazy_migrate:
+                self._lazy_migrate_secondary_index_asset_key(
+                    conn, [asset_key for (asset_key,) in results if asset_key]
+                )
         return list(
             set([AssetKey.from_db_string(asset_key) for (asset_key,) in results if asset_key])
         )
+
+    def _lazy_migrate_secondary_index_asset_key(self, conn, asset_keys):
+        results = conn.execute(db.select([AssetKeyTable.c.asset_key])).fetchall()
+        existing = [asset_key for (asset_key,) in results if asset_key]
+        to_migrate = set(asset_keys) - set(existing)
+        for asset_key in to_migrate:
+            try:
+                conn.execute(
+                    AssetKeyTable.insert().values(  # pylint: disable=no-value-for-parameter
+                        asset_key=AssetKey.from_db_string(asset_key).to_string()
+                    )
+                )
+            except db.exc.IntegrityError:
+                # asset key already present
+                pass
+        self.enable_secondary_index(SECONDARY_INDEX_ASSET_KEY)
 
     def get_asset_events(self, asset_key, partitions=None, cursor=None, limit=None):
         check.inst_param(asset_key, "asset_key", AssetKey)
