@@ -240,6 +240,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         supported_pythons=SupportedPythons,
         extra_cmds_fn=dbt_example_extra_cmds_fn,
         buildkite_label="dbt_example",
+        upload_coverage=False,
     ),
     ModuleBuildSpec(
         "examples/deploy_docker",
@@ -262,6 +263,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         "examples/legacy_examples",
         supported_pythons=SupportedPythons,
         extra_cmds_fn=legacy_examples_extra_cmds_fn,
+        upload_coverage=False,
     ),
     ModuleBuildSpec(
         "examples/docs_snippets",
@@ -398,7 +400,7 @@ DAGSTER_PACKAGES_WITH_CUSTOM_TESTS = [
         retries=2,
     ),
     ModuleBuildSpec("python_modules/libraries/dagster-pyspark", supported_pythons=SupportedPythons),
-    ModuleBuildSpec("python_modules/libraries/lakehouse", supported_pythons=SupportedPythons),
+    ModuleBuildSpec("python_modules/libraries/lakehouse", upload_coverage=False),
 ]
 
 
@@ -478,11 +480,13 @@ def coverage_step():
             "coverage debug sys",
             "coverage debug data",
             "coverage combine",
-            "coveralls-lcov -v -n lcov.* > coverage.js.json",
+            # coveralls-lcov is currently not working - fails with:
+            # converter.rb:63:in `initialize': No such file or directory @ rb_sysopen - jest/mocks/dagre_layout.worker.ts
+            # "coveralls-lcov -v -n lcov.* > coverage.js.json",
             "coveralls",  # add '--merge=coverage.js.json' to report JS coverage
         )
         .on_python_image(
-            "coverage-image:py3.7.8-2020-10-22T213422",
+            "coverage-image:py3.7.8-2020-10-21T190732",
             [
                 "COVERALLS_REPO_TOKEN",  # exported by /env in ManagedSecretsBucket
                 "CI_NAME",
