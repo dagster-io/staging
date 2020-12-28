@@ -1,4 +1,5 @@
 from collections import namedtuple
+from typing import NamedTuple, Optional, Union
 
 from dagster import check
 from dagster.core.definitions import AssetMaterialization, Materialization, OutputDefinition
@@ -25,13 +26,22 @@ class StepOutput(namedtuple("_StepOutput", "output_def should_materialize")):
 
 
 @whitelist_for_serdes
-class StepOutputData(
-    namedtuple(
-        "_StepOutputData",
-        "step_output_handle intermediate_materialization type_check_data version",
-    )
-):
+class StepOutputHandle(NamedTuple):
+    """A reference to a specific output that has or will occur within the scope of an execution"""
+
+    step_key: str
+    output_name: str
+    mapping_key: Optional[str] = None
+
+
+@whitelist_for_serdes
+class StepOutputData(NamedTuple):
     """Serializable payload of information for the result of processing a step output"""
+
+    step_output_handle: StepOutputHandle
+    intermediate_materialization: Optional[Union[AssetMaterialization, Materialization]] = None
+    type_check_data = (None,)
+    version: str = None
 
     def __new__(
         cls,
@@ -61,16 +71,3 @@ class StepOutputData(
     @property
     def mapping_key(self):
         return self.step_output_handle.mapping_key
-
-
-@whitelist_for_serdes
-class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name mapping_key")):
-    """A reference to a specific output that has or will occur within the scope of an execution"""
-
-    def __new__(cls, step_key, output_name="result", mapping_key=None):
-        return super(StepOutputHandle, cls).__new__(
-            cls,
-            step_key=check.str_param(step_key, "step_key"),
-            output_name=check.str_param(output_name, "output_name"),
-            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
-        )
