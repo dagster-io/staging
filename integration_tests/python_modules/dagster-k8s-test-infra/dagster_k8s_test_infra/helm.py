@@ -509,6 +509,10 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
                     ],
                     "port": 3030,
                     "env": {"BUILDKITE": os.getenv("BUILDKITE")},
+                    "annotations": {"dagster-integration-tests": "ucd-1-pod-annotation"},
+                    "service": {
+                        "annotations": {"dagster-integration-tests": "ucd-1-svc-annotation"}
+                    },
                 }
             ],
         },
@@ -527,6 +531,8 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
                 "failureThreshold": 6,
                 "periodSeconds": 10,
             },
+            "annotations": {"dagster-integration-tests": "dagit-pod-annotation"},
+            "service": {"annotations": {"dagster-integration-tests": "dagit-svc-annotation"}},
         },
         "celery": {
             "enabled": True,
@@ -547,6 +553,7 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
                 "broker_transport_options": {"priority_steps": [9]},
                 "worker_concurrency": 1,
             },
+            "annotations": {"dagster-integration-tests": "celery-pod-annotation"},
         },
         "scheduler": {"k8sEnabled": False, "schedulerNamespace": namespace},
         "serviceAccount": {"name": "dagit-admin"},
@@ -558,6 +565,7 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "queuedRunCoordinator": {"enabled": True},
             "env": {"BUILDKITE": os.getenv("BUILDKITE")},
+            "annotations": {"dagster-integration-tests": "daemon-pod-annotation"},
         },
         # Used to set the environment variables in dagster.shared_env that determine the run config
         "pipeline_run": {
