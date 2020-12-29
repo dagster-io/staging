@@ -82,6 +82,9 @@
                 "port": {
                     "title": "Port",
                     "type": "integer"
+                },
+                "annotations": {
+                    "$ref": "#/definitions/Annotations"
                 }
             },
             "required": [
