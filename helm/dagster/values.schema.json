@@ -1,538 +1,493 @@
 {
-    "title": "HelmValues",
-    "description": "Schema for Helm values.",
-    "type": "object",
-    "properties": {
-        "dagit": {
-            "$ref": "#/definitions/Dagit"
+  "title": "HelmValues",
+  "description": "Schema for Helm values.",
+  "type": "object",
+  "properties": {
+    "dagit": {
+      "$ref": "#/definitions/Dagit"
+    },
+    "postgresql": {
+      "$ref": "#/definitions/PostgreSQL"
+    },
+    "rabbitmq": {
+      "$ref": "#/definitions/RabbitMQ"
+    },
+    "redis": {
+      "$ref": "#/definitions/Redis"
+    },
+    "flower": {
+      "$ref": "#/definitions/Flower"
+    },
+    "ingress": {
+      "$ref": "#/definitions/Ingress"
+    },
+    "imagePullSecrets": {
+      "title": "Imagepullsecrets",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/SecretRef"
+      }
+    }
+  },
+  "required": [
+    "dagit",
+    "postgresql",
+    "rabbitmq",
+    "redis",
+    "flower",
+    "ingress",
+    "imagePullSecrets"
+  ],
+  "definitions": {
+    "PullPolicy": {
+      "title": "PullPolicy",
+      "description": "An enumeration.",
+      "enum": ["Always", "IfNotPresent", "Never"],
+      "type": "string"
+    },
+    "Image": {
+      "title": "Image",
+      "type": "object",
+      "properties": {
+        "repository": {
+          "title": "Repository",
+          "type": "string"
         },
-        "postgresql": {
-            "$ref": "#/definitions/PostgreSQL"
+        "tag": {
+          "title": "Tag",
+          "type": "string"
+        },
+        "pullPolicy": {
+          "$ref": "#/definitions/PullPolicy"
+        }
+      },
+      "required": ["repository", "tag", "pullPolicy"]
+    },
+    "automation__helm__schema__subschema__kubernetes__Service": {
+      "title": "Service",
+      "type": "object",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "port": {
+          "title": "Port",
+          "type": "integer"
+        },
+        "annotations": {
+          "$ref": "#/definitions/Annotations"
+        }
+      },
+      "required": ["type", "port"],
+      "additionalProperties": false
+    },
+    "NodeSelector": {
+      "title": "NodeSelector",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
+    },
+    "Affinity": {
+      "title": "Affinity",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.Affinity"
+    },
+    "Tolerations": {
+      "title": "Tolerations",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/tolerations"
+    },
+    "PodSecurityContext": {
+      "title": "PodSecurityContext",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.PodSecurityContext"
+    },
+    "SecurityContext": {
+      "title": "SecurityContext",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.SecurityContext"
+    },
+    "Resources": {
+      "title": "Resources",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.ResourceRequirements"
+    },
+    "LivenessProbe": {
+      "title": "LivenessProbe",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.Probe"
+    },
+    "StartupProbe": {
+      "title": "StartupProbe",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.16.0/_definitions.json#/definitions/io.k8s.api.core.v1.Probe"
+    },
+    "Dagit": {
+      "title": "Dagit",
+      "type": "object",
+      "properties": {
+        "replicaCount": {
+          "title": "Replicacount",
+          "type": "integer"
+        },
+        "image": {
+          "$ref": "#/definitions/Image"
+        },
+        "service": {
+          "$ref": "#/definitions/automation__helm__schema__subschema__kubernetes__Service"
+        },
+        "nodeSelector": {
+          "$ref": "#/definitions/NodeSelector"
+        },
+        "affinity": {
+          "$ref": "#/definitions/Affinity"
+        },
+        "tolerations": {
+          "$ref": "#/definitions/Tolerations"
+        },
+        "podSecurityContext": {
+          "$ref": "#/definitions/PodSecurityContext"
+        },
+        "securityContext": {
+          "$ref": "#/definitions/SecurityContext"
+        },
+        "resources": {
+          "$ref": "#/definitions/Resources"
+        },
+        "livenessProbe": {
+          "$ref": "#/definitions/LivenessProbe"
+        },
+        "startupProbe": {
+          "$ref": "#/definitions/StartupProbe"
+        }
+      },
+      "required": ["replicaCount", "image", "service"]
+    },
+    "automation__helm__schema__subschema__postgresql__Service": {
+      "title": "Service",
+      "type": "object",
+      "properties": {
+        "port": {
+          "title": "Port",
+          "type": "integer"
+        }
+      },
+      "required": ["port"]
+    },
+    "PostgreSQL": {
+      "title": "PostgreSQL",
+      "type": "object",
+      "properties": {
+        "image": {
+          "$ref": "#/definitions/Image"
+        },
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "postgresqlHost": {
+          "title": "Postgresqlhost",
+          "type": "string"
+        },
+        "postgresqlUsername": {
+          "title": "Postgresqlusername",
+          "type": "string"
+        },
+        "postgresqlPassword": {
+          "title": "Postgresqlpassword",
+          "type": "string"
+        },
+        "postgresqlDatabase": {
+          "title": "Postgresqldatabase",
+          "type": "string"
+        },
+        "service": {
+          "$ref": "#/definitions/automation__helm__schema__subschema__postgresql__Service"
+        }
+      },
+      "required": [
+        "image",
+        "enabled",
+        "postgresqlHost",
+        "postgresqlUsername",
+        "postgresqlPassword",
+        "postgresqlDatabase",
+        "service"
+      ]
+    },
+    "RabbitMQConfiguration": {
+      "title": "RabbitMQConfiguration",
+      "type": "object",
+      "properties": {
+        "username": {
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string"
+        }
+      },
+      "required": ["username", "password"]
+    },
+    "automation__helm__schema__subschema__rabbitmq__Service": {
+      "title": "Service",
+      "type": "object",
+      "properties": {
+        "port": {
+          "title": "Port",
+          "type": "integer"
+        }
+      },
+      "required": ["port"]
+    },
+    "VolumePermissions": {
+      "title": "VolumePermissions",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "const": true,
+          "type": "boolean"
+        }
+      }
+    },
+    "RabbitMQ": {
+      "title": "RabbitMQ",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
         },
         "rabbitmq": {
-            "$ref": "#/definitions/RabbitMQ"
+          "$ref": "#/definitions/RabbitMQConfiguration"
         },
-        "redis": {
-            "$ref": "#/definitions/Redis"
+        "service": {
+          "$ref": "#/definitions/automation__helm__schema__subschema__rabbitmq__Service"
+        },
+        "volumePermissions": {
+          "$ref": "#/definitions/VolumePermissions"
+        }
+      },
+      "required": ["enabled", "rabbitmq", "service", "volumePermissions"]
+    },
+    "Redis": {
+      "title": "Redis",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "host": {
+          "title": "Host",
+          "type": "string"
+        },
+        "port": {
+          "title": "Port",
+          "type": "integer"
+        },
+        "brokerDbNumber": {
+          "title": "Brokerdbnumber",
+          "type": "integer"
+        },
+        "backendDbNumber": {
+          "title": "Backenddbnumber",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "enabled",
+        "host",
+        "port",
+        "brokerDbNumber",
+        "backendDbNumber"
+      ],
+      "additionalProperties": false
+    },
+    "Annotations": {
+      "title": "Annotations",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
+    },
+    "automation__helm__schema__subschema__flower__Service": {
+      "title": "Service",
+      "type": "object",
+      "properties": {
+        "annotations": {
+          "$ref": "#/definitions/Annotations"
+        },
+        "port": {
+          "title": "Port",
+          "type": "integer"
+        }
+      },
+      "required": ["annotations", "port"]
+    },
+    "Flower": {
+      "title": "Flower",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "service": {
+          "$ref": "#/definitions/automation__helm__schema__subschema__flower__Service"
+        },
+        "nodeSelector": {
+          "$ref": "#/definitions/NodeSelector"
+        },
+        "affinity": {
+          "$ref": "#/definitions/Affinity"
+        },
+        "tolerations": {
+          "$ref": "#/definitions/Tolerations"
+        },
+        "podSecurityContext": {
+          "$ref": "#/definitions/PodSecurityContext"
+        },
+        "securityContext": {
+          "$ref": "#/definitions/SecurityContext"
+        },
+        "resources": {
+          "$ref": "#/definitions/Resources"
+        },
+        "livenessProbe": {
+          "$ref": "#/definitions/LivenessProbe"
+        },
+        "startupProbe": {
+          "$ref": "#/definitions/StartupProbe"
+        }
+      },
+      "required": [
+        "enabled",
+        "service",
+        "nodeSelector",
+        "affinity",
+        "tolerations",
+        "podSecurityContext",
+        "securityContext",
+        "resources",
+        "livenessProbe",
+        "startupProbe"
+      ]
+    },
+    "IngressPath": {
+      "title": "IngressPath",
+      "type": "object",
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "serviceName": {
+          "title": "Servicename",
+          "type": "string"
+        },
+        "servicePort": {
+          "title": "Serviceport",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        }
+      },
+      "required": ["path", "serviceName", "servicePort"]
+    },
+    "DagitIngressConfiguration": {
+      "title": "DagitIngressConfiguration",
+      "type": "object",
+      "properties": {
+        "host": {
+          "title": "Host",
+          "type": "string"
+        },
+        "precedingPaths": {
+          "title": "Precedingpaths",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/IngressPath"
+          }
+        },
+        "succeedingPaths": {
+          "title": "Succeedingpaths",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/IngressPath"
+          }
+        }
+      },
+      "required": ["host", "precedingPaths", "succeedingPaths"]
+    },
+    "FlowerIngressConfiguration": {
+      "title": "FlowerIngressConfiguration",
+      "type": "object",
+      "properties": {
+        "host": {
+          "title": "Host",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "precedingPaths": {
+          "title": "Precedingpaths",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/IngressPath"
+          }
+        },
+        "succeedingPaths": {
+          "title": "Succeedingpaths",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/IngressPath"
+          }
+        }
+      },
+      "required": ["host", "path", "precedingPaths", "succeedingPaths"]
+    },
+    "Ingress": {
+      "title": "Ingress",
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "annotations": {
+          "$ref": "#/definitions/Annotations"
+        },
+        "dagit": {
+          "$ref": "#/definitions/DagitIngressConfiguration"
         },
         "flower": {
-            "$ref": "#/definitions/Flower"
-        },
-        "ingress": {
-            "$ref": "#/definitions/Ingress"
-        },
-        "imagePullSecrets": {
-            "title": "Imagepullsecrets",
-            "type": "array",
-            "items": {
-                "$ref": "#/definitions/SecretRef"
-            }
+          "$ref": "#/definitions/FlowerIngressConfiguration"
         }
+      },
+      "required": ["enabled", "annotations", "dagit", "flower"]
     },
-    "required": [
-        "dagit",
-        "postgresql",
-        "rabbitmq",
-        "redis",
-        "flower",
-        "ingress",
-        "imagePullSecrets"
-    ],
-    "definitions": {
-        "PullPolicy": {
-            "title": "PullPolicy",
-            "description": "An enumeration.",
-            "enum": [
-                "Always",
-                "IfNotPresent",
-                "Never"
-            ],
-            "type": "string"
-        },
-        "Image": {
-            "title": "Image",
-            "type": "object",
-            "properties": {
-                "repository": {
-                    "title": "Repository",
-                    "type": "string"
-                },
-                "tag": {
-                    "title": "Tag",
-                    "type": "string"
-                },
-                "pullPolicy": {
-                    "$ref": "#/definitions/PullPolicy"
-                }
-            },
-            "required": [
-                "repository",
-                "tag",
-                "pullPolicy"
-            ]
-        },
-        "automation__helm__schema__subschema__kubernetes__Service": {
-            "title": "Service",
-            "type": "object",
-            "properties": {
-                "type": {
-                    "title": "Type",
-                    "type": "string"
-                },
-                "port": {
-                    "title": "Port",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "type",
-                "port"
-            ],
-            "additionalProperties": false
-        },
-        "NodeSelector": {
-            "title": "NodeSelector",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/nodeSelector"
-        },
-        "Affinity": {
-            "title": "Affinity",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.Affinity"
-        },
-        "Tolerations": {
-            "title": "Tolerations",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.PodSpec/properties/tolerations"
-        },
-        "PodSecurityContext": {
-            "title": "PodSecurityContext",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.PodSecurityContext"
-        },
-        "SecurityContext": {
-            "title": "SecurityContext",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.SecurityContext"
-        },
-        "Resources": {
-            "title": "Resources",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.ResourceRequirements"
-        },
-        "LivenessProbe": {
-            "title": "LivenessProbe",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.Probe"
-        },
-        "StartupProbe": {
-            "title": "StartupProbe",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.16.0/_definitions.json#/definitions/io.k8s.api.core.v1.Probe"
-        },
-        "Dagit": {
-            "title": "Dagit",
-            "type": "object",
-            "properties": {
-                "replicaCount": {
-                    "title": "Replicacount",
-                    "type": "integer"
-                },
-                "image": {
-                    "$ref": "#/definitions/Image"
-                },
-                "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__kubernetes__Service"
-                },
-                "nodeSelector": {
-                    "$ref": "#/definitions/NodeSelector"
-                },
-                "affinity": {
-                    "$ref": "#/definitions/Affinity"
-                },
-                "tolerations": {
-                    "$ref": "#/definitions/Tolerations"
-                },
-                "podSecurityContext": {
-                    "$ref": "#/definitions/PodSecurityContext"
-                },
-                "securityContext": {
-                    "$ref": "#/definitions/SecurityContext"
-                },
-                "resources": {
-                    "$ref": "#/definitions/Resources"
-                },
-                "livenessProbe": {
-                    "$ref": "#/definitions/LivenessProbe"
-                },
-                "startupProbe": {
-                    "$ref": "#/definitions/StartupProbe"
-                }
-            },
-            "required": [
-                "replicaCount",
-                "image",
-                "service"
-            ]
-        },
-        "automation__helm__schema__subschema__postgresql__Service": {
-            "title": "Service",
-            "type": "object",
-            "properties": {
-                "port": {
-                    "title": "Port",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "port"
-            ]
-        },
-        "PostgreSQL": {
-            "title": "PostgreSQL",
-            "type": "object",
-            "properties": {
-                "image": {
-                    "$ref": "#/definitions/Image"
-                },
-                "enabled": {
-                    "title": "Enabled",
-                    "type": "boolean"
-                },
-                "postgresqlHost": {
-                    "title": "Postgresqlhost",
-                    "type": "string"
-                },
-                "postgresqlUsername": {
-                    "title": "Postgresqlusername",
-                    "type": "string"
-                },
-                "postgresqlPassword": {
-                    "title": "Postgresqlpassword",
-                    "type": "string"
-                },
-                "postgresqlDatabase": {
-                    "title": "Postgresqldatabase",
-                    "type": "string"
-                },
-                "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__postgresql__Service"
-                }
-            },
-            "required": [
-                "image",
-                "enabled",
-                "postgresqlHost",
-                "postgresqlUsername",
-                "postgresqlPassword",
-                "postgresqlDatabase",
-                "service"
-            ]
-        },
-        "RabbitMQConfiguration": {
-            "title": "RabbitMQConfiguration",
-            "type": "object",
-            "properties": {
-                "username": {
-                    "title": "Username",
-                    "type": "string"
-                },
-                "password": {
-                    "title": "Password",
-                    "type": "string"
-                }
-            },
-            "required": [
-                "username",
-                "password"
-            ]
-        },
-        "automation__helm__schema__subschema__rabbitmq__Service": {
-            "title": "Service",
-            "type": "object",
-            "properties": {
-                "port": {
-                    "title": "Port",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "port"
-            ]
-        },
-        "VolumePermissions": {
-            "title": "VolumePermissions",
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "title": "Enabled",
-                    "const": true,
-                    "type": "boolean"
-                }
-            }
-        },
-        "RabbitMQ": {
-            "title": "RabbitMQ",
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "title": "Enabled",
-                    "type": "boolean"
-                },
-                "rabbitmq": {
-                    "$ref": "#/definitions/RabbitMQConfiguration"
-                },
-                "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__rabbitmq__Service"
-                },
-                "volumePermissions": {
-                    "$ref": "#/definitions/VolumePermissions"
-                }
-            },
-            "required": [
-                "enabled",
-                "rabbitmq",
-                "service",
-                "volumePermissions"
-            ]
-        },
-        "Redis": {
-            "title": "Redis",
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "title": "Enabled",
-                    "type": "boolean"
-                },
-                "host": {
-                    "title": "Host",
-                    "type": "string"
-                },
-                "port": {
-                    "title": "Port",
-                    "type": "integer"
-                },
-                "brokerDbNumber": {
-                    "title": "Brokerdbnumber",
-                    "type": "integer"
-                },
-                "backendDbNumber": {
-                    "title": "Backenddbnumber",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "enabled",
-                "host",
-                "port",
-                "brokerDbNumber",
-                "backendDbNumber"
-            ],
-            "additionalProperties": false
-        },
-        "Annotations": {
-            "title": "Annotations",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.ObjectMeta/properties/annotations"
-        },
-        "automation__helm__schema__subschema__flower__Service": {
-            "title": "Service",
-            "type": "object",
-            "properties": {
-                "annotations": {
-                    "$ref": "#/definitions/Annotations"
-                },
-                "port": {
-                    "title": "Port",
-                    "type": "integer"
-                }
-            },
-            "required": [
-                "annotations",
-                "port"
-            ]
-        },
-        "Flower": {
-            "title": "Flower",
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "title": "Enabled",
-                    "type": "boolean"
-                },
-                "service": {
-                    "$ref": "#/definitions/automation__helm__schema__subschema__flower__Service"
-                },
-                "nodeSelector": {
-                    "$ref": "#/definitions/NodeSelector"
-                },
-                "affinity": {
-                    "$ref": "#/definitions/Affinity"
-                },
-                "tolerations": {
-                    "$ref": "#/definitions/Tolerations"
-                },
-                "podSecurityContext": {
-                    "$ref": "#/definitions/PodSecurityContext"
-                },
-                "securityContext": {
-                    "$ref": "#/definitions/SecurityContext"
-                },
-                "resources": {
-                    "$ref": "#/definitions/Resources"
-                },
-                "livenessProbe": {
-                    "$ref": "#/definitions/LivenessProbe"
-                },
-                "startupProbe": {
-                    "$ref": "#/definitions/StartupProbe"
-                }
-            },
-            "required": [
-                "enabled",
-                "service",
-                "nodeSelector",
-                "affinity",
-                "tolerations",
-                "podSecurityContext",
-                "securityContext",
-                "resources",
-                "livenessProbe",
-                "startupProbe"
-            ]
-        },
-        "IngressPath": {
-            "title": "IngressPath",
-            "type": "object",
-            "properties": {
-                "path": {
-                    "title": "Path",
-                    "type": "string"
-                },
-                "serviceName": {
-                    "title": "Servicename",
-                    "type": "string"
-                },
-                "servicePort": {
-                    "title": "Serviceport",
-                    "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "type": "integer"
-                        }
-                    ]
-                }
-            },
-            "required": [
-                "path",
-                "serviceName",
-                "servicePort"
-            ]
-        },
-        "DagitIngressConfiguration": {
-            "title": "DagitIngressConfiguration",
-            "type": "object",
-            "properties": {
-                "host": {
-                    "title": "Host",
-                    "type": "string"
-                },
-                "precedingPaths": {
-                    "title": "Precedingpaths",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/IngressPath"
-                    }
-                },
-                "succeedingPaths": {
-                    "title": "Succeedingpaths",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/IngressPath"
-                    }
-                }
-            },
-            "required": [
-                "host",
-                "precedingPaths",
-                "succeedingPaths"
-            ]
-        },
-        "FlowerIngressConfiguration": {
-            "title": "FlowerIngressConfiguration",
-            "type": "object",
-            "properties": {
-                "host": {
-                    "title": "Host",
-                    "type": "string"
-                },
-                "path": {
-                    "title": "Path",
-                    "type": "string"
-                },
-                "precedingPaths": {
-                    "title": "Precedingpaths",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/IngressPath"
-                    }
-                },
-                "succeedingPaths": {
-                    "title": "Succeedingpaths",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/IngressPath"
-                    }
-                }
-            },
-            "required": [
-                "host",
-                "path",
-                "precedingPaths",
-                "succeedingPaths"
-            ]
-        },
-        "Ingress": {
-            "title": "Ingress",
-            "type": "object",
-            "properties": {
-                "enabled": {
-                    "title": "Enabled",
-                    "type": "boolean"
-                },
-                "annotations": {
-                    "$ref": "#/definitions/Annotations"
-                },
-                "dagit": {
-                    "$ref": "#/definitions/DagitIngressConfiguration"
-                },
-                "flower": {
-                    "$ref": "#/definitions/FlowerIngressConfiguration"
-                }
-            },
-            "required": [
-                "enabled",
-                "annotations",
-                "dagit",
-                "flower"
-            ]
-        },
-        "SecretRef": {
-            "title": "SecretRef",
-            "type": "object",
-            "properties": {},
-            "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.LocalObjectReference"
-        }
+    "SecretRef": {
+      "title": "SecretRef",
+      "type": "object",
+      "properties": {},
+      "$ref": "https://kubernetesjsonschema.dev/v1.15.0/_definitions.json#/definitions/io.k8s.api.core.v1.LocalObjectReference"
     }
+  }
 }

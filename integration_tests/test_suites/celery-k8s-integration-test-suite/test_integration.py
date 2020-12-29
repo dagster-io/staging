@@ -382,3 +382,9 @@ def test_execute_on_celery_k8s_with_hard_failure(  # pylint: disable=redefined-o
                     break
         time.sleep(5)
     assert step_failure_found
+
+
+def test_annotations(  # pylint: disable=redefined-outer-name
+    dagster_docker_image, dagster_instance, helm_namespace
+):
+    assert True

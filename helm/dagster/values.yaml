@@ -28,6 +28,7 @@ dagit:
   service:
     type: ClusterIP
     port: 80
+    annotations: {}
 
   # Additional environment variables to set on the dagit container.
   # A Kubernetes ConfigMap will be created with these environment variables.
@@ -45,6 +46,7 @@ dagit:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  annotations: {}
   nodeSelector: {}
   affinity: {}
   tolerations: []
@@ -128,6 +130,7 @@ userDeployments:
         - ""
       env_secrets:
         - ""
+      annotations: {}
       nodeSelector: {}
       affinity: {}
       tolerations: []
@@ -135,6 +138,10 @@ userDeployments:
       securityContext: {}
       resources: {}
       replicaCount: 1
+
+      service:
+        type: ClusterIP
+        annotations: {}
 
 ####################################################################################################
 # Pipeline Run: Configuration for user code containers.
@@ -262,6 +269,7 @@ celery:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  annotations: {}
   nodeSelector: {}
   affinity: {}
   tolerations: []
@@ -375,6 +383,7 @@ flower:
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
   # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
   # https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+  annotations: {}
   nodeSelector: {}
   affinity: {}
   tolerations: []
@@ -488,6 +497,8 @@ dagsterDaemon:
     - ""
   envSecrets:
     - ""
+
+  annotations: {}
   nodeSelector: {}
   affinity: {}
   tolerations: []

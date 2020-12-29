@@ -8,8 +8,12 @@ metadata:
     {{- include "dagster.labels" $ | nindent 4 }}
     component: user-deployments
     deployment: {{ $deployment.name }}
+  annotations:
+    {{- if $deployment.service.annotations }}
+    {{ toYaml $deployment.service.annotations | trim | indent 4 }}
+    {{- end }}
 spec:
-  type: "ClusterIP"
+  type: {{ $deployment.service.type | default "ClusterIP" }}
   ports:
     - port: {{ $deployment.port }}
       protocol: TCP
