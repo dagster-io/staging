@@ -9,7 +9,7 @@ from dagster.core.types.marshal import PickleSerializationStrategy, Serializatio
 from dagster.utils import mkdir_p
 
 
-class ObjectStore(six.with_metaclass(ABCMeta)):
+class ObjectStore(metaclass=ABCMeta):
     def __init__(self, name, sep="/"):
         """Create an ObjectStore.
 

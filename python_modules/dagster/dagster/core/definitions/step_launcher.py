@@ -41,7 +41,7 @@ class StepRunRef(
         )
 
 
-class StepLauncher(six.with_metaclass(ABCMeta)):
+class StepLauncher(metaclass=ABCMeta):
     """
     A StepLauncher is responsible for executing steps, either in-process or in an external process.
     """

@@ -38,7 +38,7 @@ def _get_repository_python_origin(
     )
 
 
-class RepositoryLocationHandle(six.with_metaclass(ABCMeta)):
+class RepositoryLocationHandle(metaclass=ABCMeta):
     def __enter__(self):
         return self
 

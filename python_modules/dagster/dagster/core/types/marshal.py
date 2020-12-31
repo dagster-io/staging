@@ -7,7 +7,7 @@ from dagster import check
 from dagster.utils import PICKLE_PROTOCOL
 
 
-class SerializationStrategy(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class SerializationStrategy(metaclass=ABCMeta):  # pylint: disable=no-init
     """This is the base class for serialization / deserialization of dagster objects. The primary
     use case is serialize to / from files, but any file-like objects (e.g. byte buffers) are
     supported.

@@ -7,7 +7,7 @@ from dagster import AssetKey, DagsterType, check
 from .computation import Computation
 
 
-class Asset(six.with_metaclass(ABCMeta)):
+class Asset(metaclass=ABCMeta):
     def __init__(self, storage_key, path, computation):
         self._storage_key = check.str_param(storage_key, "storage_key")
         self._path = canonicalize_path(path)

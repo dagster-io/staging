@@ -32,7 +32,7 @@ class ComputeLogFileData(namedtuple("ComputeLogFileData", "path data cursor size
         )
 
 
-class ComputeLogManager(six.with_metaclass(ABCMeta)):
+class ComputeLogManager(metaclass=ABCMeta):
     """Abstract base class for storing unstructured compute logs (stdout/stderr) from the compute
     steps of pipeline solids."""
 

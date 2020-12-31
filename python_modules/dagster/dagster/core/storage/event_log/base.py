@@ -13,7 +13,7 @@ class EventLogSequence(pyrsistent.CheckedPVector):
     __type__ = EventRecord
 
 
-class EventLogStorage(six.with_metaclass(ABCMeta)):
+class EventLogStorage(metaclass=ABCMeta):
     """Abstract base class for storing structured event logs from pipeline runs.
 
     Note that event log storages using SQL databases as backing stores should implement
@@ -109,7 +109,7 @@ class EventLogStorage(six.with_metaclass(ABCMeta)):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
 
 
-class AssetAwareEventLogStorage(six.with_metaclass(ABCMeta)):
+class AssetAwareEventLogStorage(metaclass=ABCMeta):
     @abstractmethod
     def has_asset_key(self, asset_key):
         pass

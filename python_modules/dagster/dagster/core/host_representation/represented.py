@@ -6,7 +6,7 @@ from dagster import check
 from .pipeline_index import PipelineIndex
 
 
-class RepresentedPipeline(six.with_metaclass(ABCMeta)):
+class RepresentedPipeline(metaclass=ABCMeta):
     """
     RepresentedPipeline is a base class for ExternalPipeline or HistoricalPipeline.
 
