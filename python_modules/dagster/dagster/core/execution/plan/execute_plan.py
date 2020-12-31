@@ -235,7 +235,7 @@ def _dagster_event_sequence_for_step(step_context, retries):
     # case (3) in top comment
     except DagsterUserCodeExecutionError as dagster_user_error:
         yield _step_failure_event_from_exc_info(
-            step_context, dagster_user_error.original_exc_info,
+            step_context, sys.exc_info(),
         )
 
         if step_context.raise_on_error:
