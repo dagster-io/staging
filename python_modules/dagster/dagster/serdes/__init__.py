@@ -64,7 +64,7 @@ class SerdesClassUsageError(Exception):
     pass
 
 
-class Persistable(six.with_metaclass(ABCMeta)):
+class Persistable(metaclass=ABCMeta):
     def to_storage_value(self):
         return default_to_storage_value(self, _WHITELIST_MAP)
 
@@ -379,7 +379,7 @@ class ConfigurableClassData(
         return klass.from_config_value(self, result.value)
 
 
-class ConfigurableClass(six.with_metaclass(ABCMeta)):
+class ConfigurableClass(metaclass=ABCMeta):
     """Abstract mixin for classes that can be loaded from config.
 
     This supports a powerful plugin pattern which avoids both a) a lengthy, hard-to-synchronize list
