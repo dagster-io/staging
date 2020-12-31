@@ -12,7 +12,7 @@ from dagster.utils import mkdir_p
 from .file_manager import LocalFileHandle
 
 
-class FileCache(six.with_metaclass(ABCMeta)):
+class FileCache(metaclass=ABCMeta):
     def __init__(self, overwrite):
         # Overwrite is currently only a signal to callers to not overwrite.
         # These classes currently do not enforce any semantics around that

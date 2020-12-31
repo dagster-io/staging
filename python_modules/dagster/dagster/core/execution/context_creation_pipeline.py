@@ -99,7 +99,7 @@ def create_context_creation_data(
     )
 
 
-class ExecutionContextManager(six.with_metaclass(ABCMeta)):
+class ExecutionContextManager(metaclass=ABCMeta):
     def __init__(
         self,
         execution_plan,

@@ -548,7 +548,7 @@ class DependencyStructure:
         return debug
 
 
-class IDependencyDefinition(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class IDependencyDefinition(metaclass=ABCMeta):  # pylint: disable=no-init
     @abstractmethod
     def get_solid_dependencies(self):
         pass

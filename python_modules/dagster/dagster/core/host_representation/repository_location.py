@@ -44,7 +44,7 @@ from dagster.utils.hosted_user_process import external_repo_from_def
 from .selector import PipelineSelector
 
 
-class RepositoryLocation(six.with_metaclass(ABCMeta)):
+class RepositoryLocation(metaclass=ABCMeta):
     """
     A RepositoryLocation represents a target containing user code which has a set of Dagster
     definition objects. A given location will contain some number of uniquely named

@@ -8,7 +8,7 @@ from .step import StepExecutionContext
 from .system import SystemComputeExecutionContext
 
 
-class AbstractComputeExecutionContext(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class AbstractComputeExecutionContext(metaclass=ABCMeta):  # pylint: disable=no-init
     """Base class for solid context implemented by SolidExecutionContext and DagstermillInNotebookExecutionContext"""
 
     @abstractmethod

@@ -9,7 +9,7 @@ from dagster.core.types.dagster_type import DagsterTypeKind
 from .dependency import DependencyStructure, IDependencyDefinition, Solid, SolidInvocation
 
 
-class IContainSolids(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class IContainSolids(metaclass=ABCMeta):  # pylint: disable=no-init
     @abstractproperty
     def solids(self):
         """List[Solid]: Top-level solids in the container."""

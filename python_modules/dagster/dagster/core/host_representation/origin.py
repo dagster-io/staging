@@ -51,7 +51,7 @@ def _assign_loadable_target_origin_name(loadable_target_origin):
     )
 
 
-class RepositoryLocationOrigin(six.with_metaclass(ABCMeta)):
+class RepositoryLocationOrigin(metaclass=ABCMeta):
     """Serializable representation of a RepositoryLocation that can be used to
        uniquely identify the location or reload it in across process boundaries.
     """

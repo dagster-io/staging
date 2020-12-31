@@ -729,7 +729,7 @@ def manage_graphql_context(context_variant, recon_repo=None):
             yield DagsterGraphQLContext(instance=instance, workspace=workspace)
 
 
-class _GraphQLContextTestSuite(six.with_metaclass(ABCMeta)):
+class _GraphQLContextTestSuite(metaclass=ABCMeta):
     @abstractmethod
     def yield_graphql_context(self, request):
         pass

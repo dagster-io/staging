@@ -31,7 +31,7 @@ class ChildProcessSystemErrorEvent(
     pass
 
 
-class ChildProcessCommand(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class ChildProcessCommand(metaclass=ABCMeta):  # pylint: disable=no-init
     """Inherit from this class in order to use this library.
 
     The object must be picklable; instantiate it and pass it to _execute_command_in_child_process."""
