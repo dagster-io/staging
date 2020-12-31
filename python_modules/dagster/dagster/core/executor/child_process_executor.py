@@ -6,7 +6,6 @@ import sys
 from abc import ABCMeta, abstractmethod
 from collections import namedtuple
 
-import six
 from dagster import check
 from dagster.seven import multiprocessing
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -31,7 +30,7 @@ class ChildProcessSystemErrorEvent(
     pass
 
 
-class ChildProcessCommand(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class ChildProcessCommand(metaclass=ABCMeta):  # pylint: disable=no-init
     """Inherit from this class in order to use this library.
 
     The object must be picklable; instantiate it and pass it to _execute_command_in_child_process."""

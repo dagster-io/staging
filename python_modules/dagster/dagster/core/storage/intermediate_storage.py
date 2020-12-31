@@ -13,7 +13,7 @@ from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStor
 from .type_storage import TypeStoragePluginRegistry
 
 
-class IntermediateStorage(six.with_metaclass(ABCMeta)):  # pylint: disable=no-init
+class IntermediateStorage(metaclass=ABCMeta):  # pylint: disable=no-init
     @abstractmethod
     def get_intermediate(self, context, dagster_type=None, step_output_handle=None):
         pass

@@ -3,7 +3,6 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from collections import namedtuple
 from contextlib import contextmanager
 
-import six
 from dagster import check
 from dagster.core.definitions import PipelineDefinition
 from dagster.core.definitions.resource import ScopedResourcesBuilder
@@ -99,7 +98,7 @@ def create_context_creation_data(
     )
 
 
-class ExecutionContextManager(six.with_metaclass(ABCMeta)):
+class ExecutionContextManager(metaclass=ABCMeta):
     def __init__(
         self,
         execution_plan,
