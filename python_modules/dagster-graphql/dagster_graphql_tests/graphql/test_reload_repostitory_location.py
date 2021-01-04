@@ -21,7 +21,7 @@ class TestReloadRepositoriesOutOfProcess(
         context_variants=[GraphQLContextVariant.readonly_in_memory_instance_managed_grpc_env()]
     )
 ):
-    def test_out_of_process_reload_location(self, graphql_context):
+    def _execute_reload(self, graphql_context):
         result = execute_dagster_graphql(
             graphql_context, RELOAD_REPOSITORY_LOCATION_QUERY, {"repositoryLocationName": "test"}
         )
@@ -84,7 +84,11 @@ class TestReloadRepositoriesOutOfProcess(
                     {"name": "new_repo"}
                 ]
 
-    def test_reload_failure(self, graphql_context):
+    def test_out_of_process_reload_location(self, graphql_context):
+        self._execute_reload(graphql_context)
+        self._execute_reload(graphql_context.copy_for_request())
+
+    def _execute_reload_failure(self, graphql_context):
         result = execute_dagster_graphql(
             graphql_context, RELOAD_REPOSITORY_LOCATION_QUERY, {"repositoryLocationName": "test"}
         )
@@ -156,6 +160,10 @@ class TestReloadRepositoriesOutOfProcess(
         assert result.data["reloadRepositoryLocation"]["name"] == "test"
         assert result.data["reloadRepositoryLocation"]["repositories"] == [{"name": "test_repo"}]
         assert result.data["reloadRepositoryLocation"]["isReloadSupported"] is True
+
+    def test_reload_failure(self, graphql_context):
+        self._execute_reload_failure(graphql_context)
+        self._execute_reload_failure(graphql_context.copy_for_request())
 
 
 class TestReloadRepositoriesInProcess(
