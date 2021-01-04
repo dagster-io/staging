@@ -10,7 +10,7 @@ from dagster.utils.error import serializable_error_info_from_exc_info
 class Workspace:
     def __init__(self, repository_location_origins):
         self._location_origin_dict = OrderedDict()
-        check.list_param(
+        self._repository_location_origins = check.list_param(
             repository_location_origins,
             "repository_location_origins",
             of_type=RepositoryLocationOrigin,
@@ -28,6 +28,13 @@ class Workspace:
 
             self._location_origin_dict[origin.location_name] = origin
             self._load_handle(origin.location_name)
+
+    @property
+    def repository_location_origins(self):
+        return self._repository_location_origins
+
+    def copy_for_request(self):
+        return Workspace(self.repository_location_origins)
 
     def _load_handle(self, location_name):
         existing_handle = self._location_handle_dict.get(location_name)

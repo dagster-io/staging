@@ -2,7 +2,7 @@ from dagster.cli.workspace import get_workspace_from_kwargs
 from dagster.core.test_utils import instance_for_test
 from dagster.utils import file_relative_path
 from dagster_graphql.client.query import LAUNCH_PIPELINE_EXECUTION_MUTATION, SUBSCRIPTION_QUERY
-from dagster_graphql.implementation.context import DagsterGraphQLContext
+from dagster_graphql.implementation.context import RequestContext
 from dagster_graphql.schema import create_schema
 from dagster_graphql.test.utils import execute_dagster_graphql, infer_pipeline_selector
 from graphql import graphql
@@ -19,7 +19,7 @@ def test_execute_hammer_through_dagit():
                 "attribute": "hammer_pipeline",
             }
         ) as workspace:
-            context = DagsterGraphQLContext(workspace=workspace, instance=instance,)
+            context = RequestContext.with_process_context(workspace=workspace, instance=instance)
             selector = infer_pipeline_selector(context, "hammer_pipeline")
             executor = SyncExecutor()
 
