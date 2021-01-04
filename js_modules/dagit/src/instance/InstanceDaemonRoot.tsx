@@ -15,6 +15,7 @@ import {SCHEDULE_FRAGMENT, SchedulerTimezoneNote} from 'src/schedules/ScheduleUt
 import {SCHEDULER_FRAGMENT, SchedulerInfo} from 'src/schedules/SchedulerInfo';
 import {SchedulesTable} from 'src/schedules/SchedulesTable';
 import {SENSOR_FRAGMENT} from 'src/sensors/SensorFragment';
+import {SensorInfo} from 'src/sensors/SensorInfo';
 import {SensorsTable} from 'src/sensors/SensorsTable';
 import {JobType} from 'src/types/globalTypes';
 import {Box} from 'src/ui/Box';
@@ -52,9 +53,6 @@ export const InstanceDaemonRoot = () => {
             const hasSchedules = repositoriesOrError.nodes.some(
               (repository) => repository.schedules.length,
             );
-            const hasDaemonScheduler =
-              scheduler.__typename === 'Scheduler' &&
-              scheduler.schedulerClass === 'DagsterDaemonScheduler';
 
             const daemonStatusSection = (
               <Group direction="column" spacing={16}>
@@ -74,7 +72,10 @@ export const InstanceDaemonRoot = () => {
                     <Subheading>Schedules</Subheading>
                     <SchedulerTimezoneNote schedulerOrError={scheduler} />
                   </Box>
-                  {hasDaemonScheduler ? null : <SchedulerInfo schedulerOrError={scheduler} />}
+                  <SchedulerInfo
+                    schedulerOrError={scheduler}
+                    daemonHealth={instance.daemonHealth}
+                  />
                   {repositoriesOrError.nodes.map((repository) => (
                     <Group direction="column" spacing={12} key={repository.name}>
                       <strong>{`${repository.name}@${repository.location.name}`}</strong>
@@ -97,6 +98,7 @@ export const InstanceDaemonRoot = () => {
                 >
                   <Subheading>Sensors</Subheading>
                 </Box>
+                <SensorInfo daemonHealth={instance.daemonHealth} />
                 {repositoriesOrError.nodes.map((repository) =>
                   repository.sensors.length ? (
                     <Group direction="column" spacing={12} key={repository.name}>
