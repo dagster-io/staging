@@ -19,7 +19,7 @@ def test_execute_hammer_through_dagit():
                 "attribute": "hammer_pipeline",
             }
         ) as workspace:
-            context = DagsterGraphQLContext(workspace=workspace, instance=instance,)
+            context = DagsterGraphQLContext(workspace=workspace, instance=instance)
             selector = infer_pipeline_selector(context, "hammer_pipeline")
             executor = SyncExecutor()
 

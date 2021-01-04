@@ -531,7 +531,7 @@ class DauphinReloadRepositoryLocationMutation(dauphin.Mutation):
 
         graphene_info.context.reload_repository_location(location_name)
 
-        if graphene_info.context.has_repository_location(location_name):
+        if graphene_info.context.root_context.has_repository_location(location_name):
             return graphene_info.schema.type_named("RepositoryLocation")(
                 graphene_info.context.get_repository_location(location_name)
             )
