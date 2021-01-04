@@ -516,6 +516,7 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
                     ],
                     "port": 3030,
                     "env": {"BUILDKITE": os.getenv("BUILDKITE")},
+                    "replicaCount": 1,
                 }
             ],
         },
