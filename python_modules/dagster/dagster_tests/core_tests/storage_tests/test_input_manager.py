@@ -21,7 +21,7 @@ from dagster.core.storage.input_manager import input_manager
 
 def test_validate_inputs():
     @input_manager
-    def my_loader(_, _resource_config):
+    def my_loader(_):
         return 5
 
     @solid(
@@ -43,7 +43,7 @@ def test_validate_inputs():
 
 def test_root_input_manager():
     @input_manager
-    def my_hardcoded_csv_loader(_context, _resource_config):
+    def my_hardcoded_csv_loader(_context):
         return 5
 
     @solid(input_defs=[InputDefinition("input1", manager_key="my_loader")])
@@ -59,8 +59,8 @@ def test_root_input_manager():
 
 def test_configurable_root_input_manager():
     @input_manager(config_schema={"base_dir": str}, input_config_schema={"value": int})
-    def my_configurable_csv_loader(context, resource_config):
-        assert resource_config["base_dir"] == "abc"
+    def my_configurable_csv_loader(context):
+        assert context.resource_config["base_dir"] == "abc"
         return context.config["value"]
 
     @solid(input_defs=[InputDefinition("input1", manager_key="my_loader")])
@@ -107,7 +107,7 @@ def test_override_object_manager():
         assert input1 == 5
 
     @input_manager
-    def spark_table_loader(context, _resource_config):
+    def spark_table_loader(context):
         output = context.upstream_output
         assert output.metadata == metadata
         assert output.name == "my_output"
@@ -158,7 +158,7 @@ def test_input_manager_with_failure():
     _called = False
 
     @input_manager
-    def should_fail(_, _resource_config):
+    def should_fail(_):
         raise Failure(
             description="Foolure",
             metadata_entries=[
@@ -203,18 +203,18 @@ def test_input_manager_with_retries():
     _count = {"total": 0}
 
     @input_manager
-    def should_succeed(_, _resource_config):
+    def should_succeed(_):
         if _count["total"] < 2:
             _count["total"] += 1
             raise RetryRequested(max_retries=3)
         return "foo"
 
     @input_manager
-    def should_retry(_, _resource_config):
+    def should_retry(_):
         raise RetryRequested(max_retries=3)
 
     @input_manager
-    def should_not_execute(_, _resource_config):
+    def should_not_execute(_):
         _called = True
 
     @pipeline(
@@ -271,3 +271,23 @@ def test_input_manager_with_retries():
         step_stats_3 = instance.get_run_step_stats(result.run_id, step_keys=["take_input_3"])
         assert len(step_stats_3) == 0
         assert _called == False
+
+
+def test_input_manager_resource_config():
+    @input_manager(config_schema={"dog": str})
+    def emit_dog(context):
+        assert context.resource_config["dog"] == "poodle"
+
+    @solid(input_defs=[InputDefinition("solid_input", manager_key="emit_dog")])
+    def source_solid(_, solid_input):
+        return solid_input
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"emit_dog": emit_dog})])
+    def basic_pipeline():
+        return source_solid(source_solid())
+
+    result = execute_pipeline(
+        basic_pipeline, run_config={"resources": {"emit_dog": {"config": {"dog": "poodle"}}}}
+    )
+
+    assert result.success
