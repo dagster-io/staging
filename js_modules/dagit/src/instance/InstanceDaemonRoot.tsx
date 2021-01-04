@@ -52,9 +52,6 @@ export const InstanceDaemonRoot = () => {
             const hasSchedules = repositoriesOrError.nodes.some(
               (repository) => repository.schedules.length,
             );
-            const hasDaemonScheduler =
-              scheduler.__typename === 'Scheduler' &&
-              scheduler.schedulerClass === 'DagsterDaemonScheduler';
 
             const daemonStatusSection = (
               <Group direction="column" spacing={16}>
@@ -74,7 +71,10 @@ export const InstanceDaemonRoot = () => {
                     <Subheading>Schedules</Subheading>
                     <SchedulerTimezoneNote schedulerOrError={scheduler} />
                   </Box>
-                  {hasDaemonScheduler ? null : <SchedulerInfo schedulerOrError={scheduler} />}
+                  <SchedulerInfo
+                    schedulerOrError={scheduler}
+                    daemonHealth={instance.daemonHealth}
+                  />
                   {repositoriesOrError.nodes.map((repository) => (
                     <Group direction="column" spacing={12} key={repository.name}>
                       <strong>{`${repository.name}@${repository.location.name}`}</strong>
