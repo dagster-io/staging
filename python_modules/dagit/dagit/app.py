@@ -48,8 +48,10 @@ class DagsterGraphQLView(GraphQLView):
 def dagster_graphql_subscription_view(subscription_server, context):
     context = check.inst_param(context, "context", DagsterGraphQLContext)
 
+    context_for_request = context.copy_for_request()
+
     def view(ws):
-        subscription_server.handle(ws, request_context=context)
+        subscription_server.handle(ws, request_context=context_for_request)
         return []
 
     return view

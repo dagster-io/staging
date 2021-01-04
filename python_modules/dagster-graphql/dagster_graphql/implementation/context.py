@@ -1,4 +1,5 @@
 from dagster import check
+from dagster.cli.workspace.workspace import Workspace
 from dagster.core.host_representation import PipelineSelector, RepositoryLocation
 from dagster.core.host_representation.external import ExternalPipeline
 from dagster.core.host_representation.grpc_server_state_subscriber import (
@@ -13,9 +14,12 @@ from rx.subjects import Subject
 
 
 class DagsterGraphQLContext:
-    def __init__(self, instance, workspace, version=None):
+    def __init__(self, instance, workspace, root_context=None, version=None):
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
-        self._workspace = workspace
+        self._workspace = check.inst_param(workspace, "workspace", Workspace)
+        self._root_context = check.opt_inst_param(
+            root_context, "root_context", DagsterGraphQLContext
+        )
         self._repository_locations = {}
 
         self._location_state_events = Subject()
@@ -38,9 +42,31 @@ class DagsterGraphQLContext:
 
         self.version = version
 
+    def copy_for_request(self):
+        workspace_for_request = self.workspace.copy_for_request()
+        root_context = self
+        return DagsterGraphQLContext(
+            instance=self.instance,
+            workspace=workspace_for_request,
+            root_context=root_context,
+            version=self.version,
+        )
+
+    @property
+    def is_root_context(self):
+        return self._root_context is None
+
+    @property
+    def root_context(self):
+        return self if self.is_root_context else self._root_context
+
     @property
     def instance(self):
         return self._instance
+
+    @property
+    def workspace(self):
+        return self._workspace
 
     @property
     def repository_locations(self):
@@ -88,16 +114,23 @@ class DagsterGraphQLContext:
         return self._workspace.is_reload_supported(name)
 
     def reload_repository_location(self, name):
-        self._workspace.reload_repository_location(name)
+        # If this method is called in the context of the Dagit webserver, the current GraphQL context
+        # is a copy of the context made for the current request. To reload the repository location,
+        # it is necessary to reload the root context and workspace.
 
-        if self._workspace.has_repository_location_handle(name):
-            new_handle = self._workspace.get_repository_location_handle(name)
-            new_handle.add_state_subscriber(self._location_state_subscriber)
+        root_context = self.root_context
+        root_context.workspace.reload_repository_location(name)
+
+        # pylint: disable=protected-access
+        if root_context._workspace.has_repository_location_handle(name):
+            new_handle = root_context._workspace.get_repository_location_handle(name)
+            new_handle.add_state_subscriber(root_context._location_state_subscriber)
             new_location = RepositoryLocation.from_handle(new_handle)
             check.invariant(new_location.name == name)
-            self._repository_locations[name] = new_location
-        elif name in self._repository_locations:
-            del self._repository_locations[name]
+            root_context._repository_locations[name] = new_location
+        elif name in root_context._repository_locations:
+            del root_context._repository_locations[name]
+        # pylint: enable=protected-access
 
     def get_subset_external_pipeline(self, selector):
         check.inst_param(selector, "selector", PipelineSelector)
