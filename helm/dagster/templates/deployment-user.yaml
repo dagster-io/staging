@@ -93,24 +93,13 @@ spec:
               subPath: dagster.yaml
           resources:
             {{- toYaml $deployment.resources | nindent 12 }}
+          {{- if hasKey $deployment "livenessProbe" }}
           livenessProbe:
-            {{- if hasKey $deployment "livenessProbe" }}
             {{- toYaml $deployment.livenessProbe | nindent 12 }}
-            {{- if and (not (hasKey $deployment.livenessProbe "exec")) (not (hasKey $deployment.livenessProbe "httpGet")) }}
-            exec:
-              command: ["dagster", "api", "grpc-health-check", "-p", "{{ $deployment.port }}"]
-            {{- end }}
-            {{- else }}
-            exec:
-              command: ["dagster", "api", "grpc-health-check", "-p", "{{ $deployment.port }}"]
-            {{- end }}
+          {{- end }}
           {{- if hasKey $deployment "startupProbe" }}
           startupProbe:
             {{- toYaml $deployment.startupProbe | nindent 12 }}
-            {{- if and (not (hasKey $deployment.startupProbe "exec")) (not (hasKey $deployment.startupProbe "httpGet")) }}
-            exec:
-              command: ["dagster", "api", "grpc-health-check", "-p", "{{ $deployment.port }}"]
-            {{- end }}
           {{- end }}
       {{- with $deployment.nodeSelector }}
       nodeSelector:
