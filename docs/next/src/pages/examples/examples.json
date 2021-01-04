@@ -98,5 +98,10 @@
         "name": "deploy_docker",
         "title": "",
         "description": ""
+    },
+    {
+        "name": "pyspark_smoke_test",
+        "title": "PySpark Smoke Test",
+        "description": "Automatically test all PySpark transformations on empty data"
     }
 ]
