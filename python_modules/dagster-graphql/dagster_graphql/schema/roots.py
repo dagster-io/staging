@@ -529,15 +529,15 @@ class DauphinReloadRepositoryLocationMutation(dauphin.Mutation):
         if not graphene_info.context.is_reload_supported(location_name):
             return graphene_info.schema.type_named("ReloadNotSupported")(location_name)
 
-        graphene_info.context.reload_repository_location(location_name)
+        context = graphene_info.context.reload_repository_location(location_name)
 
-        if graphene_info.context.has_repository_location(location_name):
+        if context.has_repository_location(location_name):
             return graphene_info.schema.type_named("RepositoryLocation")(
-                graphene_info.context.get_repository_location(location_name)
+                context.get_repository_location(location_name)
             )
         else:
             return graphene_info.schema.type_named("RepositoryLocationLoadFailure")(
-                location_name, graphene_info.context.get_repository_location_error(location_name)
+                location_name, context.get_repository_location_error(location_name)
             )
 
 
