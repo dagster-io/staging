@@ -531,13 +531,18 @@ class DauphinReloadRepositoryLocationMutation(dauphin.Mutation):
 
         graphene_info.context.reload_repository_location(location_name)
 
-        if graphene_info.context.has_repository_location(location_name):
+        # If this mutation called in the context of the Dagit webserver, the current GraphQL context
+        # is a copy of the context made for the current request. Reloading a repository location
+        # modifies the root context, so we need to access the root context for the new
+        # location information.
+        root_context = graphene_info.context.root_context
+        if root_context.has_repository_location(location_name):
             return graphene_info.schema.type_named("RepositoryLocation")(
-                graphene_info.context.get_repository_location(location_name)
+                root_context.get_repository_location(location_name)
             )
         else:
             return graphene_info.schema.type_named("RepositoryLocationLoadFailure")(
-                location_name, graphene_info.context.get_repository_location_error(location_name)
+                location_name, root_context.get_repository_location_error(location_name)
             )
 
 
