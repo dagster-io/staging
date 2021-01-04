@@ -230,8 +230,9 @@ class DauphinLocationStateChangeEvent(dauphin.ObjectType):
 
 
 def get_location_state_change_observable(graphene_info):
-    context = graphene_info.context
-    return context.location_state_events.map(
+    process_context = graphene_info.context.process_context
+
+    return process_context.location_state_events.map(
         lambda event: graphene_info.schema.type_named("LocationStateChangeSubscription")(
             event=graphene_info.schema.type_named("LocationStateChangeEvent")(
                 event_type=event.event_type,

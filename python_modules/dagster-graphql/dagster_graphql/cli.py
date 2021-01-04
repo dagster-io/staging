@@ -21,7 +21,7 @@ from graphql.execution.executors.gevent import GeventExecutor
 from graphql.execution.executors.sync import SyncExecutor
 
 from .client.query import LAUNCH_PIPELINE_EXECUTION_MUTATION
-from .implementation.context import DagsterGraphQLContext
+from .implementation.context import ProcessContext, RequestContext
 from .schema import create_schema
 from .version import __version__
 
@@ -43,7 +43,9 @@ def execute_query(workspace, query, variables=None, use_sync_executor=False, ins
 
     query = query.strip("'\" \n\t")
 
-    context = DagsterGraphQLContext(workspace=workspace, instance=instance, version=__version__,)
+    context = RequestContext.from_process_context(
+        ProcessContext(workspace=workspace, instance=instance, version=__version__)
+    )
 
     executor = SyncExecutor() if use_sync_executor else GeventExecutor()
 
