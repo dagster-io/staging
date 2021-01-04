@@ -520,6 +520,7 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
                     "service": {
                         "annotations": {"dagster-integration-tests": "ucd-1-svc-annotation"}
                     },
+                    "replicaCount": 1,
                 }
             ],
         },
