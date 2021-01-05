@@ -13,6 +13,7 @@ from dagster.core.definitions import (
 from dagster.core.definitions.events import DynamicOutput
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
+    DagsterExecutionLoadInputError,
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
     DagsterStepOutputNotFoundError,
@@ -240,6 +241,19 @@ def _type_checked_step_output_event_sequence(step_context, step_output_handle, o
             metadata_entries=type_check.metadata_entries,
             dagster_type=dagster_type,
         )
+
+
+def load_input_values(step_context):
+    for step_input in step_context.step.step_inputs:
+        if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
+            continue
+
+        for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
+            if isinstance(event_or_input_value, DagsterEvent):
+                yield event_or_input_value
+            else:
+                check.invariant(step_input.name not in inputs)
+                inputs[step_input.name] = event_or_input_value
 
 
 def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
