@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import tempfile
 
 from dagster import (
     ModeDefinition,
@@ -55,45 +56,52 @@ def hello_logging_pipeline():
 
 
 def test_logging():
-    with safe_tempfile_path() as test_file_path:
-        with safe_tempfile_path() as critical_file_path:
-            with instance_for_test() as instance:
-                execute_pipeline(
-                    reconstructable(hello_logging_pipeline),
-                    {
-                        "loggers": {
-                            "test": {
-                                "config": {
-                                    "name": "test",
-                                    "file_path": test_file_path,
-                                    "log_level": "DEBUG",
-                                }
-                            },
-                            "critical": {
-                                "config": {
-                                    "name": "critical",
-                                    "file_path": critical_file_path,
-                                    "log_level": "CRITICAL",
-                                }
-                            },
-                        }
-                    },
-                    instance=instance,
-                )
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_manager_base_dir = os.path.join(temp_dir, "file_manager")
 
-                with open(test_file_path, "r") as test_file:
-                    records = [
-                        json.loads(line)
-                        for line in test_file.read().strip("\n").split("\n")
-                        if line
-                    ]
+        with safe_tempfile_path() as test_file_path:
+            with safe_tempfile_path() as critical_file_path:
+                with instance_for_test() as instance:
+                    execute_pipeline(
+                        reconstructable(hello_logging_pipeline),
+                        {
+                            "loggers": {
+                                "test": {
+                                    "config": {
+                                        "name": "test",
+                                        "file_path": test_file_path,
+                                        "log_level": "DEBUG",
+                                    }
+                                },
+                                "critical": {
+                                    "config": {
+                                        "name": "critical",
+                                        "file_path": critical_file_path,
+                                        "log_level": "CRITICAL",
+                                    }
+                                },
+                            },
+                            "storage": {"filesystem": {"config": {"base_dir": temp_dir}}},
+                            "resources": {
+                                "file_manager": {"config": {"base_dir": file_manager_base_dir}}
+                            },
+                        },
+                        instance=instance,
+                    )
 
-                with open(critical_file_path, "r") as critical_file:
-                    critical_records = [
-                        json.loads(line)
-                        for line in critical_file.read().strip("\n").split("\n")
-                        if line
-                    ]
+                    with open(test_file_path, "r") as test_file:
+                        records = [
+                            json.loads(line)
+                            for line in test_file.read().strip("\n").split("\n")
+                            if line
+                        ]
+
+                    with open(critical_file_path, "r") as critical_file:
+                        critical_records = [
+                            json.loads(line)
+                            for line in critical_file.read().strip("\n").split("\n")
+                            if line
+                        ]
 
     messages = [x["dagster_meta"]["orig_message"] for x in records]
 

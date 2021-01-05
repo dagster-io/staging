@@ -5,11 +5,11 @@ from contextlib import contextmanager
 
 import nbformat
 import pytest
-from dagster import execute_pipeline, pipeline
+from dagster import check, execute_pipeline, pipeline
 from dagster.core.definitions.events import PathMetadataEntryData
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.test_utils import instance_for_test
-from dagster.utils import file_relative_path, safe_tempfile_path
+from dagster.utils import file_relative_path, mkdir_p, safe_tempfile_path
 from dagstermill import DagstermillError, define_dagstermill_solid
 from jupyter_client.kernelspec import NoSuchKernel
 from nbconvert.preprocessors import ExecutePreprocessor
@@ -58,19 +58,40 @@ def cleanup_result_notebook(result):
 
 
 @contextmanager
-def exec_for_test(fn_name, env=None, raise_on_error=True, **kwargs):
+def exec_for_test(fn_name, run_config=None, raise_on_error=True, scaffold_storage=True, **kwargs):
+    run_config = check.opt_dict_param(run_config, "run_config")
     result = None
     recon_pipeline = ReconstructablePipeline.for_module("dagstermill.examples.repository", fn_name)
 
-    with instance_for_test() as instance:
-        try:
-            result = execute_pipeline(
-                recon_pipeline, env, instance=instance, raise_on_error=raise_on_error, **kwargs
-            )
-            yield result
-        finally:
-            if result:
-                cleanup_result_notebook(result)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        file_manager_base_dir = os.path.join(temp_dir, "file_manager")
+        mkdir_p(file_manager_base_dir)
+
+        if scaffold_storage:
+            run_config["storage"] = {"filesystem": {"config": {"base_dir": temp_dir}}}
+
+        if "resources" not in run_config:
+            run_config["resources"] = {
+                "file_manager": {"config": {"base_dir": file_manager_base_dir}}
+            }
+        elif "file_manager" not in run_config["resources"]:
+            run_config["resources"]["file_manager"] = {
+                "config": {"base_dir": file_manager_base_dir}
+            }
+
+        with instance_for_test() as instance:
+            try:
+                result = execute_pipeline(
+                    recon_pipeline,
+                    run_config,
+                    instance=instance,
+                    raise_on_error=raise_on_error,
+                    **kwargs,
+                )
+                yield result
+            finally:
+                if result:
+                    cleanup_result_notebook(result)
 
 
 @pytest.mark.notebook_test
@@ -114,31 +135,31 @@ def test_hello_world_with_output_notebook():
 def test_hello_world_with_config_escape():
     with exec_for_test(
         "hello_world_config_pipeline",
-        env={"solids": {"hello_world_config": {"config": {"greeting": "'"}}}},
+        run_config={"solids": {"hello_world_config": {"config": {"greeting": "'"}}}},
     ) as result:
         assert result.success
 
     with exec_for_test(
         "hello_world_config_pipeline",
-        env={"solids": {"hello_world_config": {"config": {"greeting": '"'}}}},
+        run_config={"solids": {"hello_world_config": {"config": {"greeting": '"'}}}},
     ) as result:
         assert result.success
 
     with exec_for_test(
         "hello_world_config_pipeline",
-        env={"solids": {"hello_world_config": {"config": {"greeting": "\\"}}}},
+        run_config={"solids": {"hello_world_config": {"config": {"greeting": "\\"}}}},
     ) as result:
         assert result.success
 
     with exec_for_test(
         "hello_world_config_pipeline",
-        env={"solids": {"hello_world_config": {"config": {"greeting": "}"}}}},
+        run_config={"solids": {"hello_world_config": {"config": {"greeting": "}"}}}},
     ) as result:
         assert result.success
 
     with exec_for_test(
         "hello_world_config_pipeline",
-        env={"solids": {"hello_world_config": {"config": {"greeting": "\n"}}}},
+        run_config={"solids": {"hello_world_config": {"config": {"greeting": "\n"}}}},
     ) as result:
         assert result.success
 
@@ -146,7 +167,8 @@ def test_hello_world_with_config_escape():
 @pytest.mark.notebook_test
 def test_reexecute_result_notebook():
     with exec_for_test(
-        "hello_world_pipeline", {"loggers": {"console": {"config": {"log_level": "ERROR"}}}}
+        "hello_world_pipeline",
+        run_config={"loggers": {"console": {"config": {"log_level": "ERROR"}}}},
     ) as result:
         assert result.success
 
@@ -156,13 +178,13 @@ def test_reexecute_result_notebook():
         for materialization_event in materialization_events:
             result_path = get_path(materialization_event)
 
-        if result_path.endswith(".ipynb"):
-            with open(result_path) as fd:
-                nb = nbformat.read(fd, as_version=4)
-            ep = ExecutePreprocessor()
-            ep.preprocess(nb, {})
-            with open(result_path) as fd:
-                assert nbformat.read(fd, as_version=4) == nb
+            if result_path.endswith(".ipynb"):
+                with open(result_path) as fd:
+                    nb = nbformat.read(fd, as_version=4)
+                ep = ExecutePreprocessor()
+                ep.preprocess(nb, {})
+                with open(result_path) as fd:
+                    assert nbformat.read(fd, as_version=4) == nb
 
 
 @pytest.mark.notebook_test
@@ -258,13 +280,20 @@ def test_hello_world_reexecution():
             )
 
             reexecution_result = None
-            with instance_for_test() as instance:
-                try:
-                    reexecution_result = execute_pipeline(reexecution_pipeline, instance=instance)
-                    assert reexecution_result.success
-                finally:
-                    if reexecution_result:
-                        cleanup_result_notebook(reexecution_result)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                with instance_for_test() as instance:
+                    try:
+                        reexecution_result = execute_pipeline(
+                            reexecution_pipeline,
+                            instance=instance,
+                            run_config={
+                                "storage": {"filesystem": {"config": {"base_dir": temp_dir}}}
+                            },
+                        )
+                        assert reexecution_result.success
+                    finally:
+                        if reexecution_result:
+                            cleanup_result_notebook(reexecution_result)
 
 
 @pytest.mark.notebook_test
@@ -371,5 +400,10 @@ def test_non_reconstructable_pipeline():
     def non_reconstructable():
         foo_solid()
 
-    with pytest.raises(DagstermillError, match="pipeline that is not reconstructable."):
-        execute_pipeline(non_reconstructable)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with pytest.raises(DagstermillError, match="pipeline that is not reconstructable."):
+            execute_pipeline(
+                non_reconstructable,
+                run_config={"storage": {"filesystem": {"config": {"base_dir": temp_dir}}}},
+            )
+

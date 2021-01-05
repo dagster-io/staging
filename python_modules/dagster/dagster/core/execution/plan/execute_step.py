@@ -241,6 +241,9 @@ def _type_checked_step_output_event_sequence(step_context, step_output_handle, o
     )
 
     if not type_check.success:
+        # import pdb
+
+        # pdb.set_trace()
         raise DagsterTypeCheckDidNotPass(
             description='Type check failed for step output "{output_name}" - expected type "{dagster_type}".'.format(
                 output_name=output.output_name, dagster_type=dagster_type.display_name,
@@ -265,7 +268,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
-    for input_name, input_value in _load_input_values(step_context):
+    for input_name, input_value in load_input_values(step_context):
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
         if isinstance(input_value, ObjectStoreOperation):
             yield DagsterEvent.object_store_operation(
@@ -522,7 +525,7 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
     )
 
 
-def _load_input_values(step_context):
+def load_input_values(step_context):
     step = step_context.step
 
     for step_input in step.step_inputs:
