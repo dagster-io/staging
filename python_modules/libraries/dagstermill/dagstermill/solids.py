@@ -21,6 +21,7 @@ from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
 from dagster.core.storage.file_manager import FileHandle
+from dagster.core.storage.intermediate_storage import ObjectStoreIntermediateStorage
 from dagster.serdes import pack_value
 from dagster.utils import mkdir_p, safe_tempfile_path
 from dagster.utils.error import serializable_error_info_from_exc_info
@@ -30,8 +31,7 @@ from papermill.parameterize import _find_first_tagged_cell_index
 
 from .engine import DagstermillNBConvertEngine
 from .errors import DagstermillError
-from .serialize import read_value, write_value
-from .translator import RESERVED_INPUT_NAMES, DagsterTranslator
+from .translator import DagsterTranslator
 
 
 # This is based on papermill.parameterize.parameterize_notebook
@@ -85,7 +85,7 @@ def replace_parameters(context, nb, parameters):
     return nb
 
 
-def get_papermill_parameters(compute_context, inputs, output_log_path):
+def get_papermill_parameters(compute_context, inputs, output_log_path, marshal_dir):
     check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
     check.param_invariant(
         isinstance(compute_context.run_config, dict),
@@ -95,9 +95,6 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
     check.dict_param(inputs, "inputs", key_type=str)
 
     run_id = compute_context.run_id
-
-    marshal_dir = "/tmp/dagstermill/{run_id}/marshal".format(run_id=run_id)
-    mkdir_p(marshal_dir)
 
     if not isinstance(compute_context.pipeline, ReconstructablePipeline):
         raise DagstermillError(
@@ -117,22 +114,13 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
 
     parameters = {}
 
-    input_def_dict = compute_context.solid_def.input_dict
-    for input_name, input_value in inputs.items():
-        assert (
-            input_name not in RESERVED_INPUT_NAMES
-        ), "Dagstermill solids cannot have inputs named {input_name}".format(input_name=input_name)
-        dagster_type = input_def_dict[input_name].dagster_type
-        parameter_value = write_value(
-            dagster_type, input_value, os.path.join(marshal_dir, "input-{}".format(input_name))
-        )
-        parameters[input_name] = parameter_value
-
-    parameters["__dm_context"] = dm_context_dict
-    parameters["__dm_executable_dict"] = dm_executable_dict
-    parameters["__dm_pipeline_run_dict"] = pack_value(compute_context.pipeline_run)
-    parameters["__dm_solid_handle_kwargs"] = dm_solid_handle_kwargs
-    parameters["__dm_instance_ref_dict"] = pack_value(compute_context.instance.get_ref())
+    parameters["context_dict"] = dm_context_dict
+    parameters["executable_dict"] = dm_executable_dict
+    parameters["pipeline_run_dict"] = pack_value(compute_context.pipeline_run)
+    parameters["solid_handle_kwargs"] = dm_solid_handle_kwargs
+    parameters["instance_ref_dict"] = pack_value(compute_context.instance.get_ref())
+    parameters["step_key"] = compute_context.step.key
+    parameters["input_names"] = list(inputs.keys())
 
     return parameters
 
@@ -153,15 +141,32 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
         system_compute_context = compute_context.get_system_context()
 
-        with tempfile.TemporaryDirectory() as output_notebook_dir:
+        if not system_compute_context.intermediate_storage.is_persistent:
+            raise DagstermillError(
+                "Must provide persistent intermediate storage to execute dagstermill solids. To "
+                "use the default filesystem storage, set {'storage': 'filesystem': {}} in your "
+                "run_config; or configure another persistent intermediate storage on your pipeline "
+                "and select it in your run_config."
+            )
+
+        if not isinstance(
+            system_compute_context.intermediate_storage, ObjectStoreIntermediateStorage
+        ):
+            raise DagstermillError(
+                "Must provide an intermediate storage that wraps an object store (subclass of "
+                "dagster.storage.intermediate_storage.ObjectStoreIntermediateStorage), e.g., the "
+                "default filesystem storage"
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
             with safe_tempfile_path() as output_log_path:
 
                 parameterized_notebook_path = os.path.join(
-                    output_notebook_dir, "{prefix}-inter.ipynb".format(prefix=str(uuid.uuid4()))
+                    temp_dir, "{prefix}-inter.ipynb".format(prefix=str(uuid.uuid4()))
                 )
 
                 executed_notebook_path = os.path.join(
-                    output_notebook_dir, "{prefix}-out.ipynb".format(prefix=str(uuid.uuid4()))
+                    temp_dir, "{prefix}-out.ipynb".format(prefix=str(uuid.uuid4()))
                 )
 
                 # Scaffold the registration here
@@ -169,7 +174,9 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                 nb_no_parameters = replace_parameters(
                     system_compute_context,
                     nb,
-                    get_papermill_parameters(system_compute_context, inputs, output_log_path),
+                    get_papermill_parameters(
+                        system_compute_context, inputs, output_log_path, marshal_dir=temp_dir
+                    ),
                 )
                 write_ipynb(nb_no_parameters, parameterized_notebook_path)
 
@@ -219,8 +226,8 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
             executed_notebook_file_handle = None
             try:
-                # use binary mode when when moving the file since certain file_managers such as S3
-                # may try to hash the contents
+                # use binary mode when copying the file contents since certain file_managers such
+                # as S3 may try to hash the contents
                 with open(executed_notebook_path, "rb") as fd:
                     executed_notebook_file_handle = compute_context.resources.file_manager.write(
                         fd, mode="wb", ext="ipynb"
@@ -228,9 +235,9 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                     executed_notebook_materialization_path = executed_notebook_file_handle.path_desc
             except Exception:  # pylint: disable=broad-except
                 compute_context.log.warning(
-                    "Error when attempting to materialize executed notebook using file manager (falling back to local): {exc}".format(
-                        exc=str(serializable_error_info_from_exc_info(sys.exc_info()))
-                    )
+                    "Error when attempting to materialize executed notebook using file manager "
+                    "(falling back to local): "
+                    f"{str(serializable_error_info_from_exc_info(sys.exc_info()))}"
                 )
                 executed_notebook_materialization_path = executed_notebook_path
 
@@ -250,13 +257,23 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
             output_nb = scrapbook.read_notebook(executed_notebook_path)
 
+            intermediate_storage = system_compute_context.intermediate_storage
+            object_store = system_compute_context.intermediate_storage.object_store
             for (output_name, output_def) in system_compute_context.solid_def.output_dict.items():
-                data_dict = output_nb.scraps.data_dict
-                if output_name in data_dict:
-                    value = read_value(output_def.dagster_type, data_dict[output_name])
+                key = intermediate_storage.key_for_paths(
+                    [
+                        "dagstermill",
+                        compute_context.solid_handle.to_string(),
+                        "outputs",
+                        output_name,
+                    ]
+                )
+                if object_store.has_object(key):
+                    obj, _key = object_store.get_object(key=key)
 
-                    yield Output(value, output_name)
+                    yield Output(obj, output_name)
 
+            # FIXME make sure this is a tempfile
             for key, value in output_nb.scraps.items():
                 if key.startswith("event-"):
                     with open(value.data, "rb") as fd:

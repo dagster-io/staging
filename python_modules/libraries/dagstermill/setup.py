@@ -33,6 +33,7 @@ if __name__ == "__main__":
             "nteract-scrapbook>=0.2.0",
             "papermill>=1.0.0,<2.0.0",
             "six",
+            "dataclasses==0.8; python_version<'3.7'",
         ],
         entry_points={"console_scripts": ["dagstermill = dagstermill.cli:main"]},
     )
