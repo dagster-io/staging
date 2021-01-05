@@ -1,4 +1,5 @@
 import os
+import tempfile
 
 # pylint: disable=unused-argument
 import pytest
@@ -68,15 +69,17 @@ def test_ingest_pipeline_fast_filesystem_storage(postgres, pg_hostname):
 @pytest.mark.spark
 @pytest.mark.skipif('"win" in sys.platform', reason="avoiding the geopandas tests")
 def test_airline_pipeline_1_warehouse(postgres, pg_hostname):
-    with instance_for_test() as instance:
+    with tempfile.TemporaryDirectory() as temp_dir:
+        with instance_for_test() as instance:
 
-        warehouse_config_object = load_yaml_from_globs(
-            config_path("test_base.yaml"), config_path("local_warehouse.yaml")
-        )
-        result_warehouse = execute_pipeline(
-            pipeline=warehouse_pipeline,
-            mode="local",
-            run_config=warehouse_config_object,
-            instance=instance,
-        )
-        assert result_warehouse.success
+            warehouse_config_object = load_yaml_from_globs(
+                config_path("test_base.yaml"), config_path("local_warehouse.yaml")
+            )
+            warehouse_config_object["resources"]["object_manager"] = {"base_dir": temp_dir}
+            result_warehouse = execute_pipeline(
+                pipeline=warehouse_pipeline,
+                mode="local",
+                run_config=warehouse_config_object,
+                instance=instance,
+            )
+            assert result_warehouse.success

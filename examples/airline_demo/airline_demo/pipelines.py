@@ -1,7 +1,7 @@
 """Pipeline definitions for the airline_demo.
 """
 
-from dagster import ModeDefinition, PresetDefinition, composite_solid, pipeline
+from dagster import ModeDefinition, PresetDefinition, composite_solid, fs_object_manager, pipeline
 from dagster.core.definitions.no_step_launcher import no_step_launcher
 from dagster.core.storage.file_cache import fs_file_cache
 from dagster.core.storage.file_manager import local_file_manager
@@ -48,6 +48,7 @@ test_mode = ModeDefinition(
         "s3": s3_resource,
         "file_cache": fs_file_cache,
         "file_manager": local_file_manager,
+        "object_manager": fs_object_manager,
     },
     intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
 )
@@ -63,6 +64,7 @@ local_mode = ModeDefinition(
         "tempfile": tempfile_resource,
         "file_cache": fs_file_cache,
         "file_manager": local_file_manager,
+        "object_manager": fs_object_manager,
     },
     intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
 )
@@ -78,6 +80,7 @@ prod_mode = ModeDefinition(
         "tempfile": tempfile_resource,
         "file_cache": s3_file_cache,
         "file_manager": s3_file_manager,
+        "object_manager": fs_object_manager,
     },
     intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
 )
