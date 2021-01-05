@@ -6,10 +6,12 @@ import pytest
 from dagster import (
     DependencyDefinition,
     InputDefinition,
+    ModeDefinition,
     OutputDefinition,
     PresetDefinition,
     execute_pipeline,
     file_relative_path,
+    fs_object_manager,
     pipeline,
     repository,
 )
@@ -33,6 +35,7 @@ def define_papermill_pandas_hello_world_solid():
 
 
 @pipeline(
+    mode_defs=[ModeDefinition(resource_defs={"object_manager": fs_object_manager})],
     preset_defs=[
         PresetDefinition.from_files(
             "test",
@@ -52,7 +55,7 @@ def define_papermill_pandas_hello_world_solid():
                 )
             ],
         ),
-    ]
+    ],
 )
 def papermill_pandas_hello_world_pipeline():
     hello_world = define_papermill_pandas_hello_world_solid()

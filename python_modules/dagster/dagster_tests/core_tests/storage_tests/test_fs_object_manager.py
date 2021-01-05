@@ -37,10 +37,7 @@ def test_fs_object_manager():
 
         assert len(asset_store_operation_events) == 3
         # SET ASSET for step "solid_a" output "result"
-        assert (
-            asset_store_operation_events[0].event_specific_data.op
-            == AssetStoreOperationType.SET_ASSET
-        )
+        assert asset_store_operation_events[0].event_specific_data.op == "SET_ASSET"
         filepath_a = os.path.join(tmpdir_path, result.run_id, "solid_a", "result")
         assert os.path.isfile(filepath_a)
         with open(filepath_a, "rb") as read_obj:

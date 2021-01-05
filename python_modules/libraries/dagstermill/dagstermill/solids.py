@@ -19,10 +19,15 @@ from dagster import (
 )
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.execution.context.compute import SolidExecutionContext
-from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.execution.context.system import (
+    InputContext,
+    OutputContext,
+    SystemComputeExecutionContext,
+)
+from dagster.core.storage.asset_store import InMemoryAssetStore
 from dagster.core.storage.file_manager import FileHandle
 from dagster.serdes import pack_value
-from dagster.utils import mkdir_p, safe_tempfile_path
+from dagster.utils import safe_tempfile_path
 from dagster.utils.error import serializable_error_info_from_exc_info
 from papermill.engines import papermill_engines
 from papermill.iorw import load_notebook_node, write_ipynb
@@ -30,8 +35,7 @@ from papermill.parameterize import _find_first_tagged_cell_index
 
 from .engine import DagstermillNBConvertEngine
 from .errors import DagstermillError
-from .serialize import read_value, write_value
-from .translator import RESERVED_INPUT_NAMES, DagsterTranslator
+from .translator import DagsterTranslator
 
 
 # This is based on papermill.parameterize.parameterize_notebook
@@ -85,7 +89,7 @@ def replace_parameters(context, nb, parameters):
     return nb
 
 
-def get_papermill_parameters(compute_context, inputs, output_log_path):
+def get_papermill_parameters(compute_context, inputs, output_log_path, marshal_dir):
     check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
     check.param_invariant(
         isinstance(compute_context.run_config, dict),
@@ -93,11 +97,6 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
         "SystemComputeExecutionContext must have valid run_config",
     )
     check.dict_param(inputs, "inputs", key_type=str)
-
-    run_id = compute_context.run_id
-
-    marshal_dir = "/tmp/dagstermill/{run_id}/marshal".format(run_id=run_id)
-    mkdir_p(marshal_dir)
 
     if not isinstance(compute_context.pipeline, ReconstructablePipeline):
         raise DagstermillError(
@@ -117,22 +116,13 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
 
     parameters = {}
 
-    input_def_dict = compute_context.solid_def.input_dict
-    for input_name, input_value in inputs.items():
-        assert (
-            input_name not in RESERVED_INPUT_NAMES
-        ), "Dagstermill solids cannot have inputs named {input_name}".format(input_name=input_name)
-        dagster_type = input_def_dict[input_name].dagster_type
-        parameter_value = write_value(
-            dagster_type, input_value, os.path.join(marshal_dir, "input-{}".format(input_name))
-        )
-        parameters[input_name] = parameter_value
-
-    parameters["__dm_context"] = dm_context_dict
-    parameters["__dm_executable_dict"] = dm_executable_dict
-    parameters["__dm_pipeline_run_dict"] = pack_value(compute_context.pipeline_run)
-    parameters["__dm_solid_handle_kwargs"] = dm_solid_handle_kwargs
-    parameters["__dm_instance_ref_dict"] = pack_value(compute_context.instance.get_ref())
+    parameters["context_dict"] = dm_context_dict
+    parameters["executable_dict"] = dm_executable_dict
+    parameters["pipeline_run_dict"] = pack_value(compute_context.pipeline_run)
+    parameters["solid_handle_kwargs"] = dm_solid_handle_kwargs
+    parameters["instance_ref_dict"] = pack_value(compute_context.instance.get_ref())
+    parameters["step_key"] = compute_context.step.key
+    parameters["input_names"] = list(inputs.keys())
 
     return parameters
 
@@ -153,15 +143,24 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
         system_compute_context = compute_context.get_system_context()
 
-        with tempfile.TemporaryDirectory() as output_notebook_dir:
+        object_manager = system_compute_context.resources.object_manager
+
+        if isinstance(object_manager, InMemoryAssetStore):
+            raise DagstermillError(
+                "May not use the default mem_asset_store when executing Dagstermill solids. "
+                "Please configure an object manager resource that is appropriate for passing "
+                "values across process boundaries on your pipeline, e.g., fs_object_manager."
+            )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
             with safe_tempfile_path() as output_log_path:
 
                 parameterized_notebook_path = os.path.join(
-                    output_notebook_dir, "{prefix}-inter.ipynb".format(prefix=str(uuid.uuid4()))
+                    temp_dir, "{prefix}-inter.ipynb".format(prefix=str(uuid.uuid4()))
                 )
 
                 executed_notebook_path = os.path.join(
-                    output_notebook_dir, "{prefix}-out.ipynb".format(prefix=str(uuid.uuid4()))
+                    temp_dir, "{prefix}-out.ipynb".format(prefix=str(uuid.uuid4()))
                 )
 
                 # Scaffold the registration here
@@ -169,7 +168,9 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                 nb_no_parameters = replace_parameters(
                     system_compute_context,
                     nb,
-                    get_papermill_parameters(system_compute_context, inputs, output_log_path),
+                    get_papermill_parameters(
+                        system_compute_context, inputs, output_log_path, marshal_dir=temp_dir
+                    ),
                 )
                 write_ipynb(nb_no_parameters, parameterized_notebook_path)
 
@@ -219,8 +220,8 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
             executed_notebook_file_handle = None
             try:
-                # use binary mode when when moving the file since certain file_managers such as S3
-                # may try to hash the contents
+                # use binary mode when copying the file contents since certain file_managers such
+                # as S3 may try to hash the contents
                 with open(executed_notebook_path, "rb") as fd:
                     executed_notebook_file_handle = compute_context.resources.file_manager.write(
                         fd, mode="wb", ext="ipynb"
@@ -228,9 +229,9 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
                     executed_notebook_materialization_path = executed_notebook_file_handle.path_desc
             except Exception:  # pylint: disable=broad-except
                 compute_context.log.warning(
-                    "Error when attempting to materialize executed notebook using file manager (falling back to local): {exc}".format(
-                        exc=str(serializable_error_info_from_exc_info(sys.exc_info()))
-                    )
+                    "Error when attempting to materialize executed notebook using file manager "
+                    "(falling back to local): "
+                    f"{str(serializable_error_info_from_exc_info(sys.exc_info()))}"
                 )
                 executed_notebook_materialization_path = executed_notebook_path
 
@@ -250,13 +251,51 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
             output_nb = scrapbook.read_notebook(executed_notebook_path)
 
+            # Optional output handling
+            outputs_to_handle = set([])
+            for key, value in output_nb.scraps.items():
+                if key.startswith("output-"):
+                    with open(value.data, "rb") as fd:
+                        output_event = pickle.loads(fd.read())
+                    outputs_to_handle.add(output_event.output_name)
+
             for (output_name, output_def) in system_compute_context.solid_def.output_dict.items():
-                data_dict = output_nb.scraps.data_dict
-                if output_name in data_dict:
-                    value = read_value(output_def.dagster_type, data_dict[output_name])
+                if output_name not in outputs_to_handle:
+                    continue
 
-                    yield Output(value, output_name)
+                step_output = system_compute_context.step.step_output_named(output_name)
 
+                input_context = InputContext(
+                    name=None,
+                    pipeline_name=compute_context.pipeline_run.pipeline_name,
+                    solid_def=None,
+                    config=(compute_context.solid_config or {}).get("outputs"),
+                    metadata=step_output.output_def.metadata,
+                    upstream_output=OutputContext(
+                        step_key=system_compute_context.step.key,
+                        name=output_name,
+                        pipeline_name=compute_context.pipeline_run.pipeline_name,
+                        run_id=system_compute_context.run_id,
+                        metadata=step_output.output_def.metadata,
+                        # mapping_key would come from DynamicOutput, not clear how we would do that
+                        # here -- risk of collision if we map over a dagstermill solid?
+                        mapping_key=None,
+                        config=(compute_context.solid_config or {}).get("outputs"),
+                        solid_def=compute_context.solid_def,
+                        dagster_type=output_def.dagster_type,
+                        log_manager=compute_context.log,
+                        version=None,
+                        step_context=None,  # Not clear how to provide this
+                    ),
+                    dagster_type=output_def.dagster_type,
+                    log_manager=compute_context.log,
+                    step_context=None,  # Not clear how to provide this
+                )
+                obj = object_manager.load_input(context=input_context)
+
+                yield Output(obj, output_name)
+
+            # TODO: make sure this is a tempfile
             for key, value in output_nb.scraps.items():
                 if key.startswith("event-"):
                     with open(value.data, "rb") as fd:
@@ -304,6 +343,7 @@ def define_dagstermill_solid(
     required_resource_keys = check.opt_set_param(
         required_resource_keys, "required_resource_keys", of_type=str
     )
+    required_resource_keys.add("object_manager")
     if output_notebook is not None:
         required_resource_keys.add("file_manager")
     if isinstance(asset_key_prefix, str):
