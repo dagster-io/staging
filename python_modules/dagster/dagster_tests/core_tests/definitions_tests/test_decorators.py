@@ -542,26 +542,19 @@ def test_partitions_for_hourly_schedule_decorators_with_timezone():
                 ).isoformat()
             }
 
-            # You can specify a start date in a different timezone and it will be transformed into the
-            # execution timezone
+            # You can't specify a start date in a different timezone
             start_date_with_different_timezone = pendulum.create(2019, 1, 1, 0, tz="US/Pacific")
 
-            @hourly_schedule(
-                pipeline_name="foo_pipeline",
-                start_date=start_date_with_different_timezone,
-                execution_time=time(hour=0, minute=25),
-                execution_timezone="US/Central",
-            )
-            def hourly_central_schedule_with_timezone_start_time(hourly_time):
-                return {"hourly_time": hourly_time.isoformat()}
+            with pytest.raises(DagsterInvariantViolationError):
 
-            _check_partitions(
-                hourly_central_schedule_with_timezone_start_time,
-                HOURS_UNTIL_FEBRUARY_27 - 2,  # start date is two hours later since it's in PT
-                start_date_with_different_timezone.in_tz("US/Central"),
-                DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
-                relativedelta(hours=1),
-            )
+                @hourly_schedule(
+                    pipeline_name="foo_pipeline",
+                    start_date=start_date_with_different_timezone,
+                    execution_time=time(hour=0, minute=25),
+                    execution_timezone="US/Central",
+                )
+                def hourly_central_schedule_with_timezone_start_time(hourly_time):
+                    return {"hourly_time": hourly_time.isoformat()}
 
 
 def test_partitions_for_daily_schedule_decorators_without_timezone():

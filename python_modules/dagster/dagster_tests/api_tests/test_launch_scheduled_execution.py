@@ -32,6 +32,7 @@ from dagster.utils import find_free_port
 from dagster.utils.temp_file import get_temp_file_name
 
 _COUPLE_DAYS_AGO = today_at_midnight().subtract(days=2)
+_COUPLE_DAYS_AGO_PST = today_at_midnight("US/Pacific").subtract(days=2)
 
 
 def _throw(_context):
@@ -84,7 +85,7 @@ def wrong_config_schedule(_context):
 
 
 @daily_schedule(
-    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO, execution_timezone="US/Pacific",
+    pipeline_name="the_pipeline", start_date=_COUPLE_DAYS_AGO_PST, execution_timezone="US/Pacific",
 )
 def pacific_time_schedule(_context):
     return {"solids": {"the_solid": {"config": {"work_amt": "a lot"}}}}

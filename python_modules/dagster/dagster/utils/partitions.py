@@ -45,6 +45,35 @@ def _delta_to_delta_range(delta):
         )
 
 
+def _validate_schedule_times(start_time, end_time, execution_timezone):
+    check.inst_param(start_time, "start_time", datetime.datetime)
+    check.opt_inst_param(end_time, "end_time", datetime.datetime)
+    check.opt_str_param(execution_timezone, "exceution_timezone")
+
+    if execution_timezone and start_time.tzinfo:
+        if not isinstance(start_time, pendulum.Pendulum):
+            raise DagsterInvariantViolationError(
+                "Timezone-aware schedule start time must be a pendulum datetime"
+            )
+        if start_time.timezone.name != execution_timezone:
+            raise DagsterInvariantViolationError(
+                "Schedule's start time timezone must match the execution timezone"
+            )
+
+    if not end_time:
+        return
+
+    if execution_timezone and end_time.tzinfo:
+        if not isinstance(end_time, pendulum.Pendulum):
+            raise DagsterInvariantViolationError(
+                "Timezone-aware schedule end time must be a pendulum datetime"
+            )
+        if end_time.timezone.name != execution_timezone:
+            raise DagsterInvariantViolationError(
+                "Schedule end time's timezone must match the execution timezone"
+            )
+
+
 def schedule_partition_range(
     start, end, cron_schedule, fmt, timezone, execution_time_to_partition_fn,
 ):
@@ -56,6 +85,8 @@ def schedule_partition_range(
     check.str_param(fmt, "fmt")
     check.opt_str_param(timezone, "timezone")
     check.callable_param(execution_time_to_partition_fn, "execution_time_to_partition_fn")
+
+    _validate_schedule_times(start, end, timezone)
 
     if end and start > end:
         raise DagsterInvariantViolationError(
@@ -134,6 +165,8 @@ def date_partition_range(
     check.opt_str_param(timezone, "timezone")
 
     check.opt_inst_param(delta, "delta", (datetime.timedelta, relativedelta))
+
+    _validate_schedule_times(start, end, timezone)
 
     if delta:
         check.invariant(not delta_range, "cannot supply both 'delta' and 'delta_range' parameters")
