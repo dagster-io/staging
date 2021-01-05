@@ -74,7 +74,7 @@ describe('App', () => {
     const [runsLink] = screen.getAllByText('Runs');
     expect(runsLink.closest('a')).toHaveAttribute('href', '/instance/runs');
     expect(screen.getByText('Assets').closest('a')).toHaveAttribute('href', '/instance/assets');
-    expect(screen.getByText('Daemons').closest('a')).toHaveAttribute('href', '/instance/daemons');
+    expect(screen.getByText('Instance details').closest('a')).toHaveAttribute('href', '/instance');
 
     expect(screen.getByText('my_repository')).toBeVisible();
   });
