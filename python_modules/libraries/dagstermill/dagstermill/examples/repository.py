@@ -13,6 +13,7 @@ from dagster import (
     OutputDefinition,
     ResourceDefinition,
     String,
+    fs_object_manager,
     lambda_solid,
     pipeline,
     repository,
@@ -68,7 +69,11 @@ def test_nb_solid(name, **kwargs):
     )
 
 
-default_mode_defs = [ModeDefinition(resource_defs={"file_manager": local_file_manager})]
+default_mode_defs = [
+    ModeDefinition(
+        resource_defs={"file_manager": local_file_manager, "object_manager": fs_object_manager}
+    )
+]
 
 
 hello_world = test_nb_solid("hello_world", output_defs=[])
@@ -281,11 +286,16 @@ def filepicklelist_resource(init_context):
             resource_defs={
                 "list": ResourceDefinition(lambda _: []),
                 "file_manager": local_file_manager,
+                "object_manager": fs_object_manager,
             },
         ),
         ModeDefinition(
             name="prod",
-            resource_defs={"list": filepicklelist_resource, "file_manager": local_file_manager},
+            resource_defs={
+                "list": filepicklelist_resource,
+                "file_manager": local_file_manager,
+                "object_manager": fs_object_manager,
+            },
         ),
     ]
 )
@@ -296,7 +306,11 @@ def resource_pipeline():
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            resource_defs={"list": filepicklelist_resource, "file_manager": local_file_manager}
+            resource_defs={
+                "list": filepicklelist_resource,
+                "file_manager": local_file_manager,
+                "object_manager": fs_object_manager,
+            }
         )
     ]
 )
