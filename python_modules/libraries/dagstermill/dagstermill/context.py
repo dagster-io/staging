@@ -85,7 +85,7 @@ class DagstermillExecutionContext(AbstractComputeExecutionContext):
         return self._pipeline_context.pipeline_def
 
     @property
-    def resources(self) -> NamedTuple:
+    def resources(self) -> Any:
         """collections.namedtuple: A dynamically-created type whose properties allow access to
         resources."""
         return self._pipeline_context.scoped_resources_builder.build(
