@@ -13,6 +13,7 @@ from dagster.core.definitions import (
 from dagster.core.definitions.events import DynamicOutput
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
+    DagsterExecutionLoadInputError,
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
     DagsterStepOutputNotFoundError,
