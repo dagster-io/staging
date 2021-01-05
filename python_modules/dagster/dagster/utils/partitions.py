@@ -3,6 +3,8 @@ import warnings
 
 import pendulum
 from dagster import check
+from dagster.core.definitions.partition import Partition, PartitionSetDefinition, last_partition
+from dagster.core.definitions.schedule import ScheduleExecutionContext
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.utils.schedules import schedule_execution_time_iterator
 from dateutil.relativedelta import relativedelta
@@ -48,8 +50,6 @@ def _delta_to_delta_range(delta):
 def schedule_partition_range(
     start, end, cron_schedule, fmt, timezone, execution_time_to_partition_fn,
 ):
-    from dagster.core.definitions.partition import Partition
-
     check.inst_param(start, "start", datetime.datetime)
     check.opt_inst_param(end, "end", datetime.datetime)
     check.str_param(cron_schedule, "cron_schedule")
@@ -185,3 +185,23 @@ def date_partition_range(
         return date_names[:-1]
 
     return get_date_range_partitions
+
+
+def create_default_partition_selector_fn(
+    execution_time_to_partition_fn, fmt=DEFAULT_DATE_FORMAT,
+):
+    check.callable_param(execution_time_to_partition_fn, "execution_time_to_partition_fn")
+    check.str_param(fmt, "fmt")
+
+    def default_partition_selector(context, partition_set_def):
+        check.inst_param(context, "context", ScheduleExecutionContext)
+        check.inst_param(partition_set_def, "partition_set_def", PartitionSetDefinition)
+
+        if not context.scheduled_execution_time:
+            return last_partition(context, partition_set_def)
+
+        partition_time = execution_time_to_partition_fn(context.scheduled_execution_time)
+
+        return Partition(value=partition_time, name=partition_time.strftime(fmt))
+
+    return default_partition_selector
