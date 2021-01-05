@@ -88,7 +88,14 @@ class DagsterDaemonController:
                 daemon.last_iteration_time = curr_time
                 daemon.last_iteration_exception = None
                 try:
-                    daemon.run_iteration()
+                    generator = daemon.run_iteration()
+                    try:
+                        while True:
+                            next(generator)
+                            self._check_add_heartbeat(daemon, curr_time)
+                    except StopIteration:
+                        pass
+
                 except Exception:  # pylint: disable=broad-except
                     error_info = serializable_error_info_from_exc_info(sys.exc_info())
                     daemon.last_iteration_exception = error_info
