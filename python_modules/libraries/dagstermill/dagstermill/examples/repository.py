@@ -13,6 +13,7 @@ from dagster import (
     OutputDefinition,
     ResourceDefinition,
     String,
+    fs_object_manager,
     lambda_solid,
     pipeline,
     repository,
@@ -68,7 +69,11 @@ def test_nb_solid(name, **kwargs):
     )
 
 
-default_mode_defs = [ModeDefinition(resource_defs={"file_manager": local_file_manager})]
+default_mode_defs = [
+    ModeDefinition(
+        resource_defs={"file_manager": local_file_manager, "object_manager": fs_object_manager}
+    )
+]
 
 
 hello_world = test_nb_solid("hello_world", output_defs=[])

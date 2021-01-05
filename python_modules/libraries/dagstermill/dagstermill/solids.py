@@ -19,7 +19,12 @@ from dagster import (
 )
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.execution.context.compute import SolidExecutionContext
-from dagster.core.execution.context.system import SystemComputeExecutionContext
+from dagster.core.execution.context.system import (
+    InputContext,
+    OutputContext,
+    SystemComputeExecutionContext,
+)
+from dagster.core.storage.asset_store import InMemoryAssetStore
 from dagster.core.storage.file_manager import FileHandle
 from dagster.core.storage.intermediate_storage import ObjectStoreIntermediateStorage
 from dagster.serdes import pack_value
@@ -141,21 +146,15 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
         system_compute_context = compute_context.get_system_context()
 
-        if not system_compute_context.intermediate_storage.is_persistent:
-            raise DagstermillError(
-                "Must provide persistent intermediate storage to execute dagstermill solids. To "
-                "use the default filesystem storage, set {'storage': 'filesystem': {}} in your "
-                "run_config; or configure another persistent intermediate storage on your pipeline "
-                "and select it in your run_config."
-            )
+        object_manager = system_compute_context.resources.object_manager
 
-        if not isinstance(
-            system_compute_context.intermediate_storage, ObjectStoreIntermediateStorage
-        ):
+        # FIXME: Is this really the blessed way to check whether the object manager is the in-memory
+        # object manager
+        if isinstance(object_manager, InMemoryAssetStore):
             raise DagstermillError(
-                "Must provide an intermediate storage that wraps an object store (subclass of "
-                "dagster.storage.intermediate_storage.ObjectStoreIntermediateStorage), e.g., the "
-                "default filesystem storage"
+                "May not use the default mem_asset_store when executing Dagstermill solids. "
+                "Please configure an object manager resource that is appropriate for passing "
+                "values across process boundaries on your pipeline, e.g., fs_asset_store."
             )
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -257,21 +256,54 @@ def _dm_solid_compute(name, notebook_path, output_notebook=None, asset_key_prefi
 
             output_nb = scrapbook.read_notebook(executed_notebook_path)
 
-            intermediate_storage = system_compute_context.intermediate_storage
-            object_store = system_compute_context.intermediate_storage.object_store
-            for (output_name, output_def) in system_compute_context.solid_def.output_dict.items():
-                key = intermediate_storage.key_for_paths(
-                    [
-                        "dagstermill",
-                        compute_context.solid_handle.to_string(),
-                        "outputs",
-                        output_name,
-                    ]
-                )
-                if object_store.has_object(key):
-                    obj, _key = object_store.get_object(key=key)
+            # Optional output handling
+            outputs_to_handle = set([])
+            for key, value in output_nb.scraps.items():
+                if key.startswith("output-"):
+                    with open(value.data, "rb") as fd:
+                        output_event = pickle.loads(fd.read())
+                    outputs_to_handle.add(output_event.output_name)
 
-                    yield Output(obj, output_name)
+            for (output_name, output_def) in system_compute_context.solid_def.output_dict.items():
+                if output_name not in outputs_to_handle:
+                    continue
+                input_context = InputContext(
+                    name=None,
+                    pipeline_name=compute_context.pipeline_run.pipeline_name,
+                    solid_def=None,
+                    config=None,
+                    metadata=None,
+                    upstream_output=OutputContext(
+                        step_key=system_compute_context.step.key,
+                        name=output_name,
+                        pipeline_name=compute_context.pipeline_run.pipeline_name,
+                        run_id=system_compute_context.run_id,
+                        metadata=None,
+                        mapping_key=None,
+                        config=None,
+                        solid_def=compute_context.solid_def,
+                        dagster_type=output_def.dagster_type,
+                        log_manager=compute_context.log,
+                        version=None,
+                        step_context=None,  # FIXME: ?
+                    ),
+                    dagster_type=output_def.dagster_type,
+                    log_manager=compute_context.log,
+                    step_context=None,  # FIXME: ?
+                    # step_key=system_compute_context.step.key,
+                    # output_name=output_name,
+                    # mapping_key=None,
+                    # asset_metadata={},
+                    # pipeline_name=compute_context.pipeline_run.pipeline_name,
+                    # solid_def=compute_context.solid_def,
+                    # dagster_type=output_def.dagster_type,
+                    # # Consider postfixing this with _dagstermill
+                    # source_run_id=system_compute_context.run_id,
+                    # version=None,
+                )
+                obj = object_manager.load_input(context=input_context)
+
+                yield Output(obj, output_name)
 
             # FIXME make sure this is a tempfile
             for key, value in output_nb.scraps.items():

@@ -525,6 +525,22 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
     )
 
 
+def load_input_value(step_context, step_input):
+    with user_code_error_boundary(
+        DagsterExecutionLoadInputError,
+        control_flow_exceptions=[Failure, RetryRequested],
+        msg_fn=lambda: f"""Error occurred during the loading of a step input:
+            step key: "{step_context.step.key}"
+            input name: "{step_input.name}"
+        """,  # pylint: disable=cell-var-from-loop
+        step_key=step_context.step.key,
+        input_name=step_input.name,
+    ):
+        input_value = step_input.source.load_input_object(step_context)
+
+    return input_value
+
+
 def load_input_values(step_context):
     step = step_context.step
 
@@ -532,16 +548,4 @@ def load_input_values(step_context):
         if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
 
-        with user_code_error_boundary(
-            DagsterExecutionLoadInputError,
-            control_flow_exceptions=[Failure, RetryRequested],
-            msg_fn=lambda: f"""Error occurred during the loading of a step input:
-                step key: "{step_context.step.key}"
-                input name: "{step_input.name}"
-            """,  # pylint: disable=cell-var-from-loop
-            step_key=step_context.step.key,
-            input_name=step_input.name,
-        ):
-            input_value = step_input.source.load_input_object(step_context)
-
-        yield step_input.name, input_value
+        yield step_input.name, load_input_value(step_context, step_input)
