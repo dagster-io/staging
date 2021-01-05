@@ -123,6 +123,8 @@ class QueuedRunCoordinatorDaemon(DagsterDaemon):
             self._tag_concurrency_limits, in_progress_runs
         )
         for run in sorted_runs:
+            yield
+
             if num_dequeued_runs >= max_runs_to_launch:
                 break
 
