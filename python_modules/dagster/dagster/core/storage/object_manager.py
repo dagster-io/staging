@@ -79,7 +79,7 @@ def object_manager(
     """
     Define an object manager.
 
-    The decorated function should accept an :py:class:`InitResourceContext and return an
+    The decorated function should accept an :py:class:`InitResourceContext` and return an
     py:class:`ObjectManager`.
 
     Args:
