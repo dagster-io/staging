@@ -135,7 +135,7 @@ class InMemoryEventLogStorage(EventLogStorage, AssetAwareEventLogStorage, Config
 
         if include_cursor:
             asset_events = [
-                tuple(index + cursor, event) for index, event in enumerate(asset_events)
+                tuple([index + cursor, event]) for index, event in enumerate(asset_events)
             ]
 
         return asset_events
