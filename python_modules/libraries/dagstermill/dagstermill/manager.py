@@ -10,6 +10,7 @@ from dagster import (
     Failure,
     Materialization,
     ModeDefinition,
+    Output,
     PipelineDefinition,
     SolidDefinition,
     TypeCheck,
@@ -20,7 +21,8 @@ from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.execution.api import create_execution_plan, scoped_pipeline_context
-from dagster.core.execution.plan.execute_step import load_input_values
+from dagster.core.execution.context.system import OutputContext
+from dagster.core.execution.plan.execute_step import load_input_value
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resources_init import (
     get_required_resource_keys_to_init,
@@ -28,6 +30,7 @@ from dagster.core.execution.resources_init import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.asset_store import AssetStoreContext
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.utils import make_new_run_id
@@ -37,6 +40,8 @@ from dagster.utils import PICKLE_PROTOCOL, EventGenerationManager
 
 from .context import DagstermillExecutionContext, DagstermillRuntimeExecutionContext
 from .errors import DagstermillError
+
+DUMMY_OUTPUT_VALUE = "97b8993c43b04d72bde4f27c15fb7042"
 
 
 class DagstermillResourceEventGenerationManager(EventGenerationManager):
@@ -60,7 +65,6 @@ class Manager:
         self.marshal_dir = None
         self.context = None
         self.resource_manager = None
-        self.input_values = {}
 
     def _setup_resources(
         self,
@@ -171,9 +175,6 @@ class Manager:
                 solid_name=solid_def.name,
             )
 
-        for input_name, input_value in load_input_values(self.context._step_context):
-            self.input_values[input_name] = input_value
-
         return self.context
 
     def load_input(self, input_name):
@@ -189,7 +190,9 @@ class Manager:
         When the notebook is executed by Dagstermill, these assignments will be overwritten with an
         injected call to this function.
         """
-        return self.input_values[input_name].obj
+        # FIXME: Check context
+        step_context = self.context._step_context
+        return load_input_value(step_context, step_context.step.step_input_named(input_name))
 
     def get_context(
         self, solid_config=None, mode_def: ModeDefinition = None, run_config: Dict[str, Any] = None,
@@ -294,14 +297,65 @@ class Manager:
 
         solid_context = self.get_context()
         system_context = solid_context._pipeline_context
-        step_context = solid_context._step_context
+        object_manager = solid_context.resources.object_manager
+        output_def = self.solid_def.output_def_named(output_name)
 
-        intermediate_storage = system_context.intermediate_storage
-        object_store = intermediate_storage.object_store
-        key = intermediate_storage.key_for_paths(
-            ["dagstermill", step_context.solid_handle.to_string(), "outputs", output_name]
+        # asset_store_context = AssetStoreContext(
+        #     step_key=system_context.step.key,
+        #     output_name=output_name,
+        #     mapping_key=None,
+        #     asset_metadata={},
+        #     pipeline_name=solid_context.pipeline_run.pipeline_name,
+        #     solid_def=solid_context.solid_def,
+        #     dagster_type=output_def.dagster_type,
+        #     # Consider postfixing this with _dagstermill
+        #     source_run_id=system_context.run_id,
+        #     version=None,
+        # )
+
+        output_context = OutputContext(
+            step_key=solid_context._step_context.step.key,
+            name=output_name,
+            pipeline_name=solid_context.pipeline_run.pipeline_name,
+            run_id=system_context.run_id,
+            metadata=None,
+            mapping_key=None,
+            config=None,
+            solid_def=solid_context.solid_def,
+            dagster_type=output_def.dagster_type,
+            log_manager=solid_context.log,
+            version=None,
         )
-        object_store.set_object(key=key, obj=value)
+
+        object_manager.handle_output(context=output_context, obj=value)
+
+        dagster_event = Output(value=DUMMY_OUTPUT_VALUE, output_name=output_name)
+
+        self._yield_event(dagster_event)
+
+    yield_output = yield_result
+
+    def _yield_event(self, dagster_event):
+        if not self.in_pipeline:
+            return dagster_event
+
+        # deferred import for perf
+        import scrapbook
+
+        if isinstance(dagster_event, Output):
+            assert dagster_event.value == DUMMY_OUTPUT_VALUE, (
+                "Use dagstermill.yield_result to yield Outputs from Dagstermill notebooks: "
+                "Users should not call _yield_event directly"
+            )
+            event_id = f"output-{uuid.uuid4().hex}"
+        else:
+            event_id = f"event-{uuid.uuid4().hex}"
+
+        out_file_path = os.path.join(self.marshal_dir, event_id)
+        with open(out_file_path, "wb") as fd:
+            fd.write(pickle.dumps(dagster_event, PICKLE_PROTOCOL))
+
+        scrapbook.glue(event_id, out_file_path)
 
     def yield_event(self, dagster_event):
         """Yield a dagster event directly from notebook code.
@@ -318,18 +372,7 @@ class Manager:
             (AssetMaterialization, Materialization, ExpectationResult, TypeCheck, Failure),
         )
 
-        if not self.in_pipeline:
-            return dagster_event
-
-        # deferred import for perf
-        import scrapbook
-
-        event_id = "event-{event_uuid}".format(event_uuid=str(uuid.uuid4()))
-        out_file_path = os.path.join(self.marshal_dir, event_id)
-        with open(out_file_path, "wb") as fd:
-            fd.write(pickle.dumps(dagster_event, PICKLE_PROTOCOL))
-
-        scrapbook.glue(event_id, out_file_path)
+        return self._yield_event(dagster_event)
 
     def teardown_resources(self):
         if self.resource_manager is not None:

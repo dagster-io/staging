@@ -58,7 +58,13 @@ def cleanup_result_notebook(result):
 
 
 @contextmanager
-def exec_for_test(fn_name, run_config=None, raise_on_error=True, scaffold_storage=True, **kwargs):
+def exec_for_test(
+    fn_name,
+    run_config=None,
+    raise_on_error=True,
+    # scaffold_storage=True,
+    **kwargs,
+):
     run_config = check.opt_dict_param(run_config, "run_config")
     result = None
     recon_pipeline = ReconstructablePipeline.for_module("dagstermill.examples.repository", fn_name)
@@ -67,17 +73,21 @@ def exec_for_test(fn_name, run_config=None, raise_on_error=True, scaffold_storag
         file_manager_base_dir = os.path.join(temp_dir, "file_manager")
         mkdir_p(file_manager_base_dir)
 
-        if scaffold_storage:
-            run_config["storage"] = {"filesystem": {"config": {"base_dir": temp_dir}}}
+        # if scaffold_storage:
+        #     run_config["storage"] = {"filesystem": {"config": {"base_dir": temp_dir}}}
 
         if "resources" not in run_config:
             run_config["resources"] = {
-                "file_manager": {"config": {"base_dir": file_manager_base_dir}}
+                "file_manager": {"config": {"base_dir": file_manager_base_dir}},
+                "object_manager": {"config": {"base_dir": temp_dir}},
             }
-        elif "file_manager" not in run_config["resources"]:
-            run_config["resources"]["file_manager"] = {
-                "config": {"base_dir": file_manager_base_dir}
-            }
+        else:
+            if "file_manager" not in run_config["resources"]:
+                run_config["resources"]["file_manager"] = {
+                    "config": {"base_dir": file_manager_base_dir}
+                }
+            if "object_manager" not in run_config["resources"]:
+                run_config["resources"]["object_manager"] = {"config": {"base_dir": temp_dir}}
 
         with instance_for_test() as instance:
             try:
