@@ -5,12 +5,13 @@ import * as React from 'react';
 import {ScrollContainer} from 'src/ListComponents';
 import {Loading} from 'src/Loading';
 import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
+import {INSTANCE_HEALTH_FRAGMENT} from 'src/instance/InstanceStatusRoot';
 import {ScheduleTickHistory} from 'src/jobs/TickHistory';
 import {TopNav} from 'src/nav/TopNav';
 import {DagsterTag} from 'src/runs/RunTag';
 import {ScheduleDetails} from 'src/schedules/ScheduleDetails';
 import {SCHEDULE_FRAGMENT} from 'src/schedules/ScheduleUtils';
-import {SCHEDULER_FRAGMENT} from 'src/schedules/SchedulerInfo';
+import {SCHEDULER_FRAGMENT, SchedulerInfo} from 'src/schedules/SchedulerInfo';
 import {PreviousRunsForScheduleQuery} from 'src/schedules/types/PreviousRunsForScheduleQuery';
 import {
   ScheduleRootQuery,
@@ -62,7 +63,7 @@ export const ScheduleRoot: React.FC<Props> = (props) => {
 
   return (
     <Loading queryResult={queryResult} allowStaleData={true}>
-      {({scheduleOrError}) => {
+      {({scheduleOrError, scheduler, instance}) => {
         if (scheduleOrError.__typename !== 'Schedule') {
           return null;
         }
@@ -87,6 +88,11 @@ export const ScheduleRoot: React.FC<Props> = (props) => {
           <ScrollContainer>
             <TopNav breadcrumbs={breadcrumbs} />
             <Group direction="column" spacing={24} padding={{vertical: 20, horizontal: 24}}>
+              <SchedulerInfo
+                schedulerOrError={scheduler}
+                daemonHealth={instance.daemonHealth}
+                errorsOnly={true}
+              />
               <ScheduleDetails
                 repoAddress={repoAddress}
                 schedule={scheduleOrError}
@@ -152,10 +158,14 @@ const SCHEDULE_ROOT_QUERY = gql`
         stack
       }
     }
+    instance {
+      ...InstanceHealthFragment
+    }
   }
 
   ${SCHEDULER_FRAGMENT}
   ${SCHEDULE_FRAGMENT}
+  ${INSTANCE_HEALTH_FRAGMENT}
 `;
 
 const PREVIOUS_RUNS_FOR_SCHEDULE_QUERY = gql`
