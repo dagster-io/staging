@@ -305,7 +305,14 @@ class SystemStepExecutionContext(SystemExecutionContext):
         )
 
     def for_input_manager(
-        self, name, config, metadata, dagster_type, source_handle=None, resource_config=None,
+        self,
+        name,
+        config,
+        metadata,
+        dagster_type,
+        source_handle=None,
+        resource_config=None,
+        resources=None,
     ):
         return InputContext(
             pipeline_name=self.pipeline_def.name,
@@ -318,6 +325,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
             log_manager=self._log_manager,
             step_context=self,
             resource_config=resource_config,
+            resources=resources,
         )
 
     def get_output_manager(self, step_output_handle):
@@ -504,7 +512,7 @@ class OutputContext(
 class InputContext(
     namedtuple(
         "_InputContext",
-        "name pipeline_name solid_def config metadata upstream_output dagster_type log step_context resource_config",
+        "name pipeline_name solid_def config metadata upstream_output dagster_type log step_context resource_config resources",
     )
 ):
     """
@@ -523,6 +531,9 @@ class InputContext(
         log (Optional[DagsterLogManager]): The log manager to use for this input.
         resource_config (Optional[Dict[str, Any]]): The config associated with the resource that
             initializes the InputManager.
+        resources (ScopedResources): The resources required by the resource that initializes the
+            input manager. If using the :py:func:`@input_manager` decorator, these resources
+            correspond to those requested with the `required_resource_keys` parameter.
     """
 
     def __new__(
@@ -539,6 +550,7 @@ class InputContext(
         # This is used internally by the intermediate storage adapter, we don't expect users to mock this.
         step_context=None,
         resource_config=None,
+        resources=None,
     ):
 
         return super(InputContext, cls).__new__(
@@ -557,6 +569,7 @@ class InputContext(
                 step_context, "step_context", SystemStepExecutionContext
             ),
             resource_config=resource_config,
+            resources=resources,
         )
 
 
