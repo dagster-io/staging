@@ -3,6 +3,7 @@ import sys
 import time
 from contextlib import contextmanager
 
+import pytest
 # pylint: disable=unused-argument
 from click.testing import CliRunner
 from dagster import check
@@ -139,6 +140,8 @@ def test_start_worker_config_from_partial_yaml(rabbitmq):
         assert check_for_worker("dagster_test_worker", args=args)
 
 
+# https://github.com/dagster-io/dagster/issues/3494
+@pytest.mark.skip
 def test_start_worker_config_from_yaml(rabbitmq):
     args = ["-y", file_relative_path(__file__, "engine_config.yaml")]
 
