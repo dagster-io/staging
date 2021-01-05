@@ -23,6 +23,7 @@ from dagster.cli import ENV_PREFIX, cli
 from dagster.cli.pipeline import pipeline_execute_command
 from dagster.cli.run import run_list_command, run_wipe_command
 from dagster.core.definitions.decorators.sensor import sensor
+from dagster.core.definitions.partition import last_partition
 from dagster.core.definitions.sensor import RunRequest
 from dagster.core.test_utils import instance_for_test, instance_for_test_tempdir
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -84,7 +85,9 @@ def define_bar_schedules():
             "foo_schedule", cron_schedule="* * * * *", pipeline_name="test_pipeline", run_config={},
         ),
         "partitioned_schedule": partition_set.create_schedule_definition(
-            schedule_name="partitioned_schedule", cron_schedule="* * * * *"
+            schedule_name="partitioned_schedule",
+            cron_schedule="* * * * *",
+            partition_selector=last_partition,
         ),
     }
 
