@@ -18,6 +18,7 @@ from dagster.core.definitions.events import (
 )
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
+    DagsterExecutionLoadInputError,
     DagsterExecutionStepExecutionError,
     DagsterInvariantViolationError,
     DagsterStepOutputNotFoundError,
@@ -264,11 +265,16 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
-    for input_name, input_value in _load_input_values(step_context):
+    for input_name, input_value in load_input_values(step_context):
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
         if isinstance(input_value, ObjectStoreOperation):
             yield DagsterEvent.object_store_operation(
                 step_context, ObjectStoreOperation.serializable(input_value, value_name=input_name)
+            )
+            inputs[input_name] = input_value.obj
+        elif isinstance(input_value, AssetStoreOperation):
+            yield DagsterEvent.asset_store_operation(
+                step_context, AssetStoreOperation.serializable(input_value)
             )
             inputs[input_name] = input_value.obj
         elif isinstance(input_value, FanInStepInputValuesWrapper):
@@ -290,13 +296,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
                 # or the value directly
                 else:
                     final_values.append(inner_value)
-
             inputs[input_name] = final_values
-        elif isinstance(input_value, AssetStoreOperation):
-            yield DagsterEvent.asset_store_operation(
-                step_context, AssetStoreOperation.serializable(input_value)
-            )
-            inputs[input_name] = input_value.obj
         else:
             inputs[input_name] = input_value
 
@@ -423,9 +423,11 @@ def _set_objects(step_context, step_output, step_output_handle, output):
             step_context,
             AssetStoreOperation.serializable(
                 AssetStoreOperation(
-                    AssetStoreOperationType.SET_ASSET,
-                    step_output_handle,
-                    AssetStoreHandle(output_def.manager_key, output_def.metadata),
+                    op=AssetStoreOperationType.SET_ASSET,
+                    step_output_handle=step_output_handle,
+                    asset_store_handle=AssetStoreHandle(
+                        output_def.manager_key, output_def.metadata
+                    ),
                 )
             ),
         )
@@ -528,13 +530,27 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
     )
 
 
-def _load_input_values(step_context):
+def load_input_value(step_context, step_input):
+    with user_code_error_boundary(
+        DagsterExecutionLoadInputError,
+        control_flow_exceptions=[Failure, RetryRequested],
+        msg_fn=lambda: f"""Error occurred during the loading of a step input:
+            step key: "{step_context.step.key}"
+            input name: "{step_input.name}"
+        """,  # pylint: disable=cell-var-from-loop
+        step_key=step_context.step.key,
+        input_name=step_input.name,
+    ):
+        input_value = step_input.source.load_input_object(step_context)
+
+    return input_value
+
+
+def load_input_values(step_context):
     step = step_context.step
 
     for step_input in step.step_inputs:
         if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
             continue
 
-        input_value = step_input.source.load_input_object(step_context)
-
-        yield step_input.name, input_value
+        yield step_input.name, load_input_value(step_context, step_input)
