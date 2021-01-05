@@ -806,6 +806,20 @@ class AssetStoreOperation(
             obj=obj,
         )
 
+    @classmethod
+    def serializable(cls, inst, **kwargs):
+        return cls(
+            **dict(
+                {
+                    "op": inst.op.value,
+                    "step_output_handle": inst.step_output_handle,
+                    "asset_store_handle": inst.asset_store_handle,
+                    "obj": None,
+                },
+                **kwargs,
+            )
+        )
+
 
 class ObjectStoreOperationType(Enum):
     SET_OBJECT = "SET_OBJECT"
