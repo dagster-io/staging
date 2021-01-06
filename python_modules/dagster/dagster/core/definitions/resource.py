@@ -47,6 +47,7 @@ class ResourceDefinition(ConfigurableDefinition):
         description=None,
         required_resource_keys=None,
         version=None,
+        do_not_reinit=None,
     ):
         EXPECTED_POSITIONALS = ["*"]
         fn_positionals, _ = split_function_parameters(resource_fn, EXPECTED_POSITIONALS)
@@ -70,6 +71,7 @@ class ResourceDefinition(ConfigurableDefinition):
         self._version = check.opt_str_param(version, "version")
         if version:
             experimental_arg_warning("version", "ResourceDefinition.__init__")
+        self._do_not_reinit = check.opt_bool_param(do_not_reinit, "_do_not_reinit", default=False)
 
     @property
     def resource_fn(self):
@@ -90,6 +92,10 @@ class ResourceDefinition(ConfigurableDefinition):
     @property
     def required_resource_keys(self):
         return self._required_resource_keys
+
+    @property
+    def do_not_reinit(self):
+        return self._do_not_reinit
 
     @staticmethod
     def none_resource(description=None):

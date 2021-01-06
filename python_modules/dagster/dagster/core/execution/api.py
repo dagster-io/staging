@@ -207,6 +207,7 @@ def execute_run(pipeline, pipeline_run, instance, raise_on_error=False):
             pipeline_run,
             instance,
             intermediate_storage=pipeline_context.intermediate_storage,
+            resource_instances_not_to_reinit=pipeline_context.resource_instances_not_to_reinit,
         ),
     )
 
