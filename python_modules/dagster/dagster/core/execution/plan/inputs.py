@@ -187,10 +187,6 @@ class FromStepOutput(
 
     def load_input_object(self, step_context):
         source_handle = self.step_output_handle
-        if self.input_def.manager_key:
-            loader = getattr(step_context.resources, self.input_def.manager_key)
-            return _load_input_with_input_manager(loader, self.get_load_context(step_context))
-
         object_manager = step_context.get_output_manager(source_handle)
 
         check.invariant(
@@ -202,9 +198,10 @@ class FromStepOutput(
             f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
         )
 
-        obj = _load_input_with_input_manager(object_manager, self.get_load_context(step_context))
-
+        obj = object_manager.load_input(self.get_load_context(step_context))
         output_def = step_context.execution_plan.get_step_output(source_handle).output_def
+        manager_key = output_def.manager_key
+        metadata = output_def.metadata
 
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
         if isinstance(obj, ObjectStoreOperation):
@@ -215,7 +212,7 @@ class FromStepOutput(
             return AssetStoreOperation(
                 AssetStoreOperationType.GET_ASSET,
                 source_handle,
-                AssetStoreHandle(output_def.manager_key, output_def.metadata),
+                AssetStoreHandle(manager_key, metadata),
                 obj=obj,
             )
 
