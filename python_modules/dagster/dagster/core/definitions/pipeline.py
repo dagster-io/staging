@@ -11,7 +11,7 @@ from dagster.core.errors import (
 )
 from dagster.core.storage.input_manager import IInputManagerDefinition
 from dagster.core.storage.output_manager import IOutputManagerDefinition
-from dagster.core.types.dagster_type import DagsterTypeKind, construct_dagster_type_dictionary
+from dagster.core.types.dagster_type import construct_dagster_type_dictionary
 from dagster.core.utils import str_format_set
 from dagster.utils.backcompat import experimental_arg_warning
 
