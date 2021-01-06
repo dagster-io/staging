@@ -81,6 +81,7 @@ export type InstanceDaemonRootQuery_repositoriesOrError_RepositoryConnection_nod
 
 export interface InstanceDaemonRootQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_partitionSet {
   __typename: "PartitionSet";
+  id: string;
   name: string;
   partitionStatusesOrError: InstanceDaemonRootQuery_repositoriesOrError_RepositoryConnection_nodes_schedules_partitionSet_partitionStatusesOrError;
 }

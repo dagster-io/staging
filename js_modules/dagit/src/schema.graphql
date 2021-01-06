@@ -521,6 +521,7 @@ enum JobTickStatus {
 }
 
 type PartitionSet {
+  id: String!
   name: String!
   pipelineName: String!
   solidSelection: [String!]

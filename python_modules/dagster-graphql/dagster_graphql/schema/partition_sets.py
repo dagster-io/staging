@@ -102,6 +102,7 @@ class DauphinPartitionSet(dauphin.ObjectType):
     class Meta:
         name = "PartitionSet"
 
+    id = dauphin.NonNull(dauphin.String)
     name = dauphin.NonNull(dauphin.String)
     pipeline_name = dauphin.NonNull(dauphin.String)
     solid_selection = dauphin.List(dauphin.NonNull(dauphin.String))
@@ -124,6 +125,7 @@ class DauphinPartitionSet(dauphin.ObjectType):
         )
 
         super(DauphinPartitionSet, self).__init__(
+            id=external_partition_set.name,
             name=external_partition_set.name,
             pipeline_name=external_partition_set.pipeline_name,
             solid_selection=external_partition_set.solid_selection,
