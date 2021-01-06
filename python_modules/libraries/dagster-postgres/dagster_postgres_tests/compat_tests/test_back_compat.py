@@ -250,21 +250,15 @@ def test_0_9_22_postgres_pre_asset_partition(hostname, conn_string):
 
         with pytest.raises(
             DagsterInstanceMigrationRequired,
-            match=_migration_regex("event log", current_revision="c9159e740d7e"),
+            match=_migration_regex("run", current_revision="c9159e740d7e"),
         ):
             execute_pipeline(asset_pipeline, instance=instance)
 
         # ensure migration is run
         instance.upgrade()
 
-        runs = instance.get_runs()
-        assert len(runs) == 2
-
         result = execute_pipeline(asset_pipeline, instance=instance)
         assert result.success
-
-        runs = instance.get_runs()
-        assert len(runs) == 3
 
 
 def test_0_9_22_postgres_pre_run_partition(hostname, conn_string):
@@ -326,6 +320,7 @@ def _migration_regex(storage_name, current_revision, expected_revision=None):
             storage_name
         )
     )
+
     if expected_revision:
         revision = re.escape(
             "Database is at revision {}, head is {}.".format(current_revision, expected_revision)
