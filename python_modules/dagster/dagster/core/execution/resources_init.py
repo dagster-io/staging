@@ -1,7 +1,7 @@
 from collections import deque
 
 from dagster import check
-from dagster.core.definitions.resource import ScopedResourcesBuilder
+from dagster.core.definitions.resource import ResourceDefinition, ScopedResourcesBuilder
 from dagster.core.errors import (
     DagsterInvariantViolationError,
     DagsterResourceFunctionError,
@@ -23,7 +23,13 @@ from .context.init import InitResourceContext
 
 
 def resource_initialization_manager(
-    execution_plan, environment_config, pipeline_run, log_manager, resource_keys_to_init, instance
+    execution_plan,
+    environment_config,
+    pipeline_run,
+    log_manager,
+    resource_keys_to_init,
+    instance,
+    hardcoded_resource_instances,
 ):
     generator = resource_initialization_event_generator(
         execution_plan,
@@ -32,6 +38,7 @@ def resource_initialization_manager(
         log_manager,
         resource_keys_to_init,
         instance,
+        hardcoded_resource_instances,
     )
     return EventGenerationManager(generator, ScopedResourcesBuilder)
 
@@ -80,6 +87,7 @@ def _core_resource_initialization_event_generator(
     resource_log_manager,
     resource_managers,
     instance,
+    hardcoded_resource_instances,
 ):
     pipeline_def = execution_plan.pipeline_def
     resource_instances = {}
@@ -95,7 +103,14 @@ def _core_resource_initialization_event_generator(
 
         for level in toposort(resource_dependencies):
             for resource_name in level:
-                resource_def = mode_definition.resource_defs[resource_name]
+
+                if resource_name in hardcoded_resource_instances:
+                    # use the given resource instances instead of re-initiating it from resource def
+                    resource_def = ResourceDefinition.hardcoded_resource(
+                        hardcoded_resource_instances[resource_name]
+                    )
+                else:
+                    resource_def = mode_definition.resource_defs[resource_name]
                 if not resource_name in resource_keys_to_init:
                     continue
 
@@ -142,7 +157,13 @@ def _core_resource_initialization_event_generator(
 
 
 def resource_initialization_event_generator(
-    execution_plan, environment_config, pipeline_run, log_manager, resource_keys_to_init, instance
+    execution_plan,
+    environment_config,
+    pipeline_run,
+    log_manager,
+    resource_keys_to_init,
+    instance,
+    hardcoded_resource_instances=None,
 ):
     check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
     check.inst_param(environment_config, "environment_config", EnvironmentConfig)
@@ -150,7 +171,7 @@ def resource_initialization_event_generator(
     check.inst_param(log_manager, "log_manager", DagsterLogManager)
     check.set_param(resource_keys_to_init, "resource_keys_to_init", of_type=str)
     check.inst_param(instance, "instance", DagsterInstance)
-
+    check.opt_dict_param(hardcoded_resource_instances, "hardcoded_resource_instances")
     if execution_plan.step_key_for_single_step_plans():
         step = execution_plan.get_step_by_key(execution_plan.step_key_for_single_step_plans())
         resource_log_manager = log_manager.with_tags(**step.logging_tags)
@@ -169,6 +190,7 @@ def resource_initialization_event_generator(
             resource_log_manager=resource_log_manager,
             resource_managers=resource_managers,
             instance=instance,
+            hardcoded_resource_instances=hardcoded_resource_instances,
         )
     except GeneratorExit:
         # Shouldn't happen, but avoid runtime-exception in case this generator gets GC-ed
