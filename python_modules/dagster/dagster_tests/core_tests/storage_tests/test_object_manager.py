@@ -296,31 +296,6 @@ def test_set_object_manager_configure_intermediate_storage():
         execute_pipeline(my_pipeline, run_config={"intermediate_storage": {"filesystem": {}}})
 
 
-def test_fan_in():
-    with tempfile.TemporaryDirectory() as tmpdir_path:
-        default_object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
-
-        @solid
-        def input_solid1(_):
-            return 1
-
-        @solid
-        def input_solid2(_):
-            return 2
-
-        @solid
-        def solid1(_, input1):
-            assert input1 == [1, 2]
-
-        @pipeline(
-            mode_defs=[ModeDefinition(resource_defs={"object_manager": default_object_manager})]
-        )
-        def my_pipeline():
-            solid1(input1=[input_solid1(), input_solid2()])
-
-        execute_pipeline(my_pipeline)
-
-
 def test_configured():
     @object_manager(
         config_schema={"base_dir": str},

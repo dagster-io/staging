@@ -46,7 +46,7 @@ def solid1(_):
     """Do stuff"""
 
 
-@solid(input_defs=[InputDefinition("dataframe", manager_key="my_root_input_manager")])
+@solid(input_defs=[InputDefinition("dataframe", root_manager_key="my_root_input_manager")])
 def solid2(_, dataframe):
     """Do stuff"""
 
