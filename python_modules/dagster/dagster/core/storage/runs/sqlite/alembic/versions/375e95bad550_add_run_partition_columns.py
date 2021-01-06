@@ -27,12 +27,12 @@ def upgrade():
         indices = [x.get("name") for x in inspector.get_indexes("runs")]
         with op.batch_alter_table("runs") as batch_op:
             if "partition" not in columns:
-                batch_op.add_column("runs", sa.Column("partition", sa.String))
+                batch_op.add_column(sa.Column("partition", sa.String))
             if "partition_set" not in columns:
-                batch_op.add_column("runs", sa.Column("partition_set", sa.String))
+                batch_op.add_column(sa.Column("partition_set", sa.String))
             if "idx_run_partitions" not in indices:
                 batch_op.create_index(
-                    "idx_run_partitions", "runs", ["partition_set", "partition"], unique=False
+                    "idx_run_partitions", ["partition_set", "partition"], unique=False
                 )
 
 
