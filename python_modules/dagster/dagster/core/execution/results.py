@@ -515,6 +515,9 @@ class SolidExecutionResult:
 
     def _get_value(self, context, step_output_data):
         step_output_handle = step_output_data.step_output_handle
+        # FIXME because the context is created by reconstruct_context, this isn't working in the default
+        # mem_object_manager case - in-memory values dict is lost when the resource is re-initiated
+        # during reconstruct_context
         manager = context.get_output_manager(step_output_handle)
 
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
