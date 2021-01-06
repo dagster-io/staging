@@ -185,8 +185,8 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
     for name, inp in solid.definition.input_dict.items():
         inp_handle = SolidInputHandle(solid, inp)
         has_upstream = input_has_upstream(dependency_structure, inp_handle, solid, name)
-        if inp.manager_key:
-            input_field = get_input_manager_input_field(solid, inp, resource_defs, has_upstream)
+        if inp.manager_key and not has_upstream:
+            input_field = get_input_manager_input_field(solid, inp, resource_defs)
         else:
             input_field = None
 
@@ -203,7 +203,7 @@ def input_has_upstream(dependency_structure, input_handle, solid, input_name):
     return dependency_structure.has_deps(input_handle) or solid.container_maps_input(input_name)
 
 
-def get_input_manager_input_field(solid, input_def, resource_defs, has_upstream):
+def get_input_manager_input_field(solid, input_def, resource_defs):
     if input_def.manager_key not in resource_defs:
         raise DagsterInvalidDefinitionError(
             f'Input "{input_def.name}" for solid "{solid.name}" requires manager_key '
@@ -219,7 +219,7 @@ def get_input_manager_input_field(solid, input_def, resource_defs, has_upstream)
         )
 
     input_manager = resource_defs[input_def.manager_key]
-    return input_manager.get_input_config_schema(input_def, has_upstream)
+    return input_manager.get_input_config_schema(input_def)
 
 
 def get_outputs_field(solid, handle, resource_defs):
