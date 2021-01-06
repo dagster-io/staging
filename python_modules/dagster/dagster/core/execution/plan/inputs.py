@@ -88,7 +88,7 @@ class StepInputSource(ABC):
     def can_load_input_object(self, step_context):
         raise NotImplementedError()
 
-    def required_resource_keys(self, _execution_plan):
+    def required_resource_keys(self):
         return set()
 
     @abstractmethod
@@ -117,7 +117,7 @@ class FromRootInputManager(
         # TODO: support versioning for root loaders
         return None
 
-    def required_resource_keys(self, _execution_plan):
+    def required_resource_keys(self):
         return {self.input_def.root_manager_key}
 
     def can_load_input_object(self, step_context):
@@ -195,8 +195,6 @@ class FromStepOutput(
 
         obj = object_manager.load_input(self.get_load_context(step_context))
         output_def = step_context.execution_plan.get_step_output(source_handle).output_def
-        manager_key = output_def.manager_key
-        metadata = output_def.metadata
 
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
         if isinstance(obj, ObjectStoreOperation):
@@ -207,7 +205,7 @@ class FromStepOutput(
             return AssetStoreOperation(
                 AssetStoreOperationType.GET_ASSET,
                 source_handle,
-                AssetStoreHandle(manager_key, metadata),
+                AssetStoreHandle(output_def.manager_key, output_def.metadata),
                 obj=obj,
             )
 
@@ -222,8 +220,8 @@ class FromStepOutput(
                 step_versions[self.step_output_handle.step_key], self.step_output_handle.output_name
             )
 
-    def required_resource_keys(self, execution_plan):
-        return {execution_plan.get_manager_key(self.step_output_handle)}
+    def required_resource_keys(self):
+        return set()
 
 
 def _generate_error_boundary_msg_for_step_input(context, input_name):
@@ -302,10 +300,10 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
         # so we can yield the relevant object store events and unpack the values in the caller
         return FanInStepInputValuesWrapper(values)
 
-    def required_resource_keys(self, execution_plan):
+    def required_resource_keys(self):
         resource_keys = set()
         for source in self.sources:
-            resource_keys = resource_keys.union(source.required_resource_keys(execution_plan))
+            resource_keys = resource_keys.union(source.required_resource_keys())
         return resource_keys
 
     def compute_version(self, step_versions):
