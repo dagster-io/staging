@@ -368,7 +368,7 @@ def test_custom_configurable_input_type_old():
 def test_custom_configurable_input_type():
     from dagster import dagster_type_loader, usable_as_dagster_type
     from dataclasses import dataclass
-    from dagster.core.storage.input_manager import make_upstream_input_manager
+    from dagster.core.storage.input_manager import type_based_root_input_manager
 
     @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
     def file_summary_loader(_, config):
@@ -388,7 +388,7 @@ def test_custom_configurable_input_type():
     def email_file_summary(context, file_summary):
         context.log.info(str(file_summary))
 
-    input_manager_with_custom_types = make_upstream_input_manager(
+    input_manager_with_custom_types = type_based_root_input_manager(
         [(FileSummary, file_summary_loader)]
     )
 

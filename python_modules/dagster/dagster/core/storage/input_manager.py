@@ -11,7 +11,7 @@ from dagster.core.definitions.resource import ResourceDefinition
 
 class IInputManagerDefinition:
     @abstractmethod
-    def get_input_config_schema(self, input_def, has_upstream):
+    def get_input_config_schema(self, input_def):
         """The schema for per-input configuration for inputs that are managed by this
         input manager"""
 
@@ -36,7 +36,7 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
         if input_config_schema_fn:
             self._input_config_schema_fn = input_config_schema_fn
         else:
-            self._input_config_schema_fn = lambda _context, _has_upstream: input_config_schema
+            self._input_config_schema_fn = lambda _context: input_config_schema
 
         super(InputManagerDefinition, self).__init__(
             resource_fn=resource_fn,
@@ -46,9 +46,9 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
             version=version,
         )
 
-    def get_input_config_schema(self, input_def, has_upstream):
+    def get_input_config_schema(self, input_def):
         definition_config_schema = convert_user_facing_definition_config_schema(
-            self._input_config_schema_fn(input_def, has_upstream)
+            self._input_config_schema_fn(input_def)
         )
 
         return definition_config_schema.config_type if definition_config_schema else None
@@ -193,7 +193,18 @@ class _InputManagerDecoratorCallable:
         return input_manager_def
 
 
-def make_upstream_input_manager(type_loaders):
+def type_based_root_input_manager(type_loaders):
+    """
+    Returns a root input manager definition that loads inputs based on the dagster type of the input
+    definition being loaded.
+
+    Includes a set of built-in loaders for primitive dagster types like Int, String, etc.
+
+    Args:
+        type_loaders (List[Tuple(DagsterType, Loader)]): Each entry is a dagster type and the loader
+            that will be used to load inputs with that type.
+    """
+
     from dagster.core.types.dagster_type import resolve_dagster_type
 
     # TODO: augment the dict with loaders for builtin types
@@ -202,10 +213,7 @@ def make_upstream_input_manager(type_loaders):
         for dagster_type, loader in type_loaders
     }
 
-    def config_schema_fn(input_def, has_upstream):
-        if has_upstream:
-            return None
-
+    def config_schema_fn(input_def):
         type_loader = loaders_by_type_name.get(input_def.dagster_type.unique_name)
 
         # this path would be deprecated and eventually removed
@@ -216,19 +224,15 @@ def make_upstream_input_manager(type_loaders):
 
     @input_manager(input_config_schema_fn=config_schema_fn)
     def _input_manager(context):
-        if context.upstream_output:
-            return context.upstream_output_manager.load_input(context)
-        else:
-            type_loader = loaders_by_type_name.get(context.dagster_type.unique_name)
+        type_loader = loaders_by_type_name.get(context.dagster_type.unique_name)
 
-            # this path would be deprecated and eventually removed
-            if type_loader is None:
-                type_loader = context.dagster_type.loader
+        # this path would be deprecated and eventually removed
+        if type_loader is None:
+            type_loader = context.dagster_type.loader
 
-            return type_loader.construct_from_config_value(context, context.config)
+        return type_loader.construct_from_config_value(context, context.config)
 
     return _input_manager
 
 
-# An input manager that defers to the upstream object manager for loading inputs
-default_input_manager = make_upstream_input_manager([])
+default_input_manager = type_based_root_input_manager([])
