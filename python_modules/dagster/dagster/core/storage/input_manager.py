@@ -209,12 +209,11 @@ def type_based_root_input_manager(type_loaders):
 
     # TODO: augment the dict with loaders for builtin types
     loaders_by_type_name = {
-        resolve_dagster_type(dagster_type).unique_name: loader
-        for dagster_type, loader in type_loaders
+        resolve_dagster_type(dagster_type).key: loader for dagster_type, loader in type_loaders
     }
 
     def config_schema_fn(input_def):
-        type_loader = loaders_by_type_name.get(input_def.dagster_type.unique_name)
+        type_loader = loaders_by_type_name.get(input_def.dagster_type.key)
 
         # this path would be deprecated and eventually removed
         if type_loader is None:
@@ -230,7 +229,7 @@ def type_based_root_input_manager(type_loaders):
         input_config_schema_fn=config_schema_fn, required_resource_keys=required_resource_keys
     )
     def _input_manager(context):
-        type_loader = loaders_by_type_name.get(context.dagster_type.unique_name)
+        type_loader = loaders_by_type_name.get(context.dagster_type.key)
 
         # this path would be deprecated and eventually removed
         if type_loader is None:
