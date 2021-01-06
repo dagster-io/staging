@@ -121,11 +121,25 @@ class DagsterDaemonController:
             >= DAEMON_HEARTBEAT_INTERVAL_SECONDS
         ):
             self._last_heartbeat_times[daemon_type] = curr_time
+
+            last_stored_heartbeat = self._instance.get_daemon_heartbeats().get(daemon.daemon_type())
+            if last_stored_heartbeat and last_stored_heartbeat.daemon_id != self._daemon_uuid:
+                self._logger.warning(
+                    "Taking over from another {} daemon process. If this "
+                    "message reoccurs, you may have multiple daemons running which is not supported. "
+                    "Last heartbeat daemon id: {}, "
+                    "Current daemon_id: {}".format(
+                        daemon.daemon_type().value,
+                        last_stored_heartbeat.daemon_id,
+                        self._daemon_uuid,
+                    )
+                )
+
             self._instance.add_daemon_heartbeat(
                 DaemonHeartbeat(
                     pendulum.now("UTC").float_timestamp,
                     daemon.daemon_type(),
-                    None,
+                    self._daemon_uuid,
                     daemon.last_iteration_exception,
                 )
             )
