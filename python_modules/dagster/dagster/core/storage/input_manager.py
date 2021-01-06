@@ -222,7 +222,13 @@ def type_based_root_input_manager(type_loaders):
 
         return type_loader.schema_type if type_loader else None
 
-    @input_manager(input_config_schema_fn=config_schema_fn)
+    required_resource_keys = set().union(
+        *[loader.required_resource_keys for _, loader in type_loaders]
+    )
+
+    @input_manager(
+        input_config_schema_fn=config_schema_fn, required_resource_keys=required_resource_keys
+    )
     def _input_manager(context):
         type_loader = loaders_by_type_name.get(context.dagster_type.unique_name)
 
