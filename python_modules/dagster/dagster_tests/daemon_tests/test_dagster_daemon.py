@@ -106,11 +106,11 @@ def test_different_intervals(caplog):
         run_daemon = controller.get_daemon(DaemonType.QUEUED_RUN_COORDINATOR)
 
         assert scheduler_daemon
-        assert scheduler_daemon.last_iteration_time == init_time
+        # assert controller._last_iteration_times[scheduler_daemon] == init_time
         assert _scheduler_ran(caplog)
 
         assert run_daemon
-        assert run_daemon.last_iteration_time == init_time
+        # assert controller._last_iteration_times[run_daemon] == init_time
         assert _run_coordinator_ran(caplog)
         caplog.clear()
 
@@ -118,10 +118,10 @@ def test_different_intervals(caplog):
         controller.run_iteration(next_time)
 
         # Run coordinator does another iteration, scheduler does not
-        assert scheduler_daemon.last_iteration_time == init_time
+        # assert controller._last_iteration_times[scheduler_daemon] == init_time
         assert not _scheduler_ran(caplog)
 
-        assert run_daemon.last_iteration_time == next_time
+        # assert controller._last_iteration_times[run_daemon] == next_time
         assert _run_coordinator_ran(caplog)
         caplog.clear()
 
@@ -129,8 +129,8 @@ def test_different_intervals(caplog):
         controller.run_iteration(next_time)
 
         # 30 seconds later both daemons do another iteration
-        assert scheduler_daemon.last_iteration_time == next_time
+        # assert controller._last_iteration_times[scheduler_daemon] == next_time
         assert _scheduler_ran(caplog)
 
-        assert run_daemon.last_iteration_time == next_time
+        # assert controller._last_iteration_times[run_daemon] == next_time
         assert _run_coordinator_ran(caplog)
