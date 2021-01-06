@@ -202,8 +202,7 @@ class ModuleBuildSpec(
                 StepBuilder("%s mypy" % package)
                 .run(
                     "pip install mypy",
-                    "cd {directory}".format(directory=self.directory),
-                    "tox -vv -e mypy",
+                    "mypy --config-file mypy/config {directory}".format(directory=self.directory),
                 )
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
