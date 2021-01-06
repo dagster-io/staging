@@ -173,7 +173,8 @@ class FromStepOutput(
                 if not step_context.instance.step_has_output(step_context.run_id, source_handle):
                     return False
 
-        if step_context.using_object_manager(source_handle):
+        if step_context.using_default_intermediate_storage():
+            # intermediate storage isn't being used explicitly so we default to object manager
             # object manager does not have a has check so assume present
             return True
 

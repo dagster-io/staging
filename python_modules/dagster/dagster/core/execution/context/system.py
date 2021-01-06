@@ -21,6 +21,7 @@ from dagster.core.execution.plan.utils import build_resources_for_manager
 from dagster.core.execution.retries import Retries
 from dagster.core.executor.base import Executor
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.storage.mem_object_manager import InMemoryObjectManager
 from dagster.core.storage.output_manager import OutputManager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
@@ -209,6 +210,22 @@ class SystemPipelineExecutionContext(SystemExecutionContext):
     def executor(self):
         return self._executor
 
+    @property
+    def resource_instances_not_to_reinit(self):
+        # workaround for mem_object_manager to work in reconstruct_context, e.g. result.result_for_solid
+        # in-memory values dict will get lost when the resource is re-initiated in reconstruct_context
+        # so instead of re-initiating every single resource, we pass the resource instances to
+        # reconstruct_context directly to avoid re-building from resource def.
+        resource_instances = {}
+
+        for (
+            key,
+            resource_instance,
+        ) in self._execution_context_data.scoped_resources_builder.resource_instance_dict.items():
+            if isinstance(resource_instance, InMemoryObjectManager):
+                resource_instances[key] = resource_instance
+        return resource_instances
+
 
 class SystemStepExecutionContext(SystemExecutionContext):
     __slots__ = ["_step", "_resources", "_required_resource_keys", "_step_launcher"]
@@ -329,9 +346,19 @@ class SystemStepExecutionContext(SystemExecutionContext):
             resources=resources,
         )
 
+    def using_default_intermediate_storage(self):
+        from dagster.core.storage.system_storage import mem_intermediate_storage
+
+        # pylint: disable=comparison-with-callable
+        return (
+            self.intermediate_storage_def is None
+            or self.intermediate_storage_def == mem_intermediate_storage
+        )
+
     def get_output_manager(self, step_output_handle):
         step_output = self.execution_plan.get_step_output(step_output_handle)
-        if self.using_object_manager(step_output_handle):
+        # backcompat: if intermediate storage is specified, adapt it to object manager
+        if self.using_default_intermediate_storage():
             output_manager = getattr(self.resources, step_output.output_def.manager_key)
         else:
             from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
