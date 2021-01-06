@@ -70,6 +70,7 @@ class Manager:
         log_manager,
         resource_keys_to_init,
         instance,
+        hardcoded_resource_instances,
     ):
         """
         Drop-in replacement for
@@ -83,6 +84,7 @@ class Manager:
             log_manager,
             resource_keys_to_init,
             instance,
+            hardcoded_resource_instances,
         )
         self.resource_manager = DagstermillResourceEventGenerationManager(
             generator, ScopedResourcesBuilder
