@@ -87,20 +87,22 @@ class DagsterDaemonController:
                 (curr_time - daemon.last_iteration_time).total_seconds() >= daemon.interval_seconds
             ):
                 daemon.last_iteration_time = curr_time
-                daemon.last_iteration_exception = None
+                daemon.last_iteration_exceptions = []
                 daemon_generators.append((daemon, daemon.run_iteration()))
 
         # Call next on each daemon generator function, rotating through the daemons.
         while len(daemon_generators) > 0:
             daemon, generator = daemon_generators.pop(0)
             try:
-                next(generator)
+                errors = next(generator)
+                if not errors is None:
+                    daemon.last_iteration_exceptions = errors
             except StopIteration:
                 pass  # don't add the generator back
             except Exception:  # pylint: disable=broad-except
                 # log errors in daemon
                 error_info = serializable_error_info_from_exc_info(sys.exc_info())
-                daemon.last_iteration_exception = error_info
+                daemon.last_iteration_exceptions = [error_info]
                 self._logger.error(
                     "Caught error in {}:\n{}".format(daemon.daemon_type(), error_info)
                 )
@@ -144,7 +146,7 @@ class DagsterDaemonController:
                     pendulum.now("UTC").float_timestamp,
                     daemon.daemon_type(),
                     self._daemon_uuid,
-                    daemon.last_iteration_exception,
+                    daemon.last_iteration_exceptions,
                 )
             )
 
@@ -203,7 +205,7 @@ def get_daemon_status(instance, daemon_type, curr_time_seconds=None):
     has_recent_heartbeat = curr_time_seconds <= maximum_tolerated_time
 
     # check if daemon has an error
-    healthy = has_recent_heartbeat and not latest_heartbeat.error
+    healthy = has_recent_heartbeat and not latest_heartbeat.errors
 
     return DaemonStatus(
         daemon_type=daemon_type,

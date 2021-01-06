@@ -63,8 +63,9 @@ def test_error_daemon(monkeypatch):
 
         status = get_daemon_status(instance, SensorDaemon.daemon_type(), init_time.float_timestamp)
         assert status.healthy == False
+        assert len(status.last_heartbeat.errors) == 1
         assert (
-            status.last_heartbeat.error.message.strip()
+            status.last_heartbeat.errors[0].message.strip()
             == "dagster.core.errors.DagsterInvariantViolationError: foobar"
         )
 

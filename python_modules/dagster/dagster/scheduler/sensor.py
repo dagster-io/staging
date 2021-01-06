@@ -118,6 +118,7 @@ def execute_sensor_iteration(instance, logger, debug_crash_flags=None):
         )
     )
 
+    exceptions = []
     for job_state in sensor_jobs:
         sensor_debug_crash_flags = (
             debug_crash_flags.get(job_state.job_name) if debug_crash_flags else None
@@ -168,13 +169,14 @@ def execute_sensor_iteration(instance, logger, debug_crash_flags=None):
                     before=now.subtract(days=7),  #  keep the last 7 days
                 )
         except Exception:  # pylint: disable=broad-except
+            error_info = serializable_error_info_from_exc_info(sys.exc_info())
             logger.error(
                 "Sensor failed for {sensor_name} : {error_info}".format(
-                    sensor_name=job_state.job_name,
-                    error_info=serializable_error_info_from_exc_info(sys.exc_info()).to_string(),
+                    sensor_name=job_state.job_name, error_info=error_info.to_string(),
                 )
             )
-        yield
+            exceptions.append(error_info)
+        yield exceptions
 
 
 def _evaluate_sensor(

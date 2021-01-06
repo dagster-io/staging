@@ -81,6 +81,7 @@ def launch_scheduled_runs(
     schedule_names = ", ".join([schedule.job_name for schedule in schedules])
     logger.info(f"Checking for new runs for the following schedules: {schedule_names}")
 
+    exceptions = []
     for schedule_state in schedules:
         try:
             with RepositoryLocationHandle.create_from_repository_location_origin(
@@ -98,9 +99,12 @@ def launch_scheduled_runs(
                     (debug_crash_flags.get(schedule_state.job_name) if debug_crash_flags else None),
                 )
         except Exception:  # pylint: disable=broad-except
-            error_info = serializable_error_info_from_exc_info(sys.exc_info()).to_string()
-            logger.error(f"Scheduler failed for {schedule_state.job_name} : {error_info}")
-        yield
+            error_info = serializable_error_info_from_exc_info(sys.exc_info())
+            logger.error(
+                f"Scheduler failed for {schedule_state.job_name} : {error_info.to_string()}"
+            )
+            exceptions.append(error_info)
+        yield exceptions
 
 
 def launch_scheduled_runs_for_schedule(
