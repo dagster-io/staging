@@ -200,11 +200,7 @@ class ModuleBuildSpec(
         if self.directory not in MYPY_EXCLUDES:
             tests.append(
                 StepBuilder("%s mypy" % package)
-                .run(
-                    "pip install mypy",
-                    "cd {directory}".format(directory=self.directory),
-                    "tox -vv -e mypy",
-                )
+                .run("pip install mypy", f"mypy --config-file mypy/config {self.directory}",)
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
             )
