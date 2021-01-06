@@ -81,33 +81,54 @@ class DagsterDaemonController:
         return list(self._daemons.values())
 
     def run_iteration(self, curr_time):
+        first_controller_iteration = not self._last_heartbeat_times
+
         daemon_generators = []  # list of daemon generator functions
         for daemon in self.daemons:
             if (not daemon.last_iteration_time) or (
                 (curr_time - daemon.last_iteration_time).total_seconds() >= daemon.interval_seconds
             ):
                 daemon.last_iteration_time = curr_time
-                daemon.last_iteration_exception = None
                 daemon_generators.append((daemon, daemon.run_iteration()))
+
+                # Build a list of any exceptions encountered during the iteration.
+                # Once the iteration completes, this is copied to last_iteration_exceptions
+                # which is used in the heartbeats. This guarantees that heartbeats contain the full
+                # list of errors raised.
+                daemon.current_iteration_exceptions = []
 
         # Call next on each daemon generator function, rotating through the daemons.
         while len(daemon_generators) > 0:
             daemon, generator = daemon_generators.pop(0)
             try:
-                next(generator)
+                error_info = next(generator)
+                if error_info:
+                    daemon.current_iteration_exceptions.append(error_info)
             except StopIteration:
-                pass  # don't add the generator back
+                # daemon has completed an iteration, don't add the generator back
+                # We've completed an iteration, so errors can be reported in heartbeat
+                daemon.last_iteration_exceptions = daemon.current_iteration_exceptions
             except Exception:  # pylint: disable=broad-except
                 # log errors in daemon
                 error_info = serializable_error_info_from_exc_info(sys.exc_info())
-                daemon.last_iteration_exception = error_info
                 self._logger.error(
-                    "Caught error in {}:\n{}".format(daemon.daemon_type(), error_info)
+                    "Caught error in {}:\n{}".format(daemon.daemon_type(), error_info,)
                 )
+                daemon.current_iteration_exceptions.append(error_info)
+                # The iteration stopped short, so errors can be reported in heartbeat
+                daemon.last_iteration_exceptions = daemon.current_iteration_exceptions
             else:
                 # append to the back, so other daemons will execute next
                 daemon_generators.append((daemon, generator))
-            self._check_add_heartbeat(daemon, curr_time)
+
+            if not first_controller_iteration:
+                # wait until first iteration completes, otherwise heartbeats may be reported before
+                # errors occur
+                self._check_add_heartbeat(daemon, curr_time)
+
+        if first_controller_iteration:
+            for daemon in self.daemons:
+                self._check_add_heartbeat(daemon, curr_time)
 
     def _check_add_heartbeat(self, daemon, curr_time):
         """
@@ -144,7 +165,7 @@ class DagsterDaemonController:
                     pendulum.now("UTC").float_timestamp,
                     daemon.daemon_type(),
                     self._daemon_uuid,
-                    daemon.last_iteration_exception,
+                    daemon.last_iteration_exceptions,
                 )
             )
 
@@ -203,7 +224,7 @@ def get_daemon_status(instance, daemon_type, curr_time_seconds=None):
     has_recent_heartbeat = curr_time_seconds <= maximum_tolerated_time
 
     # check if daemon has an error
-    healthy = has_recent_heartbeat and not latest_heartbeat.error
+    healthy = has_recent_heartbeat and not latest_heartbeat.errors
 
     return DaemonStatus(
         daemon_type=daemon_type,
