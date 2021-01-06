@@ -3,7 +3,6 @@ from collections import namedtuple
 from .defines import TOX_MAP, SupportedPython, SupportedPythons
 from .step_builder import StepBuilder
 
-
 MYPY_EXCLUDES = [
     "python_modules/dagit",
     "python_modules/automation",
@@ -197,8 +196,7 @@ class ModuleBuildSpec(
                 StepBuilder("%s mypy" % package)
                 .run(
                     "pip install mypy",
-                    "cd {directory}".format(directory=self.directory),
-                    "tox -vv -e mypy",
+                    "mypy --config-file mypy/config {directory}".format(directory=self.directory),
                 )
                 .on_integration_image(SupportedPython.V3_7)
                 .build()
