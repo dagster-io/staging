@@ -22,6 +22,7 @@ from dagster.core.scheduler.scheduler import (
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.test_utils import environ
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
+from dagster_k8s.test import wait_for_job_and_get_raw_logs
 from marks import mark_scheduler
 
 
@@ -394,6 +395,59 @@ def test_start_and_stop_schedule_cron_tab(
         instance.reconcile_scheduler_state(external_repo)
         cron_jobs = instance.scheduler.get_all_cron_jobs()
         assert len(cron_jobs) == 0
+
+
+@mark_scheduler
+def test_cronjob_execution(
+    dagster_instance_with_k8s_scheduler,
+    unset_dagster_home,
+    helm_namespace_for_k8s_run_launcher,
+    restore_k8s_cron_tab,
+):  # pylint:disable=unused-argument,redefined-outer-name
+    with tempfile.TemporaryDirectory() as tempdir:
+        with environ({"DAGSTER_HOME": tempdir}):
+            local_instance = DagsterInstance.get()
+
+            with get_test_external_repo() as external_repo:
+                # Initialize scheduler
+                dagster_instance_with_k8s_scheduler.reconcile_scheduler_state(external_repo)
+                dagster_instance_with_k8s_scheduler.start_schedule_and_update_storage_state(
+                    external_repo.get_external_schedule("no_config_pipeline_every_min_schedule")
+                )
+
+                local_runs = local_instance.get_runs()
+                assert len(local_runs) == 0
+
+                cron_job_name = external_repo.get_external_schedule(
+                    "no_config_pipeline_every_min_schedule"
+                ).get_external_origin_id()
+
+                batch_v1_api = kubernetes.client.BatchV1Api()
+                batch_v1beta1_api = kubernetes.client.BatchV1beta1Api()
+
+                cron_job = batch_v1beta1_api.read_namespaced_cron_job(
+                    cron_job_name, helm_namespace_for_k8s_run_launcher
+                )
+
+                # https://github.com/kubernetes-client/python/issues/991
+                job = kubernetes.client.V1Job(
+                    api_version='batch/v1',
+                    kind='Job',
+                    metadata=kubernetes.client.models.V1ObjectMeta(
+                        name=cron_job_name,
+                        # This annotation is added by kubectl, probably best to add it ourselves as well
+                        annotations={"cronjob.kubernetes.io/instantiate": "manual"}
+                    ),
+                    spec=cron_job.spec.job_template.spec
+                )
+
+                created_job = batch_v1_api.create_namespaced_job(namespace=helm_namespace_for_k8s_run_launcher, body=job)
+                
+                result = wait_for_job_and_get_raw_logs(
+                    job_name=created_job.metadata.name, namespace=helm_namespace_for_k8s_run_launcher
+                )
+
+                assert "PIPELINE_SUCCESS" in result, "no match, result: {}".format(result)
 
 
 @mark_scheduler
