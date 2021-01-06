@@ -14,9 +14,7 @@ def hello_cereal(context, date):
         cereals = [row for row in csv.DictReader(fd)]
 
     context.log.info(
-        "Today is {date}. Found {n_cereals} cereals".format(
-            date=date, n_cereals=len(cereals)
-        )
+        "Today is {date}. Found {n_cereals} cereals".format(date=date, n_cereals=len(cereals))
     )
 
 
@@ -32,15 +30,10 @@ def hello_cereal_pipeline():
     pipeline_name="hello_cereal_pipeline",
     start_date=datetime(2020, 6, 1),
     execution_time=time(6, 45),
+    execution_timezone="US/Central",
 )
 def good_morning_schedule(date):
-    return {
-        "solids": {
-            "hello_cereal": {
-                "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
-            }
-        }
-    }
+    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
 
 
 # end_scheduler_marker_1
@@ -67,16 +60,11 @@ def weekday_filter():
     pipeline_name="hello_cereal_pipeline",
     start_date=datetime(2020, 6, 1),
     execution_time=time(6, 45),
+    execution_timezone="US/Central",
     should_execute=weekday_filter,
 )
 def good_weekday_morning_schedule(date):
-    return {
-        "solids": {
-            "hello_cereal": {
-                "inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}
-            }
-        }
-    }
+    return {"solids": {"hello_cereal": {"inputs": {"date": {"value": date.strftime("%Y-%m-%d")}}}}}
 
 
 # end_scheduler_marker_4
