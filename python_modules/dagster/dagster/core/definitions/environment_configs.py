@@ -185,7 +185,7 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
     for name, inp in solid.definition.input_dict.items():
         inp_handle = SolidInputHandle(solid, inp)
         has_upstream = input_has_upstream(dependency_structure, inp_handle, solid, name)
-        if inp.manager_key and not has_upstream:
+        if inp.root_manager_key and not has_upstream:
             input_field = get_input_manager_input_field(solid, inp, resource_defs)
         else:
             input_field = None
@@ -204,21 +204,21 @@ def input_has_upstream(dependency_structure, input_handle, solid, input_name):
 
 
 def get_input_manager_input_field(solid, input_def, resource_defs):
-    if input_def.manager_key not in resource_defs:
+    if input_def.root_manager_key not in resource_defs:
         raise DagsterInvalidDefinitionError(
-            f'Input "{input_def.name}" for solid "{solid.name}" requires manager_key '
-            f'"{input_def.manager_key}", but no resource has been provided. Please include a '
+            f'Input "{input_def.name}" for solid "{solid.name}" requires root_manager_key '
+            f'"{input_def.root_manager_key}", but no resource has been provided. Please include a '
             f"resource definition for that key in the resource_defs of your ModeDefinition."
         )
 
-    if not isinstance(resource_defs[input_def.manager_key], IInputManagerDefinition):
+    if not isinstance(resource_defs[input_def.root_manager_key], IInputManagerDefinition):
         raise DagsterInvalidDefinitionError(
-            f'Input "{input_def.name}" for solid "{solid.name}" requires manager_key '
-            f'"{input_def.manager_key}", but the resource definition provided is not an '
+            f'Input "{input_def.name}" for solid "{solid.name}" requires root_manager_key '
+            f'"{input_def.root_manager_key}", but the resource definition provided is not an '
             "IInputManagerDefinition"
         )
 
-    input_manager = resource_defs[input_def.manager_key]
+    input_manager = resource_defs[input_def.root_manager_key]
     return input_manager.get_input_config_schema(input_def)
 
 

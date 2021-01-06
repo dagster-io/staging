@@ -725,44 +725,24 @@ def _validate_inputs(dependency_structure, solid_dict, mode_definitions):
     for solid in solid_dict.values():
         for handle in solid.input_handles():
             if dependency_structure.has_deps(handle):
-                if not handle.input_def.manager_key:
-                    for mode_def in mode_definitions:
-                        for source_output_handle in dependency_structure.get_deps_list(handle):
-                            output_manager_key = source_output_handle.output_def.manager_key
-                            output_manager_def = mode_def.resource_defs[output_manager_key]
-                            # TODO: remove the IOutputManagerDefinition check when asset store
-                            # API is removed.
-                            if isinstance(
-                                output_manager_def, IOutputManagerDefinition
-                            ) and not isinstance(output_manager_def, IInputManagerDefinition):
-                                raise DagsterInvalidDefinitionError(
-                                    f'Input "{handle.input_def.name}" of solid "{solid.name}" is '
-                                    f'connected to output "{source_output_handle.output_def.name}" '
-                                    f'of solid "{source_output_handle.solid.name}". In mode '
-                                    f'"{mode_def.name}", that output does not have an output '
-                                    f"manager that knows how to load inputs, so we don't know how "
-                                    f"to load the input. To address this, assign an InputManager "
-                                    f"to this input or assign an ObjectManager to the upstream "
-                                    "output."
-                                )
-            else:
-                if (
-                    not handle.input_def.dagster_type.loader
-                    and not handle.input_def.dagster_type.kind == DagsterTypeKind.NOTHING
-                    and not handle.input_def.manager_key
-                ):
-                    raise DagsterInvalidDefinitionError(
-                        'Input "{input_name}" in solid "{solid_name}" is not connected to '
-                        "the output of a previous solid and can not be loaded from configuration, "
-                        "creating an impossible to execute pipeline. "
-                        "Possible solutions are:\n"
-                        '  * add a dagster_type_loader for the type "{dagster_type}"\n'
-                        '  * connect "{input_name}" to the output of another solid\n'.format(
-                            solid_name=solid.name,
-                            input_name=handle.input_def.name,
-                            dagster_type=handle.input_def.dagster_type.display_name,
-                        )
-                    )
+                for mode_def in mode_definitions:
+                    for source_output_handle in dependency_structure.get_deps_list(handle):
+                        output_manager_key = source_output_handle.output_def.manager_key
+                        output_manager_def = mode_def.resource_defs[output_manager_key]
+                        # TODO: remove the IOutputManagerDefinition check when asset store
+                        # API is removed.
+                        if isinstance(
+                            output_manager_def, IOutputManagerDefinition
+                        ) and not isinstance(output_manager_def, IInputManagerDefinition):
+                            raise DagsterInvalidDefinitionError(
+                                f'Input "{handle.input_def.name}" of solid "{solid.name}" is '
+                                f'connected to output "{source_output_handle.output_def.name}" '
+                                f'of solid "{source_output_handle.solid.name}". In mode '
+                                f'"{mode_def.name}", that output does not have an output '
+                                f"manager that knows how to load inputs, so we don't know how "
+                                f"to load the input. To address this, assign an ObjectManager to "
+                                f"the upstream output."
+                            )
 
 
 def _build_all_node_defs(node_defs):

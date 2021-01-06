@@ -101,14 +101,14 @@ class FromRootInputManager(
     namedtuple("_FromRootInputManager", "input_def config_data"), StepInputSource,
 ):
     def load_input_object(self, step_context):
-        loader = getattr(step_context.resources, self.input_def.manager_key)
+        loader = getattr(step_context.resources, self.input_def.root_manager_key)
         load_input_context = step_context.for_input_manager(
             self.input_def.name,
             self.config_data,
             metadata=self.input_def.metadata,
             dagster_type=self.input_def.dagster_type,
             resource_config=step_context.environment_config.resources[
-                self.input_def.manager_key
+                self.input_def.root_manager_key
             ].get("config", {}),
         )
         return _load_input_with_input_manager(loader, load_input_context)
@@ -118,7 +118,7 @@ class FromRootInputManager(
         return None
 
     def required_resource_keys(self, _execution_plan):
-        return {self.input_def.manager_key}
+        return {self.input_def.root_manager_key}
 
     def can_load_input_object(self, step_context):
         return True
@@ -160,9 +160,7 @@ class FromStepOutput(
     def can_load_input_object(self, step_context):
         source_handle = self.step_output_handle
         if step_context.using_object_manager(source_handle):
-            # asset store does not have a has check so assume present
-            return True
-        if self.input_def.manager_key:
+            # object manager does not have a has check so assume present
             return True
 
         return step_context.intermediate_storage.has_intermediate(
@@ -170,11 +168,8 @@ class FromStepOutput(
         )
 
     def get_load_context(self, step_context):
-        resource_config = (
-            step_context.environment_config.resources[self.input_def.manager_key].get("config", {})
-            if self.input_def.manager_key
-            else None
-        )
+        manager_key = step_context.execution_plan.get_manager_key(self.step_output_handle)
+        resource_config = step_context.environment_config.resources[manager_key].get("config", {})
 
         return step_context.for_input_manager(
             self.input_def.name,
