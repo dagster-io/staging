@@ -35,7 +35,8 @@ class DagsterDaemon:
         self._logger = get_default_daemon_logger(type(self).__name__)
         self.interval_seconds = check.int_param(interval_seconds, "interval_seconds")
         self.last_iteration_time = None
-        self.last_iteration_exception = None
+        self.last_iteration_exceptions = []
+        self.current_iteration_exceptions = []
 
     @abstractclassmethod
     def daemon_type(cls):
@@ -47,9 +48,10 @@ class DagsterDaemon:
     def run_iteration(self):
         """
         Execute the daemon. In order to avoid blocking the controller thread for extended periods,
-        daemons can yield control during this method.
+        daemons can yield control during this method. Yeilds can be either NoneType or a
+        non-fatal exception
 
-        returns: generator (NoneType)
+        returns: generator (Exception).
         """
 
 
