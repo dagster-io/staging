@@ -173,7 +173,7 @@ scheduler:
   # need access to dagster code (to call `dagster api launch_scheduled_execution`) and instance yaml
   # but does not need access to user code.
   image:
-    repository: "dagster/k8s-dagit"
+    repository: "dagster/k8s-dagster"
     tag: "latest"
     pullPolicy: Always
 
