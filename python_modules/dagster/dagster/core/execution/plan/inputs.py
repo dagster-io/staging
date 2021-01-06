@@ -88,7 +88,7 @@ class StepInputSource(ABC):
     def can_load_input_object(self, step_context):
         raise NotImplementedError()
 
-    def required_resource_keys(self):
+    def required_resource_keys(self, _execution_plan):
         return set()
 
     @abstractmethod
@@ -117,7 +117,7 @@ class FromRootInputManager(
         # TODO: support versioning for root loaders
         return None
 
-    def required_resource_keys(self):
+    def required_resource_keys(self, _execution_plan):
         return {self.input_def.manager_key}
 
     def can_load_input_object(self, step_context):
@@ -227,8 +227,8 @@ class FromStepOutput(
                 step_versions[self.step_output_handle.step_key], self.step_output_handle.output_name
             )
 
-    def required_resource_keys(self):
-        return {self.input_def.manager_key} if self.input_def.manager_key else set()
+    def required_resource_keys(self, execution_plan):
+        return {execution_plan.get_manager_key(self.step_output_handle)}
 
 
 def _generate_error_boundary_msg_for_step_input(context, input_name):
@@ -307,10 +307,10 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
         # so we can yield the relevant object store events and unpack the values in the caller
         return FanInStepInputValuesWrapper(values)
 
-    def required_resource_keys(self):
+    def required_resource_keys(self, execution_plan):
         resource_keys = set()
         for source in self.sources:
-            resource_keys = resource_keys.union(source.required_resource_keys())
+            resource_keys = resource_keys.union(source.required_resource_keys(execution_plan))
         return resource_keys
 
     def compute_version(self, step_versions):
