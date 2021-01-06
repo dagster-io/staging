@@ -320,9 +320,19 @@ class SystemStepExecutionContext(SystemExecutionContext):
             resource_config=resource_config,
         )
 
+    def _is_default_intermediate_storage(self):
+        from dagster.core.storage.system_storage import mem_intermediate_storage
+
+        # pylint: disable=comparison-with-callable
+        return (
+            self.intermediate_storage_def is None
+            or self.intermediate_storage_def == mem_intermediate_storage
+        )
+
     def get_output_manager(self, step_output_handle):
         step_output = self.execution_plan.get_step_output(step_output_handle)
-        if self.using_object_manager(step_output_handle):
+        # backcompat: if intermediate storage is specified, adapt it to object manager
+        if self._is_default_intermediate_storage():
             output_manager = getattr(self.resources, step_output.output_def.manager_key)
         else:
             from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter

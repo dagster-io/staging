@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, abstractmethod, abstractproperty
 
 import six
@@ -39,6 +40,11 @@ class IntermediateStorage(ABC):  # pylint: disable=no-init
 
 class IntermediateStorageAdapter(ObjectManager):
     def __init__(self, intermediate_storage):
+        warnings.warn(
+            "Intermediate Storages are deprecated in 0.10.0 and will be removed in 0.11.0. "
+            "Use Object Managers instead, which gives you better control over how inputs and "
+            "outputs are handled and loaded."
+        )
         self.intermediate_storage = check.inst_param(
             intermediate_storage, "intermediate_storage", IntermediateStorage
         )
