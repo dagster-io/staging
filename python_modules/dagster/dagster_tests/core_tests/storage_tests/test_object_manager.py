@@ -378,3 +378,22 @@ def test_mem_object_manager_execution():
     mem_object_manager_instance.handle_output(output_context, 1)
     input_context = InputContext(pipeline_name="foo", upstream_output=output_context,)
     assert mem_object_manager_instance.load_input(input_context) == 1
+
+
+def test_mem_object_managers_result_for_solid():
+    @solid
+    def one(_):
+        return 1
+
+    @solid
+    def add_one(_, x):
+        return x + 1
+
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": mem_object_manager})])
+    def my_pipeline():
+        add_one(one())
+
+    result = execute_pipeline(my_pipeline)
+    assert result.success
+    assert result.result_for_solid("one").output_value() == 1
+    assert result.result_for_solid("add_one").output_value() == 2

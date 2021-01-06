@@ -14,7 +14,7 @@ class InMemoryObjectManager(ObjectManager):
         return self.values[keys]
 
     def can_load(self, context):
-        keys = tuple(context.get_run_scoped_output_identifier())
+        keys = tuple(context.upstream_output.get_run_scoped_output_identifier())
         return keys in self.values
 
 
