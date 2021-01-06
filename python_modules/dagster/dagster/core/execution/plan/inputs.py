@@ -206,16 +206,11 @@ class FromStepOutput(
 
 
 def _generate_error_boundary_msg_for_step_input(context, input_name):
-    return lambda: """Error occurred during input loading:
-    input name: "{input_name}"
-    step key: "{key}"
-    solid invocation: "{solid}"
-    solid definition: "{solid_def}"
-    """.format(
-        input_name=input_name,
-        key=context.step.key,
-        solid_def=context.solid_def.name,
-        solid=context.solid.name,
+    return (
+        lambda: f"\n    Error occurred during input loading:"
+        f'\n    input name: "{input_name}"'
+        f'\n    solid invocation: "{context.solid.name}"'
+        f'\n    solid definition: "{context.solid_def.name}"'
     )
 
 
@@ -340,8 +335,8 @@ def _load_input_with_input_manager(root_input_manager, context):
         control_flow_exceptions=[Failure, RetryRequested],
         msg_fn=lambda: (
             f"Error occurred during the loading of a step input:"
-            f'    step key: "{context.step_context.step.key}"'
-            f'    input name: "{context.name}"'
+            f'\n    step key: "{context.step_context.step.key}"'
+            f'\n    input name: "{context.name}"'
         ),
         step_key=context.step_context.step.key,
         input_name=context.name,
