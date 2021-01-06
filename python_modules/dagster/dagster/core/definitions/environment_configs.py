@@ -178,9 +178,6 @@ def get_inputs_field(solid, handle, dependency_structure, resource_defs):
     check.inst_param(handle, "handle", SolidHandle)
     check.inst_param(dependency_structure, "dependency_structure", DependencyStructure)
 
-    if not solid.definition.has_configurable_inputs:
-        return None
-
     inputs_field_fields = {}
     for name, inp in solid.definition.input_dict.items():
         inp_handle = SolidInputHandle(solid, inp)

@@ -140,7 +140,7 @@ startAfter:start_marker
 endBefore:end_marker
 ```
 
-Setting the `manager_key` on an `InputDefinition` controls how that input is loaded in pipelines where it has no upstream output.
+Setting the `root_manager_key` on an `InputDefinition` controls how that input is loaded in pipelines where it has no upstream output.
 
 The <PyObject module="dagster" object="input_manager" /> decorator behaves nearly identically to the <PyObject module="dagster" object="resource" /> decorator.  It yields an <PyObject module="dagster" object="InputManagerDefinition" />, which is a <PyObject module="dagster" object="ResourceDefinition" /> that will produce an <PyObject module="dagster" object="InputManager" />.
 
@@ -171,7 +171,7 @@ You might want to execute a subset of solids in your pipeline and control how th
 
 For example, you might have `solid1` that normally produces a table that `solid2` consumes. To debug `solid2`, you might want to run it on a different table than the one normally produced by `solid1`.
 
-To accomplish this, you can set up the `manager_key` on `solid2`'s `InputDefinition` to point to an input manager with the desired loading behavior.  As before, setting the `manager_key` on an `InputDefinition` controls how that input is loaded when it has no upstream output.
+To accomplish this, you can set up the `root_manager_key` on `solid2`'s `InputDefinition` to point to an input manager with the desired loading behavior.  As before, setting the `root_manager_key` on an `InputDefinition` controls how that input is loaded when it has no upstream output.
 
 
 ```python literalinclude caption=subselection.py
@@ -180,7 +180,7 @@ startAfter:start_marker
 endBefore:end_marker
 ```
 
-When running the full pipeline, `solid2`'s input will be loaded using the object manager on the output of `solid1`.  When running the pipeline subset, `solid2`'s input has no upstream output, so the input manager corresponding to its `manager_key` is used.
+When running the full pipeline, `solid2`'s input will be loaded using the object manager on the output of `solid1`.  When running the pipeline subset, `solid2`'s input has no upstream output, so the input manager corresponding to its `root_manager_key` is used.
 
 ```python literalinclude caption=subselection.py
 file:/docs_snippets/docs_snippets/overview/object_managers/subselection.py
