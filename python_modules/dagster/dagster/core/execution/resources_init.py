@@ -281,9 +281,7 @@ def get_required_resource_keys_for_step(execution_step, execution_plan, intermed
     for step_input in execution_step.step_inputs:
         resource_keys = resource_keys.union(step_input.dagster_type.required_resource_keys)
 
-        resource_keys = resource_keys.union(
-            step_input.source.required_resource_keys(execution_plan)
-        )
+        resource_keys = resource_keys.union(step_input.source.required_resource_keys())
 
         for source_handle in step_input.get_step_output_handle_dependencies():
             source_manager_key = execution_plan.get_manager_key(source_handle)
