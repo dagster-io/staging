@@ -219,7 +219,7 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
         watchdog = SqliteEventLogStorageWatchdog(self, run_id, callback, start_cursor)
         self._watchers[run_id][callback] = (
             watchdog,
-            self._obs.schedule(watchdog, self._base_dir, True),
+            self._obs.schedule(watchdog, self.path_for_run_id(run_id), True),
         )
 
     def end_watch(self, run_id, handler):
