@@ -172,7 +172,7 @@ def _type_checked_event_sequence_for_input(
     with user_code_error_boundary(
         DagsterTypeCheckError,
         lambda: (
-            'In solid "{handle}" the input "{input_name}" received '
+            'In solid "{handle}", the input "{input_name}" received '
             "value {input_value} of Python type {input_type} which "
             "does not pass the typecheck for Dagster type "
             "{dagster_type_name}. Step {step_key}."
@@ -391,9 +391,8 @@ def _store_output(
         DagsterExecutionHandleOutputError,
         control_flow_exceptions=[Failure, RetryRequested],
         msg_fn=lambda: (
-            f"Error occurred during the the handling of step output:"
-            f'    step key: "{step_context.step.key}"'
-            f'    output name: "{output_context.name}"'
+            f'Error occurred while handling output "{output_context.name}" of '
+            f'step "{step_context.step.key}":'
         ),
         step_key=step_context.step.key,
         output_name=output_context.name,
@@ -436,16 +435,11 @@ def _create_type_materializations(
                 step_output = step.step_output_named(output_name)
                 with user_code_error_boundary(
                     DagsterTypeMaterializationError,
-                    msg_fn=lambda: """Error occurred during output materialization:
-                    output name: "{output_name}"
-                    step key: "{key}"
-                    solid invocation: "{solid}"
-                    solid definition: "{solid_def}"
-                    """.format(
-                        output_name=output_name,
-                        key=step_context.step.key,
-                        solid_def=step_context.solid_def.name,
-                        solid=step_context.solid.name,
+                    msg_fn=lambda: (
+                        "Error occurred during output materialization:"
+                        f'\n    output name: "{output_name}"'
+                        f'\n    solid invocation: "{step_context.solid.name}"'
+                        f'\n    solid definition: "{step_context.solid_def.name}"'
                     ),
                 ):
                     output_def = step_context.solid_def.output_def_named(step_output.name)
@@ -487,15 +481,7 @@ def _user_event_sequence_for_step_compute_fn(
         lambda: user_code_error_boundary(
             DagsterExecutionStepExecutionError,
             control_flow_exceptions=[Failure, RetryRequested],
-            msg_fn=lambda: """Error occurred during the execution of step:
-            step key: "{key}"
-            solid invocation: "{solid}"
-            solid definition: "{solid_def}"
-            """.format(
-                key=step_context.step.key,
-                solid_def=step_context.solid_def.name,
-                solid=step_context.solid.name,
-            ),
+            msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
             step_key=step_context.step.key,
             solid_def_name=step_context.solid_def.name,
             solid_name=step_context.solid.name,
