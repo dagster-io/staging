@@ -75,6 +75,16 @@ class InputManager(ABC):
             Any: The data object.
         """
 
+    def can_load(self, context):  # pylint: disable=unused-argument
+        """The user can override this method to implement their own check logic.
+        Args:
+            context (InputContext): The context of the step output that produces this asset.
+
+        Returns:
+            Bool: True if the input can be loaded.
+        """
+        return True
+
 
 def input_manager(
     config_schema=None,
