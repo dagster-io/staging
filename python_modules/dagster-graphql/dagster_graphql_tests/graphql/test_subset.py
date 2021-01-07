@@ -74,9 +74,6 @@ class TestSolidSelections(ReadonlyGraphQLContextTestMatrix):
         assert result.data["runConfigSchemaOrError"]["__typename"] == "InvalidSubsetError"
 
         assert re.match(
-            (
-                r".*DagsterInvalidSubsetError[\s\S]*"
-                r'add a dagster_type_loader for the type "InputTypeWithoutHydration"'
-            ),
+            (r".*DagsterInvalidSubsetError[\s\S]*" r'"InputTypeWithoutHydration"'),
             result.data["runConfigSchemaOrError"]["message"],
         )
