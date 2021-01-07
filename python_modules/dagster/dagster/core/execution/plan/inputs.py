@@ -161,9 +161,11 @@ class FromStepOutput(
 
     def can_load_input_object(self, step_context):
         source_handle = self.step_output_handle
+
         if step_context.using_object_manager(source_handle):
-            # asset store does not have a has check so assume present
+            # object manager does not have a has check so assume present
             return True
+
         if self.input_def.manager_key:
             return True
 
@@ -334,12 +336,34 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
     def can_load_input_object(self, step_context):
         return any([source.can_load_input_object(step_context) for source in self.sources])
 
+    def _sources_to_skip(self, step_context):
+        step_keys_to_check = set()
+        for inner_source in self.sources:
+            source_handle = inner_source.step_output_handle
+            # only check optional sources
+            if not step_context.execution_plan.get_step_output(
+                source_handle
+            ).output_def.is_required:
+                step_keys_to_check.add(source_handle)
+
+        # Early return if all sources are required
+        if not step_keys_to_check:
+            return set()
+
+        # If there's optional source, we ask the instance to check if the source step has emitted
+        # any Output event.
+        return step_context.instance.step_output_handles_no_output(
+            step_context.run_id, step_keys_to_check
+        )
+
     def load_input_object(self, step_context):
         values = []
+
+        # some upstream steps may have skipped and we allow fan-in to continue in their absence
+        source_handles_to_skip = self._sources_to_skip(step_context)
+
         for inner_source in self.sources:
-            # perform a can_load check since some upstream steps may have skipped, and
-            # we allow fan-in to continue in their absence
-            if inner_source.can_load_input_object(step_context):
+            if not inner_source.step_output_handle in source_handles_to_skip:
                 values.append(inner_source.load_input_object(step_context))
 
         # When we're using an object store-backed intermediate store, we wrap the

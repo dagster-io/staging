@@ -909,6 +909,16 @@ class DagsterInstance:
     def watch_event_logs(self, run_id, cursor, cb):
         return self._event_storage.watch(run_id, cursor, cb)
 
+    def step_output_handles_no_output(self, run_id, step_output_handles_to_check):
+        # FIXME https://github.com/dagster-io/dagster/issues/3511
+        step_output_handles_with_output = set()
+        for event_record in self.all_logs(run_id):
+            if event_record.dagster_event and event_record.dagster_event.is_successful_output:
+                step_output_handles_with_output.add(
+                    event_record.dagster_event.event_specific_data.step_output_handle
+                )
+        return step_output_handles_to_check.difference(step_output_handles_with_output)
+
     # asset storage
 
     @property
