@@ -162,8 +162,9 @@ class FromStepOutput(
     def can_load_input_object(self, step_context):
         source_handle = self.step_output_handle
         if step_context.using_object_manager(source_handle):
-            # asset store does not have a has check so assume present
-            return True
+            return step_context.get_output_manager(source_handle).can_load(
+                self.get_load_context(step_context)
+            )
         if self.input_def.manager_key:
             return True
 
