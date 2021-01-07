@@ -9,7 +9,7 @@ import {useDocumentTitle} from 'src/hooks/useDocumentTitle';
 import {UnloadableSchedules} from 'src/jobs/UnloadableJobs';
 import {SCHEDULES_ROOT_QUERY, SchedulerTimezoneNote} from 'src/schedules/ScheduleUtils';
 import {SchedulerInfo} from 'src/schedules/SchedulerInfo';
-import {SchedulesGraph} from 'src/schedules/SchedulesGraph';
+import {SchedulesNextTicks} from 'src/schedules/SchedulesNextTicks';
 import {SchedulesTable} from 'src/schedules/SchedulesTable';
 import {SchedulesRootQuery} from 'src/schedules/types/SchedulesRootQuery';
 import {JobType} from 'src/types/globalTypes';
@@ -69,8 +69,11 @@ export const SchedulesRoot = ({repoAddress}: {repoAddress: RepoAddress}) => {
             schedulesSection = repositoryOrError.schedules.length > 0 && (
               <Group direction="column" spacing={16}>
                 <SchedulerTimezoneNote schedulerOrError={scheduler} />
-                <SchedulesGraph repoAddress={repoAddress} />
                 <SchedulesTable schedules={repositoryOrError.schedules} repoAddress={repoAddress} />
+                <SchedulesNextTicks
+                  repoAddress={repoAddress}
+                  schedules={repositoryOrError.schedules}
+                />
               </Group>
             );
           }

@@ -8,14 +8,17 @@ import {Group} from 'src/ui/Group';
 interface Props {
   timestamp: number;
   timezone?: string | null;
+  format?: string;
 }
 
+const TIME_FORMAT_DEFAULT = 'MMM D, YYYY, h:mm A z';
+
 export const TimestampDisplay = (props: Props) => {
-  const {timestamp, timezone} = props;
+  const {timestamp, timezone, format} = props;
   const [userTimezone] = React.useContext(TimezoneContext);
 
   const timestampString = timestampToString(
-    {unix: timestamp, format: 'MMM D, YYYY, h:mm A z'},
+    {unix: timestamp, format: format || TIME_FORMAT_DEFAULT},
     timezone || userTimezone,
   );
 
@@ -25,7 +28,7 @@ export const TimestampDisplay = (props: Props) => {
       {timezone && timezone !== userTimezone ? (
         <TimestampTooltip
           content={timestampToString(
-            {unix: timestamp, format: 'MMM D, YYYY, h:mm A z'},
+            {unix: timestamp, format: format || TIME_FORMAT_DEFAULT},
             browserTimezone(),
           )}
         >
