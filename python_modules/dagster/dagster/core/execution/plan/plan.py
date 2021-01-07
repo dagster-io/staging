@@ -208,8 +208,6 @@ def get_step_input_source(
     input_config = solid_config.inputs.get(input_name) if solid_config else None
 
     input_def = solid.definition.input_def_named(input_name)
-    if not dependency_structure.has_deps(input_handle):
-        return FromRootInputManager(input_def=input_def, config_data=input_config)
 
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
@@ -251,6 +249,9 @@ def get_step_input_source(
             parent_input = parent_inputs[parent_name]
             return parent_input.source
         # else fall through to Nothing case or raise
+
+    if not dependency_structure.has_deps(input_handle):
+        return FromRootInputManager(input_def=input_def, config_data=input_config)
 
     if solid.definition.input_has_default(input_name):
         return FromDefaultValue(solid.definition.default_value_for_input(input_name))
