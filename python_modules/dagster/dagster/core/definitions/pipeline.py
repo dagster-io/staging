@@ -724,8 +724,8 @@ def _validate_type_resource_deps_for_mode(mode_def, mode_resources, dagster_type
 def _validate_inputs(dependency_structure, solid_dict, mode_definitions):
     for solid in solid_dict.values():
         for handle in solid.input_handles():
-            if dependency_structure.has_deps(handle):
-                for mode_def in mode_definitions:
+            for mode_def in mode_definitions:
+                if dependency_structure.has_deps(handle):
                     for source_output_handle in dependency_structure.get_deps_list(handle):
                         output_manager_key = source_output_handle.output_def.manager_key
                         output_manager_def = mode_def.resource_defs[output_manager_key]
@@ -743,6 +743,12 @@ def _validate_inputs(dependency_structure, solid_dict, mode_definitions):
                                 f"to load the input. To address this, assign an ObjectManager to "
                                 f"the upstream output."
                             )
+                else:
+                    input_manager_def = mode_def.resource_defs[handle.input_def.root_manager_key]
+                    # Make sure the input manager will be able to provide a config schema for
+                    # the input definition it'll be used on. I.e. fail early if user code will
+                    # error.
+                    input_manager_def.get_input_config_schema(handle.input_def)
 
 
 def _build_all_node_defs(node_defs):
