@@ -22,7 +22,7 @@ def read_dataframe_from_table(**_kwargs):
 
 
 # start_marker
-@input_manager
+@input_manager(input_config_schema={"table_name": str})
 def my_root_input_manager(context):
     return read_dataframe_from_table(name=context.config["table_name"])
 
