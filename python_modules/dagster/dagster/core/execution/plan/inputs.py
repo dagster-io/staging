@@ -161,9 +161,22 @@ class FromStepOutput(
 
     def can_load_input_object(self, step_context):
         source_handle = self.step_output_handle
+
+        if self.fan_in:
+            # If it's fan_in and source is optional output, ask the instance to check if the source step has emitted
+            # any Output event.
+            output_def = step_context.execution_plan.get_step_output(source_handle).output_def
+            if not output_def.is_required:
+                # If the source step doesn't yield any output, we can't load the input, i.e. will skip
+                # However, this costs an instance call. Ideal approach:
+                # https://github.com/dagster-io/dagster/issues/3511
+                if not step_context.instance.step_has_output(step_context.run_id, source_handle):
+                    return False
+
         if step_context.using_object_manager(source_handle):
-            # asset store does not have a has check so assume present
+            # object manager does not have a has check so assume present
             return True
+
         if self.input_def.manager_key:
             return True
 
