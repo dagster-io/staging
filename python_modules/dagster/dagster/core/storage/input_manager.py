@@ -220,7 +220,8 @@ def type_based_root_input_manager(type_loaders):
 
         type_loader = loaders_by_type_name.get(input_def.dagster_type.key)
 
-        # this path would be deprecated and eventually removed
+        # This will be deprecated and eventually removed with the deprecation and removal
+        # of dagster type loaders
         if type_loader is None:
             type_loader = input_def.dagster_type.loader
 
@@ -236,6 +237,8 @@ def type_based_root_input_manager(type_loaders):
 
         return type_loader.schema_type
 
+    # Required resource keys is the union of required resource keys of all loaders. Maybe
+    # find a way to decide required resource keys per input, based on the loader for that input.
     required_resource_keys = set().union(
         *[loader.required_resource_keys() for _, loader in type_loaders]
     )
@@ -246,7 +249,8 @@ def type_based_root_input_manager(type_loaders):
     def _input_manager(context):
         type_loader = loaders_by_type_name.get(context.dagster_type.key)
 
-        # this path would be deprecated and eventually removed
+        # This will be deprecated and eventually removed with the deprecation and removal
+        # of dagster type loaders
         if type_loader is None:
             type_loader = context.dagster_type.loader
 
