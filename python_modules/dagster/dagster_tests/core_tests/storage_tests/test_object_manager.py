@@ -321,6 +321,32 @@ def test_fan_in():
         execute_pipeline(my_pipeline)
 
 
+def test_fan_in_skip():
+    with tempfile.TemporaryDirectory() as tmpdir_path:
+        default_object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
+
+        @solid(output_defs=[OutputDefinition(name="skip", is_required=False)])
+        def skip(_):
+            return
+            yield  # pylint: disable=unreachable
+
+        @solid
+        def input_solid1(_):
+            return 1
+
+        @solid
+        def solid1(_, input1):
+            assert input1 == [1]
+
+        @pipeline(
+            mode_defs=[ModeDefinition(resource_defs={"object_manager": default_object_manager})]
+        )
+        def my_pipeline():
+            solid1(input1=[input_solid1(), skip()])
+
+        assert execute_pipeline(my_pipeline).success
+
+
 def test_configured():
     @object_manager(
         config_schema={"base_dir": str},
