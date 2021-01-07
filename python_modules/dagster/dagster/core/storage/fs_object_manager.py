@@ -109,6 +109,10 @@ class PickledObjectFilesystemObjectManager(ObjectManager):
         with open(filepath, self.read_mode) as read_obj:
             return pickle.load(read_obj)
 
+    def can_load(self, context):
+        filepath = self._get_path(context.upstream_output)
+        return os.path.exists(filepath)
+
 
 class CustomPathPickledObjectFilesystemObjectManager(ObjectManager):
     """Built-in filesystem object managerthat stores and retrieves values using pickling and
@@ -159,6 +163,10 @@ class CustomPathPickledObjectFilesystemObjectManager(ObjectManager):
 
         with open(filepath, self.read_mode) as read_obj:
             return pickle.load(read_obj)
+
+    def can_load(self, context):
+        filepath = self._get_path(context.upstream_output)
+        return os.path.exists(filepath)
 
 
 @object_manager(
