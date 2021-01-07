@@ -19,6 +19,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_step_versions_helper,
 )
 from dagster.core.instance import DagsterInstance
+from dagster.core.storage.input_manager import root_manager_can_load_input_def
 from dagster.core.storage.mem_object_manager import mem_object_manager
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
@@ -250,7 +251,9 @@ def get_step_input_source(
             return parent_input.source
         # else fall through to Nothing case or raise
 
-    if not dependency_structure.has_deps(input_handle):
+    if not dependency_structure.has_deps(input_handle) and root_manager_can_load_input_def(
+        plan_builder.mode_definition.resource_defs, input_def
+    ):
         return FromRootInputManager(input_def=input_def, config_data=input_config)
 
     if solid.definition.input_has_default(input_name):

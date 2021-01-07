@@ -1,14 +1,17 @@
 from abc import ABC, abstractmethod
 from functools import update_wrapper
+from typing import Dict
 
 from dagster import check
 from dagster.core.definitions.config import is_callable_valid_config_arg
 from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
+from dagster.core.definitions.input import InputDefinition
 from dagster.core.definitions.resource import ResourceDefinition
-from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.core.types.dagster_type import DagsterTypeKind
+
+CANNOT_LOAD_INPUT_DEF = object()
 
 
 class IInputManagerDefinition:
@@ -49,9 +52,11 @@ class InputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
         )
 
     def get_input_config_schema(self, input_def):
-        definition_config_schema = convert_user_facing_definition_config_schema(
-            self._input_config_schema_fn(input_def)
-        )
+        result = self._input_config_schema_fn(input_def)
+        if result == CANNOT_LOAD_INPUT_DEF:
+            return result
+
+        definition_config_schema = convert_user_facing_definition_config_schema(result)
 
         return definition_config_schema.config_type if definition_config_schema else None
 
@@ -226,14 +231,7 @@ def type_based_root_input_manager(type_loaders):
             type_loader = input_def.dagster_type.loader
 
         if not type_loader:
-            raise DagsterInvalidDefinitionError(
-                f'Input "{input_def.name}" is not connected to the output of a previous solid, and '
-                "the root input manager does not know how to load inputs with its dagster type "
-                "from configuration. Possible solutions are:\n"
-                "  * Use type_based_root_input_manager to define a root input manager with an "
-                f'entry for the type "{input_def.dagster_type.display_name}"\n'
-                f'  * Connect "{input_def.name}" to the output of another solid\n'
-            )
+            return CANNOT_LOAD_INPUT_DEF
 
         return type_loader.schema_type
 
@@ -254,9 +252,27 @@ def type_based_root_input_manager(type_loaders):
         if type_loader is None:
             type_loader = context.dagster_type.loader
 
+        # This is problematic: someone might give a loader that can load even if no config is
+        # available.
+        if context.config is None:
+            check.invariant(
+                context.solid_def.input_has_default(context.name),
+                "Must provide default value if no config is available",
+            )
+
+            return context.solid_def.default_value_for_input(context.name)
+
         return type_loader.construct_from_config_value(context, context.config)
 
     return _input_manager
 
 
 default_input_manager = type_based_root_input_manager([])
+
+
+def root_manager_can_load_input_def(
+    resource_defs: Dict[str, ResourceDefinition], input_def: InputDefinition
+) -> bool:
+    input_manager_def = resource_defs[input_def.root_manager_key]
+
+    return input_manager_def.get_input_config_schema(input_def) != CANNOT_LOAD_INPUT_DEF

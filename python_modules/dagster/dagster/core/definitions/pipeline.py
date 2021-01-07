@@ -9,7 +9,10 @@ from dagster.core.errors import (
     DagsterInvalidSubsetError,
     DagsterInvariantViolationError,
 )
-from dagster.core.storage.input_manager import IInputManagerDefinition
+from dagster.core.storage.input_manager import (
+    IInputManagerDefinition,
+    root_manager_can_load_input_def,
+)
 from dagster.core.storage.output_manager import IOutputManagerDefinition
 from dagster.core.types.dagster_type import construct_dagster_type_dictionary
 from dagster.core.utils import str_format_set
@@ -744,11 +747,22 @@ def _validate_inputs(dependency_structure, solid_dict, mode_definitions):
                                 f"the upstream output."
                             )
                 else:
-                    input_manager_def = mode_def.resource_defs[handle.input_def.root_manager_key]
+                    input_def = handle.input_def
                     # Make sure the input manager will be able to provide a config schema for
-                    # the input definition it'll be used on. I.e. fail early if user code will
-                    # error.
-                    input_manager_def.get_input_config_schema(handle.input_def)
+                    # the input definition it'll be used on.
+                    if (
+                        not root_manager_can_load_input_def(mode_def.resource_defs, input_def)
+                        and not input_def.has_default_value
+                    ):
+                        raise DagsterInvalidDefinitionError(
+                            f'Input "{input_def.name}" of solid "{solid.name}" is not connected to the '
+                            f"output of a previous solid, and the root input manager configured for"
+                            f"that input does not know how to load it. Possible solutions are:\n"
+                            f"  * Use type_based_root_input_manager to define a root input manager with an "
+                            f'entry for the type "{input_def.dagster_type.display_name}"\n'
+                            f'  * Connect "{input_def.name}" to the output of another solid\n'
+                            f"  * Set a default value on the InputDefinition\n"
+                        )
 
 
 def _build_all_node_defs(node_defs):
