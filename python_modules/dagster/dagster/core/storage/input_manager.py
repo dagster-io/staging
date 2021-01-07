@@ -222,7 +222,7 @@ def type_based_root_input_manager(type_loaders):
         return type_loader.schema_type if type_loader else None
 
     required_resource_keys = set().union(
-        *[loader.required_resource_keys for _, loader in type_loaders]
+        *[loader.required_resource_keys() for _, loader in type_loaders]
     )
 
     @input_manager(
