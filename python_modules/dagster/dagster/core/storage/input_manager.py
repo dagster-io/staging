@@ -7,6 +7,8 @@ from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
 from dagster.core.definitions.resource import ResourceDefinition
+from dagster.core.errors import DagsterInvalidDefinitionError
+from dagster.core.types.dagster_type import DagsterTypeKind
 
 
 class IInputManagerDefinition:
@@ -213,13 +215,26 @@ def type_based_root_input_manager(type_loaders):
     }
 
     def config_schema_fn(input_def):
+        if input_def.dagster_type.kind == DagsterTypeKind.NOTHING:
+            return None
+
         type_loader = loaders_by_type_name.get(input_def.dagster_type.key)
 
         # this path would be deprecated and eventually removed
         if type_loader is None:
             type_loader = input_def.dagster_type.loader
 
-        return type_loader.schema_type if type_loader else None
+        if not type_loader:
+            raise DagsterInvalidDefinitionError(
+                f'Input "{input_def.name}" is not connected to the output of a previous solid, and '
+                "the root input manager does not know how to load inputs with its dagster type "
+                "from configuration. Possible solutions are:\n"
+                "  * Use type_based_root_input_manager to define a root input manager with an "
+                f'entry for the type "{input_def.dagster_type.display_name}"\n'
+                f'  * Connect "{input_def.name}" to the output of another solid\n'
+            )
+
+        return type_loader.schema_type
 
     required_resource_keys = set().union(
         *[loader.required_resource_keys() for _, loader in type_loaders]

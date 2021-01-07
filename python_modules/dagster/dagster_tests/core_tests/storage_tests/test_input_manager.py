@@ -1,5 +1,7 @@
 import tempfile
+from typing import NamedTuple
 
+import pytest
 from dagster import (
     DagsterInstance,
     EventMetadataEntry,
@@ -9,15 +11,19 @@ from dagster import (
     ObjectManager,
     OutputDefinition,
     PythonObjectDagsterType,
+    dagster_type_loader,
     execute_pipeline,
     fs_object_manager,
     input_manager,
     pipeline,
     resource,
     solid,
+    usable_as_dagster_type,
 )
 from dagster.core.definitions.events import Failure, RetryRequested
+from dagster.core.errors import DagsterInvalidSubsetError
 from dagster.core.instance import InstanceRef
+from dagster.core.storage.input_manager import type_based_root_input_manager
 
 
 def test_validate_inputs():
@@ -309,16 +315,12 @@ def test_input_manager_resource_config():
 
 
 def test_custom_configurable_input_type_old():
-    from dagster import dagster_type_loader, usable_as_dagster_type
-    from dataclasses import dataclass
-
     @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
     def file_summary_loader(_, config):
         return FileSummary(config["num_rows"], config["best_row"])
 
     @usable_as_dagster_type(loader=file_summary_loader)
-    @dataclass
-    class FileSummary:
+    class FileSummary(NamedTuple):
         num_rows: int
         best_row: str
 
@@ -349,17 +351,12 @@ def test_custom_configurable_input_type_old():
 
 
 def test_custom_configurable_input_type():
-    from dagster import dagster_type_loader, usable_as_dagster_type
-    from dataclasses import dataclass
-    from dagster.core.storage.input_manager import type_based_root_input_manager
-
     @dagster_type_loader(config_schema={"num_rows": int, "best_row": str})
     def file_summary_loader(_, config):
         return FileSummary(config["num_rows"], config["best_row"])
 
     @usable_as_dagster_type
-    @dataclass
-    class FileSummary:
+    class FileSummary(NamedTuple):
         num_rows: int
         best_row: str
 
@@ -394,3 +391,24 @@ def test_custom_configurable_input_type():
     )
 
     execute_pipeline(my_pipeline)
+
+
+def test_unhandled_type():
+    @usable_as_dagster_type(name="InputTypeWithoutHydration")
+    class InputTypeWithoutHydration(int):
+        pass
+
+    @solid(output_defs=[OutputDefinition(InputTypeWithoutHydration)])
+    def one(_):
+        return 1
+
+    @solid(input_defs=[InputDefinition("some_input", InputTypeWithoutHydration)])
+    def fail_subset(_, some_input):
+        return some_input
+
+    @pipeline
+    def my_pipeline():
+        fail_subset(one())
+
+    with pytest.raises(DagsterInvalidSubsetError):
+        my_pipeline.get_pipeline_subset_def({"fail_subset"})
