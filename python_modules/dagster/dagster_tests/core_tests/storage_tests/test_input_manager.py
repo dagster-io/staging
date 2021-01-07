@@ -262,38 +262,6 @@ def test_input_manager_with_retries():
         assert len(step_stats_3) == 0
 
 
-def test_fan_in():
-    with tempfile.TemporaryDirectory() as tmpdir_path:
-        object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
-
-        @solid
-        def input_solid1(_):
-            return 1
-
-        @solid
-        def input_solid2(_):
-            return 2
-
-        @solid(input_defs=[InputDefinition("input1", root_manager_key="input_manager")])
-        def solid1(_, input1):
-            assert input1 == [1, 2]
-
-        @pipeline(
-            mode_defs=[
-                ModeDefinition(
-                    resource_defs={
-                        "object_manager": object_manager,
-                        "input_manager": object_manager,
-                    }
-                )
-            ]
-        )
-        def my_pipeline():
-            solid1(input1=[input_solid1(), input_solid2()])
-
-        execute_pipeline(my_pipeline)
-
-
 def test_input_manager_resource_config():
     @input_manager(config_schema={"dog": str})
     def emit_dog(context):
@@ -373,7 +341,9 @@ def test_custom_configurable_input_type():
     )
 
     @pipeline(
-        mode_defs=[ModeDefinition(resource_defs={"input_manager": input_manager_with_custom_types})]
+        mode_defs=[
+            ModeDefinition(resource_defs={"root_input_manager": input_manager_with_custom_types})
+        ]
     )
     def my_pipeline():
         email_file_summary(summarize_file())

@@ -60,7 +60,7 @@ class ModeDefinition(
         from dagster.core.storage.mem_object_manager import mem_object_manager
 
         resource_defs_with_defaults = merge_dicts(
-            {"object_manager": mem_object_manager, "input_manager": default_input_manager},
+            {"object_manager": mem_object_manager, "root_input_manager": default_input_manager},
             resource_defs or {},
         )
 
