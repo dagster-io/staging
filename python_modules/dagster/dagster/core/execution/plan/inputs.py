@@ -162,7 +162,7 @@ class FromStepOutput(
     def can_load_input_object(self, step_context):
         source_handle = self.step_output_handle
         if step_context.using_object_manager(source_handle):
-            # asset store does not have a has check so assume present
+            # object manager does not have a has check so assume present
             return True
         if self.input_def.manager_key:
             return True
@@ -336,10 +336,16 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
 
     def load_input_object(self, step_context):
         values = []
+
+        # some upstream steps may have skipped and we allow fan-in to continue in their absence
+        # the stopgap is to ask the instance to check the event logs to find out step skipping
+        # https://github.com/dagster-io/dagster/issues/3511
+        source_handles_to_skip = step_context.instance.step_output_handles_no_output(
+            step_context.run_id, set([source.step_output_handle for source in self.sources])
+        )
+
         for inner_source in self.sources:
-            # perform a can_load check since some upstream steps may have skipped, and
-            # we allow fan-in to continue in their absence
-            if inner_source.can_load_input_object(step_context):
+            if not inner_source.step_output_handle in source_handles_to_skip:
                 values.append(inner_source.load_input_object(step_context))
 
         # When we're using an object store-backed intermediate store, we wrap the
