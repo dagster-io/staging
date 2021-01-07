@@ -189,7 +189,7 @@ class FromStepOutput(
             f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
         )
 
-        obj = object_manager.load_input(self.get_load_context(step_context))
+        obj = _load_input_with_input_manager(object_manager, self.get_load_context(step_context))
         output_def = step_context.execution_plan.get_step_output(source_handle).output_def
 
         # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
