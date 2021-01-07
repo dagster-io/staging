@@ -86,7 +86,7 @@ spec:
           resources:
             {{- toYaml $.Values.celery.resources | nindent 12 }}
       {{- if $.Values.celery.livenessProbe }}
-        {{- if not $.Values.celery.livenessProbe.exec }}
+        {{- if and (and (not $.Values.celery.livenessProbe.exec) (not $.Values.celery.livenessProbe.tcpSocket)) (not $.Values.celery.livenessProbe.httpGet) }}
           livenessProbe:
             exec:
               command:
@@ -113,7 +113,7 @@ spec:
             failureThreshold:
               {{- toYaml $.Values.celery.livenessProbe.failureThreshold | nindent 14 }}
             {{- end }}
-        {{- else}}
+        {{- else }}
           livenessProbe:
           {{- toYaml $.Values.celery.livenessProbe | nindent 12 }}
         {{- end }}

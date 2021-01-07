@@ -94,7 +94,7 @@ spec:
           resources:
             {{- toYaml $deployment.resources | nindent 12 }}
         {{- if $deployment.livenessProbe }}
-          {{- if not $deployment.livenessProbe.exec }}
+          {{- if and (and (not $deployment.livenessProbe.exec) (not $deployment.livenessProbe.tcpSocket)) (not $deployment.livenessProbe.httpGet) }}
           livenessProbe:
             exec:
               command: ["dagster", "api", "grpc-health-check", "-p", "{{ $deployment.port }}"]
@@ -118,13 +118,13 @@ spec:
             failureThreshold:
               {{- toYaml $deployment.livenessProbe.failureThreshold | nindent 14 }}
             {{- end }}
-          {{- else}}
+          {{- else }}
           livenessProbe:
             {{- toYaml $deployment.livenessProbe | nindent 12 }}
           {{- end }}
         {{- end }}
         {{- if $deployment.startupProbe }}
-          {{- if not $deployment.startupProbe.exec }}
+          {{- if and (and (not $deployment.startupProbe.exec) (not $deployment.startupProbe.tcpSocket)) (not $deployment.startupProbe.httpGet) }}
           startupProbe:
             exec:
               command: ["dagster", "api", "grpc-health-check", "-p", "{{ $deployment.port }}"]
@@ -148,7 +148,7 @@ spec:
             failureThreshold:
               {{- toYaml $deployment.startupProbe.failureThreshold | nindent 14 }}
             {{- end }}
-          {{- else}}
+          {{- else }}
           startupProbe:
             {{- toYaml $deployment.startupProbe | nindent 12 }}
           {{- end }}
