@@ -43,6 +43,8 @@ def check_for_release():
 
 
 def is_phab_and_dagit_only():
+
+    print("HIIIII")
     branch_name = os.getenv("BUILDKITE_BRANCH")
     if branch_name is None:
         branch_name = (
@@ -61,6 +63,8 @@ def is_phab_and_dagit_only():
             .strip("'b\n")
             .split("\n")
         )
+
+        print(repr(diff_files))
         return all(filepath.startswith(DAGIT_PATH) for (filepath) in diff_files)
 
     except subprocess.CalledProcessError:
