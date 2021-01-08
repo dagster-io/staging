@@ -13,7 +13,7 @@ from dagster.utils.backcompat import experimental
 
 @io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
 def fs_io_manager(init_context):
-    """Built-in filesystem object manager that stores and retrieves values using pickling.
+    """Built-in filesystem IO manager that stores and retrieves values using pickling.
 
     It allows users to specify a base directory where all the step outputs will be stored. It
     serializes and deserializes output values using pickling and automatically constructs
@@ -21,8 +21,8 @@ def fs_io_manager(init_context):
 
     Example usage:
 
-    1. Specify a pipeline-level object manager using the reserved resource key ``"io_manager"``,
-    which will set the given object manager on all solids across a pipeline.
+    1. Specify a pipeline-level IO manager using the reserved resource key ``"io_manager"``,
+    which will set the given IO manager on all solids across a pipeline.
 
     .. code-block:: python
 
@@ -39,8 +39,8 @@ def fs_io_manager(init_context):
             solid_b(solid_a())
 
 
-    2. Specify object manager on :py:class:`OutputDefinition`, which allows the user to set
-    different object managers on different step outputs.
+    2. Specify IO manager on :py:class:`OutputDefinition`, which allows the user to set
+    different IO managers on different step outputs.
 
     .. code-block:: python
 
@@ -64,7 +64,7 @@ def fs_io_manager(init_context):
 
 
 class PickledObjectFilesystemIOManager(IOManager):
-    """Built-in filesystem object manager that stores and retrieves values using pickling.
+    """Built-in filesystem IO manager that stores and retrieves values using pickling.
 
     Args:
         base_dir (Optional[str]): base directory where all the step outputs which use this object
@@ -109,7 +109,7 @@ class PickledObjectFilesystemIOManager(IOManager):
 
 
 class CustomPathPickledObjectFilesystemIOManager(IOManager):
-    """Built-in filesystem object managerthat stores and retrieves values using pickling and
+    """Built-in filesystem IO managerthat stores and retrieves values using pickling and
     allow users to specify file path for outputs.
 
     Args:
@@ -162,7 +162,7 @@ class CustomPathPickledObjectFilesystemIOManager(IOManager):
 @io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
 @experimental
 def custom_path_fs_io_manager(init_context):
-    """Built-in object manager that allows users to custom output file path per output definition.
+    """Built-in IO manager that allows users to custom output file path per output definition.
 
     It also allows users to specify a base directory where all the step output will be stored in. It
     serializes and deserializes output values (assets) using pickling and stores the pickled object

@@ -346,7 +346,7 @@ class IntermediateStorageConfig(
                 (
                     'The "storage" and "intermediate_storage" entries in the run config are deprecated, '
                     "and will removed in 0.11.0. Loading inputs and storing outputs are now handled "
-                    'by "object managers", which are resources that can be configured via '
+                    'by "IO managers", which are resources that can be configured via '
                     'the "io_manager" resource key.'
                 )
             )

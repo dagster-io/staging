@@ -59,7 +59,7 @@ class IOManagerDefinition(ResourceDefinition, IInputManagerDefinition, IOutputMa
 
 class IOManager(InputManager, OutputManager):
     """
-    Base class for user-provided object managers.
+    Base class for user-provided IO managers.
 
     Extend this class to handle how objects are loaded and stored. Users should implement
     ``handle_output`` to store an object and ``load_input`` to retrieve an object.
@@ -75,7 +75,7 @@ def io_manager(
     version=None,
 ):
     """
-    Define an object manager.
+    Define an IO manager.
 
     The decorated function should accept an :py:class:`InitResourceContext and return an
     py:class:`IOManager`.

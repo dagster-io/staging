@@ -11,7 +11,7 @@ from dagster.utils.backcompat import experimental
 
 class MemoizableIOManager(IOManager):
     """
-    Base class for object manager enabled to work with memoized execution. Users should implement
+    Base class for IO manager enabled to work with memoized execution. Users should implement
     the ``load_input`` and ``handle_output`` methods described in the ``IOManager`` API, and the
     ``has_object`` method, which returns a boolean representing whether a data object can be found.
     """
@@ -76,7 +76,7 @@ class VersionedPickledObjectFilesystemIOManager(MemoizableIOManager):
 @io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
 @experimental
 def versioned_filesystem_io_manager(init_context):
-    """Filesystem object manager that utilizes versioning of stored objects.
+    """Filesystem IO manager that utilizes versioning of stored objects.
 
     It allows users to specify a base directory where all the step outputs will be stored in. It
     serializes and deserializes output values (assets) using pickling and automatically constructs
