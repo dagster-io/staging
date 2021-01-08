@@ -1,8 +1,10 @@
 import {QueryResult} from '@apollo/client';
+import {Spinner} from '@blueprintjs/core';
 import * as React from 'react';
 
 import {DaemonList} from 'src/instance/DaemonList';
 import {InstanceHealthQuery} from 'src/instance/types/InstanceHealthQuery';
+import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
 import {Subheading} from 'src/ui/Text';
 import {RepositoryLocationsList} from 'src/workspace/RepositoryLocationsList';
@@ -13,7 +15,19 @@ interface Props {
 
 export const InstanceHealthPage = (props: Props) => {
   const {queryData} = props;
-  const {data} = queryData;
+  const {data, loading} = queryData;
+
+  const content = () => {
+    if (loading && !data?.instance) {
+      return (
+        <Box padding={24}>
+          <Spinner size={16} />
+        </Box>
+      );
+    }
+
+    return data?.instance ? <DaemonList daemonHealth={data.instance.daemonHealth} /> : null;
+  };
 
   return (
     <Group direction="column" spacing={32}>
@@ -23,7 +37,7 @@ export const InstanceHealthPage = (props: Props) => {
       </Group>
       <Group direction="column" spacing={16}>
         <Subheading>Daemon statuses</Subheading>
-        {data?.instance ? <DaemonList daemonHealth={data.instance.daemonHealth} /> : null}
+        {content()}
       </Group>
     </Group>
   );
