@@ -43,6 +43,8 @@ def check_for_release():
 
 
 def is_phab_and_dagit_only():
+
+    print("GREETINGS")
     branch_name = os.getenv("BUILDKITE_BRANCH")
     if branch_name is None:
         branch_name = (
