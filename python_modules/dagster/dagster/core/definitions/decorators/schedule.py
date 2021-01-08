@@ -14,10 +14,11 @@ from dagster.utils.partitions import (
     DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE,
     DEFAULT_MONTHLY_FORMAT,
     schedule_partition_range,
+    validate_schedule_boundary,
 )
 
 from ..mode import DEFAULT_MODE_NAME
-from ..schedule import ScheduleDefinition
+from ..schedule import ScheduleDefinition, validate_schedule_timezone
 
 # Error messages are long
 # pylint: disable=C0301
@@ -147,6 +148,12 @@ def monthly_schedule(
     check.int_param(execution_day_of_month, "execution_day")
     check.inst_param(execution_time, "execution_time", datetime.time)
     check.opt_str_param(execution_timezone, "execution_timezone")
+
+    if execution_timezone:
+        validate_schedule_timezone(execution_timezone)
+
+    start_date = validate_schedule_boundary(start_date, execution_timezone)
+    end_date = validate_schedule_boundary(end_date, execution_timezone) if end_date else None
 
     if (
         start_date.day != 1
@@ -289,6 +296,12 @@ def weekly_schedule(
     check.inst_param(execution_time, "execution_time", datetime.time)
     check.opt_str_param(execution_timezone, "execution_timezone")
 
+    if execution_timezone:
+        validate_schedule_timezone(execution_timezone)
+
+    start_date = validate_schedule_boundary(start_date, execution_timezone)
+    end_date = validate_schedule_boundary(end_date, execution_timezone) if end_date else None
+
     if start_date.hour != 0 or start_date.minute != 0 or start_date.second != 0:
         warnings.warn(
             "`start_date` must be at the beginning of a day for a weekly schedule. "
@@ -423,6 +436,12 @@ def daily_schedule(
     check.opt_dict_param(environment_vars, "environment_vars", key_type=str, value_type=str)
     check.opt_str_param(execution_timezone, "execution_timezone")
 
+    if execution_timezone:
+        validate_schedule_timezone(execution_timezone)
+
+    start_date = validate_schedule_boundary(start_date, execution_timezone)
+    end_date = validate_schedule_boundary(end_date, execution_timezone) if end_date else None
+
     if start_date.hour != 0 or start_date.minute != 0 or start_date.second != 0:
         warnings.warn(
             "`start_date` must be at the beginning of a day for a daily schedule. "
@@ -547,6 +566,12 @@ def hourly_schedule(
     check.str_param(pipeline_name, "pipeline_name")
     check.inst_param(execution_time, "execution_time", datetime.time)
     check.opt_str_param(execution_timezone, "execution_timezone")
+
+    if execution_timezone:
+        validate_schedule_timezone(execution_timezone)
+
+    start_date = validate_schedule_boundary(start_date, execution_timezone)
+    end_date = validate_schedule_boundary(end_date, execution_timezone) if end_date else None
 
     if start_date.minute != 0 or start_date.second != 0:
         warnings.warn(

@@ -45,6 +45,21 @@ def _delta_to_delta_range(delta):
         )
 
 
+def validate_schedule_boundary(boundary_date, execution_timezone):
+    """ Ensure that the passed-in start / end date of a schedule are transformed to
+        a pendulum datetime with the same timezone that the scheduler will use. If the datetime
+        is timezone-unaware, this is simply a matter of adding the timezone. If it's timezone-aware,
+        transform it to a Pendulum datetime at the same time but with the correct timezone.
+    """
+
+    timezone = execution_timezone if execution_timezone else pendulum.now().timezone.name
+
+    if not boundary_date.tzinfo:
+        return pendulum.instance(boundary_date, tz=timezone)
+
+    return pendulum.from_timestamp(boundary_date.timestamp(), tz=timezone)
+
+
 def schedule_partition_range(
     start, end, cron_schedule, fmt, timezone, execution_time_to_partition_fn,
 ):
@@ -66,18 +81,9 @@ def schedule_partition_range(
 
     def get_schedule_range_partitions():
         tz = timezone if timezone else pendulum.now().timezone.name
-        _start = (
-            start.in_tz(tz)
-            if isinstance(start, pendulum.Pendulum)
-            else pendulum.instance(start, tz=tz)
-        )
 
-        if not end:
-            _end = pendulum.now(tz)
-        elif isinstance(end, pendulum.Pendulum):
-            _end = end.in_tz(tz)
-        else:
-            _end = pendulum.instance(end, tz=tz)
+        _start = validate_schedule_boundary(start, tz)
+        _end = validate_schedule_boundary(end, tz) if end else pendulum.now(tz)
 
         end_timestamp = _end.timestamp()
 
@@ -157,18 +163,8 @@ def date_partition_range(
 
     def get_date_range_partitions():
         tz = timezone if timezone else pendulum.now().timezone.name
-        _start = (
-            start.in_tz(tz)
-            if isinstance(start, pendulum.Pendulum)
-            else pendulum.instance(start, tz=tz)
-        )
-
-        if not end:
-            _end = pendulum.now(tz)
-        elif isinstance(end, pendulum.Pendulum):
-            _end = end.in_tz(tz)
-        else:
-            _end = pendulum.instance(end, tz=tz)
+        _start = validate_schedule_boundary(start, tz)
+        _end = validate_schedule_boundary(end, tz) if end else pendulum.now(tz)
 
         period = pendulum.period(_start, _end)
         date_names = [

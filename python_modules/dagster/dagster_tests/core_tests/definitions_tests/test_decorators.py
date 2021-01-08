@@ -403,10 +403,7 @@ def test_schedule_decorators_sanity():
     assert foo_schedule_timezone.execution_timezone == "US/Central"
 
     with pytest.raises(
-        DagsterInvalidDefinitionError,
-        match=re.escape(
-            "Invalid execution timezone MadeUpTimeZone for invalid_timezone_foo_schedule"
-        ),
+        DagsterInvalidDefinitionError, match=re.escape("Invalid execution timezone MadeUpTimeZone"),
     ):
 
         @daily_schedule(

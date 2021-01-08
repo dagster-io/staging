@@ -17,6 +17,16 @@ from .mode import DEFAULT_MODE_NAME
 from .utils import check_valid_name
 
 
+def validate_schedule_timezone(execution_timezone):
+    try:
+        # Verify that the timezone can be loaded
+        pendulum.timezone(execution_timezone)
+    except ValueError:
+        raise DagsterInvalidDefinitionError(
+            "Invalid execution timezone {timezone}".format(timezone=execution_timezone)
+        )
+
+
 class ScheduleExecutionContext(JobContext):
     """Schedule-specific execution context.
 
@@ -188,15 +198,7 @@ class ScheduleDefinition(JobDefinition):
             self._execution_fn = _execution_fn
 
         if self._execution_timezone:
-            try:
-                # Verify that the timezone can be loaded
-                pendulum.timezone(self._execution_timezone)
-            except ValueError:
-                raise DagsterInvalidDefinitionError(
-                    "Invalid execution timezone {timezone} for {schedule_name}".format(
-                        schedule_name=name, timezone=self._execution_timezone
-                    )
-                )
+            validate_schedule_timezone(self._execution_timezone)
 
     @property
     def cron_schedule(self):
