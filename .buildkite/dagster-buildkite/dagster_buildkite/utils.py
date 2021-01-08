@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 import yaml
 
@@ -43,6 +44,9 @@ def check_for_release():
 
 
 def is_phab_and_dagit_only():
+    return False
+
+    sys.stderr.write("GREETINGS\n")
     branch_name = os.getenv("BUILDKITE_BRANCH")
     if branch_name is None:
         branch_name = (
@@ -61,6 +65,8 @@ def is_phab_and_dagit_only():
             .strip("'b\n")
             .split("\n")
         )
+        sys.stderr.write(repr(diff_files) + "\n")
+
         return all(filepath.startswith(DAGIT_PATH) for (filepath) in diff_files)
 
     except subprocess.CalledProcessError:
