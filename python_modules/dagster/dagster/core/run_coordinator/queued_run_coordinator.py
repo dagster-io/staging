@@ -15,13 +15,13 @@ from dagster.utils.backcompat import experimental
 from .base import RunCoordinator
 
 
+@experimental
 class QueuedRunCoordinator(RunCoordinator, ConfigurableClass):
     """
     Sends runs to the dequeuer process via the run storage. Requires the external process to be
     alive for runs to be launched.
     """
 
-    @experimental
     def __init__(
         self,
         max_concurrent_runs=None,
