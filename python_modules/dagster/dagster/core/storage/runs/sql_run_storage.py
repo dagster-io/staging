@@ -23,7 +23,14 @@ from dagster.utils import merge_dicts, utc_datetime_from_timestamp
 
 from ..pipeline_run import PipelineRun, PipelineRunStatus, PipelineRunsFilter
 from .base import RunStorage
-from .schema import DaemonHeartbeatsTable, RunTagsTable, RunsTable, SnapshotsTable
+from .migration import RUN_DATA_MIGRATIONS
+from .schema import (
+    DaemonHeartbeatsTable,
+    RunTagsTable,
+    RunsTable,
+    SecondaryIndexMigrationTable,
+    SnapshotsTable,
+)
 
 
 class SnapshotType(Enum):
@@ -44,6 +51,43 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
         """This method should perform any schema or data migrations necessary to bring an
         out-of-date instance of the storage up to date.
         """
+
+    def reindex(self, print_fn=lambda _: None, force=False):
+        for migration_name, migration_fn in RUN_DATA_MIGRATIONS.items():
+            if self.has_migrated(migration_name):
+                if not force:
+                    continue
+            print_fn(f"Starting data migration: {migration_name}")
+            migration_fn()(self, print_fn)
+            self.mark_migrated(migration_name)
+            print_fn(f"Finished data migration: {migration_name}")
+
+    def has_migrated(self, migration_name):
+        query = (
+            db.select([1])
+            .where(SecondaryIndexMigrationTable.c.name == migration_name)
+            .where(SecondaryIndexMigrationTable.c.migration_completed != None)
+            .limit(1)
+        )
+        with self.connect() as conn:
+            results = conn.execute(query).fetchall()
+
+        return len(results) > 0
+
+    def mark_migrated(self, migration_name):
+        query = SecondaryIndexMigrationTable.insert().values(  # pylint: disable=no-value-for-parameter
+            name=migration_name, migration_completed=datetime.now(),
+        )
+        try:
+            with self.connect() as conn:
+                conn.execute(query)
+        except db.exc.IntegrityError:
+            with self.connect() as conn:
+                conn.execute(
+                    SecondaryIndexMigrationTable.update()  # pylint: disable=no-value-for-parameter
+                    .where(SecondaryIndexMigrationTable.c.name == migration_name)
+                    .values(migration_completed=datetime.now())
+                )
 
     def fetchall(self, query):
         with self.connect() as conn:
