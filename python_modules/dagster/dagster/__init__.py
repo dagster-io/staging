@@ -319,7 +319,7 @@ __all__ = [
     "hourly_schedule",
     "monthly_schedule",
     "weekly_schedule",
-    # object managers
+    # IO managers
     "IOManager",
     "IOManagerDefinition",
     "io_manager",

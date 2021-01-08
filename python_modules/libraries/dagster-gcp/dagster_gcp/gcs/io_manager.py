@@ -71,7 +71,7 @@ class PickledObjectGCSIOManager(IOManager):
     required_resource_keys={"gcs"},
 )
 def gcs_io_manager(init_context):
-    """Persistent object manager using GCS for storage.
+    """Persistent IO manager using GCS for storage.
 
     Suitable for objects storage for distributed executors, so long as
     each execution node has network connectivity and credentials for GCS and

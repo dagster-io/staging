@@ -205,7 +205,7 @@ def _check_intra_process_pipeline(pipeline):
 
 
 def _all_outputs_non_mem_io_managers(pipeline_def, mode_def):
-    """Returns true if every output definition in the pipeline uses an object manager that's not
+    """Returns true if every output definition in the pipeline uses an IO manager that's not
     the mem_io_manager.
 
     If true, this indicates that it's OK to execute steps in their own processes, because their
@@ -227,8 +227,8 @@ def _all_outputs_non_mem_io_managers(pipeline_def, mode_def):
 
 
 def _check_persistent_storage_requirement(pipeline_def, mode_def, intermediate_storage_def):
-    """We prefer to store outputs with object managers, but will fall back to intermediate storage
-    if an object manager isn't set.
+    """We prefer to store outputs with IO managers, but will fall back to intermediate storage
+    if an IO manager isn't set.
     """
     if not (
         _all_outputs_non_mem_io_managers(pipeline_def, mode_def)

@@ -83,7 +83,7 @@ class PickledObjectS3IOManager(IOManager):
     required_resource_keys={"s3"},
 )
 def s3_io_manager(init_context):
-    """Persistent object manager using S3 for storage.
+    """Persistent IO manager using S3 for storage.
 
     Suitable for objects storage for distributed executors, so long as
     each execution node has network connectivity and credentials for S3 and
