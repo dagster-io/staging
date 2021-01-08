@@ -1,4 +1,4 @@
-from dagster import ModeDefinition, ObjectManager, execute_pipeline, object_manager, pipeline, solid
+from dagster import IOManager, ModeDefinition, execute_pipeline, io_manager, pipeline, solid
 
 
 def connect():
@@ -23,8 +23,8 @@ def solid2(_, _input_dataframe):
     """Return a Pandas DataFrame"""
 
 
-# object_manager_start_marker
-class MyObjectManager(ObjectManager):
+# io_manager_start_marker
+class MyIOManager(IOManager):
     def handle_output(self, context, obj):
         table_name = context.config["table"]
         write_dataframe_to_table(name=table_name, dataframe=obj)
@@ -34,17 +34,17 @@ class MyObjectManager(ObjectManager):
         return read_dataframe_from_table(name=table_name)
 
 
-@object_manager(output_config_schema={"table": str})
-def my_object_manager(_):
-    return MyObjectManager()
+@io_manager(output_config_schema={"table": str})
+def my_io_manager(_):
+    return MyIOManager()
 
 
-# object_manager_end_marker
+# io_manager_end_marker
 
 
 def execute_with_config():
     # execute_start_marker
-    @pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": my_object_manager})])
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_io_manager})])
     def my_pipeline():
         solid2(solid1())
 

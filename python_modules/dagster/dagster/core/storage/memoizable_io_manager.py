@@ -2,17 +2,17 @@ import os
 import pickle
 from abc import abstractmethod
 
-from dagster import ObjectManager, check, object_manager
+from dagster import IOManager, check, io_manager
 from dagster.config import Field
 from dagster.config.source import StringSource
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
 from dagster.utils.backcompat import experimental
 
 
-class MemoizableObjectManager(ObjectManager):
+class MemoizableIOManager(IOManager):
     """
     Base class for object manager enabled to work with memoized execution. Users should implement
-    the ``load_input`` and ``handle_output`` methods described in the ``ObjectManager`` API, and the
+    the ``load_input`` and ``handle_output`` methods described in the ``IOManager`` API, and the
     ``has_object`` method, which returns a boolean representing whether a data object can be found.
     """
 
@@ -28,7 +28,7 @@ class MemoizableObjectManager(ObjectManager):
         """
 
 
-class VersionedPickledObjectFilesystemObjectManager(MemoizableObjectManager):
+class VersionedPickledObjectFilesystemIOManager(MemoizableIOManager):
     def __init__(self, base_dir=None):
         self.base_dir = check.opt_str_param(base_dir, "base_dir")
         self.write_mode = "wb"
@@ -73,11 +73,9 @@ class VersionedPickledObjectFilesystemObjectManager(MemoizableObjectManager):
         return os.path.exists(filepath) and not os.path.isdir(filepath)
 
 
-@object_manager(
-    config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)}
-)
+@io_manager(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
 @experimental
-def versioned_filesystem_object_manager(init_context):
+def versioned_filesystem_io_manager(init_context):
     """Filesystem object manager that utilizes versioning of stored objects.
 
     It allows users to specify a base directory where all the step outputs will be stored in. It
@@ -85,4 +83,4 @@ def versioned_filesystem_object_manager(init_context):
     the filepaths for the assets using the provided directory, and the version for a provided step
     output.
     """
-    return VersionedPickledObjectFilesystemObjectManager(init_context.resource_config["base_dir"])
+    return VersionedPickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])

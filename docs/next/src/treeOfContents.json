@@ -320,8 +320,8 @@
             "path": "/_apidocs/hooks"
           },
           {
-            "name": "Object Managers",
-            "path": "/_apidocs/object-managers"
+            "name": "IO Managers",
+            "path": "/_apidocs/io-managers"
           },
           {
             "name": "Utilities",

@@ -10,13 +10,11 @@ from dagster.core.storage.input_manager import IInputManagerDefinition, InputMan
 from dagster.core.storage.output_manager import IOutputManagerDefinition, OutputManager
 
 
-class ObjectManagerDefinition(
-    ResourceDefinition, IInputManagerDefinition, IOutputManagerDefinition
-):
+class IOManagerDefinition(ResourceDefinition, IInputManagerDefinition, IOutputManagerDefinition):
     """Definition of an output manager resource.
 
     An OutputManagerDefinition is a :py:class:`ResourceDefinition` whose resource_fn returns an
-    :py:class:`ObjectManager`.
+    :py:class:`IOManager`.
     """
 
     def __init__(
@@ -31,7 +29,7 @@ class ObjectManagerDefinition(
     ):
         self._input_config_schema = input_config_schema
         self._output_config_schema = output_config_schema
-        super(ObjectManagerDefinition, self).__init__(
+        super(IOManagerDefinition, self).__init__(
             resource_fn=resource_fn,
             config_schema=config_schema,
             description=description,
@@ -49,7 +47,7 @@ class ObjectManagerDefinition(
 
     def copy_for_configured(self, name, description, config_schema, _):
         check.invariant(name is None, "ResourceDefintions do not have names")
-        return ObjectManagerDefinition(
+        return IOManagerDefinition(
             config_schema=config_schema,
             description=description or self.description,
             resource_fn=self.resource_fn,
@@ -59,7 +57,7 @@ class ObjectManagerDefinition(
         )
 
 
-class ObjectManager(InputManager, OutputManager):
+class IOManager(InputManager, OutputManager):
     """
     Base class for user-provided object managers.
 
@@ -68,7 +66,7 @@ class ObjectManager(InputManager, OutputManager):
     """
 
 
-def object_manager(
+def io_manager(
     config_schema=None,
     description=None,
     output_config_schema=None,
@@ -80,7 +78,7 @@ def object_manager(
     Define an object manager.
 
     The decorated function should accept an :py:class:`InitResourceContext and return an
-    py:class:`ObjectManager`.
+    py:class:`IOManager`.
 
     Args:
         config_schema (Optional[ConfigSchema]): The schema for the resource config. Configuration
@@ -98,23 +96,23 @@ def object_manager(
 
     .. code-block:: python
 
-        class MyObjectManager(ObjectManager):
+        class MyIOManager(IOManager):
             def handle_output(self, context, obj):
                 write_csv("some/path")
 
             def load_input(self, context):
                 return read_csv("some/path")
 
-        @object_manager
-        def my_object_manager(init_context):
-            return MyObjectManager()
+        @io_manager
+        def my_io_manager(init_context):
+            return MyIOManager()
 
-        @solid(output_defs=[OutputDefinition(manager_key="my_object_manager_key")])
+        @solid(output_defs=[OutputDefinition(manager_key="my_io_manager_key")])
         def my_solid(_):
             return do_stuff()
 
         @pipeline(
-            mode_defs=[ModeDefinition(resource_defs={"my_object_manager_key": my_object_manager})]
+            mode_defs=[ModeDefinition(resource_defs={"my_io_manager_key": my_io_manager})]
         )
         def my_pipeline():
             my_solid()
@@ -122,10 +120,10 @@ def object_manager(
         execute_pipeline(my_pipeline)
     """
     if callable(config_schema) and not is_callable_valid_config_arg(config_schema):
-        return _ObjectManagerDecoratorCallable()(config_schema)
+        return _IOManagerDecoratorCallable()(config_schema)
 
     def _wrap(resource_fn):
-        return _ObjectManagerDecoratorCallable(
+        return _IOManagerDecoratorCallable(
             config_schema=config_schema,
             description=description,
             required_resource_keys=required_resource_keys,
@@ -137,7 +135,7 @@ def object_manager(
     return _wrap
 
 
-class _ObjectManagerDecoratorCallable:
+class _IOManagerDecoratorCallable:
     def __init__(
         self,
         config_schema=None,
@@ -161,7 +159,7 @@ class _ObjectManagerDecoratorCallable:
     def __call__(self, fn):
         check.callable_param(fn, "fn")
 
-        object_manager_def = ObjectManagerDefinition(
+        io_manager_def = IOManagerDefinition(
             resource_fn=fn,
             config_schema=self.config_schema,
             description=self.description,
@@ -171,6 +169,6 @@ class _ObjectManagerDecoratorCallable:
             input_config_schema=self.input_config_schema,
         )
 
-        update_wrapper(object_manager_def, wrapped=fn)
+        update_wrapper(io_manager_def, wrapped=fn)
 
-        return object_manager_def
+        return io_manager_def

@@ -15,7 +15,7 @@ from dagster.core.events import DagsterEventType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.utils import make_new_run_id
-from dagster_aws.s3.object_manager import PickledObjectS3ObjectManager, s3_object_manager
+from dagster_aws.s3.io_manager import PickledObjectS3IOManager, s3_io_manager
 from dagster_aws.s3.utils import construct_s3_client
 
 
@@ -35,22 +35,20 @@ def define_inty_pipeline():
     def test_s3_resource(_):
         return construct_s3_client(max_attempts=5)
 
-    @lambda_solid(output_def=OutputDefinition(Int, manager_key="object_manager"))
+    @lambda_solid(output_def=OutputDefinition(Int, manager_key="io_manager"))
     def return_one():
         return 1
 
     @lambda_solid(
         input_defs=[InputDefinition("num", Int)],
-        output_def=OutputDefinition(Int, manager_key="object_manager"),
+        output_def=OutputDefinition(Int, manager_key="io_manager"),
     )
     def add_one(num):
         return num + 1
 
     @pipeline(
         mode_defs=[
-            ModeDefinition(
-                resource_defs={"object_manager": s3_object_manager, "s3": test_s3_resource,},
-            )
+            ModeDefinition(resource_defs={"io_manager": s3_io_manager, "s3": test_s3_resource,},)
         ]
     )
     def basic_external_plan_execution():
@@ -59,10 +57,10 @@ def define_inty_pipeline():
     return basic_external_plan_execution
 
 
-def test_s3_object_manager_execution(mock_s3_bucket):
+def test_s3_io_manager_execution(mock_s3_bucket):
     pipeline_def = define_inty_pipeline()
 
-    run_config = {"resources": {"object_manager": {"config": {"s3_bucket": mock_s3_bucket.name}}}}
+    run_config = {"resources": {"io_manager": {"config": {"s3_bucket": mock_s3_bucket.name}}}}
 
     run_id = make_new_run_id()
 
@@ -87,7 +85,7 @@ def test_s3_object_manager_execution(mock_s3_bucket):
 
     assert get_step_output(return_one_step_events, "return_one")
 
-    object_manager = PickledObjectS3ObjectManager(
+    io_manager = PickledObjectS3IOManager(
         mock_s3_bucket.name, construct_s3_client(max_attempts=5), s3_prefix="dagster"
     )
     step_output_handle = StepOutputHandle("return_one")
@@ -107,7 +105,7 @@ def test_s3_object_manager_execution(mock_s3_bucket):
             solid_def=pipeline_def.solid_def_named("return_one"),
         ),
     )
-    assert object_manager.load_input(context) == 1
+    assert io_manager.load_input(context) == 1
 
     add_one_step_events = list(
         execute_plan(
@@ -137,4 +135,4 @@ def test_s3_object_manager_execution(mock_s3_bucket):
     )
 
     assert get_step_output(add_one_step_events, "add_one")
-    assert object_manager.load_input(context) == 2
+    assert io_manager.load_input(context) == 2

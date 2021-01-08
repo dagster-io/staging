@@ -2,14 +2,12 @@ from tempfile import TemporaryDirectory
 
 from dagster import Any, seven
 from dagster.core.execution.context.system import InputContext, OutputContext
-from dagster.core.storage.memoizable_object_manager import (
-    VersionedPickledObjectFilesystemObjectManager,
-)
+from dagster.core.storage.memoizable_io_manager import VersionedPickledObjectFilesystemIOManager
 
 
-def test_versioned_pickled_object_filesystem_object_manager():
+def test_versioned_pickled_object_filesystem_io_manager():
     with TemporaryDirectory() as temp_dir:
-        store = VersionedPickledObjectFilesystemObjectManager(temp_dir)
+        store = VersionedPickledObjectFilesystemIOManager(temp_dir)
         context = OutputContext(
             step_key="foo",
             name="bar",

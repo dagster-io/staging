@@ -17,17 +17,17 @@ from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.utils import make_new_run_id
 from dagster_azure.adls2 import create_adls2_client
-from dagster_azure.adls2.object_manager import PickledObjectADLS2ObjectManager, adls2_object_manager
+from dagster_azure.adls2.io_manager import PickledObjectADLS2IOManager, adls2_io_manager
 from dagster_azure.adls2.resources import adls2_resource
 from dagster_azure.blob import create_blob_client
 
 
-def fake_object_manager_factory(object_manager):
+def fake_io_manager_factory(io_manager):
     @resource
-    def fake_object_manager(_):
-        return object_manager
+    def fake_io_manager(_):
+        return io_manager
 
-    return fake_object_manager
+    return fake_io_manager
 
 
 def get_step_output(step_events, step_key, output_name="result"):
@@ -42,22 +42,20 @@ def get_step_output(step_events, step_key, output_name="result"):
 
 
 def define_inty_pipeline():
-    @lambda_solid(output_def=OutputDefinition(Int, manager_key="object_manager"))
+    @lambda_solid(output_def=OutputDefinition(Int, manager_key="io_manager"))
     def return_one():
         return 1
 
     @lambda_solid(
         input_defs=[InputDefinition("num", Int)],
-        output_def=OutputDefinition(Int, manager_key="object_manager"),
+        output_def=OutputDefinition(Int, manager_key="io_manager"),
     )
     def add_one(num):
         return num + 1
 
     @pipeline(
         mode_defs=[
-            ModeDefinition(
-                resource_defs={"object_manager": adls2_object_manager, "adls2": adls2_resource}
-            )
+            ModeDefinition(resource_defs={"io_manager": adls2_io_manager, "adls2": adls2_resource})
         ]
     )
     def basic_external_plan_execution():
@@ -70,12 +68,12 @@ nettest = pytest.mark.nettest
 
 
 @nettest
-def test_adls2_object_manager_execution(storage_account, file_system, credential):
+def test_adls2_io_manager_execution(storage_account, file_system, credential):
     pipeline_def = define_inty_pipeline()
 
     run_config = {
         "resources": {
-            "object_manager": {"config": {"adls2_file_system": file_system}},
+            "io_manager": {"config": {"adls2_file_system": file_system}},
             "adls2": {
                 "config": {"storage_account": storage_account, "credential": {"key": credential}}
             },
@@ -117,12 +115,12 @@ def test_adls2_object_manager_execution(storage_account, file_system, credential
         ),
     )
 
-    object_manager = PickledObjectADLS2ObjectManager(
+    io_manager = PickledObjectADLS2IOManager(
         file_system=file_system,
         adls2_client=create_adls2_client(storage_account, credential),
         blob_client=create_blob_client(storage_account, credential),
     )
-    assert object_manager.load_input(context) == 1
+    assert io_manager.load_input(context) == 1
 
     add_one_step_events = list(
         execute_plan(
@@ -147,4 +145,4 @@ def test_adls2_object_manager_execution(storage_account, file_system, credential
     )
 
     assert get_step_output(add_one_step_events, "add_one")
-    assert object_manager.load_input(context) == 2
+    assert io_manager.load_input(context) == 2
