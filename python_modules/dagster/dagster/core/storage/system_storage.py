@@ -109,7 +109,7 @@ Framework authors seeking to add their own intermediate storage definitions can 
 def io_manager_from_intermediate_storage(intermediate_storage_def):
     """Define an :py:class:`IOManagerDefinition` from an existing :py:class:`IntermediateStorageDefinition`.
 
-    This method is used to adapt an existing user-defined intermediate storage to a object manager
+    This method is used to adapt an existing user-defined intermediate storage to a IO manager
     resource, for example:
 
     .. code-block:: python
@@ -123,7 +123,7 @@ def io_manager_from_intermediate_storage(intermediate_storage_def):
 
     Args:
         intermediate_storage_def (IntermediateStorageDefinition): The intermediate storage definition
-            to be converted to an object manager definition.
+            to be converted to an IO manager definition.
 
     Returns:
         IOManagerDefinition

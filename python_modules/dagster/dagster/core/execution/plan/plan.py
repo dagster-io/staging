@@ -481,7 +481,7 @@ class ExecutionPlan(
     @property
     def artifacts_persisted(self):
         """
-        Check if all the border steps of the current run have non-in-memory object managers for reexecution.
+        Check if all the border steps of the current run have non-in-memory IO managers for reexecution.
 
         Border steps: all the steps that don't have upstream steps to execute, i.e. indegree is 0).
         """
@@ -498,15 +498,15 @@ class ExecutionPlan(
 
         mode_def = self.pipeline_def.get_mode_definition(self.environment_config.mode)
         for step in self.get_steps_to_execute_by_level()[0]:
-            # check if all its inputs' upstream step outputs have non-in-memory object manager configured
+            # check if all its inputs' upstream step outputs have non-in-memory IO manager configured
             for step_input in step.step_inputs:
                 for step_output_handle in step_input.get_step_output_handle_dependencies():
                     manager_key = self.get_manager_key(step_output_handle)
                     manager_def = mode_def.resource_defs.get(manager_key)
                     if (
-                        # no object manager is configured
+                        # no IO manager is configured
                         not manager_def
-                        # object manager is non persistent
+                        # IO manager is non persistent
                         or manager_def == mem_io_manager
                     ):
                         return False
@@ -529,10 +529,10 @@ def check_io_manager_intermediate_storage(mode_def, environment_config):
     if not intermediate_storage_is_default and not io_manager_is_default:
         raise DagsterInvariantViolationError(
             'You have specified an intermediate storage, "{intermediate_storage_name}", and have '
-            "also specified a default object manager. You must specify only one. To avoid specifying "
+            "also specified a default IO manager. You must specify only one. To avoid specifying "
             "an intermediate storage, omit the intermediate_storage_defs argument to your"
             'ModeDefinition and omit "intermediate_storage" in your run config. To avoid '
-            'specifying a default object manager, omit the "io_manager" key from the '
+            'specifying a default IO manager, omit the "io_manager" key from the '
             "resource_defs argument to your ModeDefinition.".format(
                 intermediate_storage_name=intermediate_storage_def.name
             )

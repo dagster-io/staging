@@ -83,7 +83,7 @@ class PickledObjectADLS2IOManager(IOManager):
     required_resource_keys={"adls2"},
 )
 def adls2_io_manager(init_context):
-    """Persistent object manager using Azure Data Lake Storage Gen2 for storage.
+    """Persistent IO manager using Azure Data Lake Storage Gen2 for storage.
 
     Suitable for objects storage for distributed executors, so long as
     each execution node has network connectivity and credentials for ADLS and
