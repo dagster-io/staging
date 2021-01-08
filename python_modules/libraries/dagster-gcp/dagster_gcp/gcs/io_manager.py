@@ -1,7 +1,7 @@
 import logging
 import pickle
 
-from dagster import Field, ObjectManager, StringSource, check, object_manager
+from dagster import Field, IOManager, StringSource, check, io_manager
 from dagster.utils import PICKLE_PROTOCOL
 from dagster.utils.backoff import backoff
 from google.api_core.exceptions import TooManyRequests
@@ -10,7 +10,7 @@ from google.cloud import storage
 DEFAULT_LEASE_DURATION = 60  # One minute
 
 
-class PickledObjectGCSObjectManager(ObjectManager):
+class PickledObjectGCSIOManager(IOManager):
     def __init__(self, bucket, client=None, prefix="dagster"):
         self.bucket = check.str_param(bucket, "bucket")
         self.client = client or storage.Client()
@@ -63,14 +63,14 @@ class PickledObjectGCSObjectManager(ObjectManager):
         )
 
 
-@object_manager(
+@io_manager(
     config_schema={
         "gcs_bucket": Field(StringSource),
         "gcs_prefix": Field(StringSource, is_required=False, default_value="dagster"),
     },
     required_resource_keys={"gcs"},
 )
-def gcs_object_manager(init_context):
+def gcs_io_manager(init_context):
     """Persistent object manager using GCS for storage.
 
     Suitable for objects storage for distributed executors, so long as
@@ -85,7 +85,7 @@ def gcs_object_manager(init_context):
         pipeline_def = PipelineDefinition(
             mode_defs=[
                 ModeDefinition(
-                    resource_defs={'object_manager': gcs_object_manager, 'gcs': gcs_resource, ...},
+                    resource_defs={'io_manager': gcs_io_manager, 'gcs': gcs_resource, ...},
                 ), ...
             ], ...
         )
@@ -95,15 +95,15 @@ def gcs_object_manager(init_context):
     .. code-block:: YAML
 
         resources:
-            object_manager:
+            io_manager:
                 config:
                     gcs_bucket: my-cool-bucket
                     gcs_prefix: good/prefix-for-files-
     """
     client = init_context.resources.gcs
-    pickled_object_manager = PickledObjectGCSObjectManager(
+    pickled_io_manager = PickledObjectGCSIOManager(
         init_context.resource_config["gcs_bucket"],
         client,
         init_context.resource_config["gcs_prefix"],
     )
-    return pickled_object_manager
+    return pickled_io_manager

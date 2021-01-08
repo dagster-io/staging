@@ -4,11 +4,11 @@ from dagster.core.execution.api import execute_pipeline
 from dagster.core.storage.object_store import InMemoryObjectStore
 from dagster.core.storage.system_storage import (
     build_intermediate_storage_from_object_store,
-    object_manager_from_intermediate_storage,
+    io_manager_from_intermediate_storage,
 )
 
 
-def test_intermediate_storage_def_to_object_manager_def():
+def test_intermediate_storage_def_to_io_manager_def():
     called = {}
 
     @intermediate_storage()
@@ -27,7 +27,7 @@ def test_intermediate_storage_def_to_object_manager_def():
         mode_defs=[
             ModeDefinition(
                 resource_defs={
-                    "object_manager": object_manager_from_intermediate_storage(
+                    "io_manager": io_manager_from_intermediate_storage(
                         no_config_intermediate_storage
                     )
                 }

@@ -6,9 +6,9 @@ from dagster import (
     AssetMaterialization,
     DagsterInstance,
     DagsterInvariantViolationError,
+    IOManagerDefinition,
     InputDefinition,
     ModeDefinition,
-    ObjectManagerDefinition,
     OutputDefinition,
     execute_pipeline,
     pipeline,
@@ -19,17 +19,17 @@ from dagster import (
 from dagster.core.definitions.events import AssetStoreOperationType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.context.system import InputContext, OutputContext
-from dagster.core.storage.fs_object_manager import custom_path_fs_object_manager, fs_object_manager
-from dagster.core.storage.mem_object_manager import InMemoryObjectManager, mem_object_manager
-from dagster.core.storage.object_manager import ObjectManager, object_manager
+from dagster.core.storage.fs_io_manager import custom_path_fs_io_manager, fs_io_manager
+from dagster.core.storage.io_manager import IOManager, io_manager
+from dagster.core.storage.mem_io_manager import InMemoryIOManager, mem_io_manager
 
 
-def test_object_manager_with_config():
+def test_io_manager_with_config():
     @solid
     def my_solid(_):
         pass
 
-    class MyObjectManager(ObjectManager):
+    class MyIOManager(IOManager):
         def load_input(self, context):
             assert context.upstream_output.config["some_config"] == "some_value"
             return 1
@@ -37,13 +37,11 @@ def test_object_manager_with_config():
         def handle_output(self, context, obj):
             assert context.config["some_config"] == "some_value"
 
-    @object_manager(output_config_schema={"some_config": str})
-    def configurable_object_manager(_):
-        return MyObjectManager()
+    @io_manager(output_config_schema={"some_config": str})
+    def configurable_io_manager(_):
+        return MyIOManager()
 
-    @pipeline(
-        mode_defs=[ModeDefinition(resource_defs={"object_manager": configurable_object_manager})]
-    )
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": configurable_io_manager})])
     def my_pipeline():
         my_solid()
 
@@ -52,12 +50,12 @@ def test_object_manager_with_config():
     assert result.output_for_solid("my_solid") == 1
 
 
-def test_object_manager_with_required_resource_keys():
+def test_io_manager_with_required_resource_keys():
     @solid
     def my_solid(_):
         pass
 
-    class MyObjectManager(ObjectManager):
+    class MyIOManager(IOManager):
         def __init__(self, prefix):
             self._prefix = prefix
 
@@ -67,9 +65,9 @@ def test_object_manager_with_required_resource_keys():
         def handle_output(self, _context, obj):
             pass
 
-    @object_manager(required_resource_keys={"foo_resource"})
-    def object_manager_requires_resource(init_context):
-        return MyObjectManager(init_context.resources.foo_resource)
+    @io_manager(required_resource_keys={"foo_resource"})
+    def io_manager_requires_resource(init_context):
+        return MyIOManager(init_context.resources.foo_resource)
 
     @resource
     def foo_resource(_):
@@ -79,7 +77,7 @@ def test_object_manager_with_required_resource_keys():
         mode_defs=[
             ModeDefinition(
                 resource_defs={
-                    "object_manager": object_manager_requires_resource,
+                    "io_manager": io_manager_requires_resource,
                     "foo_resource": foo_resource,
                 }
             )
@@ -101,7 +99,7 @@ def define_pipeline(manager, metadata_dict):
     def solid_b(_context, _df):
         return 1
 
-    @pipeline(mode_defs=[ModeDefinition("local", resource_defs={"object_manager": manager})])
+    @pipeline(mode_defs=[ModeDefinition("local", resource_defs={"io_manager": manager})])
     def my_pipeline():
         solid_b(solid_a())
 
@@ -110,8 +108,8 @@ def define_pipeline(manager, metadata_dict):
 
 def test_result_output():
     with tempfile.TemporaryDirectory() as tmpdir_path:
-        default_object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
-        pipeline_def = define_pipeline(default_object_manager, {})
+        default_io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
+        pipeline_def = define_pipeline(default_io_manager, {})
 
         result = execute_pipeline(pipeline_def)
         assert result.success
@@ -121,10 +119,10 @@ def test_result_output():
         assert result.result_for_solid("solid_b").output_value() == 1
 
 
-def test_fs_object_manager_reexecution():
+def test_fs_io_manager_reexecution():
     with tempfile.TemporaryDirectory() as tmpdir_path:
-        default_object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
-        pipeline_def = define_pipeline(default_object_manager, {})
+        default_io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
+        pipeline_def = define_pipeline(default_io_manager, {})
         instance = DagsterInstance.ephemeral()
 
         result = execute_pipeline(pipeline_def, instance=instance)
@@ -148,7 +146,7 @@ def test_fs_object_manager_reexecution():
 
 
 def test_can_reexecute():
-    pipeline_def = define_pipeline(fs_object_manager, {})
+    pipeline_def = define_pipeline(fs_io_manager, {})
     plan = create_execution_plan(pipeline_def)
     assert plan.artifacts_persisted
 
@@ -164,14 +162,14 @@ def execute_pipeline_with_steps(pipeline_def, step_keys_to_execute=None):
 
 def test_step_subset_with_custom_paths():
     with tempfile.TemporaryDirectory() as tmpdir_path:
-        default_object_manager = custom_path_fs_object_manager
+        default_io_manager = custom_path_fs_io_manager
         # pass hardcoded file path via metadata
         test_metadata_dict = {
             "solid_a": {"path": os.path.join(tmpdir_path, "a")},
             "solid_b": {"path": os.path.join(tmpdir_path, "b")},
         }
 
-        pipeline_def = define_pipeline(default_object_manager, test_metadata_dict)
+        pipeline_def = define_pipeline(default_io_manager, test_metadata_dict)
         events = execute_pipeline_with_steps(pipeline_def)
         for evt in events:
             assert not evt.is_failure
@@ -200,7 +198,7 @@ def test_step_subset_with_custom_paths():
 
 
 def test_multi_materialization():
-    class DummyObjectManager(ObjectManager):
+    class DummyIOManager(IOManager):
         def __init__(self):
             self.values = {}
 
@@ -219,11 +217,11 @@ def test_multi_materialization():
             keys = tuple(context.get_run_scoped_output_identifier())
             return keys in self.values
 
-    @object_manager
-    def dummy_object_manager(_):
-        return DummyObjectManager()
+    @io_manager
+    def dummy_io_manager(_):
+        return DummyIOManager()
 
-    @solid(output_defs=[OutputDefinition(manager_key="my_object_manager")])
+    @solid(output_defs=[OutputDefinition(manager_key="my_io_manager")])
     def solid_a(_context):
         return 1
 
@@ -231,7 +229,7 @@ def test_multi_materialization():
     def solid_b(_context, a):
         assert a == 1
 
-    @pipeline(mode_defs=[ModeDefinition(resource_defs={"my_object_manager": dummy_object_manager})])
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"my_io_manager": dummy_io_manager})])
     def my_pipeline():
         solid_b(solid_a())
 
@@ -244,8 +242,8 @@ def test_multi_materialization():
     assert len(step_materialization_events) == 2
 
 
-def test_different_object_managers():
-    @solid(output_defs=[OutputDefinition(manager_key="my_object_manager")],)
+def test_different_io_managers():
+    @solid(output_defs=[OutputDefinition(manager_key="my_io_manager")],)
     def solid_a(_context):
         return 1
 
@@ -253,19 +251,19 @@ def test_different_object_managers():
     def solid_b(_context, a):
         assert a == 1
 
-    @pipeline(mode_defs=[ModeDefinition(resource_defs={"my_object_manager": mem_object_manager})])
+    @pipeline(mode_defs=[ModeDefinition(resource_defs={"my_io_manager": mem_io_manager})])
     def my_pipeline():
         solid_b(solid_a())
 
     assert execute_pipeline(my_pipeline).success
 
 
-@object_manager
-def my_object_manager(_):
+@io_manager
+def my_io_manager(_):
     pass
 
 
-def test_set_object_manager_and_intermediate_storage():
+def test_set_io_manager_and_intermediate_storage():
     from dagster import intermediate_storage, fs_intermediate_storage
 
     @intermediate_storage()
@@ -277,7 +275,7 @@ def test_set_object_manager_and_intermediate_storage():
         @pipeline(
             mode_defs=[
                 ModeDefinition(
-                    resource_defs={"object_manager": my_object_manager},
+                    resource_defs={"io_manager": my_io_manager},
                     intermediate_storage_defs=[my_intermediate_storage, fs_intermediate_storage],
                 )
             ]
@@ -288,10 +286,10 @@ def test_set_object_manager_and_intermediate_storage():
         execute_pipeline(my_pipeline)
 
 
-def test_set_object_manager_configure_intermediate_storage():
+def test_set_io_manager_configure_intermediate_storage():
     with pytest.raises(DagsterInvariantViolationError):
 
-        @pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": my_object_manager})])
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": my_io_manager})])
         def my_pipeline():
             pass
 
@@ -300,7 +298,7 @@ def test_set_object_manager_configure_intermediate_storage():
 
 def test_fan_in():
     with tempfile.TemporaryDirectory() as tmpdir_path:
-        default_object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
+        default_io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
 
         @solid
         def input_solid1(_):
@@ -314,9 +312,7 @@ def test_fan_in():
         def solid1(_, input1):
             assert input1 == [1, 2]
 
-        @pipeline(
-            mode_defs=[ModeDefinition(resource_defs={"object_manager": default_object_manager})]
-        )
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": default_io_manager})])
         def my_pipeline():
             solid1(input1=[input_solid1(), input_solid2()])
 
@@ -324,7 +320,7 @@ def test_fan_in():
 
 
 def test_configured():
-    @object_manager(
+    @io_manager(
         config_schema={"base_dir": str},
         description="abc",
         output_config_schema={"path": str},
@@ -332,52 +328,48 @@ def test_configured():
         required_resource_keys={"r1", "r2"},
         version="123",
     )
-    def an_object_manager(_):
+    def an_io_manager(_):
         pass
 
-    configured_object_manager = an_object_manager.configured({"base_dir": "/a/b/c"})
+    configured_io_manager = an_io_manager.configured({"base_dir": "/a/b/c"})
 
-    assert isinstance(configured_object_manager, ObjectManagerDefinition)
-    assert configured_object_manager.description == an_object_manager.description
-    assert configured_object_manager.output_config_schema == an_object_manager.output_config_schema
-    assert configured_object_manager.input_config_schema == an_object_manager.input_config_schema
-    assert (
-        configured_object_manager.required_resource_keys == an_object_manager.required_resource_keys
-    )
-    assert configured_object_manager.version is None
+    assert isinstance(configured_io_manager, IOManagerDefinition)
+    assert configured_io_manager.description == an_io_manager.description
+    assert configured_io_manager.output_config_schema == an_io_manager.output_config_schema
+    assert configured_io_manager.input_config_schema == an_io_manager.input_config_schema
+    assert configured_io_manager.required_resource_keys == an_io_manager.required_resource_keys
+    assert configured_io_manager.version is None
 
 
-def test_mem_object_manager_execution():
-    mem_object_manager_instance = InMemoryObjectManager()
+def test_mem_io_manager_execution():
+    mem_io_manager_instance = InMemoryIOManager()
     output_context = OutputContext(step_key="step_key", name="output_name", pipeline_name="foo",)
-    mem_object_manager_instance.handle_output(output_context, 1)
+    mem_io_manager_instance.handle_output(output_context, 1)
     input_context = InputContext(pipeline_name="foo", upstream_output=output_context,)
-    assert mem_object_manager_instance.load_input(input_context) == 1
+    assert mem_io_manager_instance.load_input(input_context) == 1
 
 
-def test_object_manager_resources_on_context():
+def test_io_manager_resources_on_context():
     @resource
     def foo_resource(_):
         return "foo"
 
-    @object_manager(required_resource_keys={"foo_resource"})
-    def object_manager_reqs_resources(init_context):
+    @io_manager(required_resource_keys={"foo_resource"})
+    def io_manager_reqs_resources(init_context):
         assert init_context.resources.foo_resource == "foo"
 
-        class InternalObjectManager(ObjectManager):
+        class InternalIOManager(IOManager):
             def handle_output(self, context, obj):
                 assert context.resources.foo_resource == "foo"
 
             def load_input(self, context):
                 assert context.resources.foo_resource == "foo"
 
-        return InternalObjectManager()
+        return InternalIOManager()
 
     @solid(
-        input_defs=[InputDefinition("_manager_input", manager_key="object_manager_reqs_resources")],
-        output_defs=[
-            OutputDefinition(dagster_type=str, manager_key="object_manager_reqs_resources")
-        ],
+        input_defs=[InputDefinition("_manager_input", manager_key="io_manager_reqs_resources")],
+        output_defs=[OutputDefinition(dagster_type=str, manager_key="io_manager_reqs_resources")],
     )
     def big_solid(_, _manager_input):
         return "manager_input"
@@ -386,7 +378,7 @@ def test_object_manager_resources_on_context():
         mode_defs=[
             ModeDefinition(
                 resource_defs={
-                    "object_manager_reqs_resources": object_manager_reqs_resources,
+                    "io_manager_reqs_resources": io_manager_reqs_resources,
                     "foo_resource": foo_resource,
                 }
             )

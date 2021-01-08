@@ -4,10 +4,10 @@ import tempfile
 
 from dagster import ModeDefinition, execute_pipeline, pipeline, solid
 from dagster.core.definitions.events import AssetStoreOperationType
-from dagster.core.storage.fs_object_manager import fs_object_manager
+from dagster.core.storage.fs_io_manager import fs_io_manager
 
 
-def define_pipeline(object_manager):
+def define_pipeline(io_manager):
     @solid
     def solid_a(_context):
         return [1, 2, 3]
@@ -16,17 +16,17 @@ def define_pipeline(object_manager):
     def solid_b(_context, _df):
         return 1
 
-    @pipeline(mode_defs=[ModeDefinition("local", resource_defs={"object_manager": object_manager})])
+    @pipeline(mode_defs=[ModeDefinition("local", resource_defs={"io_manager": io_manager})])
     def asset_pipeline():
         solid_b(solid_a())
 
     return asset_pipeline
 
 
-def test_fs_object_manager():
+def test_fs_io_manager():
     with tempfile.TemporaryDirectory() as tmpdir_path:
-        object_manager = fs_object_manager.configured({"base_dir": tmpdir_path})
-        pipeline_def = define_pipeline(object_manager)
+        io_manager = fs_io_manager.configured({"base_dir": tmpdir_path})
+        pipeline_def = define_pipeline(io_manager)
 
         result = execute_pipeline(pipeline_def)
         assert result.success

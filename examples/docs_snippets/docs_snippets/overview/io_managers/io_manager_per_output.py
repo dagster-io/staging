@@ -1,12 +1,5 @@
 # start_marker
-from dagster import (
-    ModeDefinition,
-    OutputDefinition,
-    fs_object_manager,
-    mem_object_manager,
-    pipeline,
-    solid,
-)
+from dagster import ModeDefinition, OutputDefinition, fs_io_manager, mem_io_manager, pipeline, solid
 
 
 @solid(output_defs=[OutputDefinition(manager_key="fs")])
@@ -19,9 +12,7 @@ def solid2(_, a):
     return a + 1
 
 
-@pipeline(
-    mode_defs=[ModeDefinition(resource_defs={"fs": fs_object_manager, "mem": mem_object_manager})]
-)
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"fs": fs_io_manager, "mem": mem_io_manager})])
 def my_pipeline():
     solid2(solid1())
 

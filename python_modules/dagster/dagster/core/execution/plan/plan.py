@@ -19,7 +19,7 @@ from dagster.core.execution.resolve_versions import (
     resolve_step_versions_helper,
 )
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.mem_object_manager import mem_object_manager
+from dagster.core.storage.mem_io_manager import mem_io_manager
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
@@ -112,7 +112,7 @@ class _PlanBuilder:
             else [step.handle for step in self._steps.values()]
         )
 
-        check_object_manager_intermediate_storage(self.mode_definition, self.environment_config)
+        check_io_manager_intermediate_storage(self.mode_definition, self.environment_config)
 
         return ExecutionPlan(
             self.pipeline, step_dict, step_handles_to_execute, self.environment_config,
@@ -507,14 +507,14 @@ class ExecutionPlan(
                         # no object manager is configured
                         not manager_def
                         # object manager is non persistent
-                        or manager_def == mem_object_manager
+                        or manager_def == mem_io_manager
                     ):
                         return False
         return True
 
 
-def check_object_manager_intermediate_storage(mode_def, environment_config):
-    """Only one of object_manager and intermediate_storage should be set."""
+def check_io_manager_intermediate_storage(mode_def, environment_config):
+    """Only one of io_manager and intermediate_storage should be set."""
     # pylint: disable=comparison-with-callable
     from dagster.core.storage.system_storage import mem_intermediate_storage
 
@@ -523,16 +523,16 @@ def check_object_manager_intermediate_storage(mode_def, environment_config):
         intermediate_storage_def is None or intermediate_storage_def == mem_intermediate_storage
     )
 
-    object_manager = mode_def.resource_defs["object_manager"]
-    object_manager_is_default = object_manager == mem_object_manager
+    io_manager = mode_def.resource_defs["io_manager"]
+    io_manager_is_default = io_manager == mem_io_manager
 
-    if not intermediate_storage_is_default and not object_manager_is_default:
+    if not intermediate_storage_is_default and not io_manager_is_default:
         raise DagsterInvariantViolationError(
             'You have specified an intermediate storage, "{intermediate_storage_name}", and have '
             "also specified a default object manager. You must specify only one. To avoid specifying "
             "an intermediate storage, omit the intermediate_storage_defs argument to your"
             'ModeDefinition and omit "intermediate_storage" in your run config. To avoid '
-            'specifying a default object manager, omit the "object_manager" key from the '
+            'specifying a default object manager, omit the "io_manager" key from the '
             "resource_defs argument to your ModeDefinition.".format(
                 intermediate_storage_name=intermediate_storage_def.name
             )

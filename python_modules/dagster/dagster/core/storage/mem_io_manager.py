@@ -1,7 +1,7 @@
-from dagster.core.storage.object_manager import ObjectManager, object_manager
+from dagster.core.storage.io_manager import IOManager, io_manager
 
 
-class InMemoryObjectManager(ObjectManager):
+class InMemoryIOManager(IOManager):
     def __init__(self):
         self.values = {}
 
@@ -14,8 +14,8 @@ class InMemoryObjectManager(ObjectManager):
         return self.values[keys]
 
 
-@object_manager
-def mem_object_manager(_):
+@io_manager
+def mem_io_manager(_):
     """Built-in object manager that stores and retrieves values in memory."""
 
-    return InMemoryObjectManager()
+    return InMemoryIOManager()
