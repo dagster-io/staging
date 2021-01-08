@@ -14,7 +14,7 @@ from dagster.core.events import DagsterEventType
 from dagster.core.execution.api import create_execution_plan, execute_plan
 from dagster.core.execution.plan.outputs import StepOutputHandle
 from dagster.core.utils import make_new_run_id
-from dagster_gcp.gcs.object_manager import PickledObjectGCSObjectManager, gcs_object_manager
+from dagster_gcp.gcs.io_manager import PickledObjectGCSIOManager, gcs_io_manager
 from dagster_gcp.gcs.resources import gcs_resource
 from google.cloud import storage
 
@@ -31,22 +31,20 @@ def get_step_output(step_events, step_key, output_name="result"):
 
 
 def define_inty_pipeline():
-    @lambda_solid(output_def=OutputDefinition(Int, manager_key="object_manager"))
+    @lambda_solid(output_def=OutputDefinition(Int, manager_key="io_manager"))
     def return_one():
         return 1
 
     @lambda_solid(
         input_defs=[InputDefinition("num", Int)],
-        output_def=OutputDefinition(Int, manager_key="object_manager"),
+        output_def=OutputDefinition(Int, manager_key="io_manager"),
     )
     def add_one(num):
         return num + 1
 
     @pipeline(
         mode_defs=[
-            ModeDefinition(
-                resource_defs={"object_manager": gcs_object_manager, "gcs": gcs_resource},
-            )
+            ModeDefinition(resource_defs={"io_manager": gcs_io_manager, "gcs": gcs_resource},)
         ]
     )
     def basic_external_plan_execution():
@@ -55,10 +53,10 @@ def define_inty_pipeline():
     return basic_external_plan_execution
 
 
-def test_gcs_object_manager_execution(gcs_bucket):
+def test_gcs_io_manager_execution(gcs_bucket):
     pipeline_def = define_inty_pipeline()
 
-    run_config = {"resources": {"object_manager": {"config": {"gcs_bucket": gcs_bucket,}}}}
+    run_config = {"resources": {"io_manager": {"config": {"gcs_bucket": gcs_bucket,}}}}
 
     run_id = make_new_run_id()
 
@@ -83,7 +81,7 @@ def test_gcs_object_manager_execution(gcs_bucket):
 
     assert get_step_output(return_one_step_events, "return_one")
 
-    object_manager = PickledObjectGCSObjectManager(gcs_bucket, storage.Client())
+    io_manager = PickledObjectGCSIOManager(gcs_bucket, storage.Client())
     step_output_handle = StepOutputHandle("return_one")
     context = InputContext(
         pipeline_name=pipeline_def.name,
@@ -96,7 +94,7 @@ def test_gcs_object_manager_execution(gcs_bucket):
             solid_def=pipeline_def.solid_def_named("return_one"),
         ),
     )
-    assert object_manager.load_input(context) == 1
+    assert io_manager.load_input(context) == 1
 
     add_one_step_events = list(
         execute_plan(
@@ -121,4 +119,4 @@ def test_gcs_object_manager_execution(gcs_bucket):
     )
 
     assert get_step_output(add_one_step_events, "add_one")
-    assert object_manager.load_input(context) == 2
+    assert io_manager.load_input(context) == 2

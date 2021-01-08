@@ -172,11 +172,11 @@ def resolve_memoized_execution_plan(execution_plan):
                     pipeline_name=pipeline_def.name, run_id="", mode=environment_config.mode
                 ),
             )
-            object_manager = resource_def.resource_fn(resource_context)
+            io_manager = resource_def.resource_fn(resource_context)
             context = get_output_context(
                 execution_plan, environment_config, step_output_handle, None
             )
-            if not object_manager.has_output(context):
+            if not io_manager.has_output(context):
                 step_keys_to_execute.add(step_output_handle.step_key)
 
     return execution_plan.build_subset_plan(list(step_keys_to_execute))

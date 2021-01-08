@@ -21,10 +21,10 @@ def read_dataframe_from_table(**_kwargs):
 
 
 # start_marker
-from dagster import ObjectManager, ModeDefinition, object_manager, pipeline
+from dagster import IOManager, ModeDefinition, io_manager, pipeline
 
 
-class DataframeTableObjectManager(ObjectManager):
+class DataframeTableIOManager(IOManager):
     def handle_output(self, context, obj):
         # name is the name given to the OutputDefinition that we're storing for
         table_name = context.name
@@ -36,12 +36,12 @@ class DataframeTableObjectManager(ObjectManager):
         return read_dataframe_from_table(name=table_name)
 
 
-@object_manager
-def df_table_object_manager(_):
-    return DataframeTableObjectManager()
+@io_manager
+def df_table_io_manager(_):
+    return DataframeTableIOManager()
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": df_table_object_manager})])
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": df_table_io_manager})])
 def my_pipeline():
     solid2(solid1())
 
