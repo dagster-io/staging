@@ -1,20 +1,20 @@
 .. currentmodule:: dagster
 
-Object, Input, and Output Managers
+IO Managers
 ==================================
 
-Object Managers
+IO Managers
 ---------------
 
-Object managers are user-provided objects that specify how to store step outputs and load step inputs.
+IO managers are user-provided objects that specify how to store step outputs and load step inputs.
 
-.. autodecorator:: object_manager
+.. autodecorator:: io_manager
 
-.. autoclass:: ObjectManager
+.. autoclass:: IOManager
     :members:
     :show-inheritance:
 
-.. autoclass:: ObjectManagerDefinition
+.. autoclass:: IOManagerDefinition
     :members:
 
 
@@ -56,11 +56,11 @@ Output managers are user-provided objects that specify how to handle step output
     :members:
 
 
-Built-in Object Managers
+Built-in IO Managers
 ------------------------
 
-.. autodata:: mem_object_manager
+.. autodata:: mem_io_manager
 
-.. autodata:: fs_object_manager
+.. autodata:: fs_io_manager
 
-.. autodata:: custom_path_fs_object_manager
+.. autodata:: custom_path_fs_io_manager
