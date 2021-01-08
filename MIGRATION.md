@@ -40,7 +40,7 @@ control over how inputs are loaded and outputs are handled.
 
   For example, if you have custom intermediate storages to handle get intermediate for inputs and
   set intermediate for outputs. It is recommended to build your own object manager using `@object_manager`
-  or `ObjectManagerDefinition`. We have provided a helper method `object_manager_from_intermediate_storage`
+  or `IOManagerDefinition`. We have provided a helper method `object_manager_from_intermediate_storage`
   to help migrate your existing custom intermediate storages to object managers.
 
   ```python

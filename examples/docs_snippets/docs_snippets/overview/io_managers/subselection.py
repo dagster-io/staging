@@ -1,12 +1,12 @@
 # pylint: disable=unused-argument
 from dagster import (
     Field,
+    IOManager,
     InputDefinition,
     ModeDefinition,
-    ObjectManager,
     OutputDefinition,
     execute_pipeline,
-    object_manager,
+    io_manager,
     pipeline,
     solid,
 )
@@ -21,7 +21,7 @@ def read_dataframe_from_table(**_kwargs):
 
 
 # start_marker
-class MyObjectManager(ObjectManager):
+class MyIOManager(IOManager):
     def handle_output(self, context, obj):
         table_name = context.name
         write_dataframe_to_table(name=table_name, dataframe=obj)
@@ -35,22 +35,22 @@ class MyObjectManager(ObjectManager):
         return read_dataframe_from_table(name=table_name)
 
 
-@object_manager(input_config_schema={"table_name": Field(str, is_required=False)})
-def my_object_manager(_):
-    return MyObjectManager()
+@io_manager(input_config_schema={"table_name": Field(str, is_required=False)})
+def my_io_manager(_):
+    return MyIOManager()
 
 
-@solid(output_defs=[OutputDefinition(manager_key="my_object_manager")])
+@solid(output_defs=[OutputDefinition(manager_key="my_io_manager")])
 def solid1(_):
     """Do stuff"""
 
 
-@solid(input_defs=[InputDefinition("dataframe", manager_key="my_object_manager")])
+@solid(input_defs=[InputDefinition("dataframe", manager_key="my_io_manager")])
 def solid2(_, dataframe):
     """Do stuff"""
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"my_object_manager": my_object_manager})])
+@pipeline(mode_defs=[ModeDefinition(resource_defs={"my_io_manager": my_io_manager})])
 def my_pipeline():
     solid2(solid1())
 

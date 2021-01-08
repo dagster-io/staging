@@ -1,4 +1,4 @@
-from docs_snippets.overview.object_managers.output_config import execute_with_config
+from docs_snippets.overview.io_managers.output_config import execute_with_config
 
 
 def test_execute_pipeline():

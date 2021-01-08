@@ -1,14 +1,14 @@
 import logging
 import pickle
 
-from dagster import Field, ObjectManager, StringSource, check, object_manager
+from dagster import Field, IOManager, StringSource, check, io_manager
 from dagster.utils import PICKLE_PROTOCOL
 from dagster_azure.adls2.utils import ResourceNotFoundError
 
 _LEASE_DURATION = 60  # One minute
 
 
-class PickledObjectADLS2ObjectManager(ObjectManager):
+class PickledObjectADLS2IOManager(IOManager):
     def __init__(self, file_system, adls2_client, blob_client, prefix="dagster"):
         self.adls2_client = adls2_client
         self.file_system_client = self.adls2_client.get_file_system_client(file_system)
@@ -75,14 +75,14 @@ class PickledObjectADLS2ObjectManager(ObjectManager):
             file.upload_data(pickled_obj, lease=lease, overwrite=True)
 
 
-@object_manager(
+@io_manager(
     config_schema={
         "adls2_file_system": Field(StringSource, description="ADLS Gen2 file system name"),
         "adls2_prefix": Field(StringSource, is_required=False, default_value="dagster"),
     },
     required_resource_keys={"adls2"},
 )
-def adls2_object_manager(init_context):
+def adls2_io_manager(init_context):
     """Persistent object manager using Azure Data Lake Storage Gen2 for storage.
 
     Suitable for objects storage for distributed executors, so long as
@@ -98,7 +98,7 @@ def adls2_object_manager(init_context):
             mode_defs=[
                 ModeDefinition(
                     resource_defs={
-                        'object_manager': adls2_object_manager,
+                        'io_manager': adls2_io_manager,
                         'adls2': adls2_resource, ...},
                 ), ...
             ], ...
@@ -109,7 +109,7 @@ def adls2_object_manager(init_context):
     .. code-block:: YAML
 
         resources:
-            object_manager:
+            io_manager:
                 config:
                     adls2_file_system: my-cool-file-system
                     adls2_prefix: good/prefix-for-files-
@@ -117,10 +117,10 @@ def adls2_object_manager(init_context):
     adls_resource = init_context.resources.adls2
     adls2_client = adls_resource.adls2_client
     blob_client = adls_resource.blob_client
-    pickled_object_manager = PickledObjectADLS2ObjectManager(
+    pickled_io_manager = PickledObjectADLS2IOManager(
         init_context.resource_config["adls2_file_system"],
         adls2_client,
         blob_client,
         init_context.resource_config.get("adls2_prefix"),
     )
-    return pickled_object_manager
+    return pickled_io_manager

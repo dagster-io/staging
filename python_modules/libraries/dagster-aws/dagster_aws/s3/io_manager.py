@@ -1,11 +1,11 @@
 import logging
 import pickle
 
-from dagster import Field, ObjectManager, StringSource, check, object_manager
+from dagster import Field, IOManager, StringSource, check, io_manager
 from dagster.utils import PICKLE_PROTOCOL
 
 
-class PickledObjectS3ObjectManager(ObjectManager):
+class PickledObjectS3IOManager(IOManager):
     def __init__(
         self, s3_bucket, s3_session, s3_prefix=None,
     ):
@@ -75,14 +75,14 @@ class PickledObjectS3ObjectManager(ObjectManager):
         self.s3.put_object(Bucket=self.bucket, Key=key, Body=pickled_obj)
 
 
-@object_manager(
+@io_manager(
     config_schema={
         "s3_bucket": Field(StringSource),
         "s3_prefix": Field(StringSource, is_required=False, default_value="dagster"),
     },
     required_resource_keys={"s3"},
 )
-def s3_object_manager(init_context):
+def s3_io_manager(init_context):
     """Persistent object manager using S3 for storage.
 
     Suitable for objects storage for distributed executors, so long as
@@ -97,7 +97,7 @@ def s3_object_manager(init_context):
         pipeline_def = PipelineDefinition(
             mode_defs=[
                 ModeDefinition(
-                    resource_defs={'object_manager': s3_object_manager, "s3": s3_resource, ...},
+                    resource_defs={'io_manager': s3_io_manager, "s3": s3_resource, ...},
                 ), ...
             ], ...
         )
@@ -107,7 +107,7 @@ def s3_object_manager(init_context):
     .. code-block:: YAML
 
         resources:
-            object_manager:
+            io_manager:
                 config:
                     s3_bucket: my-cool-bucket
                     s3_prefix: good/prefix-for-files-
@@ -115,7 +115,7 @@ def s3_object_manager(init_context):
     s3_session = init_context.resources.s3
     s3_bucket = init_context.resource_config["s3_bucket"]
     s3_prefix = init_context.resource_config.get("s3_prefix")  # s3_prefix is optional
-    pickled_object_manager = PickledObjectS3ObjectManager(
+    pickled_io_manager = PickledObjectS3IOManager(
         s3_bucket, s3_session, s3_prefix=s3_prefix
     )
-    return pickled_object_manager
+    return pickled_io_manager

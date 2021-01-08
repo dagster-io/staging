@@ -1090,7 +1090,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.d6fc4a847b2c2aa2e1021ddcce2be91bd9f9e98d"
@@ -2335,7 +2335,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.8ca9f6c18da7b30906b6c02d599293cb33919ce1"
@@ -3637,7 +3637,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         },
         {
           "__class__": "ResourceDefSnap",
@@ -4850,7 +4850,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.f03cb8fde422c6b5d8fd17ca5a3adbaad4e03626"
@@ -5947,7 +5947,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.198d07eab9f02342915e4c2f7e6db80d66d1ff1e"
@@ -7045,7 +7045,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.9b19253f219728e38711a31bb9855bec6bd7beef"
@@ -8119,7 +8119,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.4a63a8b6f4763f442832155247b0446540b884f1"
@@ -9272,7 +9272,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.08b751e9fb8ba39ea330c0ef11ee5c2003f98316"
@@ -10454,7 +10454,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.e1e29c73ffad288f0a4036b08a23eedaa6c325e8"
@@ -11546,7 +11546,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.bf5bc7074ee80c06c2371eb7ec31ec19bab66809"
@@ -12849,7 +12849,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.25f13abb92d8bf0d8ea3b22b06638074f2b32310"
@@ -12879,7 +12879,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.c1870d9c73c225215822b836e61d7d8d39fd01bd"
@@ -12923,7 +12923,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.b9a7a883b164652611ec44de525989f2162469fe"
@@ -14243,7 +14243,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.375e953c7018a34db28626e5ede3d9146a45597b"
@@ -15766,7 +15766,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         },
         {
           "__class__": "ResourceDefSnap",
@@ -15810,7 +15810,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         },
         {
           "__class__": "ResourceDefSnap",
@@ -15854,7 +15854,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         },
         {
           "__class__": "ResourceDefSnap",
@@ -16934,7 +16934,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.31a976785884561f4f7fbc3cabd1b5273c944516"
@@ -18026,7 +18026,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.160beb0d4de687baf4b123c2c3d8d8b6c68b2ffe"
@@ -19115,7 +19115,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.cdcefe4628e23a071fbf1b2c6c9997a56f4d9537"
@@ -20179,7 +20179,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.ee5d4a18cbc7c6ea3937ecb1e30b2584f48eeaf4"
@@ -21245,7 +21245,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.65b6adeb4f55cc667000a038e8d232dd7114f9bf"
@@ -22347,7 +22347,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.5842633824f6eb8eb822707df4ad1e7c94f879de"
@@ -23349,7 +23349,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.c182d6ea1ec83af48ff858ecef693035051f136a"
@@ -24458,7 +24458,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.c90a8457f986ff963cf83468738820223963be70"
@@ -25524,7 +25524,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.1eed5bee562e2a6b42032b1d50ca5046465b8381"
@@ -26689,7 +26689,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.369cfb3f47b18c38c024d3157ab558a292645b25"
@@ -27845,7 +27845,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.d859979127db18aa717102825d3574612858bd47"
@@ -29061,7 +29061,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.e1fd3d7b6984168670de4fa71f5120e7d727fe9b"
@@ -30507,7 +30507,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.5650e4221161950d056d81066c3f6f74dc3176e9"
@@ -31700,7 +31700,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.45cb4f934b9e0ae0c977cb10ad0a9544faa4b1d4"
@@ -32841,7 +32841,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.76c4c38edecebd5dda2af5219327434ecfaa8a1f"
@@ -33961,7 +33961,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.11bfd866baad5617c087e1a6f0d97346ebba34de"
@@ -35025,7 +35025,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.88d8d09689c56bde887ff7df1eddf16115942903"
@@ -36089,7 +36089,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.086d6bc9cca7936fdece9e5de085655ae1ddbb66"
@@ -37258,7 +37258,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.369cfb3f47b18c38c024d3157ab558a292645b25"
@@ -38406,7 +38406,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
-          "name": "object_manager"
+          "name": "io_manager"
         }
       ],
       "root_config_key": "Shape.d56c90e93a742d12b5cbb42247d9b48235155423"

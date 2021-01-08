@@ -6,15 +6,15 @@ from dagster.config import Field
 from dagster.config.source import StringSource
 from dagster.core.definitions.events import AssetKey, AssetMaterialization, EventMetadataEntry
 from dagster.core.execution.context.system import InputContext, OutputContext
-from dagster.core.storage.object_manager import ObjectManager, object_manager
+from dagster.core.storage.io_manager import IOManager, io_manager
 from dagster.utils import PICKLE_PROTOCOL, mkdir_p
 from dagster.utils.backcompat import experimental
 
 
-@object_manager(
+@io_manager(
     config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)}
 )
-def fs_object_manager(init_context):
+def fs_io_manager(init_context):
     """Built-in filesystem object manager that stores and retrieves values using pickling.
 
     It allows users to specify a base directory where all the step outputs will be stored. It
@@ -23,7 +23,7 @@ def fs_object_manager(init_context):
 
     Example usage:
 
-    1. Specify a pipeline-level object manager using the reserved resource key ``"object_manager"``,
+    1. Specify a pipeline-level object manager using the reserved resource key ``"io_manager"``,
     which will set the given object manager on all solids across a pipeline.
 
     .. code-block:: python
@@ -36,7 +36,7 @@ def fs_object_manager(init_context):
         def solid_b(context, df):
             return df[:5]
 
-        @pipeline(mode_defs=[ModeDefinition(resource_defs={"object_manager": fs_object_manager})])
+        @pipeline(mode_defs=[ModeDefinition(resource_defs={"io_manager": fs_io_manager})])
         def pipe():
             solid_b(solid_a())
 
@@ -46,7 +46,7 @@ def fs_object_manager(init_context):
 
     .. code-block:: python
 
-        @solid(output_defs=[OutputDefinition(manager_key="my_object_manager")])
+        @solid(output_defs=[OutputDefinition(manager_key="my_io_manager")])
         def solid_a(context, df):
             return df
 
@@ -55,17 +55,17 @@ def fs_object_manager(init_context):
             return df[:5]
 
         @pipeline(
-            mode_defs=[ModeDefinition(resource_defs={"my_object_manager": fs_object_manager})]
+            mode_defs=[ModeDefinition(resource_defs={"my_io_manager": fs_io_manager})]
         )
         def pipe():
             solid_b(solid_a())
 
     """
 
-    return PickledObjectFilesystemObjectManager(init_context.resource_config["base_dir"])
+    return PickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])
 
 
-class PickledObjectFilesystemObjectManager(ObjectManager):
+class PickledObjectFilesystemIOManager(IOManager):
     """Built-in filesystem object manager that stores and retrieves values using pickling.
 
     Args:
@@ -110,7 +110,7 @@ class PickledObjectFilesystemObjectManager(ObjectManager):
             return pickle.load(read_obj)
 
 
-class CustomPathPickledObjectFilesystemObjectManager(ObjectManager):
+class CustomPathPickledObjectFilesystemIOManager(IOManager):
     """Built-in filesystem object managerthat stores and retrieves values using pickling and
     allow users to specify file path for outputs.
 
@@ -161,11 +161,11 @@ class CustomPathPickledObjectFilesystemObjectManager(ObjectManager):
             return pickle.load(read_obj)
 
 
-@object_manager(
+@io_manager(
     config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)}
 )
 @experimental
-def custom_path_fs_object_manager(init_context):
+def custom_path_fs_io_manager(init_context):
     """Built-in object manager that allows users to custom output file path per output definition.
 
     It also allows users to specify a base directory where all the step output will be stored in. It
@@ -179,7 +179,7 @@ def custom_path_fs_object_manager(init_context):
         @solid(
             output_defs=[
                 OutputDefinition(
-                    manager_key="object_manager", metadata={"path": "path/to/sample_output"}
+                    manager_key="io_manager", metadata={"path": "path/to/sample_output"}
                 )
             ]
         )
@@ -188,10 +188,10 @@ def custom_path_fs_object_manager(init_context):
 
         @pipeline(
             mode_defs=[
-                ModeDefinition(resource_defs={"object_manager": custom_path_fs_object_manager}),
+                ModeDefinition(resource_defs={"io_manager": custom_path_fs_io_manager}),
             ],
         )
         def pipe():
             sample_data()
     """
-    return CustomPathPickledObjectFilesystemObjectManager(init_context.resource_config["base_dir"])
+    return CustomPathPickledObjectFilesystemIOManager(init_context.resource_config["base_dir"])
