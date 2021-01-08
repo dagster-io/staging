@@ -474,6 +474,10 @@
       {
         "name": "Deploying to Airflow",
         "path": "/deploying/airflow"
+      },
+      {
+        "name": "Limiting Run Concurrency",
+        "path": "/deploying/limiting_run_concurrency"
       }
     ]
   },
