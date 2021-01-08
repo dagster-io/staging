@@ -34,7 +34,7 @@ S3
             key: my-key
 
 .. autodata:: dagster_aws.s3.s3_io_manager
-  :annotation: ObjectManagerDefinition
+  :annotation: IOManagerDefinition
 
 
 Redshift
