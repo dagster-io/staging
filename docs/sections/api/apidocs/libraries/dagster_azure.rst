@@ -27,4 +27,4 @@ dependency on an old version, via ``snowflake-connector-python``.
 .. autoclass:: dagster_azure.blob.AzureBlobComputeLogManager
 
 .. autodata:: dagster_azure.adls2.adls2_io_manager
-  :annotation: ObjectManagerDefinition
+  :annotation: IOManagerDefinition
