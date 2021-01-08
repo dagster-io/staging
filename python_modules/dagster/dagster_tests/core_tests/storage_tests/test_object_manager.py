@@ -374,7 +374,9 @@ def test_object_manager_resources_on_context():
         return InternalObjectManager()
 
     @solid(
-        input_defs=[InputDefinition("_manager_input", manager_key="object_manager_reqs_resources")],
+        input_defs=[
+            InputDefinition("_manager_input", root_manager_key="object_manager_reqs_resources")
+        ],
         output_defs=[
             OutputDefinition(dagster_type=str, manager_key="object_manager_reqs_resources")
         ],
