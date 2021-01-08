@@ -6,6 +6,7 @@ from dagster import (
     ObjectManager,
     OutputDefinition,
     execute_pipeline,
+    input_manager,
     object_manager,
     pipeline,
     solid,
@@ -21,18 +22,18 @@ def read_dataframe_from_table(**_kwargs):
 
 
 # start_marker
+@input_manager(input_config_schema={"table_name": str})
+def my_root_input_manager(context):
+    return read_dataframe_from_table(name=context.config["table_name"])
+
+
 class MyObjectManager(ObjectManager):
     def handle_output(self, context, obj):
         table_name = context.name
         write_dataframe_to_table(name=table_name, dataframe=obj)
 
     def load_input(self, context):
-        if "table_name" in context.config:
-            table_name = context.config["table_name"]
-        else:
-            table_name = context.upstream_output.name
-
-        return read_dataframe_from_table(name=table_name)
+        return read_dataframe_from_table(name=context.upstream_output.name)
 
 
 @object_manager(input_config_schema={"table_name": Field(str, is_required=False)})
@@ -45,12 +46,21 @@ def solid1(_):
     """Do stuff"""
 
 
-@solid(input_defs=[InputDefinition("dataframe", manager_key="my_object_manager")])
+@solid(input_defs=[InputDefinition("dataframe", root_manager_key="my_root_input_manager")])
 def solid2(_, dataframe):
     """Do stuff"""
 
 
-@pipeline(mode_defs=[ModeDefinition(resource_defs={"my_object_manager": my_object_manager})])
+@pipeline(
+    mode_defs=[
+        ModeDefinition(
+            resource_defs={
+                "my_object_manager": my_object_manager,
+                "my_root_input_manager": my_root_input_manager,
+            }
+        )
+    ]
+)
 def my_pipeline():
     solid2(solid1())
 
