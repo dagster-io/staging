@@ -2,14 +2,15 @@ from typing import Dict
 
 from dagster import (
     DagsterType,
+    IOManager,
     InputDefinition,
     ModeDefinition,
-    ObjectManager,
     OutputDefinition,
     TypeCheck,
-    object_manager,
+    io_manager,
     pipeline,
     repository,
+    root_input_manager,
     solid,
 )
 from pyspark.sql import SparkSession
@@ -17,8 +18,13 @@ from pyspark.sql import functions as f
 from pyspark.sql.types import DataType, LongType, StringType, StructField, StructType
 
 
-@object_manager
-def local_parquet_store(_):
+@io_manager
+def local_parquet_io_manager(_):
+    raise NotImplementedError()
+
+
+@root_input_manager
+def local_parquet_root_manager(_):
     raise NotImplementedError()
 
 
@@ -44,24 +50,28 @@ class SparkDFType(DagsterType):
         super(SparkDFType, self).__init__(type_check_fn=type_check_fn, name=str(cols))
 
 
-class SmokeTestObjectManager(ObjectManager):
+def create_empty_spark_df(spark_df_type: DagsterType):
+    spark = SparkSession.builder.getOrCreate()
+    return spark.createDataFrame([], cols_to_struct_type(spark_df_type.cols))
+
+
+@root_input_manager
+def smoke_test_root_manager(context):
+    return create_empty_spark_df(context.dagster_type)
+
+
+class SmokeTestIOManager(IOManager):
     def handle_output(self, _, obj):
         """Triggers computation of the provided Spark DataFrame."""
         obj.count()
 
     def load_input(self, context):
-        """Creates an empty Spark DataFrame with the expected columns."""
-        spark = SparkSession.builder.getOrCreate()
-        if context.upstream_output:
-            cols = context.upstream_output.dagster_type.cols
-        else:
-            cols = context.dagster_type.cols
-        return spark.createDataFrame([], cols_to_struct_type(cols))
+        return create_empty_spark_df(context.upstream_output.dagster_type)
 
 
-@object_manager
+@io_manager
 def smoke_test_object_manager(_):
-    return SmokeTestObjectManager()
+    return SmokeTestIOManager()
 
 
 @solid(
@@ -69,7 +79,7 @@ def smoke_test_object_manager(_):
         InputDefinition(
             "people",
             dagster_type=SparkDFType({"name": StringType(), "age": LongType()}),
-            manager_key="object_manager",
+            root_manager_key="root_manager",
         )
     ],
     output_defs=[
@@ -96,8 +106,20 @@ def count_by_age(_, people):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition("local", resource_defs={"object_manager": local_parquet_store}),
-        ModeDefinition("smoke_test", resource_defs={"object_manager": smoke_test_object_manager}),
+        ModeDefinition(
+            "local",
+            resource_defs={
+                "io_manager": local_parquet_io_manager,
+                "root_manager": local_parquet_root_manager,
+            },
+        ),
+        ModeDefinition(
+            "smoke_test",
+            resource_defs={
+                "io_manager": smoke_test_object_manager,
+                "root_manager": smoke_test_root_manager,
+            },
+        ),
     ]
 )
 def my_pipeline():
