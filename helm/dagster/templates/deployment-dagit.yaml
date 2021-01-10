@@ -60,11 +60,9 @@ spec:
             "/bin/bash",
             "-c",
             {{- if .Values.userDeployments.enabled }}
-            "{{ template "dagster.dagit.scheduleUpCommand" $ }}"
+            "dagit -h 0.0.0.0 -p 80 -w /dagster-workspace/workspace.yaml"
             {{- else }}
-            "service cron start; \
-            /usr/local/bin/dagster schedule up; \
-            dagit -h 0.0.0.0 -p 80"
+            "dagit -h 0.0.0.0 -p 80"
             {{- end }}
           ]
           env:

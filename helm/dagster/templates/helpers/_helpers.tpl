@@ -29,15 +29,6 @@ If release name contains chart name it will be used as a full name.
 {{- .repository -}}:{{- .tag -}}
 {{- end }}
 
-{{- define "dagster.dagit.scheduleUpCommand" -}}
-{{- if .Values.userDeployments.enabled }}
-{{- range $deployment := .Values.userDeployments.deployments }}
-/usr/local/bin/dagster schedule up -w /dagster-workspace/workspace.yaml --location {{$deployment.name}};
-{{- end -}}
-dagit -h 0.0.0.0 -p 80 -w /dagster-workspace/workspace.yaml
-{{- end -}}
-{{- end -}}
-
 {{- define "dagster.dagit.fullname" -}}
 {{- $name := default "dagit" .Values.dagit.nameOverride -}}
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
