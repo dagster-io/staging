@@ -3,11 +3,10 @@ from typing import Dict
 from dagster import (
     DagsterType,
     IOManager,
-    InputDefinition,
     ModeDefinition,
     OutputDefinition,
+    SourceDefinition,
     TypeCheck,
-    input_manager,
     io_manager,
     pipeline,
     repository,
@@ -20,11 +19,6 @@ from pyspark.sql.types import DataType, LongType, StringType, StructField, Struc
 
 @io_manager
 def local_parquet_io_manager(_):
-    raise NotImplementedError()
-
-
-@input_manager
-def local_parquet_root_manager(_):
     raise NotImplementedError()
 
 
@@ -50,23 +44,16 @@ class SparkDFType(DagsterType):
         super(SparkDFType, self).__init__(type_check_fn=type_check_fn, name=str(cols))
 
 
-def create_empty_spark_df(spark_df_type: DagsterType):
-    spark = SparkSession.builder.getOrCreate()
-    return spark.createDataFrame([], cols_to_struct_type(spark_df_type.cols))
-
-
-@input_manager
-def smoke_test_root_manager(context):
-    return create_empty_spark_df(context.dagster_type)
-
-
 class SmokeTestIOManager(IOManager):
     def handle_output(self, _, obj):
         """Triggers computation of the provided Spark DataFrame."""
         obj.count()
 
     def load_input(self, context):
-        return create_empty_spark_df(context.upstream_output.dagster_type)
+        spark = SparkSession.builder.getOrCreate()
+        return spark.createDataFrame(
+            [], cols_to_struct_type(context.upstream_output.dagster_type.cols)
+        )
 
 
 @io_manager
@@ -74,17 +61,13 @@ def smoke_test_object_manager(_):
     return SmokeTestIOManager()
 
 
+people_source = SourceDefinition(
+    dagster_type=SparkDFType({"name": StringType(), "age": LongType()})
+)
+
+
 @solid(
-    input_defs=[
-        InputDefinition(
-            "people",
-            dagster_type=SparkDFType({"name": StringType(), "age": LongType()}),
-            root_manager_key="root_manager",
-        )
-    ],
-    output_defs=[
-        OutputDefinition(SparkDFType({"name": StringType(), "age_bracket": StringType()}))
-    ],
+    output_defs=[OutputDefinition(SparkDFType({"name": StringType(), "age_bracket": StringType()}))]
 )
 def people_with_age_brackets(_, people):
     """Buckets people based on their age."""
@@ -106,24 +89,12 @@ def count_by_age(_, people):
 
 @pipeline(
     mode_defs=[
-        ModeDefinition(
-            "local",
-            resource_defs={
-                "io_manager": local_parquet_io_manager,
-                "root_manager": local_parquet_root_manager,
-            },
-        ),
-        ModeDefinition(
-            "smoke_test",
-            resource_defs={
-                "io_manager": smoke_test_object_manager,
-                "root_manager": smoke_test_root_manager,
-            },
-        ),
+        ModeDefinition("local", resource_defs={"io_manager": local_parquet_io_manager}),
+        ModeDefinition("smoke_test", resource_defs={"io_manager": smoke_test_object_manager}),
     ]
 )
 def my_pipeline():
-    count_by_age(people_with_age_brackets())
+    count_by_age(people_with_age_brackets(people_source))
 
 
 @repository
