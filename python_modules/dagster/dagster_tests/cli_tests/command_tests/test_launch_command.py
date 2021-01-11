@@ -121,6 +121,21 @@ def test_launch_subset_pipeline_invalid_value(gen_pipeline_args):
             )
 
 
+@pytest.mark.parametrize(
+    "gen_pipeline_args", [python_bar_cli_args("foo"), grpc_server_bar_cli_args("foo")],
+)
+def test_launch_with_run_id(gen_pipeline_args):
+    runner = CliRunner()
+    run_id = "my_super_cool_run_id"
+    with default_cli_test_instance() as instance:
+        with gen_pipeline_args as args:
+            result = runner.invoke(pipeline_launch_command, args + ["--run-id", run_id,],)
+            assert result.exit_code == 0
+
+        run = instance.get_run_by_id(run_id)
+        assert run is not None
+
+
 def test_empty_working_directory():
     runner = CliRunner()
     import os
