@@ -10,12 +10,7 @@ from dagster.core.definitions import (
     RetryRequested,
     TypeCheck,
 )
-from dagster.core.definitions.events import (
-    AssetStoreOperation,
-    AssetStoreOperationType,
-    DynamicOutput,
-    ObjectStoreOperation,
-)
+from dagster.core.definitions.events import DynamicOutput, HandledOutput, LoadedInput
 from dagster.core.errors import (
     DagsterExecutionHandleOutputError,
     DagsterExecutionStepExecutionError,
@@ -264,27 +259,15 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
         yield DagsterEvent.step_start_event(step_context)
 
     inputs = {}
+
     for input_name, input_value in _load_input_values(step_context):
-        # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
-        if isinstance(input_value, ObjectStoreOperation):
-            yield DagsterEvent.object_store_operation(
-                step_context, ObjectStoreOperation.serializable(input_value, value_name=input_name)
-            )
-            inputs[input_name] = input_value.obj
-        elif isinstance(input_value, FanInStepInputValuesWrapper):
+        if isinstance(input_value, FanInStepInputValuesWrapper):
             final_values = []
             for inner_value in input_value:
                 # inner value is either a store interaction
-                # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
-                if isinstance(inner_value, ObjectStoreOperation):
-                    yield DagsterEvent.object_store_operation(
-                        step_context,
-                        ObjectStoreOperation.serializable(inner_value, value_name=input_name),
-                    )
-                    final_values.append(inner_value.obj)
-                elif isinstance(inner_value, AssetStoreOperation):
-                    yield DagsterEvent.asset_store_operation(
-                        step_context, AssetStoreOperation.serializable(inner_value)
+                if isinstance(inner_value, LoadedInput):
+                    yield DagsterEvent.loaded_input(
+                        step_context, LoadedInput.serializable(inner_value)
                     )
                     final_values.append(inner_value.obj)
                 # or the value directly
@@ -292,10 +275,8 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
                     final_values.append(inner_value)
 
             inputs[input_name] = final_values
-        elif isinstance(input_value, AssetStoreOperation):
-            yield DagsterEvent.asset_store_operation(
-                step_context, AssetStoreOperation.serializable(input_value)
-            )
+        elif isinstance(input_value, LoadedInput):
+            yield DagsterEvent.loaded_input(step_context, LoadedInput.serializable(input_value))
             inputs[input_name] = input_value.obj
         else:
             inputs[input_name] = input_value
@@ -388,8 +369,6 @@ def _materializations_to_events(step_context, step_output_handle, materializatio
 
 
 def _set_objects(step_context, step_output, step_output_handle, output):
-    from dagster.core.storage.asset_store import AssetStoreHandle
-
     output_def = step_output.output_def
     output_manager = step_context.get_output_manager(step_output_handle)
     output_context = step_context.get_output_context(step_output_handle)
@@ -406,29 +385,15 @@ def _set_objects(step_context, step_output, step_output_handle, output):
     ):
         materializations = output_manager.handle_output(output_context, output.value)
 
-    # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
-    if isinstance(materializations, ObjectStoreOperation):
-        yield DagsterEvent.object_store_operation(
-            step_context,
-            ObjectStoreOperation.serializable(
-                materializations, value_name=step_output_handle.output_name
-            ),
-        )
-    else:
-        for evt in _materializations_to_events(step_context, step_output_handle, materializations):
-            yield evt
+    for evt in _materializations_to_events(step_context, step_output_handle, materializations):
+        yield evt
 
-        # SET_ASSET operation by AssetStore
-        yield DagsterEvent.asset_store_operation(
-            step_context,
-            AssetStoreOperation.serializable(
-                AssetStoreOperation(
-                    AssetStoreOperationType.SET_ASSET,
-                    step_output_handle,
-                    AssetStoreHandle(output_def.manager_key, output_def.metadata),
-                )
-            ),
-        )
+    yield DagsterEvent.handled_output(
+        step_context,
+        handled_output_result=HandledOutput(
+            output_name=step_output_handle.output_name, manager_key=output_def.manager_key
+        ),
+    )
 
 
 def _create_output_materializations(step_context, output_name, value):
