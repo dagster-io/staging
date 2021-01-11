@@ -753,7 +753,7 @@ def test_reconcile_schedule_without_start_time():
                 external_schedule.get_external_origin(),
                 JobType.SCHEDULE,
                 JobStatus.RUNNING,
-                ScheduleJobData(external_schedule.cron_schedule, None),
+                ScheduleJobData(external_schedule.cron_schedule, None, "SystemCronScheduler"),
             )
 
             instance.add_job_state(legacy_schedule_state)
