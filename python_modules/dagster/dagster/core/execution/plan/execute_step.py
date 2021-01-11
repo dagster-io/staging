@@ -425,7 +425,7 @@ def _set_objects(step_context, step_output, step_output_handle, output):
                 AssetStoreOperation(
                     AssetStoreOperationType.SET_ASSET,
                     step_output_handle,
-                    AssetStoreHandle(output_def.manager_key, output_def.metadata),
+                    AssetStoreHandle(output_def.io_manager_key, output_def.metadata),
                 )
             ),
         )

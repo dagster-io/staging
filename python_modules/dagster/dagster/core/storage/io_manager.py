@@ -107,12 +107,12 @@ def io_manager(
         def my_io_manager(init_context):
             return MyIOManager()
 
-        @solid(output_defs=[OutputDefinition(manager_key="my_io_manager_key")])
+        @solid(output_defs=[OutputDefinition(io_manager_key="my_io_io_manager_key")])
         def my_solid(_):
             return do_stuff()
 
         @pipeline(
-            mode_defs=[ModeDefinition(resource_defs={"my_io_manager_key": my_io_manager})]
+            mode_defs=[ModeDefinition(resource_defs={"my_io_io_manager_key": my_io_manager})]
         )
         def my_pipeline():
             my_solid()
