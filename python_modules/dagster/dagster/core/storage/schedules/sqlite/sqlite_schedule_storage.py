@@ -27,6 +27,9 @@ class SqliteScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         self._conn_string = conn_string
         self._inst_data = check.opt_inst_param(inst_data, "inst_data", ConfigurableClassData)
 
+    def get_alembic_file(self):
+        return __file__
+
     @property
     def inst_data(self):
         return self._inst_data
