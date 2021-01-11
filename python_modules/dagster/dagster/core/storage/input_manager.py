@@ -107,7 +107,7 @@ def input_manager(
         def csv_loader(_):
             return read_csv("some/path")
 
-        @solid(input_defs=[InputDefinition("input1", manager_key="csv_loader_key")])
+        @solid(input_defs=[InputDefinition("input1", io_manager_key="csv_loader_key")])
         def my_solid(_, input1):
             do_stuff(input1)
 
