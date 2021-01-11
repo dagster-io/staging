@@ -34,7 +34,7 @@ def test_output_manager():
     def my_output_manager(_context, obj):
         adict["result"] = obj
 
-    @solid(output_defs=[OutputDefinition(manager_key="my_output_manager")])
+    @solid(output_defs=[OutputDefinition(io_manager_key="my_output_manager")])
     def my_solid(_):
         return 5
 
@@ -54,7 +54,7 @@ def test_configurable_output_manager():
     def my_output_manager(context, obj):
         adict["result"] = (context.config, obj)
 
-    @solid(output_defs=[OutputDefinition(name="my_output", manager_key="my_output_manager")])
+    @solid(output_defs=[OutputDefinition(name="my_output", io_manager_key="my_output_manager")])
     def my_solid(_):
         return 5
 
@@ -84,7 +84,9 @@ def test_type_materializer_and_configurable_output_manager():
 
     @solid(
         output_defs=[
-            OutputDefinition(name="output1", manager_key="my_output_manager", dagster_type=my_type),
+            OutputDefinition(
+                name="output1", io_manager_key="my_output_manager", dagster_type=my_type
+            ),
             OutputDefinition(name="output2", dagster_type=my_type),
         ]
     )
@@ -120,7 +122,9 @@ def test_type_materializer_and_nonconfigurable_output_manager():
 
     @solid(
         output_defs=[
-            OutputDefinition(name="output1", manager_key="my_output_manager", dagster_type=my_type),
+            OutputDefinition(
+                name="output1", io_manager_key="my_output_manager", dagster_type=my_type
+            ),
             OutputDefinition(name="output2", dagster_type=my_type),
         ]
     )
@@ -178,7 +182,7 @@ def test_output_manager_with_failure():
             ],
         )
 
-    @solid(output_defs=[OutputDefinition(manager_key="should_fail")])
+    @solid(output_defs=[OutputDefinition(io_manager_key="should_fail")])
     def emit_str(_):
         return "emit"
 
@@ -242,13 +246,13 @@ def test_output_manager_with_retries():
         ]
     )
     def simple():
-        @solid(output_defs=[OutputDefinition(manager_key="should_succeed")],)
+        @solid(output_defs=[OutputDefinition(io_manager_key="should_succeed")],)
         def source_solid(_):
             return "foo"
 
         @solid(
             input_defs=[InputDefinition("solid_input")],
-            output_defs=[OutputDefinition(manager_key="should_retry")],
+            output_defs=[OutputDefinition(io_manager_key="should_retry")],
         )
         def take_input(_, solid_input):
             return solid_input
@@ -290,7 +294,9 @@ def test_output_manager_no_input_manager():
     def output_manager_alone(_):
         raise NotImplementedError()
 
-    @solid(output_defs=[OutputDefinition(name="output_alone", manager_key="output_manager_alone")])
+    @solid(
+        output_defs=[OutputDefinition(name="output_alone", io_manager_key="output_manager_alone")]
+    )
     def emit_str(_):
         raise NotImplementedError()
 
@@ -322,7 +328,7 @@ def test_output_manager_resource_config():
     def emit_foo(context, _obj):
         assert context.resource_config["is_foo"] == "yes"
 
-    @solid(output_defs=[OutputDefinition(manager_key="emit_foo")])
+    @solid(output_defs=[OutputDefinition(io_manager_key="emit_foo")])
     def basic_solid(_):
         return "foo"
 
@@ -348,7 +354,7 @@ def test_output_manager_required_resource_keys():
 
     @solid(
         output_defs=[
-            OutputDefinition(dagster_type=str, manager_key="output_manager_reqs_resources")
+            OutputDefinition(dagster_type=str, io_manager_key="output_manager_reqs_resources")
         ]
     )
     def big_solid(_):
@@ -373,7 +379,7 @@ def test_output_manager_required_resource_keys():
 
 
 def test_manager_not_provided():
-    @solid(output_defs=[OutputDefinition(manager_key="not_here")])
+    @solid(output_defs=[OutputDefinition(io_manager_key="not_here")])
     def solid_requires_manager(_, _input):
         return "foo"
 
@@ -383,7 +389,7 @@ def test_manager_not_provided():
 
     with pytest.raises(
         DagsterInvalidDefinitionError,
-        match='Output "result" for solid "solid_requires_manager" requires manager_key "not_here", but no '
+        match='Output "result" for solid "solid_requires_manager" requires io_manager_key "not_here", but no '
         "resource has been provided. Please include a resource definition for that key in the "
         "resource_defs of your ModeDefinition.",
     ):
@@ -395,7 +401,7 @@ def test_resource_not_output_manager():
     def resource_not_manager(_):
         return "foo"
 
-    @solid(output_defs=[OutputDefinition(manager_key="not_manager")])
+    @solid(output_defs=[OutputDefinition(io_manager_key="not_manager")])
     def solid_requires_manager(_):
         return "foo"
 
@@ -405,7 +411,7 @@ def test_resource_not_output_manager():
 
     with pytest.raises(
         DagsterInvalidDefinitionError,
-        match='Output "result" for solid "solid_requires_manager" requires manager_key '
+        match='Output "result" for solid "solid_requires_manager" requires io_manager_key '
         '"not_manager", but the resource definition provided is not an '
         "IOutputManagerDefinition",
     ):
