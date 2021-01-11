@@ -5,9 +5,10 @@ import six
 import sqlalchemy as db
 from dagster import check
 from dagster.core.definitions.job import JobType
-from dagster.core.errors import DagsterInvariantViolationError
+from dagster.core.errors import DagsterInvariantViolationError, DagsterScheduleWipeRequired
 from dagster.core.scheduler.job import (
     JobState,
+    JobStatus,
     JobTick,
     JobTickData,
     JobTickStatsSnapshot,
@@ -232,6 +233,43 @@ class SqlScheduleStorage(ScheduleStorage):
             ticks_skipped=counts.get(JobTickStatus.SKIPPED.value, 0),
             ticks_failed=counts.get(JobTickStatus.FAILURE.value, 0),
         )
+
+    def validate_stored_schedules(self, scheduler_class):
+        # If the removed ScheduleTable still has any entries, the scheduler must be wiped
+        # in order to be sure that there aren't any hanging cron jobs.
+        legacy_schedules_query = db.select([db.func.count()]).select_from(ScheduleTable)
+        rows = self.execute(legacy_schedules_query)
+        count = rows[0][0]
+
+        if count > 0:
+            raise DagsterScheduleWipeRequired(
+                "Found schedules stored using an old storage format. "
+                "Run the command `dagster schedule wipe` to update your schedule storage. "
+                "You will need to restart your schedules after running the command."
+            )
+
+        # Check for any running job states that reference a different scheduler,
+        # prompt the user to wipe if they don't match
+        stored_schedules = self.all_stored_job_state(job_type=JobType.SCHEDULE)
+
+        for schedule in stored_schedules:
+            if schedule.status != JobStatus.RUNNING:
+                continue
+
+            stored_scheduler_class = schedule.job_specific_data.scheduler
+
+            if stored_scheduler_class and stored_scheduler_class != scheduler_class:
+                instance_scheduler_class = scheduler_class if scheduler_class else "None"
+
+                raise DagsterScheduleWipeRequired(
+                    f"Found a running schedule using a scheduler ({stored_scheduler_class}) "
+                    + f"that differs from the scheduler on the instance ({instance_scheduler_class}). "
+                    + "The most likely reason for this error is that you changed the scheduler on "
+                    + "your instance while it was still running schedules. "
+                    + "To fix this, change the scheduler on your instance back to the previous "
+                    + "scheduler configuration and run the command 'dagster schedule wipe'. It "
+                    + f"will then be safe to change back to {instance_scheduler_class}."
+                )
 
     def wipe(self):
         """Clears the schedule storage."""
