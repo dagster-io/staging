@@ -22,7 +22,7 @@ const NavItem: React.FC<NavItemProps> = React.memo(({label, to, icon, matchingPa
   </Item>
 ));
 
-export const LeftNavSimple = () => {
+export const LeftNavSimple = React.memo(() => {
   const {pathname} = useLocation();
 
   const items = config.map((section, ii) => (
@@ -60,7 +60,7 @@ export const LeftNavSimple = () => {
       </Group>
     </Box>
   );
-};
+});
 
 interface ItemProps extends LinkProps {
   $active?: boolean;

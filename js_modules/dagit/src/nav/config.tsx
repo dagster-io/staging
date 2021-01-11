@@ -1,5 +1,9 @@
 import {IconName} from '@blueprintjs/core';
+import * as React from 'react';
 import {matchPath} from 'react-router-dom';
+
+import {InstanceStatusDot} from 'src/nav/InstanceStatusDot';
+import {Group} from 'src/ui/Group';
 
 export type NavItemConfig = {
   label: React.ReactNode;
@@ -51,7 +55,12 @@ export const config: NavItemConfig[][] = [
   ],
   [
     {
-      label: 'Status',
+      label: (
+        <Group direction="row" spacing={8} alignItems="center">
+          <div>Instance</div>
+          <InstanceStatusDot />
+        </Group>
+      ),
       icon: 'dashboard',
       to: '/instance',
       matchingPaths: [
