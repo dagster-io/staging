@@ -3,7 +3,10 @@ from typing import Dict, List, Optional
 
 
 def trigger_step(
-    pipeline: str, branches: Optional[List[str]] = None, async_step: bool = False
+    pipeline: str,
+    branches: Optional[List[str]] = None,
+    async_step: bool = False,
+    if_condition: str = None,
 ) -> Dict:
     """trigger_step: Trigger a build of another pipeline.
 
@@ -21,5 +24,8 @@ def trigger_step(
         "async": async_step,
         "branches": " ".join(branches) if branches else "*",
     }
+
+    if if_condition:
+        step["if"] = if_condition
 
     return step
