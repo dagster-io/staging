@@ -6,7 +6,7 @@ from enum import Enum
 
 from dagster import check, seven
 from dagster.core.errors import DagsterInvalidAssetKey
-from dagster.serdes import Persistable, whitelist_for_persistence, whitelist_for_serdes
+from dagster.serdes import Persistable, whitelist_for_persistence
 
 from .utils import DEFAULT_OUTPUT, check_valid_name
 
@@ -776,50 +776,6 @@ class RetryRequested(Exception):
         self.seconds_to_wait = check.opt_int_param(seconds_to_wait, "seconds_to_wait")
 
 
-class AssetStoreOperationType(Enum):
-    SET_ASSET = "SET_ASSET"
-    GET_ASSET = "GET_ASSET"
-
-
-@whitelist_for_serdes
-class AssetStoreOperation(
-    namedtuple("_AssetStoreOperation", "op step_output_handle asset_store_handle obj",)
-):
-    """
-    Event related AssetStore
-    """
-
-    def __new__(cls, op, step_output_handle, asset_store_handle, obj=None):
-        from dagster.core.execution.plan.outputs import StepOutputHandle
-        from dagster.core.storage.asset_store import AssetStoreHandle
-
-        return super(AssetStoreOperation, cls).__new__(
-            cls,
-            op=op,
-            step_output_handle=check.inst_param(
-                step_output_handle, "step_output_handle", StepOutputHandle
-            ),
-            asset_store_handle=check.inst_param(
-                asset_store_handle, "asset_store_handle", AssetStoreHandle
-            ),
-            obj=obj,
-        )
-
-    @classmethod
-    def serializable(cls, inst, **kwargs):
-        return cls(
-            **dict(
-                {
-                    "op": inst.op.value,
-                    "step_output_handle": inst.step_output_handle,
-                    "asset_store_handle": inst.asset_store_handle,
-                    "obj": None,
-                },
-                **kwargs,
-            )
-        )
-
-
 class ObjectStoreOperationType(Enum):
     SET_OBJECT = "SET_OBJECT"
     GET_OBJECT = "GET_OBJECT"
@@ -888,6 +844,46 @@ class ObjectStoreOperation(
                     "object_store_name": inst.object_store_name,
                     "value_name": inst.value_name,
                     "version": inst.version,
+                },
+                **kwargs,
+            )
+        )
+
+
+class HandledOutput(namedtuple("_HandledOutput", "output_name manager_key")):
+    def __new__(cls, output_name, manager_key):
+        return super(HandledOutput, cls).__new__(
+            cls,
+            output_name=check.str_param(output_name, "output_name"),
+            manager_key=check.str_param(manager_key, "manager_key"),
+        )
+
+
+class LoadedInput(
+    namedtuple("_LoadedInput", "obj input_name manager_key upstream_output_name upstream_step_key")
+):
+    def __new__(
+        cls, obj, input_name, manager_key, upstream_output_name=None, upstream_step_key=None
+    ):
+        return super(LoadedInput, cls).__new__(
+            cls,
+            obj=obj,
+            input_name=check.str_param(input_name, "input_name"),
+            manager_key=check.str_param(manager_key, "manager_key"),
+            upstream_output_name=check.opt_str_param(upstream_output_name, "upstream_output_name"),
+            upstream_step_key=check.opt_str_param(upstream_step_key, "upstream_step_key"),
+        )
+
+    @classmethod
+    def serializable(cls, inst, **kwargs):
+        return cls(
+            **dict(
+                {
+                    "obj": None,
+                    "input_name": inst.input_name,
+                    "manager_key": inst.manager_key,
+                    "upstream_output_name": inst.upstream_output_name,
+                    "upstream_step_key": inst.upstream_step_key,
                 },
                 **kwargs,
             )
