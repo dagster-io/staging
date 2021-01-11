@@ -75,6 +75,17 @@ def handle_schema_errors(conn, alembic_config, msg=None):
         raise
 
 
+def raise_migration_required_error(conn, alembic_config, msg=None):
+    """ Used when you've reached a condition where you're sure a migration is needed"""
+
+    with quieten():
+        db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+
+    raise DagsterInstanceMigrationRequired(
+        msg=msg, db_revision=db_revision, head_revision=head_revision
+    )
+
+
 def run_migrations_offline(context, config, target_metadata):
     """Run migrations in 'offline' mode.
 

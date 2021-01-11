@@ -44,6 +44,9 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         with self.connect() as conn:
             retry_pg_creation_fn(lambda: ScheduleStorageSqlMetadata.create_all(conn))
 
+    def get_alembid_file(self):
+        return __file__
+
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold an open connection and set statement_timeout
         self._engine = create_engine(

@@ -109,3 +109,8 @@ class ScheduleStorage(abc.ABC):
 
     def optimize_for_dagit(self, statement_timeout):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
+
+    @abc.abstractmethod
+    def validate_stored_schedules(self, scheduler_class):
+        """Verify that the set of running schedules is properly configured for the provided
+        scheduler class, throwing an exception if it is not and the schedules need to be wiped."""
