@@ -99,7 +99,7 @@ def test_basic_event_store(conn_string):
 
 
 def event_types(out_events):
-    return list(map(lambda e: e.dagster_event.event_type, out_events))
+    return list(map(lambda e: e.dagster_event.event_type if e.dagster_event else None, out_events))
 
 
 def sorted_event_types(out_events):
