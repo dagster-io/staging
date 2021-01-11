@@ -4,11 +4,7 @@ from collections import namedtuple
 
 from dagster import check
 from dagster.core.definitions import Failure, RetryRequested
-from dagster.core.definitions.events import (
-    AssetStoreOperation,
-    AssetStoreOperationType,
-    ObjectStoreOperation,
-)
+from dagster.core.definitions.events import LoadedInput
 from dagster.core.definitions.input import InputDefinition
 from dagster.core.errors import (
     DagsterExecutionLoadInputError,
@@ -110,7 +106,10 @@ class FromRootInputManager(
             ].get("config", {}),
             resources=build_resources_for_manager(self.input_def.manager_key, step_context),
         )
-        return _load_input_with_input_manager(loader, load_input_context)
+        obj = _load_input_with_input_manager(loader, load_input_context)
+        return LoadedInput(
+            obj=obj, input_name=self.input_def.name, manager_key=self.input_def.manager_key
+        )
 
     def compute_version(self, step_versions):
         # TODO: support versioning for root loaders
@@ -176,36 +175,27 @@ class FromStepOutput(
     def load_input_object(self, step_context):
         source_handle = self.step_output_handle
         if self.input_def.manager_key:
-            loader = getattr(step_context.resources, self.input_def.manager_key)
-            return _load_input_with_input_manager(loader, self.get_load_context(step_context))
-
-        io_manager = step_context.get_output_manager(source_handle)
-
-        check.invariant(
-            isinstance(io_manager, InputManager),
-            f'Input "{self.input_def.name}" for step "{step_context.step.key}" is depending on '
-            f'the manager of upstream output "{source_handle.output_name}" from step '
-            f'"{source_handle.step_key}" to load it, but that manager is not an InputManager. '
-            f"Please ensure that the resource returned for resource key "
-            f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
-        )
-
-        obj = _load_input_with_input_manager(io_manager, self.get_load_context(step_context))
-
-        output_def = step_context.execution_plan.get_step_output(source_handle).output_def
-
-        # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
-        if isinstance(obj, ObjectStoreOperation):
-            return obj
+            manager_key = self.input_def.manager_key
+            input_manager = getattr(step_context.resources, manager_key)
         else:
-            from dagster.core.storage.asset_store import AssetStoreHandle
-
-            return AssetStoreOperation(
-                AssetStoreOperationType.GET_ASSET,
-                source_handle,
-                AssetStoreHandle(output_def.manager_key, output_def.metadata),
-                obj=obj,
+            manager_key = step_context.execution_plan.get_manager_key(source_handle)
+            input_manager = step_context.get_output_manager(source_handle)
+            check.invariant(
+                isinstance(input_manager, InputManager),
+                f'Input "{self.input_def.name}" for step "{step_context.step.key}" is depending on '
+                f'the manager of upstream output "{source_handle.output_name}" from step '
+                f'"{source_handle.step_key}" to load it, but that manager is not an InputManager. '
+                f"Please ensure that the resource returned for resource key "
+                f'"{manager_key}" is an InputManager.',
             )
+
+        return LoadedInput(
+            obj=_load_input_with_input_manager(input_manager, self.get_load_context(step_context)),
+            input_name=self.input_def.name,
+            manager_key=manager_key,
+            upstream_output_name=source_handle.output_name,
+            upstream_step_key=source_handle.step_key,
+        )
 
     def compute_version(self, step_versions):
         if (
@@ -330,9 +320,8 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
                 continue
             values.append(inner_source.load_input_object(step_context))
 
-        # When we're using an object store-backed intermediate store, we wrap the
-        # representing the fan-in values in a FanInStepInputValuesWrapper
-        # so we can yield the relevant object store events and unpack the values in the caller
+        # We wrap the representing the fan-in values in a FanInStepInputValuesWrapper
+        # so we can yield the relevant input events and unpack the values in the caller
         return FanInStepInputValuesWrapper(values)
 
     def required_resource_keys(self):
