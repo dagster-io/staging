@@ -44,7 +44,7 @@ class IntermediateStorageAdapter(IOManager):
         )
 
     def handle_output(self, context, obj):
-        res = self.intermediate_storage.set_intermediate(
+        self.intermediate_storage.set_intermediate(
             context=context.step_context,
             dagster_type=context.dagster_type,
             step_output_handle=StepOutputHandle(
@@ -53,11 +53,6 @@ class IntermediateStorageAdapter(IOManager):
             value=obj,
             version=context.version,
         )
-        # TODO yuhan retire ObjectStoreOperation https://github.com/dagster-io/dagster/issues/3043
-        # we set loose constraint on the return type of a custom `set_intermediate_object`, so
-        # in the deprecation cycle, we will filter out values other than structured `ObjectStoreOperation`
-        if isinstance(res, ObjectStoreOperation):
-            return res
 
     def load_input(self, context):
         step_context = context.step_context
@@ -75,11 +70,14 @@ class IntermediateStorageAdapter(IOManager):
                 step_key=source_handle.step_key,
                 output_name=source_handle.output_name,
             )
-        return self.intermediate_storage.get_intermediate(
+        res = self.intermediate_storage.get_intermediate(
             context=step_context,
             dagster_type=context.dagster_type,
             step_output_handle=source_handle,
         )
+
+        if isinstance(res, ObjectStoreOperation):
+            return res.obj
 
 
 class ObjectStoreIntermediateStorage(IntermediateStorage):
