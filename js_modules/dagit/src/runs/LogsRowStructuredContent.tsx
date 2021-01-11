@@ -156,6 +156,10 @@ export const LogsRowStructuredContent: React.FunctionComponent<IStructuredConten
           }
         />
       );
+    case 'HandledOutputEvent':
+      return <DefaultContent message={node.message} eventType="Handled Output" />;
+    case 'LoadedInputEvent':
+      return <DefaultContent message={node.message} eventType="Loaded Input" />;
     case 'HookCompletedEvent':
       return <DefaultContent eventType="Hook Event" message={node.message} />;
     case 'HookSkippedEvent':
