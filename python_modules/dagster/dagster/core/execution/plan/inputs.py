@@ -170,9 +170,9 @@ class FromStepOutput(
         )
 
     def get_load_context(self, step_context):
-        manager_key = step_context.execution_plan.get_manager_key(self.step_output_handle)
-        resource_config = step_context.environment_config.resources[manager_key].get("config", {})
-        resources = build_resources_for_manager(manager_key, step_context)
+        io_manager_key = step_context.execution_plan.get_io_manager_key(self.step_output_handle)
+        resource_config = step_context.environment_config.resources[io_manager_key].get("config", {})
+        resources = build_resources_for_manager(io_manager_key, step_context)
 
         return step_context.for_input_manager(
             self.input_def.name,
@@ -194,7 +194,7 @@ class FromStepOutput(
             f'the manager of upstream output "{source_handle.output_name}" from step '
             f'"{source_handle.step_key}" to load it, but that manager is not an InputManager. '
             f"Please ensure that the resource returned for resource key "
-            f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
+            f'"{step_context.execution_plan.get_io_manager_key(source_handle)}" is an InputManager.',
         )
 
         obj = _load_input_with_input_manager(io_manager, self.get_load_context(step_context))
@@ -209,7 +209,7 @@ class FromStepOutput(
             return AssetStoreOperation(
                 AssetStoreOperationType.GET_ASSET,
                 source_handle,
-                AssetStoreHandle(output_def.manager_key, output_def.metadata),
+                AssetStoreHandle(output_def.io_manager_key, output_def.metadata),
                 obj=obj,
             )
 

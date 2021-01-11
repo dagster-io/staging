@@ -332,7 +332,7 @@ class SystemStepExecutionContext(SystemExecutionContext):
     def get_output_manager(self, step_output_handle):
         step_output = self.execution_plan.get_step_output(step_output_handle)
         if self.using_io_manager(step_output_handle):
-            output_manager = getattr(self.resources, step_output.output_def.manager_key)
+            output_manager = getattr(self.resources, step_output.output_def.io_manager_key)
         else:
             from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
 
@@ -343,10 +343,10 @@ class SystemStepExecutionContext(SystemExecutionContext):
         # pylint: disable=comparison-with-callable
         from dagster.core.storage.mem_io_manager import mem_io_manager
 
-        output_manager_key = self.execution_plan.get_step_output(
+        output_io_manager_key = self.execution_plan.get_step_output(
             step_output_handle
-        ).output_def.manager_key
-        return self.mode_def.resource_defs[output_manager_key] != mem_io_manager
+        ).output_def.io_manager_key
+        return self.mode_def.resource_defs[output_io_manager_key] != mem_io_manager
 
 
 class SystemComputeExecutionContext(SystemStepExecutionContext):
@@ -617,10 +617,10 @@ def get_output_context(
     else:
         output_config = None
 
-    manager_key = execution_plan.get_step_output(step_output_handle).output_def.manager_key
-    resource_config = environment_config.resources[manager_key].get("config", {})
+    io_manager_key = execution_plan.get_step_output(step_output_handle).output_def.io_manager_key
+    resource_config = environment_config.resources[io_manager_key].get("config", {})
 
-    resources = build_resources_for_manager(manager_key, step_context) if step_context else None
+    resources = build_resources_for_manager(io_manager_key, step_context) if step_context else None
 
     return OutputContext(
         step_key=step_output_handle.step_key,
