@@ -11,7 +11,12 @@ from dagster.core.storage.event_log import (
     SqlEventLogStorageMetadata,
     SqlEventLogStorageTable,
 )
-from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
+from dagster.core.storage.sql import (
+    create_engine,
+    get_alembic_config,
+    run_alembic_upgrade,
+    stamp_alembic_rev,
+)
 from dagster.serdes import (
     ConfigurableClass,
     ConfigurableClassData,
@@ -63,8 +68,16 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
         )
         self._secondary_index_cache = {}
 
+        table_names = db.inspect(self._engine).get_table_names()
+
         with self.connect() as conn:
-            retry_pg_creation_fn(lambda: SqlEventLogStorageMetadata.create_all(conn))
+            # Stamp and create tables if there's no previously stamped revision and the main table
+            # doesn't exist (since we used to not stamp postgres storage when it was
+            # first created)
+            if "event_logs" not in table_names:
+                alembic_config = get_alembic_config(__file__)
+                retry_pg_creation_fn(lambda: SqlEventLogStorageMetadata.create_all(conn))
+                stamp_alembic_rev(alembic_config, self._engine)
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold an open connection and set statement_timeout
