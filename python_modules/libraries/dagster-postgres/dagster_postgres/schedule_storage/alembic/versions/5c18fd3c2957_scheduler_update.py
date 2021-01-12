@@ -24,9 +24,6 @@ def upgrade():
     if instance.scheduler:
         instance.scheduler.wipe(instance)
 
-    if has_table("schedules"):
-        op.drop_table("schedules")
-
     if has_table("schedule_ticks"):
         op.drop_table("schedule_ticks")
 
