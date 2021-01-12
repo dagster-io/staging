@@ -166,7 +166,6 @@ class TestEnvironmentSchema(ReadonlyGraphQLContextTestMatrix):
         )
         snapshot.assert_match(result.data)
 
-    @pytest.mark.skipif(sys.version_info < (3,), reason="Snapshot not working correctly on py2")
     def test_basic_invalid_config_on_run_config_schema(self, graphql_context, snapshot):
         selector = infer_pipeline_selector(graphql_context, "csv_hello_world")
         result = execute_dagster_graphql(

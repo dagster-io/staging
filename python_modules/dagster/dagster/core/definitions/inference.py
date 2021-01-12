@@ -63,7 +63,7 @@ def has_explicit_return_type(fn):
 
 
 def _input_param_type(type_annotation):
-    if sys.version_info.major >= 3 and type_annotation is not inspect.Parameter.empty:
+    if type_annotation is not inspect.Parameter.empty:
         return type_annotation
     return None
 
