@@ -7,8 +7,7 @@ from .final_pipeline import gcp_pipeline
 
 def define_schedule():
     @daily_schedule(
-        pipeline_name="gcp_pipeline",
-        start_date=datetime.datetime(2020, 1, 1),
+        pipeline_name="gcp_pipeline", start_date=datetime.datetime(2020, 1, 1),
     )
     def explore_visits_daily_schedule(date):
         return {

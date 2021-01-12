@@ -175,10 +175,7 @@ class RepositoryData:
             ),
         )
         self._sensors = _CacheingDefinitionIndex(
-            SensorDefinition,
-            "SensorDefinition",
-            "sensor",
-            sensors,
+            SensorDefinition, "SensorDefinition", "sensor", sensors,
         )
         self._all_pipelines = None
         self._solids = None
@@ -519,10 +516,7 @@ class RepositoryDefinition:
     """
 
     def __init__(
-        self,
-        name,
-        repository_data,
-        description=None,
+        self, name, repository_data, description=None,
     ):
         self._name = check_valid_name(name)
         self._description = check.opt_str_param(description, "description")

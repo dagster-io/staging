@@ -119,9 +119,7 @@ def get_k8s_resource_requirements(tags):
 
     if not result.success:
         raise DagsterInvalidConfigError(
-            "Error in tags for {}".format(K8S_RESOURCE_REQUIREMENTS_KEY),
-            result.errors,
-            result,
+            "Error in tags for {}".format(K8S_RESOURCE_REQUIREMENTS_KEY), result.errors, result,
         )
 
     return result.value
@@ -141,9 +139,7 @@ def get_user_defined_k8s_config(tags):
 
         if not result.success:
             raise DagsterInvalidConfigError(
-                "Error in tags for {}".format(USER_DEFINED_K8S_CONFIG_KEY),
-                result.errors,
-                result,
+                "Error in tags for {}".format(USER_DEFINED_K8S_CONFIG_KEY), result.errors, result,
             )
 
         user_defined_k8s_config = result.value

@@ -74,8 +74,7 @@ def get_subset_external_pipeline(context, selector):
         )
 
     return ExternalPipeline(
-        subset_result.external_pipeline_data,
-        repository_handle=external_repository.handle,
+        subset_result.external_pipeline_data, repository_handle=external_repository.handle,
     )
 
 
@@ -194,8 +193,7 @@ def fetch_repository_locations(graphene_info):
             GrapheneRepositoryLocation(graphene_info.context.get_repository_location(location_name))
             if graphene_info.context.has_repository_location(location_name)
             else GrapheneRepositoryLocationLoadFailure(
-                location_name,
-                graphene_info.context.get_repository_location_error(location_name),
+                location_name, graphene_info.context.get_repository_location_error(location_name),
             )
         )
         nodes.append(node)

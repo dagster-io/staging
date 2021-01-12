@@ -128,9 +128,7 @@ def test_terminate_pipeline_on_celery(rabbitmq):
 
                 try:
                     for result in execute_pipeline_iterator(
-                        pipeline=pipeline_def,
-                        run_config=run_config,
-                        instance=instance,
+                        pipeline=pipeline_def, run_config=run_config, instance=instance,
                     ):
                         # Interrupt once the first step starts
                         if (

@@ -31,8 +31,7 @@ def test_fs_storage_no_explicit_base_dir(
     results = dagster_airflow_docker_operator_pipeline(
         pipeline_name=pipeline_name,
         recon_repo=ReconstructableRepository.for_module(
-            "dagster_test.test_project.test_pipelines.repo",
-            "define_demo_execution_repo",
+            "dagster_test.test_project.test_pipelines.repo", "define_demo_execution_repo",
         ),
         environment_yaml=[
             os.path.join(environments_path, "env.yaml"),
@@ -52,8 +51,7 @@ def test_fs_storage(
     results = dagster_airflow_docker_operator_pipeline(
         pipeline_name=pipeline_name,
         recon_repo=ReconstructableRepository.for_module(
-            "dagster_test.test_project.test_pipelines.repo",
-            "define_demo_execution_repo",
+            "dagster_test.test_project.test_pipelines.repo", "define_demo_execution_repo",
         ),
         environment_yaml=[
             os.path.join(environments_path, "env.yaml"),
@@ -74,8 +72,7 @@ def test_s3_storage(
     results = dagster_airflow_docker_operator_pipeline(
         pipeline_name=pipeline_name,
         recon_repo=ReconstructableRepository.for_module(
-            "dagster_test.test_project.test_pipelines.repo",
-            "define_demo_execution_repo",
+            "dagster_test.test_project.test_pipelines.repo", "define_demo_execution_repo",
         ),
         environment_yaml=[
             os.path.join(environments_path, "env.yaml"),
@@ -89,16 +86,14 @@ def test_s3_storage(
 @nettest
 @requires_airflow_db
 def test_gcs_storage(
-    dagster_airflow_docker_operator_pipeline,
-    dagster_docker_image,
+    dagster_airflow_docker_operator_pipeline, dagster_docker_image,
 ):  # pylint: disable=redefined-outer-name
     pipeline_name = "demo_pipeline_gcs"
     environments_path = get_test_project_environments_path()
     results = dagster_airflow_docker_operator_pipeline(
         pipeline_name=pipeline_name,
         recon_repo=ReconstructableRepository.for_module(
-            "dagster_test.test_project.test_pipelines.repo",
-            "define_demo_execution_repo",
+            "dagster_test.test_project.test_pipelines.repo", "define_demo_execution_repo",
         ),
         environment_yaml=[
             os.path.join(environments_path, "env.yaml"),
@@ -118,8 +113,7 @@ def test_skip_operator(
     results = dagster_airflow_docker_operator_pipeline(
         pipeline_name=pipeline_name,
         recon_repo=ReconstructableRepository.for_module(
-            "dagster_test.test_project.test_pipelines.repo",
-            "define_demo_execution_repo",
+            "dagster_test.test_project.test_pipelines.repo", "define_demo_execution_repo",
         ),
         environment_yaml=[os.path.join(environments_path, "env_filesystem.yaml")],
         op_kwargs={"host_tmp_dir": "/tmp"},

@@ -193,10 +193,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def get_intermediate(
-        self,
-        context,
-        dagster_type=None,
-        step_output_handle=None,
+        self, context, dagster_type=None, step_output_handle=None,
     ):
         dagster_type = resolve_dagster_type(dagster_type)
         check.opt_inst_param(context, "context", SystemExecutionContext)
@@ -248,12 +245,7 @@ class ObjectStoreIntermediateStorage(IntermediateStorage):
         )
 
     def set_intermediate(
-        self,
-        context,
-        dagster_type=None,
-        step_output_handle=None,
-        value=None,
-        version=None,
+        self, context, dagster_type=None, step_output_handle=None, value=None, version=None,
     ):
         dagster_type = resolve_dagster_type(dagster_type)
         check.opt_inst_param(context, "context", SystemExecutionContext)

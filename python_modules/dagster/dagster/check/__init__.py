@@ -887,9 +887,7 @@ def class_param(obj: Any, param_name: str) -> Union[ParameterCheckError, type]:
     if not inspect.isclass(obj):
         return ParameterCheckError(
             'Param "{name}" is not a class. Got {obj} which is type {obj_type}.'.format(
-                name=param_name,
-                obj=repr(obj),
-                obj_type=type(obj),
+                name=param_name, obj=repr(obj), obj_type=type(obj),
             )
         )
     return obj

@@ -3,9 +3,7 @@ from dagster import Field, InputDefinition, Int, List, configured, execute_pipel
 
 # start_configured_named
 @solid(
-    config_schema={
-        "is_sample": Field(bool, is_required=False, default_value=False),
-    },
+    config_schema={"is_sample": Field(bool, is_required=False, default_value=False),},
     input_defs=[InputDefinition("xs", List[Int])],
 )
 def variance(context, xs):

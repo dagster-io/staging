@@ -285,9 +285,7 @@ class K8sRunLauncher(RunLauncher, ConfigurableClass):
 
         input_json = serialize_dagster_namedtuple(
             ExecuteRunArgs(
-                pipeline_origin=pipeline_origin,
-                pipeline_run_id=run.run_id,
-                instance_ref=None,
+                pipeline_origin=pipeline_origin, pipeline_run_id=run.run_id, instance_ref=None,
             )
         )
 

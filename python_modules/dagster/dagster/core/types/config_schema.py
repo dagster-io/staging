@@ -115,11 +115,7 @@ class DagsterTypeLoaderFromDecorator(DagsterTypeLoader):
 
 
 def _create_type_loader_for_decorator(
-    config_type,
-    func,
-    required_resource_keys,
-    loader_version=None,
-    external_version_fn=None,
+    config_type, func, required_resource_keys, loader_version=None, external_version_fn=None,
 ):
     return DagsterTypeLoaderFromDecorator(
         config_type, func, required_resource_keys, loader_version, external_version_fn
@@ -127,10 +123,7 @@ def _create_type_loader_for_decorator(
 
 
 def dagster_type_loader(
-    config_schema,
-    required_resource_keys=None,
-    loader_version=None,
-    external_version_fn=None,
+    config_schema, required_resource_keys=None, loader_version=None, external_version_fn=None,
 ):
     """Create an dagster type loader that maps config data to a runtime value.
 

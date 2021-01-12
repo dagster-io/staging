@@ -93,8 +93,7 @@ def resolve_step_versions_helper(execution_plan):
     pipeline_def = execution_plan.pipeline.get_definition()
 
     resource_versions_by_key = resolve_resource_versions(
-        execution_plan.environment_config,
-        pipeline_def,
+        execution_plan.environment_config, pipeline_def,
     )
 
     step_versions = {}  # step_key (str) -> version (str)

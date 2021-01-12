@@ -83,9 +83,7 @@ class GrapheneAsset(graphene.ObjectType):
         limit=graphene.Int(),
     )
     runs = graphene.Field(
-        non_null_list(lambda: GraphenePipelineRun),
-        cursor=graphene.String(),
-        limit=graphene.Int(),
+        non_null_list(lambda: GraphenePipelineRun), cursor=graphene.String(), limit=graphene.Int(),
     )
 
     class Meta:
@@ -291,14 +289,11 @@ class GrapheneIPipelineSnapshotMixin:
         non_null_list(GrapheneSolidHandle), parentHandleID=graphene.String()
     )
     solid_handle = graphene.Field(
-        GrapheneSolidHandle,
-        handleID=graphene.Argument(graphene.NonNull(graphene.String)),
+        GrapheneSolidHandle, handleID=graphene.Argument(graphene.NonNull(graphene.String)),
     )
     tags = non_null_list(GraphenePipelineTag)
     runs = graphene.Field(
-        non_null_list(GraphenePipelineRun),
-        cursor=graphene.String(),
-        limit=graphene.Int(),
+        non_null_list(GraphenePipelineRun), cursor=graphene.String(), limit=graphene.Int(),
     )
     schedules = non_null_list(GrapheneSchedule)
     sensors = non_null_list(GrapheneSensor)
@@ -352,10 +347,7 @@ class GrapheneIPipelineSnapshotMixin:
 
     def resolve_solids(self, _graphene_info):
         represented_pipeline = self.get_represented_pipeline()
-        return build_solids(
-            represented_pipeline,
-            represented_pipeline.dep_structure_index,
-        )
+        return build_solids(represented_pipeline, represented_pipeline.dep_structure_index,)
 
     def resolve_modes(self, _graphene_info):
         represented_pipeline = self.get_represented_pipeline()
@@ -443,8 +435,7 @@ class GrapheneIPipelineSnapshot(graphene.Interface):
         non_null_list(GrapheneSolidHandle), parentHandleID=graphene.String()
     )
     solid_handle = graphene.Field(
-        GrapheneSolidHandle,
-        handleID=graphene.Argument(graphene.NonNull(graphene.String)),
+        GrapheneSolidHandle, handleID=graphene.Argument(graphene.NonNull(graphene.String)),
     )
     tags = non_null_list(GraphenePipelineTag)
 
@@ -496,9 +487,7 @@ class GraphenePipeline(GrapheneIPipelineSnapshotMixin, graphene.ObjectType):
     id = graphene.NonNull(graphene.ID)
     presets = non_null_list(GraphenePipelinePreset)
     runs = graphene.Field(
-        non_null_list(GraphenePipelineRun),
-        cursor=graphene.String(),
-        limit=graphene.Int(),
+        non_null_list(GraphenePipelineRun), cursor=graphene.String(), limit=graphene.Int(),
     )
 
     class Meta:

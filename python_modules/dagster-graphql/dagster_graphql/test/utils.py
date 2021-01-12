@@ -70,8 +70,7 @@ def define_out_of_process_context(python_file, fn_name, instance):
 
     with define_out_of_process_workspace(python_file, fn_name) as workspace:
         yield WorkspaceProcessContext(
-            workspace=workspace,
-            instance=instance,
+            workspace=workspace, instance=instance,
         ).create_request_context()
 
 
@@ -80,9 +79,7 @@ def define_out_of_process_workspace(python_file, fn_name):
         [
             ManagedGrpcPythonEnvRepositoryLocationOrigin(
                 loadable_target_origin=LoadableTargetOrigin(
-                    executable_path=sys.executable,
-                    python_file=python_file,
-                    attribute=fn_name,
+                    executable_path=sys.executable, python_file=python_file, attribute=fn_name,
                 ),
                 location_name=main_repo_location_name(),
             )

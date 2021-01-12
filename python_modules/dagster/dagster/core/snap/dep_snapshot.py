@@ -129,8 +129,7 @@ class DependencyStructureIndex:
 
         check.failed(
             "Input {input_name} not found for solid {solid_name}".format(
-                input_name=input_name,
-                solid_name=solid_name,
+                input_name=input_name, solid_name=solid_name,
             )
         )
 

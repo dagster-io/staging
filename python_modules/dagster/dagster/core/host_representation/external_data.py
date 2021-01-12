@@ -63,9 +63,7 @@ class ExternalRepositoryData(
                 of_type=(ExternalScheduleData, ExternalSensorData, ExternalJobData),
             ),
             external_sensor_datas=check.opt_list_param(
-                external_sensor_datas,
-                "external_sensor_datas",
-                of_type=ExternalSensorData,
+                external_sensor_datas, "external_sensor_datas", of_type=ExternalSensorData,
             ),
         )
 
@@ -232,8 +230,7 @@ class ExternalScheduleExecutionErrorData(
 ):
     def __new__(cls, error):
         return super(ExternalScheduleExecutionErrorData, cls).__new__(
-            cls,
-            error=check.opt_inst_param(error, "error", SerializableErrorInfo),
+            cls, error=check.opt_inst_param(error, "error", SerializableErrorInfo),
         )
 
 
@@ -262,12 +259,7 @@ class ExternalJobData(
     namedtuple("_ExternalJobData", "name job_type pipeline_name solid_selection mode")
 ):
     def __new__(
-        cls,
-        name,
-        job_type,
-        pipeline_name,
-        solid_selection,
-        mode,
+        cls, name, job_type, pipeline_name, solid_selection, mode,
     ):
         return super(ExternalJobData, cls).__new__(
             cls,
@@ -290,9 +282,7 @@ class ExternalSensorExecutionData(
             not (run_requests and skip_message), "Found both skip data and run request data"
         )
         return super(ExternalSensorExecutionData, cls).__new__(
-            cls,
-            run_requests=run_requests,
-            skip_message=skip_message,
+            cls, run_requests=run_requests, skip_message=skip_message,
         )
 
     @staticmethod
@@ -310,8 +300,7 @@ class ExternalSensorExecutionData(
 class ExternalSensorExecutionErrorData(namedtuple("_ExternalSensorExecutionErrorData", "error")):
     def __new__(cls, error):
         return super(ExternalSensorExecutionErrorData, cls).__new__(
-            cls,
-            error=check.opt_inst_param(error, "error", SerializableErrorInfo),
+            cls, error=check.opt_inst_param(error, "error", SerializableErrorInfo),
         )
 
 
@@ -329,8 +318,7 @@ class ExternalExecutionParamsData(namedtuple("_ExternalExecutionParamsData", "ru
 class ExternalExecutionParamsErrorData(namedtuple("_ExternalExecutionParamsErrorData", "error")):
     def __new__(cls, error):
         return super(ExternalExecutionParamsErrorData, cls).__new__(
-            cls,
-            error=check.opt_inst_param(error, "error", SerializableErrorInfo),
+            cls, error=check.opt_inst_param(error, "error", SerializableErrorInfo),
         )
 
 
@@ -352,8 +340,7 @@ class ExternalPartitionSetData(
 class ExternalPartitionNamesData(namedtuple("_ExternalPartitionNamesData", "partition_names")):
     def __new__(cls, partition_names=None):
         return super(ExternalPartitionNamesData, cls).__new__(
-            cls,
-            partition_names=check.opt_list_param(partition_names, "partition_names", str),
+            cls, partition_names=check.opt_list_param(partition_names, "partition_names", str),
         )
 
 
@@ -371,9 +358,7 @@ class ExternalPartitionConfigData(namedtuple("_ExternalPartitionConfigData", "na
 class ExternalPartitionTagsData(namedtuple("_ExternalPartitionTagsData", "name tags")):
     def __new__(cls, name, tags=None):
         return super(ExternalPartitionTagsData, cls).__new__(
-            cls,
-            name=check.str_param(name, "name"),
-            tags=check.opt_dict_param(tags, "tags"),
+            cls, name=check.str_param(name, "name"), tags=check.opt_dict_param(tags, "tags"),
         )
 
 
@@ -409,8 +394,7 @@ class ExternalPartitionExecutionErrorData(
 ):
     def __new__(cls, error):
         return super(ExternalPartitionExecutionErrorData, cls).__new__(
-            cls,
-            error=check.opt_inst_param(error, "error", SerializableErrorInfo),
+            cls, error=check.opt_inst_param(error, "error", SerializableErrorInfo),
         )
 
 

@@ -98,9 +98,7 @@ class Solid:
         self.name = check.str_param(name, "name")
         self.definition = check.inst_param(definition, "definition", NodeDefinition)
         self.graph_definition = check.inst_param(
-            graph_definition,
-            "graph_definition",
-            GraphDefinition,
+            graph_definition, "graph_definition", GraphDefinition,
         )
         self._additional_tags = validate_tags(tags)
         self._hook_defs = check.opt_set_param(hook_defs, "hook_defs", of_type=HookDefinition)
@@ -192,9 +190,7 @@ class Solid:
 class SolidHandle(namedtuple("_SolidHandle", "name parent")):
     def __new__(cls, name: str, parent: Optional["SolidHandle"]):
         return super(SolidHandle, cls).__new__(
-            cls,
-            check.str_param(name, "name"),
-            check.opt_inst_param(parent, "parent", SolidHandle),
+            cls, check.str_param(name, "name"), check.opt_inst_param(parent, "parent", SolidHandle),
         )
 
     def __str__(self):
@@ -324,10 +320,7 @@ class SolidHandle(namedtuple("_SolidHandle", "name parent")):
 
         if isinstance(dict_repr["parent"], (list, tuple)):
             dict_repr["parent"] = SolidHandle.from_dict(
-                {
-                    "name": dict_repr["parent"][0],
-                    "parent": dict_repr["parent"][1],
-                }
+                {"name": dict_repr["parent"][0], "parent": dict_repr["parent"][1],}
             )
 
         return SolidHandle(**{k: dict_repr[k] for k in ["name", "parent"]})
@@ -343,9 +336,7 @@ class SolidInputHandle(namedtuple("_SolidInputHandle", "solid input_def")):
 
     def _inner_str(self) -> str:
         return struct_to_string(
-            "SolidInputHandle",
-            solid_name=self.solid.name,
-            input_name=self.input_def.name,
+            "SolidInputHandle", solid_name=self.solid.name, input_name=self.input_def.name,
         )
 
     def __str__(self):
@@ -379,9 +370,7 @@ class SolidOutputHandle(namedtuple("_SolidOutputHandle", "solid output_def")):
 
     def _inner_str(self) -> str:
         return struct_to_string(
-            "SolidOutputHandle",
-            solid_name=self.solid.name,
-            output_name=self.output_def.name,
+            "SolidOutputHandle", solid_name=self.solid.name, output_name=self.output_def.name,
         )
 
     def __str__(self):
@@ -628,9 +617,7 @@ class DependencyStructure:
     def input_handles(self) -> List[SolidInputHandle]:
         return list(self._handle_dict.keys())
 
-    def items(
-        self,
-    ) -> Iterable[Tuple[SolidInputHandle, SolidOutputHandle]]:
+    def items(self,) -> Iterable[Tuple[SolidInputHandle, SolidOutputHandle]]:
         return self._handle_dict.items()
 
     def get_upstream_dynamic_handle_for_solid(self, solid_name: str) -> Any:

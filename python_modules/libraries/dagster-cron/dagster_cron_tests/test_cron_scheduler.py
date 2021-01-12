@@ -118,9 +118,7 @@ def test_repository():
 def get_test_external_repo():
     with ManagedGrpcPythonEnvRepositoryLocationOrigin(
         loadable_target_origin=LoadableTargetOrigin(
-            executable_path=sys.executable,
-            python_file=__file__,
-            attribute="test_repository",
+            executable_path=sys.executable, python_file=__file__, attribute="test_repository",
         ),
         location_name="test_location",
     ).create_handle() as handle:
@@ -196,8 +194,7 @@ def test_re_init(restore_cron_tab):  # pylint:disable=unused-argument,redefined-
 
 @pytest.mark.parametrize("do_initial_reconcile", [True, False])
 def test_start_and_stop_schedule(
-    restore_cron_tab,
-    do_initial_reconcile,
+    restore_cron_tab, do_initial_reconcile,
 ):  # pylint:disable=unused-argument,redefined-outer-name
     with TemporaryDirectory() as tempdir:
         instance = define_scheduler_instance(tempdir)
@@ -236,8 +233,7 @@ def test_start_non_existent_schedule(
 
 @pytest.mark.parametrize("do_initial_reconcile", [True, False])
 def test_start_schedule_cron_job(
-    do_initial_reconcile,
-    restore_cron_tab,
+    do_initial_reconcile, restore_cron_tab,
 ):  # pylint:disable=unused-argument,redefined-outer-name
     with TemporaryDirectory() as tempdir:
         instance = define_scheduler_instance(tempdir)
@@ -457,10 +453,8 @@ def test_script_execution(
             schedule_origin_id = external_repo.get_external_schedule(
                 "no_config_pipeline_every_min_schedule"
             ).get_external_origin_id()
-            script = (
-                instance.scheduler._get_bash_script_file_path(  # pylint: disable=protected-access
-                    instance, schedule_origin_id
-                )
+            script = instance.scheduler._get_bash_script_file_path(  # pylint: disable=protected-access
+                instance, schedule_origin_id
             )
 
             subprocess.check_output([script], shell=True, env={"DAGSTER_HOME": tempdir})
@@ -588,12 +582,10 @@ def test_start_schedule_manual_duplicate_schedules_add_debug(
 
             # Manually add  extra cron tabs
             instance.scheduler._start_cron_job(  # pylint: disable=protected-access
-                instance,
-                external_schedule,
+                instance, external_schedule,
             )
             instance.scheduler._start_cron_job(  # pylint: disable=protected-access
-                instance,
-                external_schedule,
+                instance, external_schedule,
             )
 
             # Check debug command
@@ -793,8 +785,7 @@ def test_reconcile_failure_when_deleting_schedule_def(
             )
 
             with pytest.raises(
-                DagsterScheduleReconciliationError,
-                match="Error 1: Failed to stop",
+                DagsterScheduleReconciliationError, match="Error 1: Failed to stop",
             ):
                 with get_smaller_external_repo() as smaller_repo:
                     instance.reconcile_scheduler_state(smaller_repo)

@@ -42,12 +42,7 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         result = execute_dagster_graphql(
             graphql_context,
             LAUNCH_PIPELINE_EXECUTION_MUTATION,
-            variables={
-                "executionParams": {
-                    "selector": selector,
-                    "preset": "test_inline",
-                }
-            },
+            variables={"executionParams": {"selector": selector, "preset": "test_inline",}},
         )
 
         assert not result.errors
@@ -65,12 +60,7 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         result = execute_dagster_graphql(
             graphql_context,
             LAUNCH_PIPELINE_EXECUTION_MUTATION,
-            variables={
-                "executionParams": {
-                    "selector": selector,
-                    "mode": "default",
-                },
-            },
+            variables={"executionParams": {"selector": selector, "mode": "default",},},
         )
 
         assert not result.errors
@@ -92,12 +82,7 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         result = execute_dagster_graphql(
             graphql_context,
             LAUNCH_PIPELINE_EXECUTION_MUTATION,
-            variables={
-                "executionParams": {
-                    "selector": selector,
-                    "preset": "undefined_preset",
-                }
-            },
+            variables={"executionParams": {"selector": selector, "preset": "undefined_preset",}},
         )
 
         assert not result.errors
@@ -116,12 +101,7 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         result = execute_dagster_graphql(
             graphql_context,
             LAUNCH_PIPELINE_EXECUTION_MUTATION,
-            variables={
-                "executionParams": {
-                    "selector": subset_selector,
-                    "preset": "test_inline",
-                }
-            },
+            variables={"executionParams": {"selector": subset_selector, "preset": "test_inline",}},
         )
 
         # while illegally defining selector.solid_selection
@@ -274,12 +254,7 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         selector = infer_pipeline_selector(graphql_context, "naughty_programmer_pipeline")
         run_logs = sync_execute_get_run_log_data(
             context=graphql_context,
-            variables={
-                "executionParams": {
-                    "selector": selector,
-                    "mode": "default",
-                }
-            },
+            variables={"executionParams": {"selector": selector, "mode": "default",}},
         )
 
         assert run_logs["__typename"] == "PipelineRunLogsSubscriptionSuccess"
@@ -321,11 +296,7 @@ class TestExecutePipeline(ExecutingGraphQLContextTestMatrix):
         result = sync_execute_get_run_log_data(
             context=graphql_context,
             variables={
-                "executionParams": {
-                    "selector": selector,
-                    "runConfigData": None,
-                    "mode": "default",
-                }
+                "executionParams": {"selector": selector, "runConfigData": None, "mode": "default",}
             },
         )
         logs = result["messages"]

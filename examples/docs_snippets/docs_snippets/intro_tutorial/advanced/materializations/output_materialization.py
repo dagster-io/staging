@@ -37,12 +37,7 @@ def less_simple_data_frame_loader(context, config):
             },
             is_required=False,
         ),
-        "json": Field(
-            {
-                "path": String,
-            },
-            is_required=False,
-        ),
+        "json": Field({"path": String,}, is_required=False,),
     }
 )
 def less_simple_data_frame_materializer(context, config, value):

@@ -37,9 +37,7 @@ class DagsterDockerImage(namedtuple("_DagsterDockerImage", "image build_cm")):
 
     def __new__(cls, image, build_cm=do_nothing):
         return super(DagsterDockerImage, cls).__new__(
-            cls,
-            check.str_param(image, "image"),
-            check.callable_param(build_cm, "build_cm"),
+            cls, check.str_param(image, "image"), check.callable_param(build_cm, "build_cm"),
         )
 
     @property
@@ -101,10 +99,7 @@ class DagsterDockerImage(namedtuple("_DagsterDockerImage", "image build_cm")):
             tag = custom_tag
 
         return ecr_image(
-            self.image,
-            tag,
-            aws_account_id=get_aws_account_id(),
-            aws_region=get_aws_region(),
+            self.image, tag, aws_account_id=get_aws_account_id(), aws_region=get_aws_region(),
         )
 
     def _get_docker_args(self, python_version):

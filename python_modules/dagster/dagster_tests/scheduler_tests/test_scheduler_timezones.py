@@ -36,13 +36,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 0
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
@@ -57,13 +51,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             )
         freeze_datetime = freeze_datetime.add(seconds=2)
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             assert instance.get_runs_count() == 1
             ticks = instance.get_job_ticks(schedule_origin.get_id())
@@ -101,13 +89,7 @@ def test_non_utc_timezone_run(external_repo_context, capfd):
             )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 1
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
@@ -143,13 +125,7 @@ def test_differing_timezones(external_repo_context):
             ticks = instance.get_job_ticks(eastern_origin.get_id())
             assert len(ticks) == 0
 
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 0
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
@@ -160,13 +136,7 @@ def test_differing_timezones(external_repo_context):
         # Past midnight eastern time, the eastern timezone schedule will run, but not the central timezone
         freeze_datetime = freeze_datetime.add(minutes=1)
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             assert instance.get_runs_count() == 1
             ticks = instance.get_job_ticks(eastern_origin.get_id())
@@ -198,13 +168,7 @@ def test_differing_timezones(external_repo_context):
         freeze_datetime = freeze_datetime.add(hours=1)
         with pendulum.test(freeze_datetime):
 
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             assert instance.get_runs_count() == 2
             ticks = instance.get_job_ticks(eastern_origin.get_id())
@@ -233,13 +197,7 @@ def test_differing_timezones(external_repo_context):
             )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 2
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
@@ -271,26 +229,14 @@ def test_different_days_in_different_timezones(external_repo_context):
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 0
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 0
 
         freeze_datetime = freeze_datetime.add(seconds=2)
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             assert instance.get_runs_count() == 1
             ticks = instance.get_job_ticks(schedule_origin.get_id())
@@ -316,13 +262,7 @@ def test_different_days_in_different_timezones(external_repo_context):
             )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 1
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 1
@@ -353,13 +293,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
         # DST has now happened, 2 hours later it is 4AM CST
         # Should be 3 runs: 1AM CST, 3AM CST, 4AM CST
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             wait_for_all_runs_to_start(instance)
 
@@ -390,13 +324,7 @@ def test_hourly_dst_spring_forward(external_repo_context):
                 )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 3
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
@@ -428,13 +356,7 @@ def test_hourly_dst_fall_back(external_repo_context):
         # DST has now happened, 4 hours later it is 3:30AM CST
         # Should be 4 runs: 1AM CDT, 1AM CST, 2AM CST, 3AM CST
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             wait_for_all_runs_to_start(instance)
 
@@ -478,13 +400,7 @@ def test_hourly_dst_fall_back(external_repo_context):
                 )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 4
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 4
@@ -512,13 +428,7 @@ def test_daily_dst_spring_forward(external_repo_context):
         freeze_datetime = freeze_datetime.add(days=2)
 
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             wait_for_all_runs_to_start(instance)
 
@@ -556,13 +466,7 @@ def test_daily_dst_spring_forward(external_repo_context):
                 )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 3
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
@@ -590,13 +494,7 @@ def test_daily_dst_fall_back(external_repo_context):
         freeze_datetime = freeze_datetime.add(days=2)
 
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             wait_for_all_runs_to_start(instance)
 
@@ -634,13 +532,7 @@ def test_daily_dst_fall_back(external_repo_context):
                 )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 3
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
@@ -671,13 +563,7 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
         freeze_datetime = freeze_datetime.add(days=3)
 
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             wait_for_all_runs_to_start(instance)
 
@@ -722,13 +608,7 @@ def test_execute_during_dst_transition_spring_forward(external_repo_context):
                 )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 3
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3
@@ -758,13 +638,7 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
         freeze_datetime = freeze_datetime.add(days=3)
 
         with pendulum.test(freeze_datetime):
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
 
             wait_for_all_runs_to_start(instance)
 
@@ -800,13 +674,7 @@ def test_execute_during_dst_transition_fall_back(external_repo_context):
                 )
 
             # Verify idempotence
-            list(
-                launch_scheduled_runs(
-                    instance,
-                    logger(),
-                    pendulum.now("UTC"),
-                )
-            )
+            list(launch_scheduled_runs(instance, logger(), pendulum.now("UTC"),))
             assert instance.get_runs_count() == 3
             ticks = instance.get_job_ticks(schedule_origin.get_id())
             assert len(ticks) == 3

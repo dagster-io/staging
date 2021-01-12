@@ -121,9 +121,7 @@ class DagsterDaemon:
                 "message reoccurs, you may have multiple daemons running which is not supported. "
                 "Last heartbeat daemon id: {}, "
                 "Current daemon_id: {}".format(
-                    daemon_type,
-                    last_stored_heartbeat.daemon_id,
-                    daemon_uuid,
+                    daemon_type, last_stored_heartbeat.daemon_id, daemon_uuid,
                 )
             )
 
@@ -151,9 +149,7 @@ class DagsterDaemon:
 
 class SchedulerDaemon(DagsterDaemon):
     def __init__(
-        self,
-        interval_seconds,
-        max_catchup_runs,
+        self, interval_seconds, max_catchup_runs,
     ):
         super(SchedulerDaemon, self).__init__(interval_seconds)
         self._max_catchup_runs = max_catchup_runs
@@ -165,8 +161,7 @@ class SchedulerDaemon(DagsterDaemon):
         from dagster.daemon.controller import DEFAULT_DAEMON_INTERVAL_SECONDS
 
         return SchedulerDaemon(
-            interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS,
-            max_catchup_runs=max_catchup_runs,
+            interval_seconds=DEFAULT_DAEMON_INTERVAL_SECONDS, max_catchup_runs=max_catchup_runs,
         )
 
     @classmethod

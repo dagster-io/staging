@@ -103,11 +103,7 @@ def test_clean_event_generator_exit():
     generator.close()
 
     generator = PipelineExecutionContextManager(  # pylint: disable=protected-access
-        execution_plan,
-        {},
-        pipeline_run,
-        instance,
-        resource_initialization_manager,
+        execution_plan, {}, pipeline_run, instance, resource_initialization_manager,
     ).get_generator()
     next(generator)
     generator.close()
@@ -125,8 +121,7 @@ def test_intermediate_storage_run_config_not_required():
         name="test_intermediate", is_persistent=False, required_resource_keys=set()
     )
     fake_mode = ModeDefinition(
-        name="fakemode",
-        intermediate_storage_defs=[intermediate_storage_def],
+        name="fakemode", intermediate_storage_defs=[intermediate_storage_def],
     )
     pipeline_def = PipelineDefinition([fake_solid], name="fakename", mode_defs=[fake_mode])
     environment_config = EnvironmentConfig.build(pipeline_def, {}, mode="fakemode")

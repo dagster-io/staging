@@ -205,8 +205,7 @@ def serialize_value(val):
 
 def deserialize_value(val):
     return _unpack_value(
-        seven.json.loads(check.str_param(val, "val")),
-        whitelist_map=_WHITELIST_MAP,
+        seven.json.loads(check.str_param(val, "val")), whitelist_map=_WHITELIST_MAP,
     )
 
 
@@ -266,8 +265,7 @@ def _unpack_value(val, whitelist_map):
 
 def deserialize_json_to_dagster_namedtuple(json_str):
     dagster_namedtuple = _deserialize_json_to_dagster_namedtuple(
-        check.str_param(json_str, "json_str"),
-        whitelist_map=_WHITELIST_MAP,
+        check.str_param(json_str, "json_str"), whitelist_map=_WHITELIST_MAP,
     )
     check.invariant(
         isinstance(dagster_namedtuple, tuple),

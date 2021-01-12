@@ -259,20 +259,12 @@ class CallableNode:
         # then **kwargs
         for input_name, output_node in kwargs.items():
             self._process_argument_node(
-                node_name,
-                output_node,
-                input_name,
-                input_bindings,
-                "(passed by keyword)",
+                node_name, output_node, input_name, input_bindings, "(passed by keyword)",
             )
 
         # the node name is potentially reassigned for aliasing
         resolved_node_name = current_context().observe_invocation(
-            self.given_alias,
-            self.node_def,
-            input_bindings,
-            self.tags,
-            self.hook_defs,
+            self.given_alias, self.node_def, input_bindings, self.tags, self.hook_defs,
         )
 
         if len(self.node_def.output_defs) == 0:

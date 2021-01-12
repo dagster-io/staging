@@ -115,11 +115,7 @@ class RepositoryLocation(ABC):
 
     @abstractmethod
     def get_external_schedule_execution_data(
-        self,
-        instance,
-        repository_handle,
-        schedule_name,
-        scheduled_execution_time,
+        self, instance, repository_handle, schedule_name, scheduled_execution_time,
     ):
         pass
 
@@ -136,11 +132,7 @@ class RepositoryLocation(ABC):
 
 class InProcessRepositoryLocation(RepositoryLocation):
     def __init__(self, handle):
-        self._handle = check.inst_param(
-            handle,
-            "handle",
-            InProcessRepositoryLocationHandle,
-        )
+        self._handle = check.inst_param(handle, "handle", InProcessRepositoryLocationHandle,)
 
         self._recon_repo = self._handle.origin.recon_repo
 
@@ -246,16 +238,11 @@ class InProcessRepositoryLocation(RepositoryLocation):
         check.str_param(partition_set_name, "partition_set_name")
 
         return get_partition_names(
-            recon_repo=self._recon_repo,
-            partition_set_name=partition_set_name,
+            recon_repo=self._recon_repo, partition_set_name=partition_set_name,
         )
 
     def get_external_schedule_execution_data(
-        self,
-        instance,
-        repository_handle,
-        schedule_name,
-        scheduled_execution_time,
+        self, instance, repository_handle, schedule_name, scheduled_execution_time,
     ):
         check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)
@@ -308,8 +295,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         self._handle = repository_location_handle
 
         external_repositories_list = sync_get_streaming_external_repositories_grpc(
-            self._handle.client,
-            self._handle,
+            self._handle.client, self._handle,
         )
 
         self.external_repositories = {repo.name: repo for repo in external_repositories_list}
@@ -404,11 +390,7 @@ class GrpcServerRepositoryLocation(RepositoryLocation):
         )
 
     def get_external_schedule_execution_data(
-        self,
-        instance,
-        repository_handle,
-        schedule_name,
-        scheduled_execution_time,
+        self, instance, repository_handle, schedule_name, scheduled_execution_time,
     ):
         check.inst_param(instance, "instance", DagsterInstance)
         check.inst_param(repository_handle, "repository_handle", RepositoryHandle)

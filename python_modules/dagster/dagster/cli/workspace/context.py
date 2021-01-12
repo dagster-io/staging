@@ -31,12 +31,7 @@ class WorkspaceRequestContext(
         cls, instance, workspace_snapshot, repository_locations_dict, process_context, version
     ):
         return super(WorkspaceRequestContext, cls).__new__(
-            cls,
-            instance,
-            workspace_snapshot,
-            repository_locations_dict,
-            process_context,
-            version,
+            cls, instance, workspace_snapshot, repository_locations_dict, process_context, version,
         )
 
     @property

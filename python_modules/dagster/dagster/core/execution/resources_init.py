@@ -96,9 +96,7 @@ def _core_resource_initialization_event_generator(
     try:
         if resource_keys_to_init:
             yield DagsterEvent.resource_init_start(
-                execution_plan,
-                resource_log_manager,
-                resource_keys_to_init,
+                execution_plan, resource_log_manager, resource_keys_to_init,
             )
 
         resource_dependencies = _resolve_resource_dependencies(mode_definition.resource_defs)

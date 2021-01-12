@@ -493,10 +493,7 @@ class TestRunStorage:
         assert {
             run.run_id
             for run in storage.get_runs(PipelineRunsFilter(statuses=[PipelineRunStatus.STARTED]))
-        } == {
-            two,
-            three,
-        }
+        } == {two, three,}
 
         assert {
             run.run_id
@@ -571,9 +568,7 @@ class TestRunStorage:
         run_id = make_new_run_id()
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=run_id,
-                pipeline_name="some_pipeline",
-                tags={run_id: run_id},
+                run_id=run_id, pipeline_name="some_pipeline", tags={run_id: run_id},
             )
         )
         assert len(storage.get_runs()) == 1
@@ -694,16 +689,12 @@ class TestRunStorage:
 
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=one,
-                pipeline_name="some_pipeline",
-                status=PipelineRunStatus.SUCCESS,
+                run_id=one, pipeline_name="some_pipeline", status=PipelineRunStatus.SUCCESS,
             )
         )
         storage.add_run(
             TestRunStorage.build_run(
-                run_id=two,
-                pipeline_name="some_pipeline",
-                status=PipelineRunStatus.SUCCESS,
+                run_id=two, pipeline_name="some_pipeline", status=PipelineRunStatus.SUCCESS,
             ),
         )
 

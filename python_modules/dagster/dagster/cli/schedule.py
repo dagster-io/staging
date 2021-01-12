@@ -202,8 +202,7 @@ def execute_up_command(preview, cli_args, print_fn):
 
 
 @click.command(
-    name="list",
-    help="List all schedules that correspond to a repository.",
+    name="list", help="List all schedules that correspond to a repository.",
 )
 @repository_target_argument
 @click.option("--running", help="Filter for running schedules", is_flag=True, default=False)
@@ -397,9 +396,7 @@ def execute_logs_command(schedule_name, cli_args, print_fn, instance=None):
 
             title = "Scheduler Logs:"
             output += "{title}\n{sep}\n{info}\n".format(
-                title=title,
-                sep="=" * len(title),
-                info=logs_path,
+                title=title, sep="=" * len(title), info=logs_path,
             )
 
             title = (
@@ -412,9 +409,7 @@ def execute_logs_command(schedule_name, cli_args, print_fn, instance=None):
             )
             info = "All execution logs: {}{}".format(logs_directory, most_recent_info)
             output += "\n{title}\n{sep}\n{info}\n".format(
-                title=title,
-                sep="=" * len(title),
-                info=info,
+                title=title, sep="=" * len(title), info=info,
             )
 
             print_fn(output)
@@ -517,16 +512,12 @@ def execute_debug_command(print_fn):
         if len(errors):
             title = "Errors (Run `dagster schedule up` to resolve)"
             output += "\n{title}\n{sep}\n{info}\n\n".format(
-                title=title,
-                sep="=" * len(title),
-                info="\n".join(debug_info.errors),
+                title=title, sep="=" * len(title), info="\n".join(debug_info.errors),
             )
 
         title = "Scheduler Configuration"
         output += "{title}\n{sep}\n{info}\n".format(
-            title=title,
-            sep="=" * len(title),
-            info=debug_info.scheduler_config_info,
+            title=title, sep="=" * len(title), info=debug_info.scheduler_config_info,
         )
 
         title = "Scheduler Info"
@@ -536,9 +527,7 @@ def execute_debug_command(print_fn):
 
         title = "Scheduler Storage Info"
         output += "\n{title}\n{sep}\n{info}\n".format(
-            title=title,
-            sep="=" * len(title),
-            info="\n".join(debug_info.schedule_storage),
+            title=title, sep="=" * len(title), info="\n".join(debug_info.schedule_storage),
         )
 
         print_fn(output)

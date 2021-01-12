@@ -127,8 +127,7 @@ def test_parse_solid_selection_multi():
     assert set(solid_selection_multi_overlap) == {"return_one", "return_two", "add_nums"}
 
     with pytest.raises(
-        DagsterInvalidSubsetError,
-        match="No qualified solids to execute found for solid_selection",
+        DagsterInvalidSubsetError, match="No qualified solids to execute found for solid_selection",
     ):
         parse_solid_selection(foo_pipeline, ["*add_nums", "a"])
 
@@ -136,8 +135,7 @@ def test_parse_solid_selection_multi():
 def test_parse_solid_selection_invalid():
 
     with pytest.raises(
-        DagsterInvalidSubsetError,
-        match="No qualified solids to execute found for solid_selection",
+        DagsterInvalidSubsetError, match="No qualified solids to execute found for solid_selection",
     ):
         parse_solid_selection(foo_pipeline, ["some,solid"])
 
@@ -192,8 +190,7 @@ def test_parse_step_selection_multi():
     }
 
     with pytest.raises(
-        DagsterInvalidSubsetError,
-        match="No qualified steps to execute found for step_selection",
+        DagsterInvalidSubsetError, match="No qualified steps to execute found for step_selection",
     ):
         parse_step_selection(step_deps, ["*add_nums", "a"])
 
@@ -201,7 +198,6 @@ def test_parse_step_selection_multi():
 def test_parse_step_selection_invalid():
 
     with pytest.raises(
-        DagsterInvalidSubsetError,
-        match="No qualified steps to execute found for step_selection",
+        DagsterInvalidSubsetError, match="No qualified steps to execute found for step_selection",
     ):
         parse_step_selection(step_deps, ["1+some_solid"])

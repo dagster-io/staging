@@ -54,10 +54,7 @@ def test_execute_run():
                 )
             )
 
-            result = runner_execute_run(
-                runner,
-                [input_json],
-            )
+            result = runner_execute_run(runner, [input_json],)
 
         assert "PIPELINE_SUCCESS" in result.stdout, "no match, result: {}".format(result)
 
@@ -106,10 +103,7 @@ def test_execute_step():
                 )
             )
 
-            result = runner_execute_step(
-                runner,
-                [input_json],
-            )
+            result = runner_execute_step(runner, [input_json],)
 
         assert "STEP_SUCCESS" in result.stdout
 
@@ -137,10 +131,7 @@ def test_execute_step_1():
                 )
             )
 
-            result = runner_execute_step(
-                runner,
-                [input_json],
-            )
+            result = runner_execute_step(runner, [input_json],)
 
         assert "STEP_SUCCESS" in result.stdout
 
@@ -197,8 +188,7 @@ def test_execute_step_verify_step():
                 )
 
             runner_execute_step(
-                runner,
-                [input_json],
+                runner, [input_json],
             )
 
             # # Check that verify fails for step that has already run (case 1)

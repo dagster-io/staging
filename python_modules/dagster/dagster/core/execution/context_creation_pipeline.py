@@ -74,10 +74,7 @@ class ContextCreationData(
 
 
 def create_context_creation_data(
-    execution_plan,
-    run_config,
-    pipeline_run,
-    instance,
+    execution_plan, run_config, pipeline_run, instance,
 ):
     pipeline_def = execution_plan.pipeline.get_definition()
     environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=pipeline_run.mode)
@@ -189,10 +186,7 @@ class ExecutionContextManager(ABC):
 
         try:
             context_creation_data = create_context_creation_data(
-                execution_plan,
-                run_config,
-                pipeline_run,
-                instance,
+                execution_plan, run_config, pipeline_run, instance,
             )
 
             log_manager = create_log_manager(context_creation_data)
@@ -211,9 +205,7 @@ class ExecutionContextManager(ABC):
             )
 
             intermediate_storage = create_intermediate_storage(
-                context_creation_data,
-                intermediate_storage,
-                scoped_resources_builder,
+                context_creation_data, intermediate_storage, scoped_resources_builder,
             )
 
             execution_context = self.construct_context(
@@ -342,9 +334,7 @@ def _validate_plan_with_context(pipeline_context, execution_plan):
 
 
 def create_intermediate_storage(
-    context_creation_data,
-    intermediate_storage_data,
-    scoped_resources_builder,
+    context_creation_data, intermediate_storage_data, scoped_resources_builder,
 ):
     check.inst_param(context_creation_data, "context_creation_data", ContextCreationData)
 

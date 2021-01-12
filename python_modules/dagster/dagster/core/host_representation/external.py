@@ -134,9 +134,7 @@ class ExternalRepository:
         return self.handle.get_external_origin()
 
     def get_python_origin(self):
-        return self.handle.repository_location_handle.get_repository_python_origin(
-            self.name,
-        )
+        return self.handle.repository_location_handle.get_repository_python_origin(self.name,)
 
     def get_external_origin_id(self):
         """
@@ -270,10 +268,8 @@ class ExternalPipeline(RepresentedPipeline):
         return self.get_python_origin()
 
     def get_python_origin(self):
-        repository_python_origin = (
-            self.repository_handle.repository_location_handle.get_repository_python_origin(
-                self.repository_handle.repository_name,
-            )
+        repository_python_origin = self.repository_handle.repository_location_handle.get_repository_python_origin(
+            self.repository_handle.repository_name,
         )
         return PipelinePythonOrigin(self.name, repository_python_origin)
 

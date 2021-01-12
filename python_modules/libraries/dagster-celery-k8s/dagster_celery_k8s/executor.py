@@ -274,10 +274,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
     ):
         """Run step execution in a K8s job pod."""
         execute_step_args = unpack_value(
-            check.dict_param(
-                execute_step_args_packed,
-                "execute_step_args_packed",
-            )
+            check.dict_param(execute_step_args_packed, "execute_step_args_packed",)
         )
         check.inst_param(execute_step_args, "execute_step_args", ExecuteStepArgs)
         check.invariant(
@@ -296,9 +293,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             user_defined_k8s_config_dict
         )
         check.opt_inst_param(
-            user_defined_k8s_config,
-            "user_defined_k8s_config",
-            UserDefinedDagsterK8sConfig,
+            user_defined_k8s_config, "user_defined_k8s_config", UserDefinedDagsterK8sConfig,
         )
         check.opt_str_param(kubeconfig_file, "kubeconfig_file")
 
@@ -337,11 +332,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
             instance.report_engine_event(
                 "Not scheduling step because pipeline run status is not STARTED",
                 pipeline_run,
-                EngineEventData(
-                    [
-                        EventMetadataEntry.text(step_key, "Step key"),
-                    ]
-                ),
+                EngineEventData([EventMetadataEntry.text(step_key, "Step key"),]),
                 CeleryK8sJobExecutor,
                 step_key=step_key,
             )
@@ -421,9 +412,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                     "exiting.".format(job_name, step_key),
                     pipeline_run,
                     EngineEventData(
-                        [
-                            EventMetadataEntry.text(step_key, "Step key"),
-                        ],
+                        [EventMetadataEntry.text(step_key, "Step key"),],
                         error=serializable_error_info_from_exc_info(sys.exc_info()),
                     ),
                     CeleryK8sJobExecutor,
@@ -472,9 +461,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 "exiting.".format(job_name, step_key),
                 pipeline_run,
                 EngineEventData(
-                    [
-                        EventMetadataEntry.text(step_key, "Step key"),
-                    ],
+                    [EventMetadataEntry.text(step_key, "Step key"),],
                     error=serializable_error_info_from_exc_info(sys.exc_info()),
                 ),
                 CeleryK8sJobExecutor,
@@ -490,9 +477,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                 "exiting.".format(job_name, step_key),
                 pipeline_run,
                 EngineEventData(
-                    [
-                        EventMetadataEntry.text(step_key, "Step key"),
-                    ],
+                    [EventMetadataEntry.text(step_key, "Step key"),],
                     error=serializable_error_info_from_exc_info(sys.exc_info()),
                 ),
                 CeleryK8sJobExecutor,
@@ -523,9 +508,7 @@ def create_k8s_job_task(celery_app, **task_kwargs):
                     ),
                     pipeline_run,
                     EngineEventData(
-                        [
-                            EventMetadataEntry.text(step_key, "Step key"),
-                        ],
+                        [EventMetadataEntry.text(step_key, "Step key"),],
                         error=serializable_error_info_from_exc_info(sys.exc_info()),
                     ),
                     CeleryK8sJobExecutor,

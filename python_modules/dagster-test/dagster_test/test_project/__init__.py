@@ -91,8 +91,7 @@ def get_test_project_recon_pipeline(pipeline_name, container_image=None):
 
 class ReOriginatedReconstructablePipelineForTest(ReconstructablePipeline):
     def __new__(  # pylint: disable=signature-differs
-        cls,
-        reconstructable_pipeline,
+        cls, reconstructable_pipeline,
     ):
         return super(ReOriginatedReconstructablePipelineForTest, cls).__new__(
             cls,
@@ -125,14 +124,11 @@ class ReOriginatedReconstructablePipelineForTest(ReconstructablePipeline):
 
 class ReOriginatedExternalPipelineForTest(ExternalPipeline):
     def __init__(
-        self,
-        external_pipeline,
-        container_image=None,
+        self, external_pipeline, container_image=None,
     ):
         self._container_image = container_image
         super(ReOriginatedExternalPipelineForTest, self).__init__(
-            external_pipeline.external_pipeline_data,
-            external_pipeline.repository_handle,
+            external_pipeline.external_pipeline_data, external_pipeline.repository_handle,
         )
 
     def get_python_origin(self):
@@ -181,14 +177,11 @@ class ReOriginatedExternalPipelineForTest(ExternalPipeline):
 
 class ReOriginatedExternalScheduleForTest(ExternalSchedule):
     def __init__(
-        self,
-        external_schedule,
-        container_image=None,
+        self, external_schedule, container_image=None,
     ):
         self._container_image = container_image
         super(ReOriginatedExternalScheduleForTest, self).__init__(
-            external_schedule._external_schedule_data,
-            external_schedule.handle.repository_handle,
+            external_schedule._external_schedule_data, external_schedule.handle.repository_handle,
         )
 
     def get_external_origin(self):

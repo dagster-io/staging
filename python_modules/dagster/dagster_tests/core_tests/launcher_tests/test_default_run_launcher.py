@@ -170,8 +170,7 @@ def _check_event_log_contains(event_log, expected_type_and_message):
     ],
 )
 @pytest.mark.parametrize(
-    "run_config",
-    run_configs(),
+    "run_config", run_configs(),
 )
 def test_successful_run(get_external_pipeline, run_config):  # pylint: disable=redefined-outer-name
     with instance_for_test() as instance:
@@ -217,9 +216,7 @@ def test_invalid_instance_run(get_external_pipeline):
                     }
                 },
             ) as instance:
-                pipeline_run = instance.create_run_for_pipeline(
-                    pipeline_def=noop_pipeline,
-                )
+                pipeline_run = instance.create_run_for_pipeline(pipeline_def=noop_pipeline,)
 
                 # Server won't be able to load the run from run storage
                 with environ({"RUN_STORAGE_ENV": wrong_run_storage_dir}):
@@ -234,8 +231,7 @@ def test_invalid_instance_run(get_external_pipeline):
                             ),
                         ):
                             instance.launch_run(
-                                run_id=pipeline_run.run_id,
-                                external_pipeline=external_pipeline,
+                                run_id=pipeline_run.run_id, external_pipeline=external_pipeline,
                             )
 
                         failed_run = instance.get_run_by_id(pipeline_run.run_id)
@@ -250,8 +246,7 @@ def test_invalid_instance_run(get_external_pipeline):
     ],
 )
 @pytest.mark.parametrize(
-    "run_config",
-    run_configs(),
+    "run_config", run_configs(),
 )
 @pytest.mark.skipif(
     seven.IS_WINDOWS,
@@ -260,8 +255,7 @@ def test_invalid_instance_run(get_external_pipeline):
 def test_crashy_run(get_external_pipeline, run_config):  # pylint: disable=redefined-outer-name
     with instance_for_test() as instance:
         pipeline_run = instance.create_run_for_pipeline(
-            pipeline_def=crashy_pipeline,
-            run_config=run_config,
+            pipeline_def=crashy_pipeline, run_config=run_config,
         )
 
         with get_external_pipeline(pipeline_run.pipeline_name) as external_pipeline:
@@ -303,14 +297,12 @@ def test_crashy_run(get_external_pipeline, run_config):  # pylint: disable=redef
     ],
 )
 @pytest.mark.parametrize(
-    "run_config",
-    run_configs(),
+    "run_config", run_configs(),
 )
 def test_terminated_run(get_external_pipeline, run_config):  # pylint: disable=redefined-outer-name
     with instance_for_test() as instance:
         pipeline_run = instance.create_run_for_pipeline(
-            pipeline_def=sleepy_pipeline,
-            run_config=run_config,
+            pipeline_def=sleepy_pipeline, run_config=run_config,
         )
 
         with get_external_pipeline(pipeline_run.pipeline_name) as external_pipeline:
@@ -331,10 +323,7 @@ def test_terminated_run(get_external_pipeline, run_config):  # pylint: disable=r
             assert terminated_pipeline_run.status == PipelineRunStatus.CANCELED
 
             poll_for_event(
-                instance,
-                run_id,
-                event_type="ENGINE_EVENT",
-                message="Process for pipeline exited",
+                instance, run_id, event_type="ENGINE_EVENT", message="Process for pipeline exited",
             )
 
             run_logs = instance.all_logs(run_id)
@@ -353,10 +342,7 @@ def test_terminated_run(get_external_pipeline, run_config):  # pylint: disable=r
                             "Multiprocess executor: interrupted all active child processes",
                         ),
                         ("STEP_FAILURE", 'Execution of step "sleepy_solid" failed.'),
-                        (
-                            "PIPELINE_CANCELED",
-                            'Execution of pipeline "sleepy_pipeline" canceled.',
-                        ),
+                        ("PIPELINE_CANCELED", 'Execution of pipeline "sleepy_pipeline" canceled.',),
                         ("ENGINE_EVENT", "Process for pipeline exited"),
                     ],
                 )
@@ -366,10 +352,7 @@ def test_terminated_run(get_external_pipeline, run_config):  # pylint: disable=r
                     [
                         ("PIPELINE_CANCELING", "Sending pipeline termination request."),
                         ("STEP_FAILURE", 'Execution of step "sleepy_solid" failed.'),
-                        (
-                            "PIPELINE_CANCELED",
-                            'Execution of pipeline "sleepy_pipeline" canceled.',
-                        ),
+                        ("PIPELINE_CANCELED", 'Execution of pipeline "sleepy_pipeline" canceled.',),
                         ("ENGINE_EVENT", "Pipeline execution terminated by interrupt"),
                         ("ENGINE_EVENT", "Process for pipeline exited"),
                     ],
@@ -407,12 +390,10 @@ def _message_exists(event_records, message_text):
     ],
 )
 @pytest.mark.parametrize(
-    "run_config",
-    run_configs(),
+    "run_config", run_configs(),
 )
 def test_single_solid_selection_execution(
-    get_external_pipeline,
-    run_config,
+    get_external_pipeline, run_config,
 ):  # pylint: disable=redefined-outer-name
     with instance_for_test() as instance:
         pipeline_run = instance.create_run_for_pipeline(
@@ -443,12 +424,10 @@ def test_single_solid_selection_execution(
     ],
 )
 @pytest.mark.parametrize(
-    "run_config",
-    run_configs(),
+    "run_config", run_configs(),
 )
 def test_multi_solid_selection_execution(
-    get_external_pipeline,
-    run_config,
+    get_external_pipeline, run_config,
 ):  # pylint: disable=redefined-outer-name
     with instance_for_test() as instance:
         pipeline_run = instance.create_run_for_pipeline(
@@ -484,8 +463,7 @@ def test_multi_solid_selection_execution(
     ],
 )
 @pytest.mark.parametrize(
-    "run_config",
-    run_configs(),
+    "run_config", run_configs(),
 )
 def test_engine_events(get_external_pipeline, run_config):  # pylint: disable=redefined-outer-name
     with instance_for_test() as instance:

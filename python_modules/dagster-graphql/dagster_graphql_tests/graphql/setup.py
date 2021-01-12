@@ -669,9 +669,7 @@ def hard_failer():
             segfault()
         return 0
 
-    @solid(
-        input_defs=[InputDefinition("n", Int)],
-    )
+    @solid(input_defs=[InputDefinition("n", Int)],)
     def increment(_, n):
         return n + 1
 
@@ -958,8 +956,7 @@ def define_schedules():
         return {"intermediate_storage": {"filesystem": {}}}
 
     @daily_schedule(
-        pipeline_name="no_config_pipeline",
-        start_date=today_at_midnight().subtract(days=1),
+        pipeline_name="no_config_pipeline", start_date=today_at_midnight().subtract(days=1),
     )
     def run_config_error_schedule(_date):
         return asdf  # pylint: disable=undefined-variable

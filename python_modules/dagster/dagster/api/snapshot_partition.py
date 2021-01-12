@@ -20,8 +20,7 @@ def sync_get_external_partition_names_grpc(api_client, repository_handle, partit
     return check.inst(
         api_client.external_partition_names(
             partition_names_args=PartitionNamesArgs(
-                repository_origin=repository_origin,
-                partition_set_name=partition_set_name,
+                repository_origin=repository_origin, partition_set_name=partition_set_name,
             ),
         ),
         (ExternalPartitionNamesData, ExternalPartitionExecutionErrorData),

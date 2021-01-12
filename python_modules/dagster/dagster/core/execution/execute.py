@@ -81,9 +81,7 @@ def execute_in_process(
 
     with ephemeral_instance_if_missing(instance) as execute_instance:
         pipeline_run = execute_instance.create_run_for_pipeline(
-            pipeline_def=pipeline_def,
-            run_config=run_config,
-            mode=mode_def.name,
+            pipeline_def=pipeline_def, run_config=run_config, mode=mode_def.name,
         )
 
         _execute_run_iterable = ExecuteRunWithPlanIterable(

@@ -135,9 +135,7 @@ class GrapheneFutureJobTick(graphene.ObjectType):
     def __init__(self, job_state, timestamp):
         self._job_state = check.inst_param(job_state, "job_state", JobState)
         self._timestamp = timestamp
-        super().__init__(
-            timestamp=check.float_param(timestamp, "timestamp"),
-        )
+        super().__init__(timestamp=check.float_param(timestamp, "timestamp"),)
 
     def resolve_evaluationResult(self, graphene_info):
         if self._job_state.status != JobStatus.RUNNING:
@@ -303,8 +301,7 @@ class GrapheneJobState(graphene.ObjectType):
         return [
             GraphenePipelineRun(r)
             for r in graphene_info.context.instance.get_runs(
-                filters=filters,
-                limit=kwargs.get("limit"),
+                filters=filters, limit=kwargs.get("limit"),
             )
         ]
 

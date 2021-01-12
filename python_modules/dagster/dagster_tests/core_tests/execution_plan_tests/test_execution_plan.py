@@ -40,8 +40,7 @@ def test_topological_sort():
 def test_create_execution_plan_with_bad_inputs():
     with pytest.raises(DagsterInvalidConfigError):
         create_execution_plan(
-            define_diamond_pipeline(),
-            run_config={"solids": {"add_three": {"inputs": {"num": 3}}}},
+            define_diamond_pipeline(), run_config={"solids": {"add_three": {"inputs": {"num": 3}}}},
         )
 
 
@@ -460,8 +459,7 @@ def test_fan_in_should_skip_step():
     # skip when all the step's sources weren't yield
     assert should_skip_step(
         create_execution_plan(
-            optional_outputs_composite,
-            step_keys_to_execute=["composite_all_upstream_skip.fan_in"],
+            optional_outputs_composite, step_keys_to_execute=["composite_all_upstream_skip.fan_in"],
         ),
         instance,
         pipeline_run.run_id,
@@ -481,8 +479,7 @@ def test_fan_in_should_skip_step():
     # do not skip when some of the sources exist
     assert not should_skip_step(
         create_execution_plan(
-            optional_outputs_composite,
-            step_keys_to_execute=["composite_one_upstream_skip.fan_in"],
+            optional_outputs_composite, step_keys_to_execute=["composite_one_upstream_skip.fan_in"],
         ),
         instance,
         pipeline_run.run_id,

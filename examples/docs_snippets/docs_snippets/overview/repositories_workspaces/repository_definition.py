@@ -37,8 +37,7 @@ def subtraction_pipeline():
 
 
 @daily_schedule(
-    pipeline_name="addition_pipeline",
-    start_date=datetime.datetime(2020, 1, 1),
+    pipeline_name="addition_pipeline", start_date=datetime.datetime(2020, 1, 1),
 )
 def daily_addition_schedule(date):
     return {}

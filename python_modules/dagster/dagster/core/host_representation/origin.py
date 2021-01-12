@@ -81,8 +81,7 @@ class RepositoryLocationOrigin(ABC):
 
 @whitelist_for_serdes
 class InProcessRepositoryLocationOrigin(
-    namedtuple("_InProcessRepositoryLocationOrigin", "recon_repo"),
-    RepositoryLocationOrigin,
+    namedtuple("_InProcessRepositoryLocationOrigin", "recon_repo"), RepositoryLocationOrigin,
 ):
     """Identifies a repository location constructed in the host process. Should only be
     used in tests.
@@ -246,9 +245,7 @@ class ExternalPipelineOrigin(
         return super(ExternalPipelineOrigin, cls).__new__(
             cls,
             check.inst_param(
-                external_repository_origin,
-                "external_repository_origin",
-                ExternalRepositoryOrigin,
+                external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
             ),
             check.str_param(pipeline_name, "pipeline_name"),
         )
@@ -270,9 +267,7 @@ class ExternalJobOrigin(namedtuple("_ExternalJobOrigin", "external_repository_or
         return super(ExternalJobOrigin, cls).__new__(
             cls,
             check.inst_param(
-                external_repository_origin,
-                "external_repository_origin",
-                ExternalRepositoryOrigin,
+                external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
             ),
             check.str_param(job_name, "job_name"),
         )
@@ -296,9 +291,7 @@ class ExternalPartitionSetOrigin(
         return super(ExternalPartitionSetOrigin, cls).__new__(
             cls,
             check.inst_param(
-                external_repository_origin,
-                "external_repository_origin",
-                ExternalRepositoryOrigin,
+                external_repository_origin, "external_repository_origin", ExternalRepositoryOrigin,
             ),
             check.str_param(partition_set_name, "partition_set_name"),
         )

@@ -19,8 +19,7 @@ def test_execute_hammer_through_dagit():
             }
         ) as workspace:
             context = WorkspaceProcessContext(
-                workspace=workspace,
-                instance=instance,
+                workspace=workspace, instance=instance,
             ).create_request_context()
             selector = infer_pipeline_selector(context, "hammer_pipeline")
             executor = SyncExecutor()

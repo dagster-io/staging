@@ -37,8 +37,7 @@ def get_main_recon_repo():
 def graphql_postgres_instance(overrides):
     with tempfile.TemporaryDirectory() as temp_dir:
         with TestPostgresInstance.docker_service_up_or_skip(
-            file_relative_path(__file__, "docker-compose.yml"),
-            "test-postgres-db-graphql",
+            file_relative_path(__file__, "docker-compose.yml"), "test-postgres-db-graphql",
         ) as pg_conn_string:
             TestPostgresInstance.clean_run_storage(pg_conn_string)
             TestPostgresInstance.clean_event_log_storage(pg_conn_string)
@@ -129,8 +128,7 @@ class InstanceManagers:
                 )
 
         return MarkedManager(
-            _readonly_in_memory_instance,
-            [Marks.in_memory_instance, Marks.readonly],
+            _readonly_in_memory_instance, [Marks.in_memory_instance, Marks.readonly],
         )
 
     @staticmethod
@@ -171,8 +169,7 @@ class InstanceManagers:
                 yield instance
 
         return MarkedManager(
-            _readonly_postgres_instance,
-            [Marks.postgres_instance, Marks.readonly],
+            _readonly_postgres_instance, [Marks.postgres_instance, Marks.readonly],
         )
 
     @staticmethod
@@ -238,10 +235,7 @@ class InstanceManagers:
                             "class": "FilesystemTestScheduler",
                             "config": {"base_dir": temp_dir},
                         },
-                        "run_launcher": {
-                            "module": "dagster",
-                            "class": "DefaultRunLauncher",
-                        },
+                        "run_launcher": {"module": "dagster", "class": "DefaultRunLauncher",},
                     },
                 ) as instance:
                     yield instance
@@ -266,8 +260,7 @@ class InstanceManagers:
                 yield instance
 
         return MarkedManager(
-            _postgres_instance,
-            [Marks.postgres_instance, Marks.sync_run_launcher],
+            _postgres_instance, [Marks.postgres_instance, Marks.sync_run_launcher],
         )
 
     @staticmethod
@@ -275,12 +268,7 @@ class InstanceManagers:
         @contextmanager
         def _postgres_instance_with_default_hijack():
             with graphql_postgres_instance(
-                overrides={
-                    "run_launcher": {
-                        "module": "dagster",
-                        "class": "DefaultRunLauncher",
-                    },
-                }
+                overrides={"run_launcher": {"module": "dagster", "class": "DefaultRunLauncher",},}
             ) as instance:
                 yield instance
 
@@ -331,8 +319,7 @@ class EnvironmentManagers:
             with Workspace(
                 [
                     ManagedGrpcPythonEnvRepositoryLocationOrigin(
-                        loadable_target_origin=loadable_target_origin,
-                        location_name="test",
+                        loadable_target_origin=loadable_target_origin, location_name="test",
                     )
                 ]
             ) as workspace:

@@ -200,11 +200,7 @@ def ui(text, file, predefined, variables, remote, output, **kwargs):
         instance = DagsterInstance.get()
         with get_workspace_from_kwargs(kwargs) as workspace:
             execute_query_from_cli(
-                workspace,
-                query,
-                instance,
-                variables,
-                output,
+                workspace, query, instance, variables, output,
             )
 
 

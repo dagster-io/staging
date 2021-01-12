@@ -54,10 +54,7 @@ class GithubResource:
         self.__check_app_token()
         headers["Authorization"] = "Bearer {}".format(self.app_token["value"])
         headers["Accept"] = "application/vnd.github.machine-man-preview+json"
-        request = self.client.get(
-            "https://api.github.com/app/installations",
-            headers=headers,
-        )
+        request = self.client.get("https://api.github.com/app/installations", headers=headers,)
         request.raise_for_status()
         return request.json()
 
@@ -133,11 +130,7 @@ class GithubResource:
                 }
                 }
             """,
-            variables={
-                "id": res["data"]["repository"]["id"],
-                "title": title,
-                "body": body,
-            },
+            variables={"id": res["data"]["repository"]["id"], "title": title, "body": body,},
             installation_id=installation_id,
         )
 

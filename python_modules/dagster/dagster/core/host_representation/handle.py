@@ -223,10 +223,7 @@ class ManagedGrpcPythonEnvRepositoryLocationHandle(RepositoryLocationHandle):
 
             self.heartbeat_thread = threading.Thread(
                 target=client_heartbeat_thread,
-                args=(
-                    self.client,
-                    self.heartbeat_shutdown_event,
-                ),
+                args=(self.client, self.heartbeat_shutdown_event,),
                 name="grpc-client-heartbeat",
             )
             self.heartbeat_thread.daemon = True
@@ -324,10 +321,7 @@ class InProcessRepositoryLocationHandle(RepositoryLocationHandle):
 
     def get_repository_python_origin(self, repository_name):
         return _get_repository_python_origin(
-            sys.executable,
-            self.repository_code_pointer_dict,
-            repository_name,
-            None,
+            sys.executable, self.repository_code_pointer_dict, repository_name, None,
         )
 
     def create_location(self):
@@ -350,8 +344,7 @@ class RepositoryHandle(
 
     def get_external_origin(self):
         return ExternalRepositoryOrigin(
-            self.repository_location_handle.origin,
-            self.repository_name,
+            self.repository_location_handle.origin, self.repository_name,
         )
 
     def get_python_origin(self):

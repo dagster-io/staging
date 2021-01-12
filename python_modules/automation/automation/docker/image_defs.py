@@ -70,10 +70,7 @@ def buildkite_integration_cm(cwd):
 @contextlib.contextmanager
 def k8s_example_cm(cwd):
     with copy_directories(
-        [
-            "examples/deploy_k8s/example_project",
-        ],
-        cwd,
+        ["examples/deploy_k8s/example_project",], cwd,
     ):
         yield
 
@@ -100,11 +97,7 @@ def get_core_k8s_dirs():
 @contextlib.contextmanager
 def k8s_example_editable_cm(cwd):
     with copy_directories(
-        get_core_celery_k8s_dirs()
-        + [
-            "python_modules/libraries/dagster-aws",
-        ],
-        cwd,
+        get_core_celery_k8s_dirs() + ["python_modules/libraries/dagster-aws",], cwd,
     ):
         with copy_directories(
             ["examples/deploy_k8s/example_project"], cwd, destination="example_project"
@@ -116,11 +109,7 @@ def k8s_example_editable_cm(cwd):
 def k8s_dagit_editable_cm(cwd):
     print("!!!!! WARNING: You must call `make rebuild_dagit` after making changes to Dagit !!!!\n")
     with copy_directories(
-        get_core_celery_k8s_dirs()
-        + [
-            "python_modules/dagster-graphql",
-            "python_modules/dagit",
-        ],
+        get_core_celery_k8s_dirs() + ["python_modules/dagster-graphql", "python_modules/dagit",],
         cwd,
     ):
         yield
@@ -146,8 +135,7 @@ def k8s_dagit_example_cm(cwd):
 @contextlib.contextmanager
 def k8s_celery_worker_editable_cm(cwd):
     with copy_directories(
-        get_core_celery_k8s_dirs(),
-        cwd,
+        get_core_celery_k8s_dirs(), cwd,
     ):
         yield
 
@@ -155,10 +143,7 @@ def k8s_celery_worker_editable_cm(cwd):
 @contextlib.contextmanager
 def user_code_example_cm(cwd):
     with copy_directories(
-        [
-            "examples/deploy_k8s/example_project",
-        ],
-        cwd,
+        ["examples/deploy_k8s/example_project",], cwd,
     ):
         yield
 
@@ -166,8 +151,7 @@ def user_code_example_cm(cwd):
 @contextlib.contextmanager
 def user_code_example_editable_cm(cwd):
     with copy_directories(
-        get_core_celery_k8s_dirs() + ["python_modules/libraries/dagster-aws"],
-        cwd,
+        get_core_celery_k8s_dirs() + ["python_modules/libraries/dagster-aws"], cwd,
     ):
         with copy_directories(
             ["examples/deploy_k8s/example_project"], cwd, destination="example_project"

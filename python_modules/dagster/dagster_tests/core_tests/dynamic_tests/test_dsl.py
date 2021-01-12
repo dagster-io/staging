@@ -34,8 +34,7 @@ def add_one(_, x):
 
 def test_must_unpack():
     with pytest.raises(
-        DagsterInvalidDefinitionError,
-        match="Dynamic output must be unpacked by invoking map",
+        DagsterInvalidDefinitionError, match="Dynamic output must be unpacked by invoking map",
     ):
 
         @pipeline
@@ -45,8 +44,7 @@ def test_must_unpack():
 
 def test_must_unpack_composite():
     with pytest.raises(
-        DagsterInvalidDefinitionError,
-        match="Dynamic output must be unpacked by invoking map",
+        DagsterInvalidDefinitionError, match="Dynamic output must be unpacked by invoking map",
     ):
 
         @composite_solid(output_defs=[DynamicOutputDefinition()])

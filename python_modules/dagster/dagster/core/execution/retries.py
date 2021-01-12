@@ -6,9 +6,7 @@ from dagster import Field, Selector, check
 
 def get_retries_config():
     return Field(
-        Selector({"enabled": {}, "disabled": {}}),
-        is_required=False,
-        default_value={"enabled": {}},
+        Selector({"enabled": {}, "disabled": {}}), is_required=False, default_value={"enabled": {}},
     )
 
 

@@ -17,9 +17,7 @@ from .object_store import FilesystemObjectStore, InMemoryObjectStore, ObjectStor
 
 
 def build_intermediate_storage_from_object_store(
-    object_store,
-    init_context,
-    root_for_run_id=lambda _: "",
+    object_store, init_context, root_for_run_id=lambda _: "",
 ):
     """constructs an IntermediateStorage object from an object store and an init_context
     Call from within an intermediate_storage_definition
