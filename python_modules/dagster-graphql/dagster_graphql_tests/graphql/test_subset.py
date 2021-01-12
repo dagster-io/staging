@@ -61,7 +61,6 @@ class TestSolidSelections(ReadonlyGraphQLContextTestMatrix):
         assert result.data["runConfigSchemaOrError"]["__typename"] == "InvalidSubsetError"
         assert '"nope" does not exist' in result.data["runConfigSchemaOrError"]["message"]
 
-    @pytest.mark.skipif(sys.version_info.major < 3, reason="Exception cause only available on py3+")
     def test_pipeline_with_invalid_definition_error(self, graphql_context):
         selector = infer_pipeline_selector(
             graphql_context, "pipeline_with_invalid_definition_error", ["fail_subset"]
