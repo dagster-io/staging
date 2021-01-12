@@ -1,3 +1,5 @@
+import warnings
+
 from dagster import check
 from dagster.core.errors import DagsterInvalidDefinitionError
 from dagster.utils.backcompat import experimental_arg_warning
@@ -108,6 +110,10 @@ class SolidDefinition(NodeDefinition):
 
     @property
     def has_config_entry(self):
+        warnings.warn(
+            "SolidDefinition.has_config_entry is deprecated because whether the graph has "
+            "configurable inputs depends on what managers are supplied for its inputs and outputs."
+        )
         return self._config_schema or self.has_configurable_inputs or self.has_configurable_outputs
 
     @property
