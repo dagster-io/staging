@@ -37,7 +37,7 @@ def info_command():
 
 @click.command(name="migrate", help="Automatically migrate an out of date instance.")
 def migrate_command():
-    with DagsterInstance.get() as instance:
+    with DagsterInstance.get(skip_migration_checks=True) as instance:
         home = os.environ.get("DAGSTER_HOME")
 
         if instance.is_ephemeral:

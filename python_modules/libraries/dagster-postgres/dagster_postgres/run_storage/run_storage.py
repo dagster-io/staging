@@ -1,7 +1,13 @@
 import sqlalchemy as db
 from dagster import check
 from dagster.core.storage.runs import DaemonHeartbeatsTable, RunStorageSqlMetadata, SqlRunStorage
-from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
+from dagster.core.storage.sql import (
+    check_alembic_revision,
+    create_engine,
+    get_alembic_config,
+    run_alembic_upgrade,
+    stamp_alembic_rev,
+)
 from dagster.serdes import ConfigurableClass, ConfigurableClassData, serialize_dagster_namedtuple
 from dagster.utils import utc_datetime_from_timestamp
 
@@ -43,8 +49,16 @@ class PostgresRunStorage(SqlRunStorage, ConfigurableClass):
         )
 
         self._index_migration_cache = {}
+        table_names = db.inspect(self._engine).get_table_names()
+        should_stamp = "runs" not in table_names
+
         with self.connect() as conn:
             retry_pg_creation_fn(lambda: RunStorageSqlMetadata.create_all(conn))
+
+            alembic_config = get_alembic_config(__file__)
+            db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+            if should_stamp and not (db_revision and head_revision):
+                stamp_alembic_rev(alembic_config, self._engine)
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold 1 open connection and set statement_timeout
