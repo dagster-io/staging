@@ -7,6 +7,7 @@ from dagster.core.storage.sql import (
     create_engine,
     get_alembic_config,
     run_alembic_upgrade,
+    stamp_alembic_rev,
 )
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
@@ -47,8 +48,21 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
             self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
         )
 
+        # Stamp the alembic revision as long as it isn't pre-0.10.0
+        table_names = db.inspect(self._engine).get_table_names()
+        should_stamp = (
+            "schedules" not in table_names
+            and "schedule_ticks" not in table_names
+            and "jobs" not in table_names
+            and "job_ticks" not in table_names
+        )
         with self.connect() as conn:
             retry_pg_creation_fn(lambda: ScheduleStorageSqlMetadata.create_all(conn))
+
+            alembic_config = get_alembic_config(__file__)
+            db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+            if should_stamp and not (db_revision and head_revision):
+                stamp_alembic_rev(alembic_config, self._engine)
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold an open connection and set statement_timeout
