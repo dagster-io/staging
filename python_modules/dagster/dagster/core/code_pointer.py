@@ -6,7 +6,6 @@ import warnings
 from abc import ABC, abstractmethod
 from collections import namedtuple
 
-import six
 from dagster import check
 from dagster.core.errors import DagsterImportError, DagsterInvariantViolationError
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
@@ -95,40 +94,26 @@ def load_python_file(python_file, working_directory):
                 return import_module_from_path(module_name, python_file)
         except ImportError as ie:
             msg = get_import_error_message(ie)
-            if msg == "attempted relative import with no known parent package":
-                six.raise_from(
-                    DagsterImportError(
-                        (
-                            "Encountered ImportError: `{msg}` while importing module {module} from "
-                            "file {python_file}. Consider using the module-based options `-m` for "
-                            "CLI-based targets or the `python_package` workspace.yaml target."
-                        ).format(
-                            msg=msg,
-                            module=module_name,
-                            python_file=os.path.abspath(os.path.expanduser(python_file)),
-                        )
-                    ),
-                    ie,
-                )
+            python_file = os.path.abspath(os.path.expanduser(python_file))
 
-            six.raise_from(
-                DagsterImportError(
-                    (
-                        "Encountered ImportError: `{msg}` while importing module {module} from "
-                        "file {python_file}. Local modules were resolved using the working "
-                        "directory `{working_directory}`. If another working directory should be "
-                        "used, please explicitly specify the appropriate path using the `-d` or "
-                        "`--working-directory` for CLI based targets or the `working_directory` "
-                        "configuration option for `python_file`-based workspace.yaml targets. "
-                    ).format(
-                        msg=msg,
-                        module=module_name,
-                        python_file=os.path.abspath(os.path.expanduser(python_file)),
-                        working_directory=os.path.abspath(os.path.expanduser(working_directory)),
-                    )
-                ),
-                ie,
-            )
+            if msg == "attempted relative import with no known parent package":
+
+                raise DagsterImportError(
+                    f"Encountered ImportError: `{msg}` while importing module {module_name} from "
+                    f"file {python_file}. Consider using the module-based options `-m` for "
+                    "CLI-based targets or the `python_package` workspace.yaml target."
+                ) from ie
+
+            working_directory = os.path.abspath(os.path.expanduser(working_directory))
+
+            raise DagsterImportError(
+                f"Encountered ImportError: `{msg}` while importing module {module_name} from "
+                f"file {python_file}. Local modules were resolved using the working "
+                f"directory `{working_directory}`. If another working directory should be "
+                "used, please explicitly specify the appropriate path using the `-d` or "
+                "`--working-directory` for CLI based targets or the `working_directory` "
+                "configuration option for `python_file`-based workspace.yaml targets. "
+            ) from ie
 
     error = None
     sys_modules = {k: v for k, v in sys.modules.items()}
@@ -168,23 +153,15 @@ def load_python_file(python_file, working_directory):
     except RuntimeError:
         # We might be here because numpy throws run time errors at import time when being imported
         # multiple times... we should also use the original import error as the root
-        six.raise_from(
-            DagsterImportError(
-                (
-                    "Encountered ImportError: `{msg}` while importing module {module} from file "
-                    "{python_file}. If relying on the working directory to resolve modules, please "
-                    "explicitly specify the appropriate path using the `-d` or "
-                    "`--working-directory` for CLI based targets or the `working_directory` "
-                    "configuration option for `python_file`-based workspace.yaml targets. "
-                    + error.msg
-                ).format(
-                    msg=error.msg,
-                    module=module_name,
-                    python_file=os.path.abspath(os.path.expanduser(python_file)),
-                )
-            ),
-            error,
-        )
+        python_file = os.path.abspath(os.path.expanduser(python_file))
+
+        raise DagsterImportError(
+            f"Encountered ImportError: `{error.msg}` while importing module {module_name} from file"
+            f" {python_file}. If relying on the working directory to resolve modules, please "
+            "explicitly specify the appropriate path using the `-d` or "
+            "`--working-directory` for CLI based targets or the `working_directory` "
+            "configuration option for `python_file`-based workspace.yaml targets. " + error.msg
+        ) from error
     except ImportError:
         # raise the original import error
         raise error
