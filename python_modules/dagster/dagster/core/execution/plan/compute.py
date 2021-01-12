@@ -69,24 +69,13 @@ def create_compute_step(solid, solid_handle, step_inputs, pipeline_name, environ
     )
 
 
-def _yield_compute_results(compute_context, inputs, compute_fn):
+async def _yield_compute_results(compute_context, inputs, compute_fn):
     check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
     step = compute_context.step
+
     user_event_sequence = compute_fn(SolidExecutionContext(compute_context), inputs)
 
-    if isinstance(user_event_sequence, Output):
-        raise DagsterInvariantViolationError(
-            (
-                "Compute function for solid {solid_name} returned a Output rather than "
-                "yielding it. The compute_fn of the core SolidDefinition must yield "
-                "its results"
-            ).format(solid_name=str(step.solid_handle))
-        )
-
-    if user_event_sequence is None:
-        return
-
-    for event in user_event_sequence:
+    async for event in user_event_sequence:
         if isinstance(
             event,
             (DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult),
@@ -107,7 +96,7 @@ def _yield_compute_results(compute_context, inputs, compute_fn):
             )
 
 
-def _execute_core_compute(compute_context, inputs, compute_fn):
+async def _execute_core_compute(compute_context, inputs, compute_fn):
     """
     Execute the user-specified compute for the solid. Wrap in an error boundary and do
     all relevant logging and metrics tracking
@@ -118,7 +107,7 @@ def _execute_core_compute(compute_context, inputs, compute_fn):
     step = compute_context.step
 
     all_results = []
-    for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
+    async for step_output in _yield_compute_results(compute_context, inputs, compute_fn):
         yield step_output
         if isinstance(step_output, (DynamicOutput, Output)):
             all_results.append(step_output)

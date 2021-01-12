@@ -1,3 +1,4 @@
+import asyncio
 from collections import defaultdict
 
 from dagster import check
@@ -33,10 +34,17 @@ from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
 from dagster.core.storage.tags import MEMOIZED_RUN_TAG
 from dagster.core.types.dagster_type import DagsterTypeKind
-from dagster.utils import ensure_gen, iterate_with_context
+from dagster.utils import async_iterate_with_context, ensure_gen
 from dagster.utils.timing import time_execution_scope
 
 from .inputs import FanInStepInputValuesWrapper
+
+
+async def _run_to_completion(async_gen):
+    results = []
+    async for item in async_gen:
+        results.append(item)
+    return results
 
 
 def _step_output_error_checked_user_event_sequence(step_context, user_event_sequence):
@@ -47,14 +55,16 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
     This consumes and emits an event sequence.
     """
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
-    check.generator_param(user_event_sequence, "user_event_sequence")
+    check.async_generator(user_event_sequence)
 
     step = step_context.step
     output_names = list([output_def.name for output_def in step.step_outputs])
     seen_outputs = set()
     seen_mapping_keys = defaultdict(set)
 
-    for user_event in user_event_sequence:
+    user_event_sequence_results = asyncio.run(_run_to_completion(user_event_sequence))
+
+    for user_event in user_event_sequence_results:
         if not isinstance(user_event, (Output, DynamicOutput)):
             yield user_event
             continue
@@ -307,7 +317,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
             yield evt
 
     with time_execution_scope() as timer_result:
-        user_event_sequence = check.generator(
+        user_event_sequence = check.async_generator(
             _user_event_sequence_for_step_compute_fn(step_context, inputs)
         )
 
@@ -484,15 +494,13 @@ def _create_output_materializations(step_context, output_name, value):
                     yield DagsterEvent.step_materialization(step_context, materialization)
 
 
-def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
+async def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
     check.dict_param(evaluated_inputs, "evaluated_inputs", key_type=str)
 
-    gen = check.opt_generator(step_context.step.compute_fn(step_context, evaluated_inputs))
-    if not gen:
-        return
+    gen = check.async_generator(step_context.step.compute_fn(step_context, evaluated_inputs))
 
-    for event in iterate_with_context(
+    async for event in async_iterate_with_context(
         lambda: user_code_error_boundary(
             DagsterExecutionStepExecutionError,
             control_flow_exceptions=[Failure, RetryRequested],

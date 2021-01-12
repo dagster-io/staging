@@ -1,6 +1,6 @@
 import inspect
 import sys
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
+from typing import Any, AsyncGenerator, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
 
 from future.utils import raise_with_traceback
 
@@ -689,6 +689,16 @@ def _element_check_error(key: Any, value: Any, ddict: Dict, ttype: Type) -> Elem
             key=key, value=repr(value), ddict=repr(ddict), ttype=repr(ttype)
         )
     )
+
+
+def async_generator(obj: Any) -> AsyncGenerator:
+    if not inspect.isasyncgen(obj):
+        raise ParameterCheckError(
+            "Not a async generator (return value of async function that yields) Got {obj} instead".format(
+                obj=obj
+            )
+        )
+    return obj
 
 
 def generator(obj: Any) -> Generator:

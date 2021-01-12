@@ -207,6 +207,71 @@ def solid(
     )
 
 
+def _coerce_solid_output_to_iterator(result, context, output_defs):
+    if isinstance(result, (AssetMaterialization, Materialization, ExpectationResult)):
+        raise DagsterInvariantViolationError(
+            (
+                "Error in solid {solid_name}: If you are returning an AssetMaterialization "
+                "or an ExpectationResult from solid you must yield them to avoid "
+                "ambiguity with an implied result from returning a value.".format(
+                    solid_name=context.solid.name
+                )
+            )
+        )
+
+    if isinstance(result, Output):
+        yield result
+    elif len(output_defs) == 1:
+        if result is None and output_defs[0].is_required is False:
+            context.log.warn(
+                'Value "None" returned for non-required output "{output_name}". '
+                "This value will be passed to downstream solids. For conditional execution use\n"
+                '  yield Output(value, "{output_name}")\n'
+                "when you want the downstream solids to execute, "
+                "and do not yield it when you want downstream solids to skip.".format(
+                    output_name=output_defs[0].name
+                )
+            )
+        yield Output(value=result, output_name=output_defs[0].name)
+    elif result is not None:
+        if not output_defs:
+            raise DagsterInvariantViolationError(
+                (
+                    "Error in solid {solid_name}: Unexpectedly returned output {result} "
+                    "of type {type_}. Solid is explicitly defined to return no "
+                    "results."
+                ).format(solid_name=context.solid.name, result=result, type_=type(result))
+            )
+
+        raise DagsterInvariantViolationError(
+            (
+                "Error in solid {solid_name}: Solid unexpectedly returned "
+                "output {result} of type {type_}. Should "
+                "be a generator, containing or yielding "
+                "{n_results} results: {{{expected_results}}}."
+            ).format(
+                solid_name=context.solid.name,
+                result=result,
+                type_=type(result),
+                n_results=len(output_defs),
+                expected_results=", ".join(
+                    [
+                        "'{result_name}': {dagster_type}".format(
+                            result_name=output_def.name, dagster_type=output_def.dagster_type,
+                        )
+                        for output_def in output_defs
+                    ]
+                ),
+            )
+        )
+
+
+async def _coerce_async_solid_to_async_gen(gen, context, output_defs):
+    result = await gen
+    for event in _coerce_solid_output_to_iterator(result, context, output_defs):
+        yield event
+
+
 def _create_solid_compute_wrapper(fn, input_defs, output_defs):
     check.callable_param(fn, "fn")
     check.list_param(input_defs, "input_defs", of_type=InputDefinition)
@@ -219,7 +284,7 @@ def _create_solid_compute_wrapper(fn, input_defs, output_defs):
     ]
 
     @wraps(fn)
-    def compute(context, input_defs):
+    async def compute(context, input_defs):
         kwargs = {}
         for input_name in input_names:
             kwargs[input_name] = input_defs[input_name]
@@ -227,65 +292,17 @@ def _create_solid_compute_wrapper(fn, input_defs, output_defs):
         result = fn(context, **kwargs)
 
         if inspect.isgenerator(result):
-            yield from result
+            for event in result:
+                yield event
+        elif inspect.isasyncgen(result):
+            async for event in result:
+                yield event
+        elif inspect.iscoroutine(result):
+            async for event in _coerce_async_solid_to_async_gen(result, context, output_defs):
+                yield event
         else:
-            if isinstance(result, (AssetMaterialization, Materialization, ExpectationResult)):
-                raise DagsterInvariantViolationError(
-                    (
-                        "Error in solid {solid_name}: If you are returning an AssetMaterialization "
-                        "or an ExpectationResult from solid you must yield them to avoid "
-                        "ambiguity with an implied result from returning a value.".format(
-                            solid_name=context.solid.name
-                        )
-                    )
-                )
-
-            if isinstance(result, Output):
-                yield result
-            elif len(output_defs) == 1:
-                if result is None and output_defs[0].is_required is False:
-                    context.log.warn(
-                        'Value "None" returned for non-required output "{output_name}". '
-                        "This value will be passed to downstream solids. For conditional execution use\n"
-                        '  yield Output(value, "{output_name}")\n'
-                        "when you want the downstream solids to execute, "
-                        "and do not yield it when you want downstream solids to skip.".format(
-                            output_name=output_defs[0].name
-                        )
-                    )
-                yield Output(value=result, output_name=output_defs[0].name)
-            elif result is not None:
-                if not output_defs:
-                    raise DagsterInvariantViolationError(
-                        (
-                            "Error in solid {solid_name}: Unexpectedly returned output {result} "
-                            "of type {type_}. Solid is explicitly defined to return no "
-                            "results."
-                        ).format(solid_name=context.solid.name, result=result, type_=type(result))
-                    )
-
-                raise DagsterInvariantViolationError(
-                    (
-                        "Error in solid {solid_name}: Solid unexpectedly returned "
-                        "output {result} of type {type_}. Should "
-                        "be a generator, containing or yielding "
-                        "{n_results} results: {{{expected_results}}}."
-                    ).format(
-                        solid_name=context.solid.name,
-                        result=result,
-                        type_=type(result),
-                        n_results=len(output_defs),
-                        expected_results=", ".join(
-                            [
-                                "'{result_name}': {dagster_type}".format(
-                                    result_name=output_def.name,
-                                    dagster_type=output_def.dagster_type,
-                                )
-                                for output_def in output_defs
-                            ]
-                        ),
-                    )
-                )
+            for event in _coerce_solid_output_to_iterator(result, context, output_defs):
+                yield event
 
     return compute
 

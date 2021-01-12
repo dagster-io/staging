@@ -358,6 +358,20 @@ def iterate_with_context(context, iterator):
         yield next_output
 
 
+# Executes the next() function within an instance of the supplied context manager class
+# (leaving the context before yielding each result)
+async def async_iterate_with_context(context, iterator):
+    while True:
+        # Allow interrupts during user code so that we can terminate slow/hanging steps
+        with context():
+            try:
+                next_output = await iterator.__anext__()
+            except StopAsyncIteration:
+                return
+
+        yield next_output
+
+
 def datetime_as_float(dt):
     check.inst_param(dt, "dt", datetime.datetime)
     return float((dt - EPOCH).total_seconds())
