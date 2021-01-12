@@ -1,0 +1,47 @@
+import { ExampleReferenceLink } from 'components/ExampleReference';
+
+# Execute Pipeline by GraphQL
+
+<ExampleReferenceLink filePath="examples/trigger_pipeline" />
+
+This demonstrates how to trigger a Dagster pipeline from an external service like GraphQL.
+
+## How to Select the Pipeline
+
+First of all, we want to specify the Dagster workspace for GraphQL.
+
+We use `PipelineSelector` to choose from which repository we want to launch the pipeline.
+If we only want to execute a subset of the pipeline, we can set `solid_selection` to the name of the solid.
+
+We also need to provide the location of the repository. In the example below, we use the `ManagedGrpcPythonEnvRepositoryLocationOrigin`
+to identify a repository location in a Python environment. Dagster creates a gRPC server for these repository locations on startup.
+We specify the file path in the `LoadableTargetOrigin`.
+
+```python literalinclude caption=trigger.py
+file:/trigger_pipeline/trigger_pipeline/trigger.py
+startAfter:start_trigger_marker_0
+endBefore:end_trigger_marker_0
+```
+
+## Execute Dagster GraphQL
+
+To execute Dagster pipeline by GraphQL, we use `execute_dagster_graphql` with `LAUNCH_PIPELINE_EXECUTION_MUTATION`,
+and `DagsterGraphQLContext`. We can parameterize the pipeline execution by `selector`, `runConfigData`, `mode` and `executionMetadata`.
+
+```python literalinclude caption=trigger.py
+file:/trigger_pipeline/trigger_pipeline/trigger.py
+startAfter:start_trigger_marker_1
+endBefore:end_trigger_marker_1
+```
+
+## Open in a playground
+
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#EXAMPLE=trigger_pipeline/https://github.com/dagster-io/dagster)
+
+## Download
+
+```
+curl https://codeload.github.com/dagster-io/dagster/tar.gz/master | tar -xz --strip=2 dagster-master/examples/trigger_pipeline
+cd trigger_pipeline
+pip install -e .
+```
