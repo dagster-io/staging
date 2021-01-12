@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 import sqlalchemy as db
 from dagster import StringSource, check
+from dagster.core.events.log import EventRecord
 from dagster.core.storage.pipeline_run import PipelineRunStatus
 from dagster.core.storage.sql import (
     check_alembic_revision,
@@ -26,11 +27,11 @@ from tqdm import tqdm
 from watchdog.events import PatternMatchingEventHandler
 from watchdog.observers import Observer
 
-from ..schema import SqlEventLogStorageMetadata
-from ..sql_event_log import SqlEventLogStorage
+from ..schema import SqlEventLogStorageMetadata, SqlEventLogStorageTable
+from ..sql_event_log import ASSET_SHARD_NAME, AssetAwareSqlEventLogStorage
 
 
-class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
+class SqliteEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
     """SQLite-backed event log storage.
 
     Users should not directly instantiate this class; it is instantiated by internal machinery when
@@ -181,6 +182,33 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
                 conn.close()
             engine.dispose()
 
+    def store_event(self, event):
+        """
+        Overridden method to replicate asset events in a central assets.db sqlite shard, enabling
+        cross-run asset queries.
+
+        Args:
+            event (EventRecord): The event to store.
+        """
+        check.inst_param(event, "event", EventRecord)
+        insert_event_statement = self.prepare_insert_event(event)
+        run_id = event.run_id
+
+        with self.connect(run_id) as conn:
+            conn.execute(insert_event_statement)
+
+        if event.is_dagster_event and event.dagster_event.asset_key:
+            with self.connect(ASSET_SHARD_NAME) as asset_conn:
+                asset_conn.execute(insert_event_statement)
+                self.store_asset_key(asset_conn, event)
+
+    def delete_events(self, run_id):
+        with self.connect(run_id) as conn:
+            self.delete_events_for_run(conn, run_id)
+
+        with self.connect(ASSET_SHARD_NAME) as conn:
+            self.delete_events_for_run(conn, run_id)
+
     def has_secondary_index(self, name, run_id=None):
         return False
 
@@ -196,6 +224,22 @@ class SqliteEventLogStorage(SqlEventLogStorage, ConfigurableClass):
             os.unlink(filename)
 
         self._initialized_dbs = set()
+
+    def wipe_asset(self, asset_key):
+        # default implementation will update the event_logs in the sharded dbs, and the asset_key
+        # table in the asset shard, but will not remove the mirrored event_log events in the asset
+        # shard
+        super(SqliteEventLogStorage, self).wipe_asset(asset_key)
+
+        with self.connect(ASSET_SHARD_NAME) as conn:
+            conn.execute(
+                SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
+                    db.or_(
+                        SqlEventLogStorageTable.c.asset_key == asset_key.to_string(),
+                        SqlEventLogStorageTable.c.asset_key == asset_key.to_string(legacy=True),
+                    )
+                )
+            )
 
     def watch(self, run_id, start_cursor, callback):
         watchdog = SqliteEventLogStorageWatchdog(self, run_id, callback, start_cursor)

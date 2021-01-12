@@ -18,6 +18,8 @@ from .base import AssetAwareEventLogStorage, EventLogStorage
 from .migration import REINDEX_DATA_MIGRATIONS, SECONDARY_INDEX_ASSET_KEY
 from .schema import AssetKeyTable, SecondaryIndexMigrationTable, SqlEventLogStorageTable
 
+ASSET_SHARD_NAME = "asset"
+
 
 class SqlEventLogStorage(EventLogStorage):
     """Base class for SQL backed event log storages.
@@ -343,6 +345,10 @@ class SqlEventLogStorage(EventLogStorage):
             conn.execute(AssetKeyTable.delete())  # pylint: disable=no-value-for-parameter
 
     def delete_events(self, run_id):
+        with self.connect(run_id) as conn:
+            self.delete_events_for_run(conn, run_id)
+
+    def delete_events_for_run(self, conn, run_id):
         check.str_param(run_id, "run_id")
 
         delete_statement = SqlEventLogStorageTable.delete().where(  # pylint: disable=no-value-for-parameter
@@ -355,34 +361,33 @@ class SqlEventLogStorage(EventLogStorage):
             .group_by(SqlEventLogStorageTable.c.asset_key)
         )
 
-        with self.connect(run_id) as conn:
-            removed_asset_keys = [
+        removed_asset_keys = [
+            AssetKey.from_db_string(row[0])
+            for row in conn.execute(removed_asset_key_query).fetchall()
+        ]
+        conn.execute(delete_statement)
+        if len(removed_asset_keys) > 0:
+            keys_to_check = []
+            keys_to_check.extend([key.to_string() for key in removed_asset_keys])
+            keys_to_check.extend([key.to_string(legacy=True) for key in removed_asset_keys])
+            remaining_asset_keys = [
                 AssetKey.from_db_string(row[0])
-                for row in conn.execute(removed_asset_key_query).fetchall()
+                for row in conn.execute(
+                    db.select([SqlEventLogStorageTable.c.asset_key])
+                    .where(SqlEventLogStorageTable.c.asset_key.in_(keys_to_check))
+                    .group_by(SqlEventLogStorageTable.c.asset_key)
+                )
             ]
-            conn.execute(delete_statement)
-            if len(removed_asset_keys) > 0:
-                keys_to_check = []
-                keys_to_check.extend([key.to_string() for key in removed_asset_keys])
-                keys_to_check.extend([key.to_string(legacy=True) for key in removed_asset_keys])
-                remaining_asset_keys = [
-                    AssetKey.from_db_string(row[0])
-                    for row in conn.execute(
-                        db.select([SqlEventLogStorageTable.c.asset_key])
-                        .where(SqlEventLogStorageTable.c.asset_key.in_(keys_to_check))
-                        .group_by(SqlEventLogStorageTable.c.asset_key)
+            to_remove = set(removed_asset_keys) - set(remaining_asset_keys)
+            if to_remove:
+                keys_to_remove = []
+                keys_to_remove.extend([key.to_string() for key in to_remove])
+                keys_to_remove.extend([key.to_string(legacy=True) for key in to_remove])
+                conn.execute(
+                    AssetKeyTable.delete().where(  # pylint: disable=no-value-for-parameter
+                        AssetKeyTable.c.asset_key.in_(keys_to_remove)
                     )
-                ]
-                to_remove = set(removed_asset_keys) - set(remaining_asset_keys)
-                if to_remove:
-                    keys_to_remove = []
-                    keys_to_remove.extend([key.to_string() for key in to_remove])
-                    keys_to_remove.extend([key.to_string(legacy=True) for key in to_remove])
-                    conn.execute(
-                        AssetKeyTable.delete().where(  # pylint: disable=no-value-for-parameter
-                            AssetKeyTable.c.asset_key.in_(keys_to_remove)
-                        )
-                    )
+                )
 
     @property
     def is_persistent(self):
@@ -518,7 +523,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
                 )
                 .limit(1)
             )
-        with self.connect() as conn:
+        with self.connect(ASSET_SHARD_NAME) as conn:
             results = conn.execute(query).fetchall()
         return len(results) > 0
 
@@ -570,7 +575,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
                     .distinct()
                 )
 
-        with self.connect() as conn:
+        with self.connect(ASSET_SHARD_NAME) as conn:
             results = conn.execute(query).fetchall()
             if lazy_migrate:
                 # This is in place to migrate everyone to using the secondary index table for asset
@@ -620,7 +625,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
             query = query.where(SqlEventLogStorageTable.c.partition.in_(partitions))
 
         query = self._add_cursor_limit_to_query(query, cursor, limit, ascending=ascending)
-        with self.connect() as conn:
+        with self.connect(ASSET_SHARD_NAME) as conn:
             results = conn.execute(query).fetchall()
 
         events = []
@@ -658,7 +663,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
             .order_by(db.func.max(SqlEventLogStorageTable.c.timestamp).desc())
         )
 
-        with self.connect() as conn:
+        with self.connect(ASSET_SHARD_NAME) as conn:
             results = conn.execute(query).fetchall()
 
         return [run_id for (run_id, _timestamp) in results]
@@ -680,7 +685,7 @@ class AssetAwareSqlEventLogStorage(AssetAwareEventLogStorage, SqlEventLogStorage
             )
         )
 
-        with self.connect() as conn:
+        with self.connect(ASSET_SHARD_NAME) as conn:
             conn.execute(asset_key_delete)
             results = conn.execute(event_query).fetchall()
 
