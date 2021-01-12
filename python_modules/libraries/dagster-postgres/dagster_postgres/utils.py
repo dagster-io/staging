@@ -9,6 +9,7 @@ import six
 import sqlalchemy
 from dagster import Field, IntSource, Selector, StringSource, check
 from dagster.core.storage.sql import get_alembic_config, handle_schema_errors
+from dagster.seven import nullcontext
 
 
 class DagsterPostgresException(Exception):
@@ -124,7 +125,7 @@ def wait_for_connection(conn_string, retry_limit=5, retry_wait=0.2):
 
 
 @contextmanager
-def create_pg_connection(engine, dunder_file, storage_type_desc=None):
+def create_pg_connection(engine, dunder_file, storage_type_desc=None, check_migration_errors=True):
     check.inst_param(engine, "engine", sqlalchemy.engine.Engine)
     check.str_param(dunder_file, "dunder_file")
     check.opt_str_param(storage_type_desc, "storage_type_desc", "")
@@ -142,7 +143,7 @@ def create_pg_connection(engine, dunder_file, storage_type_desc=None):
             conn,
             get_alembic_config(dunder_file),
             msg="Postgres {}storage requires migration".format(storage_type_desc),
-        ):
+        ) if check_migration_errors else nullcontext():
             yield conn
     finally:
         if conn:
