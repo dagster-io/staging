@@ -464,7 +464,7 @@ class DagsterInstance:
 
             print_fn("Updating run storage...")
             self._run_storage.upgrade()
-            self._run_storage.reindex()
+            self._run_storage.build_missing_indexes()
 
             print_fn("Updating event storage...")
             self._event_storage.upgrade()
