@@ -289,7 +289,13 @@ def test_0_10_0_schedule_wipe(hostname, conn_string):
                 template = template_fd.read().format(hostname=hostname)
                 target_fd.write(template)
 
-        with DagsterInstance.from_config(tempdir) as instance:
+        with pytest.raises(
+            DagsterInstanceMigrationRequired, match=re.escape("Schedule storage is out of date")
+        ):
+            with DagsterInstance.from_config(tempdir) as instance:
+                pass
+
+        with DagsterInstance.from_config(tempdir, skip_migration_checks=True) as instance:
             instance.upgrade()
 
         with DagsterInstance.from_config(tempdir) as upgraded_instance:

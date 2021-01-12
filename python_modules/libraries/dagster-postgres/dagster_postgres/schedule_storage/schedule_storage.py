@@ -1,7 +1,13 @@
 import sqlalchemy as db
 from dagster import check
+from dagster.core.errors import DagsterInstanceMigrationRequired
 from dagster.core.storage.schedules import ScheduleStorageSqlMetadata, SqlScheduleStorage
-from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
+from dagster.core.storage.sql import (
+    check_alembic_revision,
+    create_engine,
+    get_alembic_config,
+    run_alembic_upgrade,
+)
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
 from ..utils import (
@@ -84,3 +90,15 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
         run_alembic_upgrade(alembic_config, self._engine)
+
+    def check_for_migration(self):
+        alembic_config = get_alembic_config(__file__)
+
+        with self.connect() as conn:
+            db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+            if db_revision != "b32a4f3036d2":
+                raise DagsterInstanceMigrationRequired(
+                    msg="Schedule storage is out of date",
+                    db_revision=db_revision,
+                    head_revision=head_revision,
+                )
