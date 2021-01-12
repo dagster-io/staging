@@ -23,7 +23,6 @@ from dagster import (
     solid,
 )
 from dagster.core.instance import InstanceRef
-from dagster.core.storage.input_manager import input_manager
 from dagster.core.storage.output_manager import output_manager
 
 
