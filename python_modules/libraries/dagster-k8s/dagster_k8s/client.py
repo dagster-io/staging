@@ -275,10 +275,18 @@ class DagsterKubernetesClient:
 
             # status.failed represents the number of pods which reached phase Failed.
             if status.failed and status.failed > 0:
+                pod_status = {}
+                try:
+                    pods = self.get_pods_in_job(job_name=job_name, namespace=namespace)
+                    for pod in pods:
+                        pod_status[pod.metadata.name] = pod.status
+                except Exception: # pylint: disable=broad-except
+                    pass
+
                 raise DagsterK8sError(
-                    "Encountered failed job pods for job {job_name} with status: {status}, "
+                    "Encountered failed job pods for job {job_name} with job status: {status} and pod status: {pod_status}"
                     "in namespace {namespace}".format(
-                        job_name=job_name, status=status, namespace=namespace
+                        job_name=job_name, status=status, pod_status=pod_status, namespace=namespace
                     )
                 )
 
@@ -359,6 +367,23 @@ class DagsterKubernetesClient:
             namespace=namespace, label_selector="job-name={}".format(job_name)
         ).items
         return [p.metadata.name for p in pods]
+
+    def get_pods_in_job(self, job_name, namespace):
+        """Get the pods launched by the job ``job_name``.
+
+        Args:
+            job_name (str): Name of the job to inspect.
+            namespace (str): Namespace in which the job is located.
+
+        Returns:
+            List[Pod]: List of Pods that have been launched by the job ``job_name``.
+        """
+        check.str_param(job_name, "job_name")
+        check.str_param(namespace, "namespace")
+
+        return self.core_api.list_namespaced_pod(
+            namespace=namespace, label_selector="job-name={}".format(job_name)
+        ).items
 
     def wait_for_pod(
         self,
