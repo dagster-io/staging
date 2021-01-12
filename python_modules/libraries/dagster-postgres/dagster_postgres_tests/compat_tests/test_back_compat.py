@@ -16,57 +16,6 @@ from dagster.utils import file_relative_path
 from sqlalchemy import create_engine
 
 
-def test_0_6_6_postgres(hostname, conn_string):
-    # Init a fresh postgres with a 0.6.6 snapshot
-    engine = create_engine(conn_string)
-    engine.execute("drop schema public cascade;")
-    engine.execute("create schema public;")
-
-    env = os.environ.copy()
-    env["PGPASSWORD"] = "test"
-    subprocess.check_call(
-        [
-            "psql",
-            "-h",
-            hostname,
-            "-p",
-            "5432",
-            "-U",
-            "test",
-            "-f",
-            file_relative_path(__file__, "snapshot_0_6_6/postgres/pg_dump.txt"),
-        ],
-        env=env,
-    )
-
-    run_id = "089287c5-964d-44c0-b727-357eb7ba522e"
-
-    with tempfile.TemporaryDirectory() as tempdir:
-        # Create the dagster.yaml
-        with open(file_relative_path(__file__, "dagster.yaml"), "r") as template_fd:
-            with open(os.path.join(tempdir, "dagster.yaml"), "w") as target_fd:
-                template = template_fd.read().format(hostname=hostname)
-                target_fd.write(template)
-
-        instance = DagsterInstance.from_config(tempdir)
-
-        # Runs will appear in DB, but event logs need migration
-        runs = instance.get_runs()
-        assert len(runs) == 1
-        assert instance.get_run_by_id(run_id)
-
-        assert instance.all_logs(run_id) == []
-
-        # Post migration, event logs appear in DB
-        instance.upgrade()
-
-        runs = instance.get_runs()
-        assert len(runs) == 1
-        assert instance.get_run_by_id(run_id)
-
-        assert len(instance.all_logs(run_id)) == 89
-
-
 def test_0_7_6_postgres_pre_event_log_migration(hostname, conn_string):
     engine = create_engine(conn_string)
     engine.execute("drop schema public cascade;")
@@ -99,7 +48,7 @@ def test_0_7_6_postgres_pre_event_log_migration(hostname, conn_string):
                 template = template_fd.read().format(hostname=hostname)
                 target_fd.write(template)
 
-        instance = DagsterInstance.from_config(tempdir)
+        instance = DagsterInstance.from_config(tempdir, skip_migration_checks=True)
 
         # Runs will appear in DB, but event logs need migration
         runs = instance.get_runs()
@@ -163,7 +112,7 @@ def test_0_7_6_postgres_pre_add_pipeline_snapshot(hostname, conn_string):
                 template = template_fd.read().format(hostname=hostname)
                 target_fd.write(template)
 
-        instance = DagsterInstance.from_config(tempdir)
+        instance = DagsterInstance.from_config(tempdir, skip_migration_checks=True)
 
         @solid
         def noop_solid(_):
@@ -235,7 +184,7 @@ def test_0_9_22_postgres_pre_asset_partition(hostname, conn_string):
                 template = template_fd.read().format(hostname=hostname)
                 target_fd.write(template)
 
-        instance = DagsterInstance.from_config(tempdir)
+        instance = DagsterInstance.from_config(tempdir, skip_migration_checks=True)
 
         @solid
         def asset_solid(_):
@@ -258,6 +207,59 @@ def test_0_9_22_postgres_pre_asset_partition(hostname, conn_string):
         instance.upgrade()
 
         result = execute_pipeline(asset_pipeline, instance=instance)
+        assert result.success
+
+
+def test_0_9_22_postgres_pre_run_partition(hostname, conn_string):
+    engine = create_engine(conn_string)
+    engine.execute("drop schema public cascade;")
+    engine.execute("create schema public;")
+
+    env = os.environ.copy()
+    env["PGPASSWORD"] = "test"
+    subprocess.check_call(
+        [
+            "psql",
+            "-h",
+            hostname,
+            "-p",
+            "5432",
+            "-U",
+            "test",
+            "-f",
+            file_relative_path(__file__, "snapshot_0_9_22_pre_run_partition/postgres/pg_dump.txt"),
+        ],
+        env=env,
+    )
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        with open(file_relative_path(__file__, "dagster.yaml"), "r") as template_fd:
+            with open(os.path.join(tempdir, "dagster.yaml"), "w") as target_fd:
+                template = template_fd.read().format(hostname=hostname)
+                target_fd.write(template)
+
+        instance = DagsterInstance.from_config(tempdir, skip_migration_checks=True)
+
+        @solid
+        def simple_solid(_):
+            return 1
+
+        @pipeline
+        def simple_pipeline():
+            simple_solid()
+
+        tags = {PARTITION_NAME_TAG: "my_partition", PARTITION_SET_TAG: "my_partition_set"}
+
+        with pytest.raises(
+            DagsterInstanceMigrationRequired,
+            match=_migration_regex("run", current_revision="3e0770016702"),
+        ):
+            execute_pipeline(simple_pipeline, tags=tags, instance=instance)
+
+        # ensure migration is run
+        instance.upgrade()
+
+        result = execute_pipeline(simple_pipeline, tags=tags, instance=instance)
         assert result.success
 
 
@@ -289,64 +291,17 @@ def test_0_10_0_schedule_wipe(hostname, conn_string):
                 template = template_fd.read().format(hostname=hostname)
                 target_fd.write(template)
 
-        with DagsterInstance.from_config(tempdir) as instance:
+        with pytest.raises(
+            DagsterInstanceMigrationRequired, match=re.escape("Schedule storage is out of date")
+        ):
+            with DagsterInstance.from_config(tempdir) as instance:
+                pass
+
+        with DagsterInstance.from_config(tempdir, skip_migration_checks=True) as instance:
             instance.upgrade()
 
         with DagsterInstance.from_config(tempdir) as upgraded_instance:
             assert len(upgraded_instance.all_stored_job_state()) == 0
-
-
-def test_0_9_22_postgres_pre_run_partition(hostname, conn_string):
-    engine = create_engine(conn_string)
-    engine.execute("drop schema public cascade;")
-    engine.execute("create schema public;")
-
-    env = os.environ.copy()
-    env["PGPASSWORD"] = "test"
-    subprocess.check_call(
-        [
-            "psql",
-            "-h",
-            hostname,
-            "-p",
-            "5432",
-            "-U",
-            "test",
-            "-f",
-            file_relative_path(__file__, "snapshot_0_9_22_pre_run_partition/postgres/pg_dump.txt"),
-        ],
-        env=env,
-    )
-
-    with tempfile.TemporaryDirectory() as tempdir:
-        with open(file_relative_path(__file__, "dagster.yaml"), "r") as template_fd:
-            with open(os.path.join(tempdir, "dagster.yaml"), "w") as target_fd:
-                template = template_fd.read().format(hostname=hostname)
-                target_fd.write(template)
-
-        instance = DagsterInstance.from_config(tempdir)
-
-        @solid
-        def simple_solid(_):
-            return 1
-
-        @pipeline
-        def simple_pipeline():
-            simple_solid()
-
-        tags = {PARTITION_NAME_TAG: "my_partition", PARTITION_SET_TAG: "my_partition_set"}
-
-        with pytest.raises(
-            DagsterInstanceMigrationRequired,
-            match=_migration_regex("run", current_revision="3e0770016702"),
-        ):
-            execute_pipeline(simple_pipeline, tags=tags, instance=instance)
-
-        # ensure migration is run
-        instance.upgrade()
-
-        result = execute_pipeline(simple_pipeline, tags=tags, instance=instance)
-        assert result.success
 
 
 def _migration_regex(storage_name, current_revision, expected_revision=None):
