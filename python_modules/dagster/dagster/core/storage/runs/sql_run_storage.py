@@ -5,7 +5,6 @@ from collections import defaultdict
 from datetime import datetime
 from enum import Enum
 
-import six
 import sqlalchemy as db
 from dagster import check
 from dagster.core.errors import DagsterRunAlreadyExists, DagsterSnapshotDoesNotExist
@@ -89,7 +88,7 @@ class SqlRunStorage(RunStorage):  # pylint: disable=no-init
                 )
                 conn.execute(runs_insert)
             except db.exc.IntegrityError as exc:
-                six.raise_from(DagsterRunAlreadyExists, exc)
+                raise DagsterRunAlreadyExists from exc
 
             if pipeline_run.tags and len(pipeline_run.tags) > 0:
                 conn.execute(
@@ -603,7 +602,7 @@ def defensively_unpack_pipeline_snapshot_query(logger, row):
     def _warn(msg):
         logger.warning("get-pipeline-snapshot: {msg}".format(msg=msg))
 
-    if not isinstance(row[0], six.binary_type):
+    if not isinstance(row[0], bytes):
         _warn("First entry in row is not a binary type.")
         return None
 
