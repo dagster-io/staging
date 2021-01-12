@@ -114,6 +114,11 @@ class ScheduleStorage(abc.ABC):
     def optimize_for_dagit(self, statement_timeout):
         """Allows for optimizing database connection / use in the context of a long lived dagit process"""
 
+    @abc.abstractmethod
+    def check_for_migration(self):
+        """Raise a DagsterInstanceMigrationRequired if the state of the storage indicates that it is
+        out of date."""
+
     def validate_stored_schedules(self, scheduler_class):
         # Check for any running job states that reference a different scheduler,
         # prompt the user to wipe if they don't match
