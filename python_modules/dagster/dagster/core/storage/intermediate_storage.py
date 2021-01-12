@@ -115,6 +115,7 @@ class IntermediateStorageAdapter(IOManager):
                     address=res.key,
                 )
             )
+            return res.obj
         else:
             return res
 
