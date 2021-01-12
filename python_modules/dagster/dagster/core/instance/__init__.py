@@ -211,6 +211,7 @@ class DagsterInstance:
         run_coordinator=None,
         run_launcher=None,
         settings=None,
+        skip_migration_checks=False,
         ref=None,
     ):
         from dagster.core.storage.compute_log_manager import ComputeLogManager
@@ -237,6 +238,9 @@ class DagsterInstance:
         self._scheduler = check.opt_inst_param(scheduler, "scheduler", Scheduler)
 
         if self._schedule_storage:
+            if not skip_migration_checks:
+                self._schedule_storage.check_for_migration()
+
             self._schedule_storage.validate_stored_schedules(self.scheduler_class)
 
         self._run_coordinator = check.inst_param(run_coordinator, "run_coordinator", RunCoordinator)
@@ -275,16 +279,20 @@ class DagsterInstance:
         )
 
     @staticmethod
-    def get(fallback_storage=None):
+    def get(fallback_storage=None, skip_migration_checks=False):
         # 1. Use $DAGSTER_HOME to determine instance if set.
         if _is_dagster_home_set():
-            return DagsterInstance.from_config(_dagster_home())
+            return DagsterInstance.from_config(
+                _dagster_home(), skip_migration_checks=skip_migration_checks
+            )
 
         # 2. If that is not set use the fallback storage directory if provided.
         # This allows us to have a nice out of the box dagit experience where runs are persisted
         # across restarts in a tempdir that gets cleaned up when the dagit watchdog process exits.
         elif fallback_storage is not None:
-            return DagsterInstance.from_config(fallback_storage)
+            return DagsterInstance.from_config(
+                fallback_storage, skip_migration_checks=skip_migration_checks
+            )
 
         # 3. If all else fails create an ephemeral in memory instance.
         else:
@@ -303,12 +311,14 @@ class DagsterInstance:
         return DagsterInstance.from_ref(InstanceRef.from_dir(tempdir, overrides=overrides))
 
     @staticmethod
-    def from_config(config_dir, config_filename=DAGSTER_CONFIG_YAML_FILENAME):
+    def from_config(
+        config_dir, config_filename=DAGSTER_CONFIG_YAML_FILENAME, skip_migration_checks=False
+    ):
         instance_ref = InstanceRef.from_dir(config_dir, config_filename=config_filename)
-        return DagsterInstance.from_ref(instance_ref)
+        return DagsterInstance.from_ref(instance_ref, skip_migration_checks=skip_migration_checks)
 
     @staticmethod
-    def from_ref(instance_ref):
+    def from_ref(instance_ref, skip_migration_checks=False):
         check.inst_param(instance_ref, "instance_ref", InstanceRef)
         return DagsterInstance(
             instance_type=InstanceType.PERSISTENT,
@@ -321,6 +331,7 @@ class DagsterInstance:
             run_coordinator=instance_ref.run_coordinator,
             run_launcher=instance_ref.run_launcher,
             settings=instance_ref.settings,
+            skip_migration_checks=skip_migration_checks,
             ref=instance_ref,
         )
 

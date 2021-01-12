@@ -1,7 +1,14 @@
 import sqlalchemy as db
 from dagster import check
+from dagster.core.errors import DagsterInstanceMigrationRequired
 from dagster.core.storage.schedules import ScheduleStorageSqlMetadata, SqlScheduleStorage
-from dagster.core.storage.sql import create_engine, get_alembic_config, run_alembic_upgrade
+from dagster.core.storage.sql import (
+    check_alembic_revision,
+    create_engine,
+    get_alembic_config,
+    run_alembic_upgrade,
+    stamp_alembic_rev,
+)
 from dagster.serdes import ConfigurableClass, ConfigurableClassData
 
 from ..utils import (
@@ -41,8 +48,19 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
             self.postgres_url, isolation_level="AUTOCOMMIT", poolclass=db.pool.NullPool
         )
 
+        table_names = db.inspect(self._engine).get_table_names()
+
         with self.connect() as conn:
-            retry_pg_creation_fn(lambda: ScheduleStorageSqlMetadata.create_all(conn))
+            alembic_config = get_alembic_config(__file__)
+            db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+            # Stamp and create tables if there's no previously stamped revision and the main table
+            # doesn't exist (since we used to not stamp postgres storage when it was
+            # first created). Main table was "schedules" pre-0.10.0, "jobs" post-0.10.0
+
+            missing_main_table = "schedules" not in table_names and "jobs" not in table_names
+            if missing_main_table and not (db_revision and head_revision):
+                retry_pg_creation_fn(lambda: ScheduleStorageSqlMetadata.create_all(conn))
+                stamp_alembic_rev(alembic_config, self._engine)
 
     def optimize_for_dagit(self, statement_timeout):
         # When running in dagit, hold an open connection and set statement_timeout
@@ -84,3 +102,15 @@ class PostgresScheduleStorage(SqlScheduleStorage, ConfigurableClass):
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
         run_alembic_upgrade(alembic_config, self._engine)
+
+    def check_for_migration(self):
+        alembic_config = get_alembic_config(__file__)
+
+        with self.connect() as conn:
+            db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+            if db_revision != "b32a4f3036d2":
+                raise DagsterInstanceMigrationRequired(
+                    msg="Schedule storage is out of date",
+                    db_revision=db_revision,
+                    head_revision=head_revision,
+                )

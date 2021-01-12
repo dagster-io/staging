@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 
 from dagster import StringSource, check
+from dagster.core.errors import DagsterInstanceMigrationRequired
 from dagster.core.storage.sql import (
     check_alembic_revision,
     create_engine,
@@ -45,12 +46,12 @@ class SqliteScheduleStorage(SqlScheduleStorage, ConfigurableClass):
         mkdir_p(base_dir)
         conn_string = create_db_conn_string(base_dir, "schedules")
         engine = create_engine(conn_string, poolclass=NullPool)
-        engine.execute("PRAGMA journal_mode=WAL;")
-        ScheduleStorageSqlMetadata.create_all(engine)
         connection = engine.connect()
         alembic_config = get_alembic_config(__file__)
         db_revision, head_revision = check_alembic_revision(alembic_config, connection)
         if not (db_revision and head_revision):
+            ScheduleStorageSqlMetadata.create_all(engine)
+            engine.execute("PRAGMA journal_mode=WAL;")
             stamp_alembic_rev(alembic_config, engine)
 
         return SqliteScheduleStorage(conn_string, inst_data)
@@ -68,6 +69,19 @@ class SqliteScheduleStorage(SqlScheduleStorage, ConfigurableClass):
                 yield conn
         finally:
             conn.close()
+
+    def check_for_migration(self):
+        alembic_config = get_alembic_config(__file__)
+
+        with self.connect() as conn:
+            db_revision, head_revision = check_alembic_revision(alembic_config, conn)
+
+            if db_revision != "140198fdfe65":
+                raise DagsterInstanceMigrationRequired(
+                    msg="Schedule storage is out of date",
+                    db_revision=db_revision,
+                    head_revision=head_revision,
+                )
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
