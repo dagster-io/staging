@@ -5,6 +5,7 @@ from dagster import ModeDefinition, PresetDefinition, composite_solid, pipeline
 from dagster.core.definitions.no_step_launcher import no_step_launcher
 from dagster.core.storage.file_cache import fs_file_cache
 from dagster.core.storage.file_manager import local_file_manager
+from dagster.core.storage.fs_io_manager import fs_io_manager
 from dagster.core.storage.temp_file_manager import tempfile_resource
 from dagster_aws.emr import emr_pyspark_step_launcher
 from dagster_aws.s3 import (
@@ -12,7 +13,7 @@ from dagster_aws.s3 import (
     file_handle_to_s3,
     s3_file_cache,
     s3_file_manager,
-    s3_plus_default_intermediate_storage_defs,
+    s3_io_manager,
     s3_resource,
 )
 from dagster_pyspark import pyspark_resource
@@ -48,8 +49,8 @@ test_mode = ModeDefinition(
         "s3": s3_resource,
         "file_cache": fs_file_cache,
         "file_manager": local_file_manager,
+        "io_manager": fs_io_manager,
     },
-    intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
 )
 
 
@@ -63,8 +64,8 @@ local_mode = ModeDefinition(
         "tempfile": tempfile_resource,
         "file_cache": fs_file_cache,
         "file_manager": local_file_manager,
+        "io_manager": fs_io_manager,
     },
-    intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
 )
 
 
@@ -78,8 +79,8 @@ prod_mode = ModeDefinition(
         "tempfile": tempfile_resource,
         "file_cache": s3_file_cache,
         "file_manager": s3_file_manager,
+        "io_manager": s3_io_manager,
     },
-    intermediate_storage_defs=s3_plus_default_intermediate_storage_defs,
 )
 
 # end_pipelines_marker_2
