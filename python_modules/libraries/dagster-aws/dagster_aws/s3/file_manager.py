@@ -79,18 +79,24 @@ class S3FileManager(FileManager):
         with self.read(file_handle, mode="rb") as file_obj:
             return file_obj.read()
 
-    def write_data(self, data, ext=None):
+    def write_data(self, data, ext=None, file_key: str = None):
         check.inst_param(data, "data", bytes)
-        return self.write(io.BytesIO(data), mode="wb", ext=ext)
+        return self.write(io.BytesIO(data), mode="wb", ext=ext, file_key=file_key)
 
-    def write(self, file_obj, mode="wb", ext=None):
+    def write(self, file_obj, mode="wb", ext=None, file_key: str = None):
         check_file_like_obj(file_obj)
-        s3_key = self.get_full_key(str(uuid.uuid4()) + (("." + ext) if ext is not None else ""))
+        file_key = file_key if file_key else str(uuid.uuid4())
+        s3_key = self._get_full_key(file_key, ext)
         self._s3_session.put_object(Body=file_obj, Bucket=self._s3_bucket, Key=s3_key)
         return S3FileHandle(self._s3_bucket, s3_key)
 
-    def get_full_key(self, file_key):
-        return "{base_key}/{file_key}".format(base_key=self._s3_base_key, file_key=file_key)
+    def _get_full_key(self, file_key, ext):
+        file_key_with_ext = file_key + (("." + ext) if ext is not None else "")
+        return f"{self._s3_base_key}/{file_key_with_ext}"
+
+    def get_file_handle(self, file_key, ext):
+        s3_key = self._get_full_key(file_key, ext)
+        return S3FileHandle(self._s3_bucket, s3_key)
 
     def delete_local_temp(self):
         self._temp_file_manager.close()
