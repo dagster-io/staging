@@ -15,7 +15,7 @@ from dagster.core.errors import (
     DagsterTypeLoadingError,
     user_code_error_boundary,
 )
-from dagster.core.storage.input_manager import InputManager
+from dagster.core.storage.root_input_manager import RootInputManager
 from dagster.serdes import whitelist_for_serdes
 
 from .objects import TypeCheckData
@@ -171,12 +171,12 @@ class FromStepOutput(
         io_manager = step_context.get_output_manager(source_handle)
 
         check.invariant(
-            isinstance(io_manager, InputManager),
+            isinstance(io_manager, RootInputManager),
             f'Input "{self.input_def.name}" for step "{step_context.step.key}" is depending on '
             f'the manager of upstream output "{source_handle.output_name}" from step '
-            f'"{source_handle.step_key}" to load it, but that manager is not an InputManager. '
+            f'"{source_handle.step_key}" to load it, but that manager is not an RootInputManager. '
             f"Please ensure that the resource returned for resource key "
-            f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an InputManager.',
+            f'"{step_context.execution_plan.get_manager_key(source_handle)}" is an RootInputManager.',
         )
 
         obj = _load_input_with_input_manager(io_manager, self.get_load_context(step_context))
@@ -335,7 +335,7 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
         )
 
 
-def _load_input_with_input_manager(input_manager, context):
+def _load_input_with_input_manager(root_input_manager, context):
     with user_code_error_boundary(
         DagsterExecutionLoadInputError,
         control_flow_exceptions=[Failure, RetryRequested],
@@ -347,7 +347,7 @@ def _load_input_with_input_manager(input_manager, context):
         step_key=context.step_context.step.key,
         input_name=context.name,
     ):
-        return input_manager.load_input(context)
+        return root_input_manager.load_input(context)
 
 
 class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type source")):
