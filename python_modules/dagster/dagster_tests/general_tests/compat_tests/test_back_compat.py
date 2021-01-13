@@ -302,7 +302,8 @@ def test_run_partition_data_migration():
         assert "partition" in set(get_sqlite3_columns(db_path, "runs"))
         assert "partition_set" in set(get_sqlite3_columns(db_path, "runs"))
 
-        instance = DagsterInstance.from_ref(InstanceRef.from_dir(test_dir))
+        with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
+            instance.upgrade()
 
         run_storage = instance._run_storage
         assert isinstance(run_storage, SqlRunStorage)
@@ -311,7 +312,6 @@ def test_run_partition_data_migration():
         partition_name = "2020-01-02"
 
         # ensure old tag-based reads are working
-        assert not run_storage.has_built_index(RUN_PARTITIONS)
         assert len(run_storage._get_partition_runs(partition_set_name, partition_name)) == 2
 
         # turn on reads for the partition column, without migrating the data
@@ -319,7 +319,6 @@ def test_run_partition_data_migration():
 
         # ensure that no runs are returned because the data has not been migrated
         assert run_storage.has_built_index(RUN_PARTITIONS)
-        assert len(run_storage._get_partition_runs(partition_set_name, partition_name)) == 0
 
         # actually migrate the data
         run_storage.build_missing_indexes(force_rebuild_all=True)
@@ -345,7 +344,7 @@ def test_0_10_0_schedule_wipe():
         with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
             instance.upgrade()
 
-        assert get_current_alembic_version(db_path) == "140198fdfe65"
+        assert get_current_alembic_version(db_path) == "0da417ae1b81"
 
         assert "schedules" not in get_sqlite3_tables(db_path)
         assert "schedule_ticks" not in get_sqlite3_tables(db_path)
