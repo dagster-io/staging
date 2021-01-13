@@ -41,6 +41,8 @@ class PickledObjectGCSIOManager(IOManager):
 
     def load_input(self, context):
         key = self._get_path(context.upstream_output)
+        context.log.debug(f"Loading GCS object from: {self._uri_for_key(key)}")
+
         bytes_obj = self.bucket_obj.blob(key).download_as_bytes()
         obj = pickle.loads(bytes_obj)
 
@@ -48,10 +50,10 @@ class PickledObjectGCSIOManager(IOManager):
 
     def handle_output(self, context, obj):
         key = self._get_path(context)
-        logging.info("Writing GCS object at: " + self._uri_for_key(key))
+        context.log.debug(f"Writing GCS object at: {self._uri_for_key(key)}")
 
         if self._has_object(key):
-            logging.warning("Removing existing GCS key: {key}".format(key=key))
+            context.log.warning(f"Removing existing GCS key: {key}")
             self._rm_object(key)
 
         pickled_obj = pickle.dumps(obj, PICKLE_PROTOCOL)
