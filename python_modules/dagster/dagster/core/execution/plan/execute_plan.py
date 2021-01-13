@@ -11,7 +11,7 @@ from dagster.core.errors import (
 )
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemExecutionContext, SystemStepExecutionContext
-from dagster.core.execution.memoization import copy_required_intermediates_for_execution
+# from dagster.core.execution.memoization import copy_required_intermediates_for_execution
 from dagster.core.execution.plan.execute_step import core_dagster_event_sequence_for_step
 from dagster.core.execution.plan.objects import StepFailureData, StepRetryData, UserFailureData
 from dagster.core.execution.plan.plan import ExecutionPlan
@@ -25,7 +25,7 @@ def inner_plan_execution_iterator(pipeline_context, execution_plan):
 
     retries = pipeline_context.retries
 
-    yield from copy_required_intermediates_for_execution(pipeline_context, execution_plan)
+    # yield from copy_required_intermediates_for_execution(pipeline_context, execution_plan)
 
     with execution_plan.start(retries=retries) as active_execution:
 
