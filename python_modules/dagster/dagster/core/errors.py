@@ -24,6 +24,16 @@ from dagster.utils.interrupts import raise_interrupts_as
 from future.utils import raise_from
 
 
+class DagsterExecutionInterruptedError(BaseException):
+    """
+    Pipeline execution was interrupted during the execution process.
+
+    Just like KeyboardInterrupt this inherits from BaseException
+    as to not be accidentally caught by code that catches Exception
+    and thus prevent the interpreter from exiting.
+    """
+
+
 class DagsterError(Exception):
     """Base class for all errors thrown by the Dagster framework.
 
@@ -489,10 +499,6 @@ class JobError(DagsterUserCodeExecutionError):
 
 class DagsterUnknownStepStateError(DagsterError):
     """When pipeline execution complete with steps in an unknown state"""
-
-
-class DagsterExecutionInterruptedError(DagsterError):
-    """Pipeline execution was interrupted during the execution process."""
 
 
 class DagsterObjectStoreError(DagsterError):
