@@ -288,6 +288,7 @@ class DagsterEvent(
         # legacy
         step_key=None,
     ):
+
         event_type_value, event_specific_data = _handle_back_compat(
             event_type_value, event_specific_data
         )
@@ -1004,27 +1005,6 @@ class StepExpectationResultData(namedtuple("_StepExpectationResultData", "expect
 
 
 @whitelist_for_serdes
-class ObjectStoreOperationResultData(
-    namedtuple(
-        "_ObjectStoreOperationResultData",
-        "op value_name metadata_entries address version mapping_key",
-    )
-):
-    def __new__(
-        cls, op, value_name, metadata_entries, address=None, version=None, mapping_key=None
-    ):
-        return super(ObjectStoreOperationResultData, cls).__new__(
-            cls,
-            op=check.opt_str_param(op, "op"),
-            value_name=check.opt_str_param(value_name, "value_name"),
-            metadata_entries=check.opt_list_param(metadata_entries, "metadata_entries"),
-            address=check.opt_str_param(address, "address"),
-            version=check.opt_str_param(version, "version"),
-            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
-        )
-
-
-@whitelist_for_serdes
 class EngineEventData(
     namedtuple("_EngineEventData", "metadata_entries error marker_start marker_end")
 ):
@@ -1162,6 +1142,34 @@ class AssetStoreOperationData(
     pass
 
 
+@whitelist_for_serdes
+class AssetStoreOperationType(Enum):
+    # keep this around to prevent issues like https://github.com/dagster-io/dagster/issues/3533
+    SET_ASSET = "SET_ASSET"
+    GET_ASSET = "GET_ASSET"
+
+
+@whitelist_for_serdes
+class ObjectStoreOperationResultData(
+    namedtuple(
+        "_ObjectStoreOperationResultData",
+        "op value_name metadata_entries address version mapping_key",
+    )
+):
+    def __new__(
+        cls, op, value_name, metadata_entries, address=None, version=None, mapping_key=None
+    ):
+        return super(ObjectStoreOperationResultData, cls).__new__(
+            cls,
+            op=check.opt_str_param(op, "op"),
+            value_name=check.opt_str_param(value_name, "value_name"),
+            metadata_entries=check.opt_list_param(metadata_entries, "metadata_entries"),
+            address=check.opt_str_param(address, "address"),
+            version=check.opt_str_param(version, "version"),
+            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
+        )
+
+
 def _handle_back_compat(event_type_value, event_specific_data):
     if event_type_value == "PIPELINE_PROCESS_START":
         return DagsterEventType.ENGINE_EVENT.value, EngineEventData([])
@@ -1170,19 +1178,35 @@ def _handle_back_compat(event_type_value, event_specific_data):
     elif event_type_value == "PIPELINE_PROCESS_EXITED":
         return DagsterEventType.ENGINE_EVENT.value, EngineEventData([])
     elif event_type_value == "ASSET_STORE_OPERATION":
-        if event_specific_data.op == "GET_ASSET":
+        if event_specific_data.op in ("GET_ASSET", AssetStoreOperationType.GET_ASSET):
             return (
                 DagsterEventType.LOADED_INPUT.value,
                 LoadedInputData(
                     event_specific_data.output_name, event_specific_data.asset_store_key
                 ),
             )
-        if event_specific_data.op == "SET_ASSET":
+        if event_specific_data.op in ("SET_ASSET", AssetStoreOperationType.SET_ASSET):
             return (
                 DagsterEventType.HANDLED_OUTPUT.value,
                 HandledOutputData(
                     event_specific_data.output_name, event_specific_data.asset_store_key
                 ),
+            )
+    elif event_type_value == "OBJECT_STORE_OPERATION":
+        if event_specific_data.op in "GET_OBJECT":
+            return (
+                DagsterEventType.LOADED_INPUT.value,
+                LoadedInputData(event_specific_data.value_name, ""),
+            )
+        if event_specific_data.op in "SET_OBJECT":
+            return (
+                DagsterEventType.HANDLED_OUTPUT.value,
+                HandledOutputData(event_specific_data.value_name, ""),
+            )
+        if event_specific_data.op == "CP_OBJECT":
+            return (
+                DagsterEventType.HANDLED_OUTPUT.value,
+                HandledOutputData(event_specific_data.value_name, ""),
             )
     else:
         return event_type_value, event_specific_data
@@ -1194,5 +1218,6 @@ register_serdes_tuple_fallbacks(
         "PipelineProcessExitedData": None,
         "PipelineProcessStartData": None,
         "AssetStoreOperationData": AssetStoreOperationData,
+        "ObjectStoreOperationResultData": ObjectStoreOperationResultData,
     }
 )
