@@ -1,9 +1,11 @@
+import {Colors, NonIdealState} from '@blueprintjs/core';
 import * as React from 'react';
 import {Link} from 'react-router-dom';
 
 import {TimestampDisplay} from 'src/schedules/TimestampDisplay';
 import {ScheduleFragment} from 'src/schedules/types/ScheduleFragment';
 import {JobStatus} from 'src/types/globalTypes';
+import {Box} from 'src/ui/Box';
 import {Group} from 'src/ui/Group';
 import {Table} from 'src/ui/Table';
 import {Subheading} from 'src/ui/Text';
@@ -40,32 +42,40 @@ export const SchedulesNextTicks: React.FC<{
   });
 
   nextTicks.sort((a, b) => a.timestamp - b.timestamp);
-
   return (
     <Group direction="column" spacing={12}>
       <Subheading>Upcoming Ticks</Subheading>
-      <Table style={{width: '100%'}}>
-        <thead>
-          <tr>
-            <th style={{width: '60px'}}>Timestamp</th>
-            <th style={{width: '300px'}}>Schedule</th>
-          </tr>
-        </thead>
-        <tbody>
-          {nextTicks.map(({schedule, timestamp}) => (
-            <tr key={`${schedule.id}:${timestamp}`}>
-              <td>
-                <TimestampDisplay timestamp={timestamp} timezone={schedule.executionTimezone} />
-              </td>
-              <td>
-                <Link to={workspacePathFromAddress(repoAddress, `/schedules/${schedule.name}`)}>
-                  {schedule.name}
-                </Link>
-              </td>
+      {futureTickSchedules.length ? (
+        <Table style={{width: '100%'}}>
+          <thead>
+            <tr>
+              <th style={{width: '60px'}}>Timestamp</th>
+              <th style={{width: '300px'}}>Schedule</th>
             </tr>
-          ))}
-        </tbody>
-      </Table>
+          </thead>
+          <tbody>
+            {nextTicks.map(({schedule, timestamp}) => (
+              <tr key={`${schedule.id}:${timestamp}`}>
+                <td>
+                  <TimestampDisplay timestamp={timestamp} timezone={schedule.executionTimezone} />
+                </td>
+                <td>
+                  <Link to={workspacePathFromAddress(repoAddress, `/schedules/${schedule.name}`)}>
+                    {schedule.name}
+                  </Link>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      ) : (
+        <Box border={{width: 1, color: Colors.LIGHT_GRAY3, side: 'all'}} padding={32}>
+          <NonIdealState
+            title="No running schedules"
+            description="There are no upcoming ticks because there are no running schedules"
+          />
+        </Box>
+      )}
     </Group>
   );
 };
