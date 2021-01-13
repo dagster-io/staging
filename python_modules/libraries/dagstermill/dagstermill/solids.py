@@ -101,8 +101,9 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
 
     if not isinstance(compute_context.pipeline, ReconstructablePipeline):
         raise DagstermillError(
-            "Can't execute a dagstermill solid from a pipeline that is not reconstructable. "
-            "Use the reconstructable() function if executing from python"
+            "Can't execute a Dagstermill solid from a pipeline that is not reconstructable. "
+            "Use the reconstructable() function if executing from python. See the Dagstermill "
+            "documentation for details."
         )
 
     dm_executable_dict = compute_context.pipeline.to_dict()
@@ -115,7 +116,7 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
 
     dm_solid_handle_kwargs = compute_context.solid_handle._asdict()
 
-    parameters = {}
+    parameters: Dict[str, Any] = {}
 
     input_def_dict = compute_context.solid_def.input_dict
     for input_name, input_value in inputs.items():
@@ -128,11 +129,13 @@ def get_papermill_parameters(compute_context, inputs, output_log_path):
         )
         parameters[input_name] = parameter_value
 
-    parameters["__dm_context"] = dm_context_dict
-    parameters["__dm_executable_dict"] = dm_executable_dict
-    parameters["__dm_pipeline_run_dict"] = pack_value(compute_context.pipeline_run)
-    parameters["__dm_solid_handle_kwargs"] = dm_solid_handle_kwargs
-    parameters["__dm_instance_ref_dict"] = pack_value(compute_context.instance.get_ref())
+    parameters["context_dict"] = dm_context_dict
+    parameters["executable_dict"] = dm_executable_dict
+    parameters["pipeline_run_dict"] = pack_value(context.pipeline_run)
+    parameters["solid_handle_kwargs"] = dm_solid_handle_kwargs
+    parameters["instance_ref_dict"] = pack_value(context.instance.get_ref())
+    parameters["step_key"] = context.step.key
+    parameters["input_names"] = list(inputs.keys())
 
     return parameters
 
