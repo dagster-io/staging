@@ -7,6 +7,7 @@ from dagster.core.definitions.definition_config_schema import (
     convert_user_facing_definition_config_schema,
 )
 from dagster.core.definitions.resource import ResourceDefinition
+from dagster.core.storage.input_manager import InputManager
 
 
 class IInputManagerDefinition:
@@ -58,10 +59,11 @@ class RootInputManagerDefinition(ResourceDefinition, IInputManagerDefinition):
         )
 
 
-class RootInputManager(ABC):
+class RootInputManager(InputManager):
     """RootInputManagers are used to load the inputs to solids at the root of a pipeline.
 
-    The easiest way to define an RootInputManager is with the :py:function:`root_input_manager` decorator.
+    The easiest way to define an RootInputManager is with the :py:decorator:`root_input_manager`
+    decorator.
     """
 
     @abstractmethod
@@ -84,6 +86,8 @@ def root_input_manager(
     version=None,
 ):
     """Define a root input manager.
+
+    Root input managers load the solid inputs that aren't connected to upstream outputs.
 
     The decorated function should accept a :py:class:`InputContext` and resource config, and return
     a loaded object that will be passed into one of the inputs of a solid.

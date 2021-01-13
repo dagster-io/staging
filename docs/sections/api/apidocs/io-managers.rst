@@ -31,7 +31,8 @@ Input and Output Contexts
 Root Input Managers
 --------------
 
-Root input managers are user-provided objects that specify how to load step inputs.
+Root input managers are user-provided objects that specify how to load inputs that aren't connected
+to upstream outputs.
 
 .. autodecorator:: root_input_manager
 

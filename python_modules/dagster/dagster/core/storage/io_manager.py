@@ -77,7 +77,7 @@ def io_manager(
     """
     Define an IO manager.
 
-    The decorated function should accept an :py:class:`InitResourceContext and return an
+    The decorated function should accept an :py:class:`InitResourceContext` and return an
     py:class:`IOManager`.
 
     Args:
