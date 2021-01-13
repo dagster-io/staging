@@ -1,0 +1,106 @@
+"""change varchar to text
+
+Revision ID: 4ea2b1f6f67b
+Revises: b32a4f3036d2
+Create Date: 2021-01-12 12:39:53.493651
+
+"""
+import sqlalchemy as sa
+from alembic import op
+from dagster.core.storage.migration.utils import has_table
+
+# pylint: disable=no-member
+
+# revision identifiers, used by Alembic.
+revision = "4ea2b1f6f67b"
+down_revision = "b32a4f3036d2"
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    if has_table("event_logs"):
+        with op.batch_alter_table("event_logs") as batch_op:
+            batch_op.alter_column(sa.Column("step_key"), type_=sa.Text, existing_type=sa.String)
+            batch_op.alter_column(sa.Column("asset_key"), type_=sa.Text, existing_type=sa.String)
+            batch_op.alter_column(sa.Column("partition"), type_=sa.Text, existing_type=sa.String)
+
+    if has_table("secondary_indexes"):
+        with op.batch_alter_table("secondary_indexes") as batch_op:
+            op.alter_column(sa.Column("name"), type_=sa.Text, existing_type=sa.String)
+
+    if has_table("asset_keys"):
+        with op.batch_alter_table("asset_keys") as batch_op:
+            op.alter_column(sa.Column("asset_key"), type_=sa.Text, existing_type=sa.String)
+
+    if has_table("runs"):
+        with op.batch_alter_table("runs") as batch_op:
+            batch_op.alter_column(
+                sa.Column("pipeline_name"), type_=sa.Text, existing_type=sa.String
+            )
+            batch_op.alter_column(sa.Column("run_body"), type_=sa.Text, existing_type=sa.String)
+            batch_op.alter_column(sa.Column("partition"), type_=sa.Text, existing_type=sa.String)
+            batch_op.alter_column(
+                sa.Column("partition_set"), type_=sa.Text, existing_type=sa.String
+            )
+
+    if has_table("secondary_indexes"):
+        with op.batch_alter_table("secondary_indexes") as batch_op:
+            batch_op.alter_column(sa.Column("name"), type_=sa.Text, existing_type=sa.String)
+
+    if has_table("run_tags"):
+        with op.batch_alter_table("run_tags") as batch_op:
+            batch_op.alter_column(sa.Column("key"), type_=sa.Text, existing_type=sa.String)
+            batch_op.alter_column(sa.Column("value"), type_=sa.Text, existing_type=sa.String)
+
+    if has_table("jobs"):
+        with op.batch_alter_table("jobs") as batch_op:
+            batch_op.alter_column(sa.Column("job_body"), type_=sa.Text, existing_type=sa.String)
+
+    if has_table("job_ticks"):
+        with op.batch_alter_table("job_ticks") as batch_op:
+            batch_op.alter_column(sa.Column("tick_body"), type_=sa.Text, existing_type=sa.String)
+
+
+def downgrade():
+    if has_table("event_logs"):
+        with op.batch_alter_table("event_logs") as batch_op:
+            batch_op.alter_column(sa.Column("step_key"), type_=sa.String, existing_type=sa.Text)
+            batch_op.alter_column(sa.Column("asset_key"), type_=sa.String, existing_type=sa.Text)
+            batch_op.alter_column(sa.Column("partition"), type_=sa.String, existing_type=sa.Text)
+
+    if has_table("secondary_indexes"):
+        with op.batch_alter_table("secondary_indexes") as batch_op:
+            op.alter_column(sa.Column("name"), type_=sa.String, existing_type=sa.Text)
+
+    if has_table("asset_keys"):
+        with op.batch_alter_table("asset_keys") as batch_op:
+            op.alter_column(sa.Column("asset_key"), type_=sa.String, existing_type=sa.Text)
+
+    if has_table("runs"):
+        with op.batch_alter_table("runs") as batch_op:
+            batch_op.alter_column(
+                sa.Column("pipeline_name"), type_=sa.String, existing_type=sa.Text
+            )
+            batch_op.alter_column(sa.Column("run_body"), type_=sa.String, existing_type=sa.Text)
+            batch_op.alter_column(sa.Column("partition"), type_=sa.String, existing_type=sa.Text)
+            batch_op.alter_column(
+                sa.Column("partition_set"), type_=sa.String, existing_type=sa.Text
+            )
+
+    if has_table("secondary_indexes"):
+        with op.batch_alter_table("secondary_indexes") as batch_op:
+            batch_op.alter_column(sa.Column("name"), type_=sa.String, existing_type=sa.Text)
+
+    if has_table("run_tags"):
+        with op.batch_alter_table("run_tags") as batch_op:
+            batch_op.alter_column(sa.Column("key"), type_=sa.String, existing_type=sa.Text)
+            batch_op.alter_column(sa.Column("value"), type_=sa.String, existing_type=sa.Text)
+
+    if has_table("jobs"):
+        with op.batch_alter_table("jobs") as batch_op:
+            batch_op.alter_column(sa.Column("job_body"), type_=sa.String, existing_type=sa.Text)
+
+    if has_table("job_ticks"):
+        with op.batch_alter_table("job_ticks") as batch_op:
+            batch_op.alter_column(sa.Column("tick_body"), type_=sa.String, existing_type=sa.Text)
