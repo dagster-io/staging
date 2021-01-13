@@ -46,18 +46,6 @@ def remove_none_entries(ddict):
     return {k: v for k, v in ddict.items() if v is not None}
 
 
-def define_solid_config_cls(config_schema, inputs_field, outputs_field):
-    check_opt_field_param(config_schema, "config_schema")
-    check_opt_field_param(inputs_field, "inputs_field")
-    check_opt_field_param(outputs_field, "outputs_field")
-
-    return Shape(
-        remove_none_entries(
-            {"config": config_schema, "inputs": inputs_field, "outputs": outputs_field}
-        ),
-    )
-
-
 def def_config_field(configurable_def, is_required=None):
     check.inst_param(configurable_def, "configurable_def", ConfigurableDefinition)
     return Field(
