@@ -302,7 +302,8 @@ def test_run_partition_data_migration():
         assert "partition" in set(get_sqlite3_columns(db_path, "runs"))
         assert "partition_set" in set(get_sqlite3_columns(db_path, "runs"))
 
-        instance = DagsterInstance.from_ref(InstanceRef.from_dir(test_dir))
+        with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
+            instance._run_storage.upgrade()
 
         run_storage = instance._run_storage
         assert isinstance(run_storage, SqlRunStorage)
@@ -345,7 +346,7 @@ def test_0_10_0_schedule_wipe():
         with DagsterInstance.from_ref(InstanceRef.from_dir(test_dir)) as instance:
             instance.upgrade()
 
-        assert get_current_alembic_version(db_path) == "140198fdfe65"
+        assert get_current_alembic_version(db_path) == "0da417ae1b81"
 
         assert "schedules" not in get_sqlite3_tables(db_path)
         assert "schedule_ticks" not in get_sqlite3_tables(db_path)
