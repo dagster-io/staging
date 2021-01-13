@@ -202,18 +202,8 @@ class DagsterType:
         return []
 
     @property
-    def input_hydration_schema_key(self):
-        rename_warning("loader_schema_key", "input_hydration_schema_key", "0.10.0")
-        return self.loader_schema_key
-
-    @property
     def loader_schema_key(self):
         return self.loader.schema_type.key if self.loader else None
-
-    @property
-    def output_materialization_schema_key(self):
-        rename_warning("materializer_schema_key", "output_materialization_schema_key", "0.10.0")
-        return self.materializer_schema_key
 
     @property
     def materializer_schema_key(self):
