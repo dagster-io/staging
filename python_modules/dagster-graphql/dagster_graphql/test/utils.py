@@ -10,7 +10,7 @@ from dagster.core.host_representation import (
 )
 from dagster.core.instance import DagsterInstance
 from dagster.core.types.loadable_target_origin import LoadableTargetOrigin
-from dagster_graphql.implementation.context import DagsterGraphQLContext
+from dagster_graphql.implementation.context import ProcessContext
 from dagster_graphql.schema import create_schema
 from graphql import graphql
 
@@ -53,7 +53,7 @@ def execute_dagster_graphql_and_finish_runs(context, query, variables=None):
 def define_in_process_context(python_file, fn_name, instance):
     check.inst_param(instance, "instance", DagsterInstance)
 
-    return DagsterGraphQLContext(
+    return ProcessContext(
         workspace=Workspace(
             [
                 InProcessRepositoryLocationOrigin(
@@ -62,7 +62,7 @@ def define_in_process_context(python_file, fn_name, instance):
             ]
         ),
         instance=instance,
-    )
+    ).create_request_context()
 
 
 @contextmanager
@@ -70,18 +70,19 @@ def define_out_of_process_context(python_file, fn_name, instance):
     check.inst_param(instance, "instance", DagsterInstance)
 
     with Workspace(
-        [
-            ManagedGrpcPythonEnvRepositoryLocationOrigin(
-                loadable_target_origin=LoadableTargetOrigin(
-                    executable_path=sys.executable, python_file=python_file, attribute=fn_name,
-                ),
-                location_name=main_repo_location_name(),
-            )
-        ]
+        [define_managed_grpc_repository_location_origin(python_file, fn_name)]
     ) as workspace:
-        yield DagsterGraphQLContext(
-            workspace=workspace, instance=instance,
-        )
+        yield ProcessContext(workspace=workspace, instance=instance,).create_request_context()
+
+
+def define_managed_grpc_repository_location_origin(python_file, fn_name):
+
+    return ManagedGrpcPythonEnvRepositoryLocationOrigin(
+        loadable_target_origin=LoadableTargetOrigin(
+            executable_path=sys.executable, python_file=python_file, attribute=fn_name,
+        ),
+        location_name=main_repo_location_name(),
+    )
 
 
 def infer_repository(graphql_context):
