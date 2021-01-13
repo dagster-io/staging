@@ -69,3 +69,12 @@ snapshots['TestComputeLogs.test_get_compute_logs_over_graphql[sqlite_with_defaul
 '''
     }
 }
+
+snapshots['TestComputeLogs.test_compute_logs_subscription_graphql[sqlite_with_default_run_launcher_managed_grpc_env] 1'] = [
+    {
+        'computeLogs': {
+            'data': '''HELLO WORLD
+'''
+        }
+    }
+]
