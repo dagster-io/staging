@@ -1,3 +1,5 @@
+"""Deprecated serialization machinery -- remove in 0.11.0"""
+
 from dagster import check, seven
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
 

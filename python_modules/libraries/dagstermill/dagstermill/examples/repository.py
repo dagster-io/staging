@@ -13,6 +13,7 @@ from dagster import (
     OutputDefinition,
     ResourceDefinition,
     String,
+    fs_io_manager,
     lambda_solid,
     pipeline,
     repository,
@@ -68,7 +69,9 @@ def test_nb_solid(name, **kwargs):
     )
 
 
-default_mode_defs = [ModeDefinition(resource_defs={"file_manager": local_file_manager})]
+default_mode_defs = [
+    ModeDefinition(resource_defs={"file_manager": local_file_manager, "io_manager": fs_io_manager})
+]
 
 
 hello_world = test_nb_solid("hello_world", output_defs=[])
@@ -196,7 +199,7 @@ if DAGSTER_PANDAS_PRESENT and SKLEARN_PRESENT and MATPLOTLIB_PRESENT:
 
     clean_data = test_nb_solid("clean_data", output_defs=[OutputDefinition(DataFrame)])
 
-    # FIXME add an output to this
+    # TODO: add an output to this
     tutorial_LR = test_nb_solid(
         "tutorial_LR", input_defs=[InputDefinition(name="df", dagster_type=DataFrame)],
     )
@@ -208,7 +211,7 @@ if DAGSTER_PANDAS_PRESENT and SKLEARN_PRESENT and MATPLOTLIB_PRESENT:
     @pipeline(mode_defs=default_mode_defs)
     def tutorial_pipeline():
         df, _ = clean_data()
-        # FIXME get better names for these
+        # TODO: get better names for these
         tutorial_LR(df)
         tutorial_RF(df)
 
@@ -281,11 +284,16 @@ def filepicklelist_resource(init_context):
             resource_defs={
                 "list": ResourceDefinition(lambda _: []),
                 "file_manager": local_file_manager,
+                "io_manager": fs_io_manager,
             },
         ),
         ModeDefinition(
             name="prod",
-            resource_defs={"list": filepicklelist_resource, "file_manager": local_file_manager},
+            resource_defs={
+                "list": filepicklelist_resource,
+                "file_manager": local_file_manager,
+                "io_manager": fs_io_manager,
+            },
         ),
     ]
 )
@@ -296,7 +304,11 @@ def resource_pipeline():
 @pipeline(
     mode_defs=[
         ModeDefinition(
-            resource_defs={"list": filepicklelist_resource, "file_manager": local_file_manager}
+            resource_defs={
+                "list": filepicklelist_resource,
+                "file_manager": local_file_manager,
+                "io_manager": fs_io_manager,
+            }
         )
     ]
 )
@@ -343,6 +355,25 @@ def yield_obj_pipeline():
     yield_obj()
 
 
+sum_nums = test_nb_solid("sum_nums", input_defs=[InputDefinition("nums", List[int])])
+
+
+def yield_num(num):
+    @solid(name=f"yield_{num}")
+    def _yield_num(_) -> int:
+        return num
+
+    return _yield_num
+
+
+@pipeline(mode_defs=default_mode_defs)
+def sum_nums_pipeline():
+    a = yield_num(5)()
+    b = yield_num(6)()
+    c = yield_num(7)()
+    sum_nums([a, b, c])
+
+
 @repository
 def notebook_repo():
     pipelines = [
@@ -358,6 +389,7 @@ def notebook_repo():
         add_pipeline,
         notebook_dag_pipeline,
         reimport_pipeline,
+        sum_nums_pipeline,
         yield_3_pipeline,
         yield_obj_pipeline,
     ]

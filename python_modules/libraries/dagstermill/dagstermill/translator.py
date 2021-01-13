@@ -3,17 +3,6 @@ from typing import Any, Dict
 import papermill
 from dagster import check, seven
 
-RESERVED_INPUT_NAMES = [
-    "__dagstermill_context",
-    "__dagstermill_dagstermill",
-    "__dagstermill_executable_dict",
-    "__dagstermill_json",
-    "__dagstermill_pipeline_run_dict",
-    "__dagstermill_solid_handle_kwargs",
-    "__dagstermill_instance_ref_dict",
-    "__dagstermill_seven",
-]
-
 INJECTED_BOILERPLATE = """
 # Injected parameters
 from dagster import seven as __dagstermill_seven
@@ -23,7 +12,8 @@ context = __dagstermill_dagstermill._reconstitute_pipeline_context(
         key: __dagstermill_seven.json.loads(value)
         for key, value
         in {pipeline_context_args}.items()
-    }}
+    }},
+    step_key="{step_key}",
 )
 """
 
@@ -51,13 +41,13 @@ class DagsterTranslator(papermill.translators.PythonTranslator):
         for key in pipeline_context_args:
             pipeline_context_args[key] = seven.json.dumps(pipeline_context_args[key])
 
-        content = INJECTED_BOILERPLATE.format(pipeline_context_args=pipeline_context_args)
+        content = INJECTED_BOILERPLATE.format(
+            pipeline_context_args=pipeline_context_args, step_key=parameters["step_key"]
+        )
 
-        for name, val in parameters.items():
-            dm_unmarshal_call = (
-                f"__dagstermill_dagstermill._load_parameter('{name}', '{seven.json.dumps(val)}')"
-            )
-            content += "{}\n".format(cls.assign(name, dm_unmarshal_call))
+        for input_name in parameters["input_names"]:
+            dm_unmarshal_call = f"__dagstermill_dagstermill._load_input('{input_name}')"
+            content += "{}\n".format(cls.assign(input_name, dm_unmarshal_call))
 
         return content
 
