@@ -212,3 +212,38 @@ snapshots['TestExpectations.test_basic_expectations_within_compute_step_events[s
         'timestamp': '<timestamp dummy value>'
     }
 ]
+
+snapshots['TestExpectations.test_basic_input_output_expectations[sqlite_with_default_run_launcher_managed_grpc_env] 1'] = [
+    {
+        '__typename': 'StepExpectationResultEvent',
+        'expectationResult': {
+            'description': None,
+            'label': 'some_expectation',
+            'metadataEntries': [
+            ],
+            'success': True
+        },
+        'level': 'DEBUG',
+        'message': 'Expectation some_expectation passed',
+        'runId': '<runId dummy value>',
+        'solidHandleID': 'df_expectations_solid',
+        'stepKey': 'df_expectations_solid',
+        'timestamp': '<timestamp dummy value>'
+    },
+    {
+        '__typename': 'StepExpectationResultEvent',
+        'expectationResult': {
+            'description': None,
+            'label': 'other_expectation',
+            'metadataEntries': [
+            ],
+            'success': True
+        },
+        'level': 'DEBUG',
+        'message': 'Expectation other_expectation passed',
+        'runId': '<runId dummy value>',
+        'solidHandleID': 'df_expectations_solid',
+        'stepKey': 'df_expectations_solid',
+        'timestamp': '<timestamp dummy value>'
+    }
+]
