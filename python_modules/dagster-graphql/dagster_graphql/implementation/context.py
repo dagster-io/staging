@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from dagster import check
 from dagster.core.host_representation import PipelineSelector, RepositoryLocation
 from dagster.core.host_representation.external import ExternalPipeline
@@ -12,7 +14,142 @@ from dagster_graphql.schema.pipelines import DauphinPipeline
 from rx.subjects import Subject
 
 
-class DagsterGraphQLContext:
+class RequestContext(
+    namedtuple(
+        "RequestContext",
+        "instance workspace_snapshot repository_locations_dict process_context version",
+    )
+):
+    def __new__(
+        cls, instance, workspace_snapshot, repository_locations_dict, process_context, version
+    ):
+        return super(RequestContext, cls).__new__(
+            cls, instance, workspace_snapshot, repository_locations_dict, process_context, version
+        )
+
+    @property
+    def repository_locations(self):
+        return list(self.repository_locations_dict.values())
+
+    @property
+    def repository_location_names(self):
+        return self.workspace_snapshot.repository_location_names
+
+    def repository_location_errors(self):
+        return self.workspace_snapshot.repository_location_errors
+
+    def get_repository_location(self, name):
+        return self.repository_locations_dict[name]
+
+    def has_repository_location_error(self, name):
+        return self.workspace_snapshot.has_repository_location_error(name)
+
+    def get_repository_location_error(self, name):
+        return self.workspace_snapshot.get_repository_location_error(name)
+
+    def has_repository_location(self, name):
+        return name in self.repository_locations_dict
+
+    def is_reload_supported(self, name):
+        return self.workspace_snapshot.is_reload_supported(name)
+
+    def reload_repository_location(self, name):
+        # This method reloads the location on the process context, and returns a new
+        # request context created from the updated process context
+        updated_process_context = self.process_context.reload_repository_location(name)
+        return updated_process_context.create_request_context()
+
+    def get_subset_external_pipeline(self, selector):
+        check.inst_param(selector, "selector", PipelineSelector)
+        # We have to grab the pipeline from the location instead of the repository directly
+        # since we may have to request a subset we don't have in memory yet
+
+        repository_location = self.repository_locations_dict[selector.location_name]
+        external_repository = repository_location.get_repository(selector.repository_name)
+
+        subset_result = repository_location.get_subset_external_pipeline_result(selector)
+        if not subset_result.success:
+            error_info = subset_result.error
+            raise UserFacingGraphQLError(
+                DauphinInvalidSubsetError(
+                    message="{message}{cause_message}".format(
+                        message=error_info.message,
+                        cause_message="\n{}".format(error_info.cause.message)
+                        if error_info.cause
+                        else "",
+                    ),
+                    pipeline=DauphinPipeline(self.get_full_external_pipeline(selector)),
+                )
+            )
+
+        return ExternalPipeline(
+            subset_result.external_pipeline_data, repository_handle=external_repository.handle,
+        )
+
+    def has_external_pipeline(self, selector):
+        check.inst_param(selector, "selector", PipelineSelector)
+        if selector.location_name in self.repository_locations_dict:
+            loc = self.repository_locations_dict[selector.location_name]
+            if loc.has_repository(selector.repository_name):
+                return loc.get_repository(selector.repository_name).has_external_pipeline(
+                    selector.pipeline_name
+                )
+
+    def get_full_external_pipeline(self, selector):
+        return (
+            self.repository_locations_dict[selector.location_name]
+            .get_repository(selector.repository_name)
+            .get_full_external_pipeline(selector.pipeline_name)
+        )
+
+    def get_external_execution_plan(
+        self, external_pipeline, run_config, mode, step_keys_to_execute
+    ):
+        return self.repository_locations_dict[
+            external_pipeline.handle.location_name
+        ].get_external_execution_plan(
+            external_pipeline=external_pipeline,
+            run_config=run_config,
+            mode=mode,
+            step_keys_to_execute=step_keys_to_execute,
+        )
+
+    def get_external_partition_config(self, repository_handle, partition_set_name, partition_name):
+        return self.repository_locations_dict[
+            repository_handle.repository_location_handle.location_name
+        ].get_external_partition_config(
+            repository_handle=repository_handle,
+            partition_set_name=partition_set_name,
+            partition_name=partition_name,
+        )
+
+    def get_external_partition_tags(self, repository_handle, partition_set_name, partition_name):
+        return self.repository_locations_dict[
+            repository_handle.repository_location_handle.location_name
+        ].get_external_partition_tags(
+            repository_handle=repository_handle,
+            partition_set_name=partition_set_name,
+            partition_name=partition_name,
+        )
+
+    def get_external_partition_names(self, repository_handle, partition_set_name):
+        return self.repository_locations_dict[
+            repository_handle.repository_location_handle.location_name
+        ].get_external_partition_names(repository_handle, partition_set_name)
+
+    def get_external_partition_set_execution_param_data(
+        self, repository_handle, partition_set_name, partition_names
+    ):
+        return self.repository_locations_dict[
+            repository_handle.repository_location_handle.location_name
+        ].get_external_partition_set_execution_param_data(
+            repository_handle=repository_handle,
+            partition_set_name=partition_set_name,
+            partition_names=partition_names,
+        )
+
+
+class ProcessContext:
     def __init__(self, instance, workspace, version=None):
         self._instance = check.inst_param(instance, "instance", DagsterInstance)
         self._workspace = workspace
@@ -38,17 +175,22 @@ class DagsterGraphQLContext:
 
         self.version = version
 
+    def create_request_context(self):
+        return RequestContext(
+            instance=self.instance,
+            workspace_snapshot=self._workspace.create_snapshot(),
+            repository_locations_dict=self._repository_locations.copy(),
+            process_context=self,
+            version=self.version,
+        )
+
     @property
     def instance(self):
         return self._instance
 
     @property
-    def repository_locations(self):
-        return list(self._repository_locations.values())
-
-    @property
-    def repository_location_names(self):
-        return self._workspace.repository_location_names
+    def workspace(self):
+        return self._workspace
 
     @property
     def location_state_events(self):
@@ -69,24 +211,6 @@ class DagsterGraphQLContext:
 
         self._location_state_events.on_next(event)
 
-    def repository_location_errors(self):
-        return self._workspace.repository_location_errors
-
-    def get_repository_location(self, name):
-        return self._repository_locations[name]
-
-    def has_repository_location_error(self, name):
-        return self._workspace.has_repository_location_error(name)
-
-    def get_repository_location_error(self, name):
-        return self._workspace.get_repository_location_error(name)
-
-    def has_repository_location(self, name):
-        return name in self._repository_locations
-
-    def is_reload_supported(self, name):
-        return self._workspace.is_reload_supported(name)
-
     def reload_repository_location(self, name):
         self._workspace.reload_repository_location(name)
 
@@ -99,91 +223,4 @@ class DagsterGraphQLContext:
         elif name in self._repository_locations:
             del self._repository_locations[name]
 
-    def get_subset_external_pipeline(self, selector):
-        check.inst_param(selector, "selector", PipelineSelector)
-        # We have to grab the pipeline from the location instead of the repository directly
-        # since we may have to request a subset we don't have in memory yet
-
-        repository_location = self._repository_locations[selector.location_name]
-        external_repository = repository_location.get_repository(selector.repository_name)
-
-        subset_result = repository_location.get_subset_external_pipeline_result(selector)
-        if not subset_result.success:
-            error_info = subset_result.error
-            raise UserFacingGraphQLError(
-                DauphinInvalidSubsetError(
-                    message="{message}{cause_message}".format(
-                        message=error_info.message,
-                        cause_message="\n{}".format(error_info.cause.message)
-                        if error_info.cause
-                        else "",
-                    ),
-                    pipeline=DauphinPipeline(self.get_full_external_pipeline(selector)),
-                )
-            )
-
-        return ExternalPipeline(
-            subset_result.external_pipeline_data, repository_handle=external_repository.handle,
-        )
-
-    def has_external_pipeline(self, selector):
-        check.inst_param(selector, "selector", PipelineSelector)
-        if selector.location_name in self._repository_locations:
-            loc = self._repository_locations[selector.location_name]
-            if loc.has_repository(selector.repository_name):
-                return loc.get_repository(selector.repository_name).has_external_pipeline(
-                    selector.pipeline_name
-                )
-
-    def get_full_external_pipeline(self, selector):
-        return (
-            self._repository_locations[selector.location_name]
-            .get_repository(selector.repository_name)
-            .get_full_external_pipeline(selector.pipeline_name)
-        )
-
-    def get_external_execution_plan(
-        self, external_pipeline, run_config, mode, step_keys_to_execute
-    ):
-        return self._repository_locations[
-            external_pipeline.handle.location_name
-        ].get_external_execution_plan(
-            external_pipeline=external_pipeline,
-            run_config=run_config,
-            mode=mode,
-            step_keys_to_execute=step_keys_to_execute,
-        )
-
-    def get_external_partition_config(self, repository_handle, partition_set_name, partition_name):
-        return self._repository_locations[
-            repository_handle.repository_location_handle.location_name
-        ].get_external_partition_config(
-            repository_handle=repository_handle,
-            partition_set_name=partition_set_name,
-            partition_name=partition_name,
-        )
-
-    def get_external_partition_tags(self, repository_handle, partition_set_name, partition_name):
-        return self._repository_locations[
-            repository_handle.repository_location_handle.location_name
-        ].get_external_partition_tags(
-            repository_handle=repository_handle,
-            partition_set_name=partition_set_name,
-            partition_name=partition_name,
-        )
-
-    def get_external_partition_names(self, repository_handle, partition_set_name):
-        return self._repository_locations[
-            repository_handle.repository_location_handle.location_name
-        ].get_external_partition_names(repository_handle, partition_set_name)
-
-    def get_external_partition_set_execution_param_data(
-        self, repository_handle, partition_set_name, partition_names
-    ):
-        return self._repository_locations[
-            repository_handle.repository_location_handle.location_name
-        ].get_external_partition_set_execution_param_data(
-            repository_handle=repository_handle,
-            partition_set_name=partition_set_name,
-            partition_names=partition_names,
-        )
+        return self
