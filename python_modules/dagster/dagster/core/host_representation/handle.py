@@ -44,6 +44,9 @@ class RepositoryLocationHandle(ABC):
     def __exit__(self, exception_type, exception_value, traceback):
         self.cleanup()
 
+    def __del__(self):
+        self.cleanup()
+
     def cleanup(self):
         pass
 
