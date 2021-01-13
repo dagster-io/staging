@@ -44,6 +44,9 @@ class RepositoryLocationHandle(ABC):
     def __exit__(self, exception_type, exception_value, traceback):
         self.cleanup()
 
+    def __del__(self):
+        self.cleanup()
+
     def cleanup(self):
         pass
 
@@ -112,10 +115,7 @@ class GrpcServerRepositoryLocationHandle(RepositoryLocationHandle):
         )
         self._watch_thread_shutdown_event = watch_thread_shutdown_event
         self._watch_thread = watch_thread
-
-        # Temporarily disabling due to thread-safety issues ith
-        # deployed gRPC servers (https://github.com/dagster-io/dagster/issues/3404)
-        # self._watch_thread.start()
+        self._watch_thread.start()
 
         self.executable_path = list_repositories_response.executable_path
         self.repository_code_pointer_dict = list_repositories_response.repository_code_pointer_dict

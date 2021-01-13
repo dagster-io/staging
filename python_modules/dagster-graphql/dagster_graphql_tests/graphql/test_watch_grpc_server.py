@@ -21,7 +21,7 @@ class TestSubscribeToGrpcServerEvents(
         test_subscriber = LocationStateSubscriber(events.append)
         handle = next(
             iter(
-                graphql_context._workspace.repository_location_handles  # pylint: disable=protected-access
+                graphql_context.process_context._workspace.repository_location_handles  # pylint: disable=protected-access
             )
         )
         handle.add_state_subscriber(test_subscriber)
