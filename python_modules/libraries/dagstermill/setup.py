@@ -32,6 +32,8 @@ if __name__ == "__main__":
             "nbconvert>=5.4.0,<6.0.0",
             "nteract-scrapbook>=0.2.0",
             "papermill>=1.0.0,<2.0.0",
+            # unpin until https://github.com/jupyter/nbformat/issues/196 is resolved.
+            "nbformat==5.0.8",
         ],
         entry_points={"console_scripts": ["dagstermill = dagstermill.cli:main"]},
     )
