@@ -9,10 +9,10 @@ import PyObject from 'components/PyObject';
 # Dagster Daemon
 
 Several Dagster features, like [schedules](/overview/schedules-sensors/schedules), [sensors](/overview/schedules-sensors/sensors),
-and run queueing, require a long-running `dagster-daemon` process to be included
+and [run queueing](/overview/pipeline-runs/limiting-run-concurrency), require a long-running `dagster-daemon` process to be included
 with your deployment.
 
-To run the `dagster-daemon` process locally, simply run the following command on the same
+To run the `dagster-daemon` process locally, run the following command on the same
 machine that you use to run Dagit:
 
 ```shell
@@ -25,12 +25,13 @@ other environments, like Docker or Kubernetes.
 ## Available daemons
 
 The `dagster-daemon` process reads from your [Dagster instance](/overview/instances/dagster-instance) file to
-determine which daemons it should include. Each of those daemons then executes on a regular interval.
+determine which daemons it should include. Each of those daemons then runs on a regular interval.
+
 The following daemons are currently available:
 
-- The _scheduler daemon_ is responsible for create runs rom any [schedules](/overview/schedules-sensors/schedules) that
-  are turned on. This daemon will run as long as you don't have a scheduler other than <PyObject module="dagster.core.scheduler" object="DagsterDaemonScheduler" />
-  set as the scheduler on your instance.
+- The _scheduler daemon_ is responsible for creating runs from any [schedules](/overview/schedules-sensors/schedules) that
+  are turned on. This daemon will run as long as you have not overridden the default <PyObject module="dagster.core.scheduler" object="DagsterDaemonScheduler" />
+  as the scheduler on your instance.
 
 - The _run queue daemon_ is responsible for launching queued runs, using any limits and prioritization
   rules you've set on your instance. You can enable this daemon by setting the run coordinator on your
