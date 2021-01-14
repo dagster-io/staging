@@ -66,6 +66,8 @@ class DefaultRunLauncher(RunLauncher, ConfigurableClass):
         check.inst_param(run, "run", PipelineRun)
         check.inst_param(external_pipeline, "external_pipeline", ExternalPipeline)
 
+        raise DagsterLaunchFailedError("help!", None)
+
         repository_location_handle = external_pipeline.repository_handle.repository_location_handle
 
         check.inst(
