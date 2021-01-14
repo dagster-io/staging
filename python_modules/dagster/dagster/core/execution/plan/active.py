@@ -1,5 +1,6 @@
 import time
 from collections import defaultdict
+from typing import Callable, Iterator, List, Optional
 
 from dagster import check
 from dagster.core.errors import (
@@ -8,14 +9,17 @@ from dagster.core.errors import (
     DagsterUnknownStepStateError,
 )
 from dagster.core.events import DagsterEvent
+from dagster.core.execution.context.system import SystemPipelineExecutionContext
 from dagster.core.execution.retries import Retries
 from dagster.core.storage.tags import PRIORITY_TAG
 from dagster.utils.interrupts import pop_captured_interrupt
 
+from .outputs import StepOutputHandle
 from .plan import ExecutionPlan
+from .step import ExecutionStep
 
 
-def _default_sort_key(step):
+def _default_sort_key(step: ExecutionStep) -> float:
     return int(step.tags.get(PRIORITY_TAG, 0)) * -1
 
 
@@ -23,7 +27,12 @@ class ActiveExecution:
     """State machine used to track progress through execution of an ExecutionPlan
     """
 
-    def __init__(self, execution_plan, retries, sort_key_fn=None):
+    def __init__(
+        self,
+        execution_plan: ExecutionPlan,
+        retries: Retries,
+        sort_key_fn: Optional[Callable[[ExecutionStep], float]] = None,
+    ):
         self._plan = check.inst_param(execution_plan, "execution_plan", ExecutionPlan)
         self._retries = check.inst_param(retries, "retries", Retries)
         self._sort_key_fn = check.opt_callable_param(sort_key_fn, "sort_key_fn", _default_sort_key)
@@ -113,7 +122,7 @@ class ActiveExecution:
                     )
                 )
 
-    def _update(self):
+    def _update(self) -> None:
         """Moves steps from _pending to _executable / _pending_skip / _pending_retry
            as a function of what has been _completed
         """
@@ -189,13 +198,13 @@ class ActiveExecution:
             self._executable.append(key)
             del self._waiting_to_retry[key]
 
-    def sleep_til_ready(self):
+    def sleep_til_ready(self) -> None:
         now = time.time()
         sleep_amt = min([ready_at - now for ready_at in self._waiting_to_retry.values()])
         if sleep_amt > 0:
             time.sleep(sleep_amt)
 
-    def get_next_step(self):
+    def get_next_step(self) -> ExecutionStep:
         check.invariant(not self.is_complete, "Can not call get_next_step when is_complete is True")
 
         steps = self.get_steps_to_execute(limit=1)
@@ -210,10 +219,10 @@ class ActiveExecution:
         check.invariant(step is not None, "Unexpected ActiveExecution state")
         return step
 
-    def get_step_by_key(self, step_key):
+    def get_step_by_key(self, step_key: str) -> ExecutionStep:
         return self._plan.get_step_by_key(step_key)
 
-    def get_steps_to_execute(self, limit=None):
+    def get_steps_to_execute(self, limit: int = None):
         check.invariant(
             self._context_guard, "ActiveExecution must be used as a context manager",
         )
@@ -232,7 +241,7 @@ class ActiveExecution:
             self._executable.remove(step.key)
         return steps
 
-    def get_steps_to_skip(self):
+    def get_steps_to_skip(self) -> List[ExecutionStep]:
         self._update()
 
         steps = []
@@ -244,7 +253,7 @@ class ActiveExecution:
 
         return sorted(steps, key=self._sort_key_fn)
 
-    def get_steps_to_abandon(self):
+    def get_steps_to_abandon(self) -> List[ExecutionStep]:
         self._update()
 
         steps = []
@@ -256,7 +265,7 @@ class ActiveExecution:
 
         return sorted(steps, key=self._sort_key_fn)
 
-    def plan_events_iterator(self, pipeline_context):
+    def plan_events_iterator(self, pipeline_context) -> Iterator[DagsterEvent]:
         """Process all steps that can be skipped and abandoned
         """
 
@@ -306,31 +315,31 @@ class ActiveExecution:
 
             steps_to_abandon = self.get_steps_to_abandon()
 
-    def mark_failed(self, step_key):
+    def mark_failed(self, step_key: str) -> None:
         self._failed.add(step_key)
         self._mark_complete(step_key)
 
-    def mark_success(self, step_key):
+    def mark_success(self, step_key: str) -> None:
         self._success.add(step_key)
         self._mark_complete(step_key)
         if step_key in self._successful_dynamic_outputs:
             self._pending_resolve.append(step_key)
 
-    def mark_skipped(self, step_key):
+    def mark_skipped(self, step_key: str) -> None:
         self._skipped.add(step_key)
         self._mark_complete(step_key)
 
-    def mark_abandoned(self, step_key):
+    def mark_abandoned(self, step_key: str) -> None:
         self._abandoned.add(step_key)
         self._mark_complete(step_key)
 
-    def mark_interrupted(self):
+    def mark_interrupted(self) -> None:
         self._interrupted = True
 
-    def check_for_interrupts(self):
+    def check_for_interrupts(self) -> None:
         return pop_captured_interrupt()
 
-    def mark_up_for_retry(self, step_key, at_time=None):
+    def mark_up_for_retry(self, step_key: str, at_time: Optional[float] = None) -> None:
         check.invariant(
             not self._retries.disabled,
             "Attempted to mark {} as up for retry but retries are disabled".format(step_key),
@@ -352,7 +361,7 @@ class ActiveExecution:
 
         self._mark_complete(step_key)
 
-    def _mark_complete(self, step_key):
+    def _mark_complete(self, step_key: str) -> None:
         check.invariant(
             step_key in self._in_flight,
             "Attempted to mark step {} as complete that was not known to be in flight".format(
@@ -361,7 +370,7 @@ class ActiveExecution:
         )
         self._in_flight.remove(step_key)
 
-    def handle_event(self, dagster_event):
+    def handle_event(self, dagster_event: DagsterEvent) -> None:
         check.inst_param(dagster_event, "dagster_event", DagsterEvent)
 
         if dagster_event.is_step_failure:
@@ -384,7 +393,9 @@ class ActiveExecution:
                     dagster_event.step_output_data.step_output_handle.output_name
                 ].append(dagster_event.step_output_data.step_output_handle.mapping_key)
 
-    def verify_complete(self, pipeline_context, step_key):
+    def verify_complete(
+        self, pipeline_context: SystemPipelineExecutionContext, step_key: str
+    ) -> None:
         """Ensure that a step has reached a terminal state, if it has not mark it as an unexpected failure
         """
         if step_key in self._in_flight:
@@ -396,18 +407,18 @@ class ActiveExecution:
             self.mark_unknown_state(step_key)
 
     # factored out for test
-    def mark_unknown_state(self, step_key):
+    def mark_unknown_state(self, step_key: str) -> None:
         # note the step so that we throw upon plan completion
         self._unknown_state.add(step_key)
         # mark as abandoned so downstream tasks do not execute
         self.mark_abandoned(step_key)
 
     # factored out for test
-    def mark_step_produced_output(self, step_output_handle):
+    def mark_step_produced_output(self, step_output_handle: StepOutputHandle) -> None:
         self._step_outputs.add(step_output_handle)
 
     @property
-    def is_complete(self):
+    def is_complete(self) -> bool:
         return (
             len(self._pending) == 0
             and len(self._in_flight) == 0
