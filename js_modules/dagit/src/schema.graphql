@@ -852,6 +852,7 @@ type Instance {
   info: String!
   runLauncher: RunLauncher
   assetsSupported: Boolean!
+  runQueuingSupported: Boolean!
   executablePath: String!
   daemonHealth: DaemonHealth!
 }
