@@ -85,14 +85,6 @@ class EventLogStorage(ABC):
     def end_watch(self, run_id, handler):
         """Call this method to stop watching."""
 
-    @abstractmethod
-    def has_secondary_index(self, name, run_id=None):
-        """Whether the secondary index for a given name is enabled."""
-
-    @abstractmethod
-    def enable_secondary_index(self, name, run_id=None):
-        """Call to enable the secondary index for a given name."""
-
     @abstractproperty
     def is_persistent(self):
         """bool: Whether the storage is persistent."""
