@@ -266,6 +266,23 @@ class InstanceManagers:
         )
 
     @staticmethod
+    def postgres_instance_with_default_run_launcher_queued_run_coordinator():
+        @contextmanager
+        def _postgres_instance_with_default_hijack():
+            with graphql_postgres_instance(
+                overrides={
+                    "run_launcher": {"module": "dagster", "class": "DefaultRunLauncher",},
+                    "run_coordinator": {
+                        "module": "dagster.core.run_coordinator",
+                        "class": "QueuedRunCoordinator",
+                    },
+                }
+            ) as instance:
+                yield instance
+
+        return MarkedManager(_postgres_instance_with_default_hijack, [],)
+
+    @staticmethod
     def asset_aware_sqlite_instance():
         @contextmanager
         def _sqlite_asset_instance():
@@ -648,6 +665,14 @@ class GraphQLContextVariant:
         )
 
     @staticmethod
+    def postgres_with_default_run_launcher_queued_run_coordinator_in_process_env():
+        return GraphQLContextVariant(
+            InstanceManagers.postgres_instance_with_default_run_launcher_queued_run_coordinator(),
+            EnvironmentManagers.user_code_in_host_process(),
+            test_id="postgres_with_default_run_launcher_queued_run_coordinator_in_process_env",
+        )
+
+    @staticmethod
     def all_variants():
         """
         There is a test case that keeps this up-to-date. If you add a static
@@ -677,6 +702,7 @@ class GraphQLContextVariant:
             GraphQLContextVariant.readonly_postgres_instance_multi_location(),
             GraphQLContextVariant.readonly_postgres_instance_managed_grpc_env(),
             GraphQLContextVariant.asset_aware_sqlite_instance_in_process_env(),
+            GraphQLContextVariant.postgres_with_default_run_launcher_queued_run_coordinator_in_process_env(),
         ]
 
     @staticmethod
