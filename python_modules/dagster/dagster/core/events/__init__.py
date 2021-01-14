@@ -786,86 +786,6 @@ class DagsterEvent(
         )
 
     @staticmethod
-    def object_store_operation(step_context, object_store_operation_result):
-        from dagster.core.definitions.events import ObjectStoreOperation
-
-        check.inst_param(
-            object_store_operation_result, "object_store_operation_result", ObjectStoreOperation
-        )
-
-        object_store_name = (
-            "{object_store_name} ".format(
-                object_store_name=object_store_operation_result.object_store_name
-            )
-            if object_store_operation_result.object_store_name
-            else ""
-        )
-
-        serialization_strategy_modifier = (
-            " using {serialization_strategy_name}".format(
-                serialization_strategy_name=object_store_operation_result.serialization_strategy_name
-            )
-            if object_store_operation_result.serialization_strategy_name
-            else ""
-        )
-
-        value_name = object_store_operation_result.value_name
-
-        if (
-            ObjectStoreOperationType(object_store_operation_result.op)
-            == ObjectStoreOperationType.SET_OBJECT
-        ):
-            message = (
-                "Stored intermediate object for output {value_name} in "
-                "{object_store_name}object store{serialization_strategy_modifier}."
-            ).format(
-                value_name=value_name,
-                object_store_name=object_store_name,
-                serialization_strategy_modifier=serialization_strategy_modifier,
-            )
-        elif (
-            ObjectStoreOperationType(object_store_operation_result.op)
-            == ObjectStoreOperationType.GET_OBJECT
-        ):
-            message = (
-                "Retrieved intermediate object for input {value_name} in "
-                "{object_store_name}object store{serialization_strategy_modifier}."
-            ).format(
-                value_name=value_name,
-                object_store_name=object_store_name,
-                serialization_strategy_modifier=serialization_strategy_modifier,
-            )
-        elif (
-            ObjectStoreOperationType(object_store_operation_result.op)
-            == ObjectStoreOperationType.CP_OBJECT
-        ):
-            message = (
-                "Copied intermediate object for input {value_name} from {key} to {dest_key}"
-            ).format(
-                value_name=value_name,
-                key=object_store_operation_result.key,
-                dest_key=object_store_operation_result.dest_key,
-            )
-        else:
-            message = ""
-
-        return DagsterEvent.from_step(
-            DagsterEventType.OBJECT_STORE_OPERATION,
-            step_context,
-            event_specific_data=ObjectStoreOperationResultData(
-                op=object_store_operation_result.op,
-                value_name=value_name,
-                address=object_store_operation_result.key,
-                metadata_entries=[
-                    EventMetadataEntry.path(object_store_operation_result.key, label="key")
-                ],
-                version=object_store_operation_result.version,
-                mapping_key=object_store_operation_result.mapping_key,
-            ),
-            message=message,
-        )
-
-    @staticmethod
     def handled_output(step_context, output_name, manager_key):
         check.str_param(output_name, "output_name")
         check.str_param(manager_key, "manager_key")
@@ -1001,27 +921,6 @@ class StepMaterializationData(namedtuple("_StepMaterializationData", "materializ
 @whitelist_for_serdes
 class StepExpectationResultData(namedtuple("_StepExpectationResultData", "expectation_result")):
     pass
-
-
-@whitelist_for_serdes
-class ObjectStoreOperationResultData(
-    namedtuple(
-        "_ObjectStoreOperationResultData",
-        "op value_name metadata_entries address version mapping_key",
-    )
-):
-    def __new__(
-        cls, op, value_name, metadata_entries, address=None, version=None, mapping_key=None
-    ):
-        return super(ObjectStoreOperationResultData, cls).__new__(
-            cls,
-            op=check.opt_str_param(op, "op"),
-            value_name=check.opt_str_param(value_name, "value_name"),
-            metadata_entries=check.opt_list_param(metadata_entries, "metadata_entries"),
-            address=check.opt_str_param(address, "address"),
-            version=check.opt_str_param(version, "version"),
-            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
-        )
 
 
 @whitelist_for_serdes
@@ -1162,6 +1061,27 @@ class AssetStoreOperationData(
     pass
 
 
+@whitelist_for_serdes
+class ObjectStoreOperationResultData(
+    namedtuple(
+        "_ObjectStoreOperationResultData",
+        "op value_name metadata_entries address version mapping_key",
+    )
+):
+    def __new__(
+        cls, op, value_name, metadata_entries, address=None, version=None, mapping_key=None
+    ):
+        return super(ObjectStoreOperationResultData, cls).__new__(
+            cls,
+            op=check.opt_str_param(op, "op"),
+            value_name=check.opt_str_param(value_name, "value_name"),
+            metadata_entries=check.opt_list_param(metadata_entries, "metadata_entries"),
+            address=check.opt_str_param(address, "address"),
+            version=check.opt_str_param(version, "version"),
+            mapping_key=check.opt_str_param(mapping_key, "mapping_key"),
+        )
+
+
 def _handle_back_compat(event_type_value, event_specific_data):
     if event_type_value == "PIPELINE_PROCESS_START":
         return DagsterEventType.ENGINE_EVENT.value, EngineEventData([])
@@ -1184,6 +1104,22 @@ def _handle_back_compat(event_type_value, event_specific_data):
                     event_specific_data.output_name, event_specific_data.asset_store_key
                 ),
             )
+    elif event_type_value == "OBJECT_STORE_OPERATION":
+        if event_specific_data.op == "GET_OBJECT":
+            return (
+                DagsterEventType.LOADED_INPUT.value,
+                LoadedInputData(event_specific_data.value_name, ""),
+            )
+        if event_specific_data.op == "SET_OBJECT":
+            return (
+                DagsterEventType.HANDLED_OUTPUT.value,
+                HandledOutputData(event_specific_data.value_name, ""),
+            )
+        if event_specific_data.op == "CP_OBJECT":
+            return (
+                DagsterEventType.HANDLED_OUTPUT.value,
+                HandledOutputData(event_specific_data.value_name, ""),
+            )
     else:
         return event_type_value, event_specific_data
 
@@ -1194,5 +1130,6 @@ register_serdes_tuple_fallbacks(
         "PipelineProcessExitedData": None,
         "PipelineProcessStartData": None,
         "AssetStoreOperationData": AssetStoreOperationData,
+        "ObjectStoreOperationResultData": ObjectStoreOperationResultData,
     }
 )
