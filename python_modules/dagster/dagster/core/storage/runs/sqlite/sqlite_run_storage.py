@@ -80,13 +80,13 @@ class SqliteRunStorage(SqlRunStorage, ConfigurableClass):
         return SqliteRunStorage(conn_string, inst_data)
 
     @contextmanager
-    def connect(self, raise_migration_required_errors=True):
+    def connect(self):
         engine = create_engine(self._conn_string, poolclass=NullPool)
         conn = engine.connect()
         try:
             with handle_schema_errors(
                 conn, get_alembic_config(__file__), msg="Sqlite run storage requires migration",
-            ) if raise_migration_required_errors else nullcontext():
+            ):
                 yield conn
         finally:
             conn.close()
