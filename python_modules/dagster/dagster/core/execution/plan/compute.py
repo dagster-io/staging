@@ -1,3 +1,6 @@
+import asyncio
+import inspect
+
 from dagster import check
 from dagster.core.definitions import (
     AssetMaterialization,
@@ -69,42 +72,57 @@ def create_compute_step(solid, solid_handle, step_inputs, pipeline_name, environ
     )
 
 
+def _validate_event(event, solid_handle):
+    if not isinstance(
+        event, (DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult),
+    ):
+        raise DagsterInvariantViolationError(
+            (
+                "Compute function for solid {solid_name} yielded a value of type {type_} "
+                "rather than an instance of Output, AssetMaterialization, or ExpectationResult."
+                " Values yielded by solids must be wrapped in one of these types. If your "
+                "solid has a single output and yields no other events, you may want to use "
+                "`return` instead of `yield` in the body of your solid compute function. If "
+                "you are already using `return`, and you expected to return a value of type "
+                "{type_}, you may be inadvertently returning a generator rather than the value "
+                "you expected."
+            ).format(solid_name=str(solid_handle), type_=type(event))
+        )
+
+    return event
+
+
 def _yield_compute_results(compute_context, inputs, compute_fn):
     check.inst_param(compute_context, "compute_context", SystemComputeExecutionContext)
-    step = compute_context.step
-    user_event_sequence = compute_fn(SolidExecutionContext(compute_context), inputs)
 
-    if isinstance(user_event_sequence, Output):
+    user_event_generator = compute_fn(SolidExecutionContext(compute_context), inputs)
+
+    if isinstance(user_event_generator, Output):
         raise DagsterInvariantViolationError(
             (
                 "Compute function for solid {solid_name} returned a Output rather than "
                 "yielding it. The compute_fn of the core SolidDefinition must yield "
                 "its results"
-            ).format(solid_name=str(step.solid_handle))
+            ).format(solid_name=str(compute_context.step.solid_handle))
         )
 
-    if user_event_sequence is None:
+    if user_event_generator is None:
         return
 
+    if inspect.isasyncgen(user_event_generator):
+
+        async def _run_to_completion(async_gen):
+            results = []
+            async for event in async_gen:
+                results.append(event)
+            return results
+
+        user_event_sequence = asyncio.run(_run_to_completion(user_event_generator))
+    else:
+        user_event_sequence = user_event_generator
+
     for event in user_event_sequence:
-        if isinstance(
-            event,
-            (DynamicOutput, Output, AssetMaterialization, Materialization, ExpectationResult),
-        ):
-            yield event
-        else:
-            raise DagsterInvariantViolationError(
-                (
-                    "Compute function for solid {solid_name} yielded a value of type {type_} "
-                    "rather than an instance of Output, AssetMaterialization, or ExpectationResult."
-                    " Values yielded by solids must be wrapped in one of these types. If your "
-                    "solid has a single output and yields no other events, you may want to use "
-                    "`return` instead of `yield` in the body of your solid compute function. If "
-                    "you are already using `return`, and you expected to return a value of type "
-                    "{type_}, you may be inadvertently returning a generator rather than the value "
-                    "you expected."
-                ).format(solid_name=str(step.solid_handle), type_=type(event))
-            )
+        yield _validate_event(event, compute_context.step.solid_handle)
 
 
 def _execute_core_compute(compute_context, inputs, compute_fn):
