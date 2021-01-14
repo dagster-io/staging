@@ -1,1 +1,1 @@
-Release instructions have moved to https://dagster.phacility.com/w/releasing/
+Release instructions have moved to https://elementl.quip.com/AIaDAbapoomE/How-to-Release
