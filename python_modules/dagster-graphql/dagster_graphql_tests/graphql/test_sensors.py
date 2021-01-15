@@ -1,3 +1,4 @@
+import pendulum
 from dagster.core.definitions.job import JobType
 from dagster.core.scheduler.job import JobState, JobStatus
 from dagster.daemon import get_default_daemon_logger
@@ -88,6 +89,29 @@ query SensorQuery($sensorSelector: SensorSelector!) {
                 message
                 stack
             }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+GET_SENSOR_TICK_RANGE_QUERY = """
+query SensorQuery($sensorSelector: SensorSelector!, $after: Float, $before: Float) {
+  sensorOrError(sensorSelector: $sensorSelector) {
+    __typename
+    ... on PythonError {
+      message
+      stack
+    }
+    ... on Sensor {
+      id
+      sensorState {
+        id
+        ticks(after: $after, before: $before) {
+          id
+          timestamp
         }
       }
     }
@@ -232,3 +256,64 @@ def test_sensor_next_ticks(graphql_context):
     assert result.data["sensorOrError"]["__typename"] == "Sensor"
     next_tick = result.data["sensorOrError"]["nextTick"]
     assert next_tick
+
+
+def _create_tick(instance):
+    list(execute_sensor_iteration(instance, get_default_daemon_logger("SensorDaemon")))
+
+
+def test_sensor_tick_range(graphql_context):
+    external_repository = graphql_context.get_repository_location(
+        main_repo_location_name()
+    ).get_repository(main_repo_name())
+    graphql_context.instance.reconcile_scheduler_state(external_repository)
+
+    sensor_name = "always_no_config_sensor"
+    external_sensor = external_repository.get_external_sensor(sensor_name)
+    sensor_selector = infer_sensor_selector(graphql_context, sensor_name)
+
+    # turn the sensor on
+    graphql_context.instance.add_job_state(
+        JobState(external_sensor.get_external_origin(), JobType.SENSOR, JobStatus.RUNNING)
+    )
+
+    freeze_datetime = pendulum.datetime(
+        year=2020, month=1, day=1, hour=1, minute=0, second=0,
+    ).in_tz("US/Central")
+    with pendulum.test(freeze_datetime):
+        _create_tick(graphql_context.instance)
+
+    freeze_datetime = freeze_datetime.add(days=1)
+    after = freeze_datetime.subtract(hours=1)
+    with pendulum.test(freeze_datetime):
+        _create_tick(graphql_context.instance)
+
+    freeze_datetime = freeze_datetime.add(days=1)
+    before = freeze_datetime.subtract(hours=1)
+    with pendulum.test(freeze_datetime):
+        _create_tick(graphql_context.instance)
+
+    result = execute_dagster_graphql(
+        graphql_context,
+        GET_SENSOR_TICK_RANGE_QUERY,
+        variables={"sensorSelector": sensor_selector, "after": None, "before": None},
+    )
+    assert len(result.data["sensorOrError"]["sensorState"]["ticks"]) == 3
+
+    result = execute_dagster_graphql(
+        graphql_context,
+        GET_SENSOR_TICK_RANGE_QUERY,
+        variables={"sensorSelector": sensor_selector, "after": after.timestamp(), "before": None,},
+    )
+    assert len(result.data["sensorOrError"]["sensorState"]["ticks"]) == 2
+
+    result = execute_dagster_graphql(
+        graphql_context,
+        GET_SENSOR_TICK_RANGE_QUERY,
+        variables={
+            "sensorSelector": sensor_selector,
+            "after": after.timestamp(),
+            "before": before.timestamp(),
+        },
+    )
+    assert len(result.data["sensorOrError"]["sensorState"]["ticks"]) == 1
