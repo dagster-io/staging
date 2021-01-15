@@ -69,11 +69,13 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
   // down through the component tree.
   const isPartitioned = asset.assetMaterializations.some((m) => m.partition);
 
-  const assetMaterializations = [...asset.assetMaterializations].sort(
-    (a, b) =>
-      (xAxis === 'partition' && (a.partition || '').localeCompare(b.partition || '')) ||
-      Number(a.materializationEvent.timestamp) - Number(b.materializationEvent.timestamp),
-  );
+  const assetMaterializations = [...asset.assetMaterializations]
+    .sort(
+      (a, b) =>
+        (xAxis === 'partition' && (a.partition || '').localeCompare(b.partition || '')) ||
+        Number(a.materializationEvent.timestamp) - Number(b.materializationEvent.timestamp),
+    )
+    .reverse();
 
   const graphDataByMetadataLabel = extractNumericData(assetMaterializations, xAxis);
   const [graphedLabels, setGraphedLabels] = React.useState(() =>
@@ -149,7 +151,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
       {activeTab === 'list' ? (
         <AssetMaterializationTable
           isPartitioned={isPartitioned}
-          materializations={[...assetMaterializations].reverse()}
+          materializations={assetMaterializations}
         />
       ) : (
         <>
@@ -170,7 +172,6 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
                 label={label}
                 width={graphedLabels.length === 1 ? '100%' : '48%'}
                 data={graphDataByMetadataLabel[label]}
-                xAxis={xAxis}
                 xHover={xHover}
                 onHoverX={(x) => x !== xHover && setXHover(x)}
               />
@@ -235,6 +236,7 @@ export interface AssetNumericHistoricalData {
     maxY: number;
     minXNumeric: number;
     maxXNumeric: number;
+    xAxis: 'time' | 'partition';
     values: {
       x: number | string; // time or partition
       xNumeric: number; // time or partition index
@@ -273,7 +275,7 @@ function extractNumericData(
   );
 
   const append = (label: string, {x, y}: {x: number | string; y: number}) => {
-    series[label] = series[label] || {minX: 0, maxX: 0, minY: 0, maxY: 0, values: []};
+    series[label] = series[label] || {minX: 0, maxX: 0, minY: 0, maxY: 0, values: [], xAxis};
 
     if (xAxis === 'partition') {
       // If the xAxis is partition keys, the graph may only contain one value for each partition.
