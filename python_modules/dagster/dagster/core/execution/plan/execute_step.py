@@ -364,7 +364,7 @@ def _set_objects(step_context, step_output, step_output_handle, output):
         DagsterExecutionHandleOutputError,
         control_flow_exceptions=[Failure, RetryRequested],
         msg_fn=lambda: (
-            f'Error occurred during the the handling of output "{output_context.name}" of '
+            f'Error occurred while handling output "{output_context.name}" of '
             f'step "{step_context.step.key}":'
         ),
         step_key=step_context.step.key,
@@ -442,12 +442,7 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
         lambda: user_code_error_boundary(
             DagsterExecutionStepExecutionError,
             control_flow_exceptions=[Failure, RetryRequested],
-            msg_fn=lambda: (
-                "Error occurred during the execution of step:"
-                f'\n    step key: "{step_context.step.key}"'
-                f'\n    solid invocation: "{step_context.solid.name}"'
-                f'\n    solid definition: "{step_context.solid_def.name}"'
-            ),
+            msg_fn=lambda: f'Error occurred while executing solid "{step_context.solid.name}":',
             step_key=step_context.step.key,
             solid_def_name=step_context.solid_def.name,
             solid_name=step_context.solid.name,
