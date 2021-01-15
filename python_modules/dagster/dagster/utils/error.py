@@ -23,15 +23,17 @@ class SerializableErrorInfo(namedtuple("SerializableErrorInfo", "message stack c
         return "{err.message}{stack}{cause}".format(err=self, stack=stack_str, cause=cause_str)
 
 
-def _serializable_error_info_from_tb(tb):
+def _serializable_error_info_from_tb(tb, message_prefix=""):
     return SerializableErrorInfo(
         # usually one entry, multiple lines for SyntaxError
-        "".join(list(tb.format_exception_only())),
+        message_prefix + "".join(list(tb.format_exception_only())),
         tb.stack.format(),
         tb.exc_type.__name__ if tb.exc_type is not None else None,
         _serializable_error_info_from_tb(tb.__cause__) if tb.__cause__ else None,
     )
 
 
-def serializable_error_info_from_exc_info(exc_info):
-    return _serializable_error_info_from_tb(traceback.TracebackException(*exc_info))
+def serializable_error_info_from_exc_info(exc_info, message_prefix=""):
+    return _serializable_error_info_from_tb(
+        traceback.TracebackException(*exc_info), message_prefix=message_prefix
+    )
