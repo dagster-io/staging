@@ -94,7 +94,7 @@ class ModuleBuildSpec(
 
         for version in self.supported_pythons:
             for tox_env_suffix in tox_env_suffixes:
-                label = package + tox_env_suffix
+                label = package.replace("dagster", ":dagster:") + tox_env_suffix
 
                 extra_cmds = self.extra_cmds_fn(version) if self.extra_cmds_fn else []
 
