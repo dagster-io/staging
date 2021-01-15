@@ -479,7 +479,7 @@ type JobState {
   jobSpecificData: JobSpecificData
   runs(limit: Int): [PipelineRun!]!
   runsCount: Int!
-  ticks(limit: Int): [JobTick!]!
+  ticks(before: Float, after: Float, limit: Int): [JobTick!]!
   runningCount: Int!
 }
 
