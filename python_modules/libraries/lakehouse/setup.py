@@ -1,9 +1,11 @@
-from setuptools import find_packages, setup
+from typing import Dict
+
+from setuptools import find_packages, setup  # type: ignore
 
 
-def get_version():
-    version = {}
-    with open("lakehouse/version.py") as fp:
+def get_version() -> str:
+    version: Dict[str, str] = {}
+    with open("dagster_test/version.py") as fp:
         exec(fp.read(), version)  # pylint: disable=W0122
 
     return version["__version__"]
@@ -23,6 +25,7 @@ if __name__ == "__main__":
         classifiers=[
             "Programming Language :: Python :: 3.6",
             "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3.8",
             "License :: OSI Approved :: Apache Software License",
             "Operating System :: OS Independent",
         ],
