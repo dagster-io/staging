@@ -31,7 +31,7 @@ class DagsterType:
     """Define a type in dagster. These can be used in the inputs and outputs of solids.
 
     Args:
-        type_check_fn (Callable[[TypeCheckContext, Any], [Union[bool, TypeCheck]]]):
+        type_check_fn (Optional[Callable[[TypeCheckContext, Any], [Union[bool, TypeCheck]]]]):
             The function that defines the type check. It takes the value flowing
             through the input or output of the solid. If it passes, return either
             ``True`` or a :py:class:`~dagster.TypeCheck` with ``success`` set to ``True``. If it fails,
@@ -83,7 +83,7 @@ class DagsterType:
 
     def __init__(
         self,
-        type_check_fn,
+        type_check_fn=None,
         key=None,
         name=None,
         is_builtin=False,
@@ -130,7 +130,9 @@ class DagsterType:
             required_resource_keys, "required_resource_keys",
         )
 
-        self._type_check_fn = check.callable_param(type_check_fn, "type_check_fn")
+        self._type_check_fn = check.opt_callable_param(
+            type_check_fn, "type_check_fn", default=lambda _context, _: True
+        )
         _validate_type_check_fn(self._type_check_fn, self._name)
 
         auto_plugins = check.opt_list_param(auto_plugins, "auto_plugins", of_type=type)
