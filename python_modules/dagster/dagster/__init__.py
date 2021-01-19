@@ -115,10 +115,11 @@ from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.launcher import DefaultRunLauncher
 from dagster.core.log_manager import DagsterLogManager
-from dagster.core.storage.file_manager import FileHandle, LocalFileHandle, local_file_manager
+from dagster.core.storage.file_manager import FileHandle
 from dagster.core.storage.fs_io_manager import custom_path_fs_io_manager, fs_io_manager
 from dagster.core.storage.init import InitIntermediateStorageContext
 from dagster.core.storage.io_manager import IOManager, IOManagerDefinition, io_manager
+from dagster.core.storage.local_file_manager import LocalFileHandle, local_file_manager
 from dagster.core.storage.mem_io_manager import mem_io_manager
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.core.storage.root_input_manager import (

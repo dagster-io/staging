@@ -1,4 +1,5 @@
-from dagster import Field, StringSource, resource
+from dagster import Field, StringSource, io_manager, resource
+from dagster.core.storage.file_io_manager import FileIOManager
 from dagster.utils.merger import merge_dicts
 
 from .file_manager import S3FileManager
@@ -93,23 +94,44 @@ def s3_resource(context):
     )
 
 
-@resource(
-    merge_dicts(
-        S3_SESSION_CONFIG,
-        {
-            "s3_bucket": Field(StringSource),
-            "s3_prefix": Field(StringSource, is_required=False, default_value="dagster"),
-        },
-    )
-)
-def s3_file_manager(context):
+def make_s3_file_manager(config):
     return S3FileManager(
         s3_session=construct_s3_client(
-            max_attempts=context.resource_config["max_attempts"],
-            region_name=context.resource_config.get("region_name"),
-            endpoint_url=context.resource_config.get("endpoint_url"),
-            use_unsigned_session=context.resource_config["use_unsigned_session"],
+            max_attempts=config["max_attempts"],
+            region_name=config.get("region_name"),
+            endpoint_url=config.get("endpoint_url"),
+            use_unsigned_session=config["use_unsigned_session"],
         ),
-        s3_bucket=context.resource_config["s3_bucket"],
-        s3_base_key=context.resource_config["s3_prefix"],
+        s3_bucket=config["s3_bucket"],
+        s3_base_key=config["s3_prefix"],
     )
+
+
+S3_FILE_MANAGER_CONFIG = merge_dicts(
+    S3_SESSION_CONFIG,
+    {
+        "s3_bucket": Field(StringSource),
+        "s3_prefix": Field(StringSource, is_required=False, default_value="dagster"),
+    },
+)
+
+
+@resource(S3_FILE_MANAGER_CONFIG)
+def s3_file_manager(context):
+    return make_s3_file_manager(context.config)
+
+
+@io_manager(S3_FILE_MANAGER_CONFIG)
+def s3_file_io_manager(context):
+    """An :py:class:`IOManager` that accepts outputs that are streams or chunks of bytes and stores
+    them as files on AWS S3.
+
+    The handled outputs must be either:
+    * The Python bytes primitive type.
+    * Binary I/O file objects.
+
+    The object returned to downstream solids is a :py:class:`Readable`, which has methods to
+    retrieve the bytes as a file object or as bytes.
+    """
+    file_manager = make_s3_file_manager(context.resource_config)
+    return FileIOManager(file_manager)
