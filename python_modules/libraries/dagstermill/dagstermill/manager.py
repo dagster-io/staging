@@ -1,6 +1,7 @@
 import os
 import pickle
 import uuid
+from typing import Any, Dict, Set
 
 from dagster import (
     AssetMaterialization,
@@ -18,12 +19,15 @@ from dagster.core.definitions.dependency import SolidHandle
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
 from dagster.core.execution.api import create_execution_plan, scoped_pipeline_context
+from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.resources_init import (
     get_required_resource_keys_to_init,
     resource_initialization_event_generator,
 )
 from dagster.core.instance import DagsterInstance
+from dagster.core.log_manager import DagsterLogManager
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
+from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.utils import make_new_run_id
 from dagster.loggers import colored_console_logger
 from dagster.serdes import unpack_value
@@ -44,12 +48,7 @@ class DagstermillResourceEventGenerationManager(EventGenerationManager):
         return iter(())
 
     def teardown(self):
-        return [
-            teardown_event
-            for teardown_event in super(
-                DagstermillResourceEventGenerationManager, self
-            ).generate_teardown_events()
-        ]
+        return [teardown_event for teardown_event in super().generate_teardown_events()]
 
 
 class Manager:
@@ -63,14 +62,14 @@ class Manager:
 
     def _setup_resources(
         self,
-        execution_plan,
-        environment_config,
-        pipeline_run,
-        log_manager,
-        resource_keys_to_init,
-        instance,
-        resource_instances_to_override,
-    ):
+        execution_plan: ExecutionPlan,
+        environment_config: EnvironmentConfig,
+        pipeline_run: PipelineRun,
+        log_manager: DagsterLogManager,
+        resource_keys_to_init: Set[str],
+        instance: DagsterInstance,
+        resource_instances_to_override: Dict[str, Any],
+    ) -> DagstermillResourceEventGenerationManager:
         """
         Drop-in replacement for
         `dagster.core.execution.resources_init.resource_initialization_manager`.  It uses a
@@ -92,14 +91,14 @@ class Manager:
 
     def reconstitute_pipeline_context(
         self,
-        output_log_path=None,
-        marshal_dir=None,
-        run_config=None,
-        executable_dict=None,
-        pipeline_run_dict=None,
-        solid_handle_kwargs=None,
-        instance_ref_dict=None,
-    ):
+        output_log_path: str,
+        marshal_dir: str,
+        run_config: Dict[str, Any],
+        executable_dict: Dict,
+        pipeline_run_dict: Dict,
+        solid_handle_kwargs: Dict,
+        instance_ref_dict: Dict,
+    ) -> DagstermillRuntimeExecutionContext:
         """Reconstitutes a context for dagstermill-managed execution.
 
         You'll see this function called to reconstruct a pipeline context within the ``injected
@@ -111,9 +110,9 @@ class Manager:
         :func:`dagstermill.reconstitute_pipeline_context` when the notebook is executed by
         dagstermill.
         """
-        check.opt_str_param(output_log_path, "output_log_path")
-        check.opt_str_param(marshal_dir, "marshal_dir")
-        run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
+        check.str_param(output_log_path, "output_log_path")
+        check.str_param(marshal_dir, "marshal_dir")
+        check.dict_param(run_config, "run_config", key_type=str)
         check.dict_param(pipeline_run_dict, "pipeline_run_dict")
         check.dict_param(executable_dict, "executable_dict")
         check.dict_param(solid_handle_kwargs, "solid_handle_kwargs")
@@ -159,8 +158,10 @@ class Manager:
             self.context = DagstermillRuntimeExecutionContext(
                 pipeline_context=pipeline_context,
                 solid_config=run_config.get("solids", {}).get(solid_def.name, {}).get("config"),
-                resource_keys_to_init=get_required_resource_keys_to_init(
-                    execution_plan, pipeline_context.intermediate_storage_def,
+                resource_keys_to_init=set(
+                    get_required_resource_keys_to_init(
+                        execution_plan, pipeline_context.intermediate_storage_def,
+                    )
                 ),
                 solid_name=solid_def.name,
             )
@@ -184,7 +185,7 @@ class Manager:
             :py:class:`~dagstermill.DagstermillExecutionContext`
         """
         check.opt_inst_param(mode_def, "mode_def", ModeDefinition)
-        run_config = check.opt_dict_param(run_config, "run_config", key_type=str)
+        run_config_dict = check.opt_dict_param(run_config, "run_config", key_type=str)
 
         # If we are running non-interactively, and there is already a context reconstituted, return
         # that context rather than overwriting it.
@@ -195,7 +196,7 @@ class Manager:
 
         if not mode_def:
             mode_def = ModeDefinition(logger_defs={"dagstermill": colored_console_logger})
-            run_config["loggers"] = {"dagstermill": {}}
+            run_config_dict["loggers"] = {"dagstermill": {}}
 
         solid_def = SolidDefinition(
             name="this_solid",
@@ -218,7 +219,7 @@ class Manager:
         pipeline_run = PipelineRun(
             pipeline_name=pipeline_def.name,
             run_id=run_id,
-            run_config=run_config,
+            run_config=run_config_dict,
             mode=mode_def.name,
             step_keys_to_execute=None,
             status=PipelineRunStatus.NOT_STARTED,
@@ -232,12 +233,11 @@ class Manager:
         execution_plan = create_execution_plan(self.pipeline, run_config, mode=mode_def.name)
         with scoped_pipeline_context(
             execution_plan,
-            run_config,
+            run_config_dict,
             pipeline_run,
             DagsterInstance.ephemeral(),
             scoped_resources_builder_cm=self._setup_resources,
         ) as pipeline_context:
-
             self.context = DagstermillExecutionContext(
                 pipeline_context=pipeline_context,
                 solid_config=solid_config,
@@ -249,7 +249,7 @@ class Manager:
 
         return self.context
 
-    def yield_result(self, value, output_name="result"):
+    def yield_result(self, value, output_name: str = "result"):
         """Yield a result directly from notebook code.
 
         When called interactively or in development, returns its input.
@@ -308,6 +308,19 @@ class Manager:
             self.resource_manager.teardown()
 
     def load_parameter(self, input_name, input_value):
+        """Loads an input to the Dagstermill solid at runtime. (Deprecated)
+
+        You'll see this function called within the ``injected parameters`` cell of a dagstermill
+        output notebook. Users should not call this function interactively except when debugging
+        output notebooks.
+
+        Set values you wish to receive as inputs from the Dagster runtime directly in the
+        ``parameters`` cell of your notebook for interactive exploration and development.
+        
+        When the notebook is executed by Dagstermill, these assignments will be overwritten with an
+        injected call to this function.
+
+        """
         input_def = self.solid_def.input_def_named(input_name)
         return read_value(input_def.dagster_type, seven.json.loads(input_value))
 
