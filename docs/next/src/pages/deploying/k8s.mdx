@@ -82,6 +82,7 @@ userDeployments:
         - "-f"
         - "/example_project/example_repo/repo.py"
       port: 3030
+      replicaCount: 1
 ```
 
 The `dagsterApiGrpcArgs` field expects a list of arguments for `dagster api grpc` which is run upon Deployment creation and 
