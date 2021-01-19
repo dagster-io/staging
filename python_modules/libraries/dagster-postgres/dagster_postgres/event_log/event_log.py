@@ -90,7 +90,8 @@ class PostgresEventLogStorage(AssetAwareSqlEventLogStorage, ConfigurableClass):
 
     def upgrade(self):
         alembic_config = get_alembic_config(__file__)
-        run_alembic_upgrade(alembic_config, self._engine)
+        with self.connect() as conn:
+            run_alembic_upgrade(alembic_config, conn)
 
     @property
     def inst_data(self):
