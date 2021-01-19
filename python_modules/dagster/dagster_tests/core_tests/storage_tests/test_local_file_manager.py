@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from dagster import LocalFileHandle, ModeDefinition, execute_pipeline, pipeline, solid
 from dagster.core.instance import DagsterInstance
-from dagster.core.storage.file_manager import LocalFileManager, local_file_manager
+from dagster.core.storage.local_file_manager import LocalFileManager, local_file_manager
 from dagster.utils.temp_file import get_temp_file_handle_with_data
 
 

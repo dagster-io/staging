@@ -1,20 +1,20 @@
+from abc import ABC, abstractmethod, abstractproperty
+
+from dagster import check
+from dagster.core.types.decorator import usable_as_dagster_type
 import io
 import os
 import shutil
 import uuid
-from abc import ABC, abstractmethod, abstractproperty
 from contextlib import contextmanager
 
-from dagster import check
 from dagster.config import Field
 from dagster.config.source import StringSource
 from dagster.core.definitions.resource import resource
 from dagster.core.instance import DagsterInstance
-from dagster.core.types.decorator import usable_as_dagster_type
 from dagster.utils import mkdir_p
 
 from .temp_file_manager import TempfileManager
-
 
 # pylint: disable=no-init
 @usable_as_dagster_type
@@ -35,20 +35,6 @@ class FileHandle(ABC):
         diplay purposes. Should not be used in a programatically meaningful
         way beyond display"""
         raise NotImplementedError()
-
-
-@usable_as_dagster_type
-class LocalFileHandle(FileHandle):
-    def __init__(self, path):
-        self._path = check.str_param(path, "path")
-
-    @property
-    def path(self):
-        return self._path
-
-    @property
-    def path_desc(self):
-        return self._path
 
 
 class FileManager(ABC):  # pylint: disable=no-init
@@ -127,7 +113,7 @@ class FileManager(ABC):  # pylint: disable=no-init
         raise NotImplementedError()
 
     @abstractmethod
-    def write(self, file_obj, mode="wb", ext=None):
+    def write(self, file_obj, mode="wb", ext=None, file_key: str = None):
         """Write the bytes contained within the given ``file_obj`` into the file manager.
         This returns a :py:class:`~dagster.FileHandle` corresponding to the newly created file.
 
@@ -142,6 +128,8 @@ class FileManager(ABC):  # pylint: disable=no-init
             mode (Optional[str]): The mode in which to write the file into storage. Default: ``'wb'``.
             ext (Optional[str]): For file managers that support file extensions, the extension with
                 which to write the file. Default: ``None``.
+            file_key (str): A unique identifier for the file. If none is provided, will generate
+                a random one.
 
         Returns:
             FileHandle: A handle to the newly created file.
@@ -149,27 +137,61 @@ class FileManager(ABC):  # pylint: disable=no-init
         raise NotImplementedError()
 
     @abstractmethod
-    def write_data(self, data, ext=None):
+    def write_data(self, data, ext=None, file_key: str = None):
         """Write raw bytes into storage.
 
         Args:
             data (bytes): The bytes to write into storage.
             ext (Optional[str]): For file managers that support file extensions, the extension with
                 which to write the file. Default: ``None``.
+            file_key (str): A unique identifier for the file. If none is provided, will generate
+                a random one.
 
         Returns:
             FileHandle: A handle to the newly created file.
         """
         raise NotImplementedError()
 
+    def get_file_handle(self, file_key, ext):
+        """Gets a handle to the file that would be created with a call to write_data or write, with
+        the given file_key and extension.
 
-@resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
-def local_file_manager(init_context):
-    return LocalFileManager(init_context.resource_config["base_dir"])
+        Invocations to this method with the same file_key and extention should always return the
+        same file handle.
+
+        Args:
+            file_key (str): A unique identifier for the file.
+            ext (Optional[str]): For file managers that support file extensions, the extension with
+                which to write the file. Default: ``None``.
+
+        Returns:
+            FileHandle: A handle to the file that would be created with a call to write_data or
+                write, with the given file_key and extension.
+        """
+        raise NotImplementedError()
 
 
 def check_file_like_obj(obj):
     check.invariant(obj and hasattr(obj, "read") and hasattr(obj, "write"))
+
+
+@usable_as_dagster_type
+class LocalFileHandle(FileHandle):
+    def __init__(self, path):
+        self._path = check.str_param(path, "path")
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def path_desc(self):
+        return self._path
+
+
+@resource(config_schema={"base_dir": Field(StringSource, default_value=".", is_required=False)})
+def local_file_manager(init_context):
+    return LocalFileManager(init_context.resource_config["base_dir"])
 
 
 class LocalFileManager(FileManager):
@@ -213,23 +235,27 @@ class LocalFileManager(FileManager):
         with self.read(file_handle, mode="rb") as file_obj:
             return file_obj.read()
 
-    def write_data(self, data, ext=None):
+    def write_data(self, data, ext=None, file_key: str = None):
         check.inst_param(data, "data", bytes)
-        return self.write(io.BytesIO(data), mode="wb", ext=ext)
+        return self.write(io.BytesIO(data), mode="wb", ext=ext, file_key=file_key)
 
-    def write(self, file_obj, mode="wb", ext=None):
+    def write(self, file_obj, mode="wb", ext=None, file_key: str = None):
         check_file_like_obj(file_obj)
         check.opt_str_param(ext, "ext")
 
         self.ensure_base_dir_exists()
 
-        dest_file_path = os.path.join(
-            self.base_dir, str(uuid.uuid4()) + (("." + ext) if ext is not None else "")
-        )
-
-        with open(dest_file_path, mode) as dest_file_obj:
+        file_key = file_key if file_key else str(uuid.uuid4())
+        file_handle = self.get_file_handle(file_key=file_key, ext=ext)
+        with open(file_handle.path, mode) as dest_file_obj:
             shutil.copyfileobj(file_obj, dest_file_obj)
-            return LocalFileHandle(dest_file_path)
+            return file_handle
+
+    def get_file_handle(self, file_key: str, ext: str) -> LocalFileHandle:
+        dest_file_path = os.path.join(
+            self.base_dir, file_key + (("." + ext) if ext is not None else "")
+        )
+        return LocalFileHandle(dest_file_path)
 
     def delete_local_temp(self):
         self._temp_file_manager.close()
