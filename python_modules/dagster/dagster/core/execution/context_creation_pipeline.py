@@ -65,7 +65,7 @@ class ContextCreationData(
         "_ContextCreationData",
         "pipeline environment_config pipeline_run mode_def "
         "intermediate_storage_def executor_def instance resource_keys_to_init "
-        "execution_plan",
+        "execution_plan pipeline_snapshot execution_plan_snapshot",
     )
 ):
     @property
@@ -74,7 +74,7 @@ class ContextCreationData(
 
 
 def create_context_creation_data(
-    execution_plan, run_config, pipeline_run, instance,
+    execution_plan, run_config, pipeline_run, instance, execution_plan_snapshot, pipeline_snapshot,
 ):
     pipeline_def = execution_plan.pipeline.get_definition()
     environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=pipeline_run.mode)
@@ -95,6 +95,8 @@ def create_context_creation_data(
             execution_plan, intermediate_storage_def
         ),
         execution_plan=execution_plan,
+        execution_plan_snapshot=execution_plan_snapshot,
+        pipeline_snapshot=pipeline_snapshot,
     )
 
 
@@ -105,6 +107,8 @@ class ExecutionContextManager(ABC):
         run_config,
         pipeline_run,
         instance,
+        execution_plan_snapshot,
+        pipeline_snapshot,
         scoped_resources_builder_cm=None,
         intermediate_storage=None,
         raise_on_error=False,
@@ -120,6 +124,8 @@ class ExecutionContextManager(ABC):
             run_config,
             pipeline_run,
             instance,
+            execution_plan_snapshot,
+            pipeline_snapshot,
             scoped_resources_builder_cm,
             intermediate_storage,
             raise_on_error,
@@ -159,6 +165,8 @@ class ExecutionContextManager(ABC):
         pipeline_run,
         instance,
         scoped_resources_builder_cm,
+        execution_plan_snapshot,
+        pipeline_snapshot,
         intermediate_storage=None,
         raise_on_error=False,
         resource_instances_to_override=None,
