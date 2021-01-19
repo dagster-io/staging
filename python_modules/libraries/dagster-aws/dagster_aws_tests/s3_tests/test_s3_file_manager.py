@@ -18,6 +18,7 @@ from dagster_aws.s3 import (
     s3_plus_default_intermediate_storage_defs,
     s3_resource,
 )
+from dagster_aws.s3.resources import s3_file_io_manager
 
 
 def build_key(run_id, step_key, output_name):
@@ -207,3 +208,33 @@ def test_s3_file_manager_resource(MockS3FileManager, mock_boto3_resource):
 
     execute_pipeline(test_pipeline)
     assert did_it_run["it_ran"]
+
+
+@mock.patch("dagster_aws.s3.resources.S3FileManager")
+def test_file_io_manager(MockS3FileManager, mock_s3_resource, mock_s3_bucket):
+    MockS3FileManager.return_value = S3FileManager(
+        mock_s3_resource.meta.client, mock_s3_bucket.name, "some-key"
+    )
+    foo_bytes = "foo".encode()
+
+    @solid(output_defs=[OutputDefinition(io_manager_key="bytes")])
+    def solid1(_):
+        return foo_bytes
+
+    @solid
+    def solid2(_, input_handle):
+        assert input_handle.read_data() == foo_bytes
+
+    @pipeline(
+        mode_defs=[
+            ModeDefinition(
+                resource_defs={
+                    "bytes": s3_file_io_manager.configured({"s3_bucket": mock_s3_bucket.name})
+                }
+            )
+        ]
+    )
+    def my_pipeline():
+        solid2(solid1())
+
+    execute_pipeline(my_pipeline)
