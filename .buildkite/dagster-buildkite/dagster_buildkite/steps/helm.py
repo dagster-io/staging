@@ -16,9 +16,9 @@ def helm_steps():
         StepBuilder(":helm: validate schema")
         .run(
             "pip install -e python_modules/automation",
-            "dagster-helm schema --command=apply",
+            "dagster-helm schema --command apply",
             "git diff --exit-code",
-            "helm lint helm/dagster -f helm/dagster/values.yaml",
+            "helm install helm/dagster --dry-run --debug",
         )
         .on_integration_image(SupportedPython.V3_7)
         .build(),
