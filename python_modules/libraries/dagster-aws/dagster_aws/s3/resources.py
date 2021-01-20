@@ -118,7 +118,7 @@ S3_FILE_MANAGER_CONFIG = merge_dicts(
 
 @resource(S3_FILE_MANAGER_CONFIG)
 def s3_file_manager(context):
-    return make_s3_file_manager(context.config)
+    return make_s3_file_manager(context.resource_config)
 
 
 @io_manager(S3_FILE_MANAGER_CONFIG)

@@ -1,10 +1,11 @@
 from contextlib import contextmanager
 from typing import NamedTuple
 
-from dagster.core.storage.file_manager import FileHandle, FileManager, LocalFileManager
-from dagster.core.storage.io_manager import IOManager, io_manager
+from dagster import check
 from dagster.config import Field
 from dagster.config.source import StringSource
+from dagster.core.storage.file_manager import FileHandle, FileManager, LocalFileManager
+from dagster.core.storage.io_manager import IOManager, io_manager
 
 
 class Readable(NamedTuple):
@@ -16,6 +17,7 @@ class Readable(NamedTuple):
 
     @contextmanager
     def read(self, mode="rb"):
+        check.invariant(mode in ["r", "rb"], 'Mode must be "r" or "rb"')
         with self.file_manager.read(self.file_handle, mode=mode) as file_obj:
             yield file_obj
 
@@ -35,6 +37,7 @@ class FileIOManager(IOManager):
             file_handle = self._file_manager.write_data(obj, file_key=file_key, ext=ext)
         elif obj and hasattr(obj, "read"):
             file_handle = self._file_manager.write(obj, file_key=file_key, ext=ext)
+            obj.close()
         else:
             raise TypeError(
                 "Output to handle must be a bytes object or a file-like object, "
