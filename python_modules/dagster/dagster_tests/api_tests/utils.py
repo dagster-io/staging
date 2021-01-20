@@ -18,7 +18,6 @@ def get_bar_repo_repository_location_handle():
     loadable_target_origin = LoadableTargetOrigin(
         executable_path=sys.executable,
         python_file=file_relative_path(__file__, "api_tests_repo.py"),
-        attribute="bar_repo",
     )
     location_name = "bar_repo_location"
 
