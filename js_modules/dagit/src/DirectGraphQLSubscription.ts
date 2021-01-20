@@ -1,5 +1,5 @@
 import {print} from 'graphql/language/printer';
-import {debounce} from 'lodash';
+import debounce from 'lodash/debounce';
 
 import {DagsterGraphQLError, showGraphQLError} from 'src/AppError';
 import {WEBSOCKET_URI} from 'src/DomUtils';
