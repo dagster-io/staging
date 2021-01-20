@@ -3,9 +3,9 @@ import {Button, Callout, Intent, Colors, Switch, Tooltip} from '@blueprintjs/cor
 import * as React from 'react';
 
 import {useConfirmation} from 'src/CustomConfirmationProvider';
-import {TickTag} from 'src/JobTick';
-import {JobRunStatus} from 'src/JobUtils';
 import {RepositoryOriginInformation} from 'src/RepositoryInformation';
+import {TickTag} from 'src/jobs/JobTick';
+import {JobRunStatus} from 'src/jobs/JobUtils';
 import {
   STOP_SCHEDULE_MUTATION,
   displayScheduleMutationErrors,

@@ -14,10 +14,10 @@ import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import styled from 'styled-components';
 
-import {showCustomAlert} from 'src/CustomAlertProvider';
-import {IExecutionSession} from 'src/LocalStorage';
-import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from 'src/PythonErrorInfo';
-import {ShortcutHandler} from 'src/ShortcutHandler';
+import {showCustomAlert} from 'src/app/CustomAlertProvider';
+import {IExecutionSession} from 'src/app/LocalStorage';
+import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from 'src/app/PythonErrorInfo';
+import {ShortcutHandler} from 'src/app/ShortcutHandler';
 import {ConfigEditorGeneratorPartitionSetsFragment_results} from 'src/execute/types/ConfigEditorGeneratorPartitionSetsFragment';
 import {
   ConfigEditorGeneratorPipelineFragment,

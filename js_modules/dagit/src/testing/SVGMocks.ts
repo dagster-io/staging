@@ -1,6 +1,6 @@
 import path from 'path';
 
-import {PIPELINE_EXPLORER_ROOT_QUERY} from 'src/PipelineExplorerRoot';
+import {PIPELINE_EXPLORER_ROOT_QUERY} from 'src/pipelines/PipelineExplorerRoot';
 import {CachedGraphQLRequest} from 'src/testing/MockedApolloLinks';
 import {PipelineExplorerRootQueryVariables} from 'src/types/PipelineExplorerRootQuery';
 

@@ -4,9 +4,12 @@ import * as React from 'react';
 import {Link} from 'react-router-dom';
 import styled from 'styled-components/macro';
 
-import {PipelineExplorerPath} from 'src/PipelinePathUtils';
-import {SidebarPipelineInfo, SIDEBAR_PIPELINE_INFO_FRAGMENT} from 'src/SidebarPipelineInfo';
-import {SidebarSolidContainer} from 'src/SidebarSolidContainer';
+import {PipelineExplorerPath} from 'src/pipelines/PipelinePathUtils';
+import {
+  SidebarPipelineInfo,
+  SIDEBAR_PIPELINE_INFO_FRAGMENT,
+} from 'src/pipelines/SidebarPipelineInfo';
+import {SidebarSolidContainer} from 'src/pipelines/SidebarSolidContainer';
 import {SolidNameOrPath} from 'src/solids/SolidNameOrPath';
 import {TypeExplorerContainer} from 'src/typeexplorer/TypeExplorerContainer';
 import {TypeListContainer} from 'src/typeexplorer/TypeListContainer';

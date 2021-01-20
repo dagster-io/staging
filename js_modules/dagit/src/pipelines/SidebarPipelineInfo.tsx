@@ -6,6 +6,7 @@ import styled from 'styled-components/macro';
 
 import {ConfigTypeSchema, CONFIG_TYPE_SCHEMA_FRAGMENT} from 'src/ConfigTypeSchema';
 import {Description} from 'src/Description';
+import {breakOnUnderscores} from 'src/app/Util';
 import {
   SectionHeader,
   SectionInner,
@@ -13,8 +14,7 @@ import {
   SidebarSection,
   SidebarSubhead,
   SidebarTitle,
-} from 'src/SidebarComponents';
-import {breakOnUnderscores} from 'src/Util';
+} from 'src/pipelines/SidebarComponents';
 import {SidebarPipelineInfoFragment} from 'src/types/SidebarPipelineInfoFragment';
 
 const NO_DESCRIPTION = '';

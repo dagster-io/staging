@@ -14,9 +14,9 @@ import {IconNames} from '@blueprintjs/icons';
 import * as React from 'react';
 import styled from 'styled-components/macro';
 
-import {showCustomAlert} from 'src/CustomAlertProvider';
-import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from 'src/PythonErrorInfo';
-import {assertUnreachable} from 'src/Util';
+import {showCustomAlert} from 'src/app/CustomAlertProvider';
+import {PythonErrorInfo, PYTHON_ERROR_FRAGMENT} from 'src/app/PythonErrorInfo';
+import {assertUnreachable} from 'src/app/Util';
 import {RunTable, RUN_TABLE_RUN_FRAGMENT} from 'src/runs/RunTable';
 import {LaunchedRunListQuery, LaunchedRunListQueryVariables} from 'src/types/LaunchedRunListQuery';
 import {TickTagFragment} from 'src/types/TickTagFragment';
