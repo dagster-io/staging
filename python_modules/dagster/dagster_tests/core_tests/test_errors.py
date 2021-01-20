@@ -38,15 +38,9 @@ def test_solid_raises_error():
         fails()
 
     result = execute_pipeline(my_pipeline, raise_on_error=False)
-    error_message = result.result_for_solid("fails").failure_data.error.message
-    assert (
-        error_message.strip()
-        == """
-Error occurred while executing solid "fails":
-
-ValueError: abc
-""".strip()
-    )
+    failure_data = result.result_for_solid("fails")
+    assert failure_data.error.message.strip() == "ValueError: abc"
+    assert failure_data.background == 'Error occurred while executing solid "fails"'
 
 
 def test_handle_output_raises_error():
@@ -70,14 +64,11 @@ def test_handle_output_raises_error():
         return_one()
 
     result = execute_pipeline(my_pipeline, raise_on_error=False)
-    error_message = result.result_for_solid("return_one").failure_data.error.message
+    failure_data = result.result_for_solid("return_one")
+    assert failure_data.error.message.strip() == "ValueError: abc"
     assert (
-        error_message.strip()
-        == """
-Error occurred while handling output "result" of step "return_one":
-
-ValueError: abc
-""".strip()
+        failure_data.background
+        == 'Error occurred while handling output "result" of step "return_one":'
     )
 
 
@@ -106,12 +97,9 @@ def test_load_input_raises_error():
         take_data(return_one())
 
     result = execute_pipeline(my_pipeline, raise_on_error=False)
-    error_message = result.result_for_solid("take_data").failure_data.error.message
+    failure_data = result.result_for_solid("take_data")
+    assert failure_data.error.message.strip() == "ValueError: abc"
     assert (
-        error_message.strip()
-        == """
-Error occurred while loading input "input1" of step "take_data":
-
-ValueError: abc
-""".strip()
+        failure_data.background
+        == 'Error occurred while loading input "input1" of step "take_data":'
     )

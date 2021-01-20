@@ -232,9 +232,7 @@ def _dagster_event_sequence_for_step(step_context, retries):
     # case (3) in top comment
     except DagsterUserCodeExecutionError as dagster_user_error:
         yield _step_failure_event_from_exc_info(
-            step_context,
-            dagster_user_error.original_exc_info,
-            message_prefix=str(dagster_user_error) + "\n\n",
+            step_context, dagster_user_error.original_exc_info, background=str(dagster_user_error),
         )
 
         if step_context.raise_on_error:
@@ -259,12 +257,13 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
 
 def _step_failure_event_from_exc_info(
-    step_context, exc_info, user_failure_data=None, message_prefix=""
+    step_context, exc_info, user_failure_data=None, background=None
 ):
     return DagsterEvent.step_failure_event(
         step_context=step_context,
         step_failure_data=StepFailureData(
-            error=serializable_error_info_from_exc_info(exc_info, message_prefix=message_prefix),
+            error=serializable_error_info_from_exc_info(exc_info),
             user_failure_data=user_failure_data,
+            background=background,
         ),
     )

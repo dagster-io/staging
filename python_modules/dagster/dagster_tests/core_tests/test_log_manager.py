@@ -46,7 +46,7 @@ def test_construct_log_string_for_log():
     )
 
 
-def make_log_string(error):
+def make_log_string(error, background=None):
     step_failure_event = DagsterEvent(
         event_type_value="STEP_FAILURE",
         pipeline_name="my_pipeline",
@@ -54,7 +54,9 @@ def make_log_string(error):
         solid_handle=SolidHandle("solid2", None),
         step_kind_value="COMPUTE",
         logging_tags={},
-        event_specific_data=StepFailureData(error=error, user_failure_data=None),
+        event_specific_data=StepFailureData(
+            error=error, user_failure_data=None, background=background
+        ),
         message='Execution of step "solid2" failed.',
         pid=54348,
     )
@@ -80,6 +82,28 @@ def test_construct_log_string_with_error():
     expected_start = textwrap.dedent(
         """
         my_pipeline - f79a8a93-27f1-41b5-b465-b35d0809b26d - 54348 - STEP_FAILURE - Execution of step "solid2" failed.
+
+        ValueError: some error
+
+        Stack Trace:
+          File "
+        """
+    ).strip()
+    assert log_string.startswith(expected_start)
+
+
+def test_construct_log_string_with_error_background():
+    try:
+        raise ValueError("some error")
+    except ValueError:
+        error = serializable_error_info_from_exc_info(sys.exc_info())
+
+    log_string = make_log_string(error, background="Error occurred while eating a banana")
+    expected_start = textwrap.dedent(
+        """
+        my_pipeline - f79a8a93-27f1-41b5-b465-b35d0809b26d - 54348 - STEP_FAILURE - Execution of step "solid2" failed.
+
+        Error occurred while eating a banana:
 
         ValueError: some error
 
