@@ -310,8 +310,8 @@ def helm_chart(namespace, docker_image, should_cleanup=True):
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
-            "envConfigMaps": [TEST_CONFIGMAP_NAME],
-            "envSecrets": [TEST_SECRET_NAME],
+            "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
+            "envSecrets": [{"name": TEST_SECRET_NAME}],
             "livenessProbe": {
                 "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
@@ -389,8 +389,8 @@ def helm_chart_for_k8s_run_launcher(namespace, docker_image, should_cleanup=True
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
-            "envConfigMaps": [TEST_CONFIGMAP_NAME],
-            "envSecrets": [TEST_SECRET_NAME],
+            "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
+            "envSecrets": [{"name": TEST_SECRET_NAME}],
             "livenessProbe": {
                 "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
@@ -453,8 +453,8 @@ def helm_chart_for_user_deployments(namespace, docker_image, should_cleanup=True
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
-            "envConfigMaps": [TEST_CONFIGMAP_NAME],
-            "envSecrets": [TEST_SECRET_NAME],
+            "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
+            "envSecrets": [{"name": TEST_SECRET_NAME}],
             "livenessProbe": {
                 "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
@@ -553,8 +553,8 @@ def helm_chart_for_daemon(namespace, docker_image, should_cleanup=True):
         "dagit": {
             "image": {"repository": repository, "tag": tag, "pullPolicy": pull_policy},
             "env": {"TEST_SET_ENV_VAR": "test_dagit_env_var"},
-            "envConfigMaps": [TEST_CONFIGMAP_NAME],
-            "envSecrets": [TEST_SECRET_NAME],
+            "envConfigMaps": [{"name": TEST_CONFIGMAP_NAME}],
+            "envSecrets": [{"name": TEST_SECRET_NAME}],
             "livenessProbe": {
                 "httpGet": {"path": "/dagit_info", "port": 80},
                 "periodSeconds": 20,
