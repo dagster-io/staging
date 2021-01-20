@@ -5,7 +5,7 @@ import tempfile
 from contextlib import contextmanager
 
 from dagster import check
-from dagster.core.storage.local_file_manager import LocalFileHandle
+from dagster.core.storage.file_manager import LocalFileHandle
 
 
 def _unlink_swallow_errors(path):

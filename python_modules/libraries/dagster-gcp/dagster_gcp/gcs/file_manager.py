@@ -79,19 +79,21 @@ class GCSFileManager(FileManager):
         with self.read(file_handle, mode="rb") as file_obj:
             return file_obj.read()
 
-    def write_data(self, data, ext=None):
+    def write_data(self, data, ext=None, file_key: str = None):
         check.inst_param(data, "data", bytes)
-        return self.write(io.BytesIO(data), mode="wb", ext=ext)
+        return self.write(io.BytesIO(data), mode="wb", ext=ext, file_key=file_key)
 
-    def write(self, file_obj, mode="wb", ext=None):
+    def write(self, file_obj, mode="wb", ext=None, file_key: str = None):
         check_file_like_obj(file_obj)
-        gcs_key = self.get_full_key(str(uuid.uuid4()) + (("." + ext) if ext is not None else ""))
+        file_key = file_key if file_key else str(uuid.uuid4())
+        gcs_key = self._get_full_key(file_key, ext)
         bucket_obj = self._client.get_bucket(self._gcs_bucket)
         bucket_obj.blob(gcs_key).upload_from_file(file_obj)
         return GCSFileHandle(self._gcs_bucket, gcs_key)
 
-    def get_full_key(self, file_key):
-        return "{base_key}/{file_key}".format(base_key=self._gcs_base_key, file_key=file_key)
+    def _get_full_key(self, file_key, ext):
+        file_key_with_ext = file_key + (("." + ext) if ext is not None else "")
+        return f"{self._gcs_base_key}/{file_key_with_ext}"
 
     def delete_local_temp(self):
         self._temp_file_manager.close()

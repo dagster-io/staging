@@ -3,7 +3,7 @@ from tempfile import TemporaryDirectory
 
 import pytest
 from dagster import ModeDefinition, OutputDefinition, execute_pipeline, pipeline, solid
-from dagster.core.storage.local_file_manager import local_file_io_manager
+from dagster.core.storage.file_io_manager import local_file_io_manager
 
 
 def test_bytes():
@@ -42,7 +42,7 @@ def test_bytes_read():
         @solid
         def solid2(_, input_handle):
             with input_handle.read() as f:
-                f.read() == foo_bytes
+                assert f.read() == foo_bytes
 
         @pipeline(
             mode_defs=[

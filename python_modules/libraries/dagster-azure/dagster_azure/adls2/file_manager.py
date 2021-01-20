@@ -89,21 +89,25 @@ class ADLS2FileManager(FileManager):
         with self.read(file_handle, mode="rb") as file_obj:
             return file_obj.read()
 
-    def write_data(self, data, ext=None):
+    def write_data(self, data, ext=None, file_key: str = None):
         check.inst_param(data, "data", bytes)
-        return self.write(io.BytesIO(data), mode="wb", ext=ext)
+        return self.write(io.BytesIO(data), mode="wb", ext=ext, file_key=file_key)
 
-    def write(self, file_obj, mode="wb", ext=None):  # pylint: disable=unused-argument
+    def write(
+        self, file_obj, mode="wb", ext=None, file_key: str = None
+    ):  # pylint: disable=unused-argument
         check_file_like_obj(file_obj)
-        adls2_key = self.get_full_key(str(uuid.uuid4()) + (("." + ext) if ext is not None else ""))
+        file_key = file_key if file_key else str(uuid.uuid4())
+        adls2_key = self._get_full_key(file_key, ext)
         adls2_file = self._client.get_file_client(
             file_system=self._file_system, file_path=adls2_key
         )
         adls2_file.upload_data(file_obj, overwrite=True)
         return ADLS2FileHandle(self._client.account_name, self._file_system, adls2_key)
 
-    def get_full_key(self, file_key):
-        return "{base_key}/{file_key}".format(base_key=self._prefix, file_key=file_key)
+    def _get_full_key(self, file_key, ext):
+        file_key_with_ext = file_key + (("." + ext) if ext is not None else "")
+        return f"{self._prefix}/{file_key_with_ext}"
 
     def delete_local_temp(self):
         self._temp_file_manager.close()
