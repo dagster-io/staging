@@ -522,6 +522,45 @@ class RepositoryDefinition:
         self._name = check_valid_name(name)
         self._description = check.opt_str_param(description, "description")
         self._repository_data = check.inst_param(repository_data, "repository_data", RepositoryData)
+        self._validate_repository_data(
+            self._repository_data.get_all_schedules(),
+            self._repository_data.get_all_sensors(),
+            self._repository_data.get_all_partition_sets(),
+            self._repository_data.get_all_pipelines(),
+        )
+
+    def _validate_repository_data(self, schedules, sensors, partition_sets, pipelines):
+        pipeline_names = set([pipeline.name for pipeline in pipelines])
+
+        for schedule in schedules:
+            if schedule.pipeline_name not in pipeline_names:
+                raise DagsterInvalidDefinitionError(
+                    'Schedule "{schedule_name}" on repository "{repo_name}" referenced a pipeline "{pipeline_name}" that was not found in the repository.'.format(
+                        schedule_name=schedule.name,
+                        repo_name=self.name,
+                        pipeline_name=schedule.pipeline_name,
+                    )
+                )
+
+        for sensor in sensors:
+            if sensor.pipeline_name not in pipeline_names:
+                raise DagsterInvalidDefinitionError(
+                    'Sensor "{sensor_name}" on repository "{repo_name}" referenced a pipeline "{pipeline_name}" that was not found in the repository.'.format(
+                        sensor_name=sensor.name,
+                        repo_name=self.name,
+                        pipeline_name=sensor.pipeline_name,
+                    )
+                )
+
+        for partition_set in partition_sets:
+            if partition_set.pipeline_name not in pipeline_names:
+                raise DagsterInvalidDefinitionError(
+                    'Partition set "{partition_set_name}" on repository "{repo_name}" referenced a pipeline "{pipeline_name}" that was not found in the repository.'.format(
+                        partition_set_name=partition_set.name,
+                        repo_name=self.name,
+                        pipeline_name=partition_set.pipeline_name,
+                    )
+                )
 
     @property
     def name(self):
