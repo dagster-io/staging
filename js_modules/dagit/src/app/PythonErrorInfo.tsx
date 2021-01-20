@@ -5,7 +5,7 @@ import styled from 'styled-components';
 
 import {MetadataEntries} from 'src/runs/MetadataEntry';
 import {MetadataEntryFragment} from 'src/runs/types/MetadataEntryFragment';
-import {PythonErrorFragment} from 'src/types/PythonErrorFragment';
+import {PythonErrorFragment} from 'src/app/types/PythonErrorFragment';
 import {FontFamily} from 'src/ui/styles';
 
 interface IPythonErrorInfoProps {
