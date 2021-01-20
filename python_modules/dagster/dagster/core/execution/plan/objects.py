@@ -35,7 +35,7 @@ class UserFailureData(namedtuple("_UserFailureData", "label description metadata
 
 @whitelist_for_serdes
 class StepFailureData(namedtuple("_StepFailureData", "error user_failure_data background")):
-    def __new__(cls, error, user_failure_data, background):
+    def __new__(cls, error, user_failure_data, background=None):
         return super(StepFailureData, cls).__new__(
             cls,
             error=check.opt_inst_param(error, "error", SerializableErrorInfo),
