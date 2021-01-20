@@ -8,7 +8,7 @@ from dagster.config import Field
 from dagster.core.definitions import resource
 from dagster.utils import mkdir_p
 
-from .local_file_manager import LocalFileHandle
+from .file_manager import LocalFileHandle
 
 
 class FileCache(ABC):

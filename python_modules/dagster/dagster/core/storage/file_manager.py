@@ -1,20 +1,20 @@
-from abc import ABC, abstractmethod, abstractproperty
-
-from dagster import check
-from dagster.core.types.decorator import usable_as_dagster_type
 import io
 import os
 import shutil
 import uuid
+from abc import ABC, abstractmethod, abstractproperty
 from contextlib import contextmanager
 
+from dagster import check
 from dagster.config import Field
 from dagster.config.source import StringSource
 from dagster.core.definitions.resource import resource
 from dagster.core.instance import DagsterInstance
+from dagster.core.types.decorator import usable_as_dagster_type
 from dagster.utils import mkdir_p
 
 from .temp_file_manager import TempfileManager
+
 
 # pylint: disable=no-init
 @usable_as_dagster_type
