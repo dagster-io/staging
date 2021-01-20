@@ -3,7 +3,7 @@ from dagster import Any, String, usable_as_dagster_type
 from dagster.check import CheckError
 from dagster.core.types.dagster_type import resolve_dagster_type
 from dagster.utils import safe_tempfile_path
-from dagstermill.serialize import read_value, write_value
+from dagstermill.deprecated.serialize import read_value, write_value
 
 
 def test_scalar():
