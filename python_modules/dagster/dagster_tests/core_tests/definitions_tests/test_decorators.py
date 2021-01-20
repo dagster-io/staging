@@ -1,4 +1,5 @@
 import re
+import string
 from datetime import datetime, time
 
 import pendulum
@@ -12,14 +13,18 @@ from dagster import (
     InputDefinition,
     Output,
     OutputDefinition,
+    PartitionSetDefinition,
     PipelineDefinition,
     ScheduleDefinition,
+    SkipReason,
     composite_solid,
     execute_pipeline,
     execute_solid,
     lambda_solid,
     pipeline,
+    repository,
     schedule,
+    sensor,
     solid,
 )
 from dagster.core.definitions.decorators import (
@@ -1036,3 +1041,58 @@ def test_input_default():
 
     result = execute_solid(foo)
     assert result.output_value() == "ok"
+
+
+def test_missing_pipeline():
+    @sensor(pipeline_name="missing_pipeline")
+    def bad_sensor(_):
+        return SkipReason()
+
+    @daily_schedule(
+        pipeline_name="missing_pipeline", start_date=datetime(year=2019, month=1, day=1),
+    )
+    def bad_schedule(_):
+        return {}
+
+    bad_partition_set = PartitionSetDefinition(
+        name="bad_partition_set",
+        pipeline_name="missing_pipeline",
+        partition_fn=string.digits,
+        run_config_fn_for_partition=lambda x: {},
+    )
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=re.escape(
+            'Sensor "bad_sensor" on repository "sensor_with_missing_pipeline" referenced a pipeline '
+            '"missing_pipeline" that was not found in the repository.'
+        ),
+    ):
+
+        @repository
+        def sensor_with_missing_pipeline():
+            return [bad_sensor]
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=re.escape(
+            'Schedule "bad_schedule" on repository "schedule_with_missing_pipeline" referenced a pipeline '
+            '"missing_pipeline" that was not found in the repository.'
+        ),
+    ):
+
+        @repository
+        def schedule_with_missing_pipeline():
+            return [bad_schedule]
+
+    with pytest.raises(
+        DagsterInvalidDefinitionError,
+        match=re.escape(
+            'Partition set "bad_partition_set" on repository "schedule_with_missing_pipeline" referenced a pipeline '
+            '"missing_pipeline" that was not found in the repository.'
+        ),
+    ):
+
+        @repository
+        def partition_set_with_missing_pipeline():
+            return [bad_partition_set]
