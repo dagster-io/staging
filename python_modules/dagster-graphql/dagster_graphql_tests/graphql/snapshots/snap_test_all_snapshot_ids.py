@@ -935,9 +935,11 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -949,9 +951,11 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -963,9 +967,11 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -977,9 +983,11 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -991,9 +999,11 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -1005,9 +1015,11 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -1110,21 +1122,26 @@ snapshots['test_all_snapshot_ids 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_",
+            "root_manager_key": null
           }
         ],
         "name": "after_failure",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -1135,14 +1152,18 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -1153,28 +1174,33 @@ snapshots['test_all_snapshot_ids 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_",
+            "root_manager_key": null
           }
         ],
         "name": "conditionally_fail",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 10'] = '0eb54e5a812b51c1fd1d9eb3802a0810aea5e487'
+snapshots['test_all_snapshot_ids 10'] = '6a66ae574c5cd0139e279e0067cbe424122ca21c'
 
 snapshots['test_all_snapshot_ids 11'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2160,9 +2186,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -2174,9 +2202,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -2188,9 +2218,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -2202,9 +2234,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -2216,9 +2250,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "PoorMansDataFrame": {
@@ -2230,9 +2266,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -2244,9 +2282,11 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -2355,21 +2395,26 @@ snapshots['test_all_snapshot_ids 11'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "df_expectations_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -2380,21 +2425,26 @@ snapshots['test_all_snapshot_ids 11'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -2405,28 +2455,33 @@ snapshots['test_all_snapshot_ids 11'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "sum_sq_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 12'] = '26c8c6272dd0f5088ea379c8f4f39f680860f6f9'
+snapshots['test_all_snapshot_ids 12'] = 'e1373044f5dcc5b66078973c2f5fb1b2b0f012a3'
 
 snapshots['test_all_snapshot_ids 13'] = '''{
   "__class__": "PipelineSnapshot",
@@ -3421,9 +3476,11 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -3435,9 +3492,11 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -3449,9 +3508,11 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -3463,9 +3524,11 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -3477,9 +3540,11 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -3491,9 +3556,11 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -3619,14 +3686,18 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": true,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -3637,14 +3708,18 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -3655,21 +3730,26 @@ snapshots['test_all_snapshot_ids 13'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "y"
+            "name": "y",
+            "root_manager_key": null
           }
         ],
         "name": "multiply_by_two",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -3680,40 +3760,47 @@ snapshots['test_all_snapshot_ids 13'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "y"
+            "name": "y",
+            "root_manager_key": null
           },
           {
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "ten"
+            "name": "ten",
+            "root_manager_key": null
           },
           {
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "should_fail"
+            "name": "should_fail",
+            "root_manager_key": null
           }
         ],
         "name": "multiply_inputs",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 14'] = 'e0a7a87039e089093af4448d5e0f9a11827cb568'
+snapshots['test_all_snapshot_ids 14'] = 'f0385fc3803160fd3962a6b0c1990084f93a5ab3'
 
 snapshots['test_all_snapshot_ids 15'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4731,9 +4818,11 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -4745,9 +4834,11 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -4759,9 +4850,11 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -4773,9 +4866,11 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -4787,9 +4882,11 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -4801,9 +4898,11 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -4958,15 +5057,19 @@ snapshots['test_all_snapshot_ids 15'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "depth"
+            "name": "depth",
+            "root_manager_key": null
           }
         ],
         "name": "fail",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -4974,7 +5077,8 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "required_resource_keys": [
           "retry_count"
         ],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -4985,21 +5089,26 @@ snapshots['test_all_snapshot_ids 15'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "depth"
+            "name": "depth",
+            "root_manager_key": null
           }
         ],
         "name": "reset",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -5010,21 +5119,25 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 16'] = 'afdf17ecd488c67c90ca440dad81ae1fb64c36fb'
+snapshots['test_all_snapshot_ids 16'] = '536a080e1f05ef93c8a24d6b61db9dd5f4483a3b'
 
 snapshots['test_all_snapshot_ids 17'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6001,9 +6114,11 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -6015,9 +6130,11 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -6029,9 +6146,11 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -6043,9 +6162,11 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -6057,9 +6178,11 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -6071,9 +6194,11 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -6165,14 +6290,18 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -6183,28 +6312,33 @@ snapshots['test_all_snapshot_ids 17'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "n"
+            "name": "n",
+            "root_manager_key": null
           }
         ],
         "name": "increment",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 18'] = 'cd3ab5498d4cc5103655b4d28d16827404a1da74'
+snapshots['test_all_snapshot_ids 18'] = '6ea64ab69d02b02ee6ab5b320b5fe586e4919b23'
 
 snapshots['test_all_snapshot_ids 19'] = '''{
   "__class__": "PipelineSnapshot",
@@ -7117,9 +7251,11 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -7131,9 +7267,11 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -7145,9 +7283,11 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -7159,9 +7299,11 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -7173,9 +7315,11 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -7187,9 +7331,11 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -7254,14 +7400,18 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
@@ -7270,9 +7420,9 @@ snapshots['test_all_snapshot_ids 19'] = '''{
   }
 }'''
 
-snapshots['test_all_snapshot_ids 2'] = 'be926ec31e951894b88a55c9093f677f19759fdb'
+snapshots['test_all_snapshot_ids 2'] = '03e8dcc9337c389e5ad70ba4bae5885b6f3d8053'
 
-snapshots['test_all_snapshot_ids 20'] = '70dc4ff02510ee09ba5e52ce3ff160e87a38bcb5'
+snapshots['test_all_snapshot_ids 20'] = '1fd26d38e6eb6e392b7fcd3ee833fcf1b1a80ce6'
 
 snapshots['test_all_snapshot_ids 21'] = '''{
   "__class__": "PipelineSnapshot",
@@ -8217,9 +8367,11 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -8231,9 +8383,11 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -8245,9 +8399,11 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -8259,9 +8415,11 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -8273,9 +8431,11 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -8287,9 +8447,11 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -8362,21 +8524,25 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 22'] = '6cc57011adb04866a5330d530bed80bedfbd07a7'
+snapshots['test_all_snapshot_ids 22'] = '766e704f9a39da959a712fcab30c1de2c874ea29'
 
 snapshots['test_all_snapshot_ids 23'] = '''{
   "__class__": "PipelineSnapshot",
@@ -9289,9 +9455,11 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -9303,9 +9471,11 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -9317,9 +9487,11 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -9331,9 +9503,11 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -9345,9 +9519,11 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -9359,9 +9535,11 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -9426,21 +9604,25 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 24'] = '934a034a437c434dacfbb55341fb3f0d14292b06'
+snapshots['test_all_snapshot_ids 24'] = '891fbf952a17b4700ad97ee71d8b2d235c56ed4e'
 
 snapshots['test_all_snapshot_ids 25'] = '''{
   "__class__": "PipelineSnapshot",
@@ -10435,9 +10617,11 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -10449,9 +10633,11 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -10463,9 +10649,11 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -10477,9 +10665,11 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -10491,9 +10681,11 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -10505,9 +10697,11 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -10587,14 +10781,18 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -10605,21 +10803,25 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 26'] = 'c60624f95c10d712253ac6ad5274a272448e4fc1'
+snapshots['test_all_snapshot_ids 26'] = 'fae4c63fd0ae53a6c92377e434058d8b4551216a'
 
 snapshots['test_all_snapshot_ids 27'] = '''{
   "__class__": "PipelineSnapshot",
@@ -11624,9 +11826,11 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -11638,9 +11842,11 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -11652,9 +11858,11 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -11666,9 +11874,11 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -11680,9 +11890,11 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -11694,9 +11906,11 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -11768,14 +11982,15 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "name": "a_solid_with_multilayered_config",
         "output_def_snaps": [],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 28'] = 'ea8366a34cef9a494c4fd027db3b4901130a2777'
+snapshots['test_all_snapshot_ids 28'] = '614cf3337bc919fed8b3d35f7aea12c87b640ce3'
 
 snapshots['test_all_snapshot_ids 29'] = '''{
   "__class__": "PipelineSnapshot",
@@ -12697,9 +12912,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -12711,9 +12928,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -12725,9 +12944,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -12739,9 +12960,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -12753,9 +12976,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -12767,9 +12992,11 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -12853,14 +13080,18 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -12871,21 +13102,26 @@ snapshots['test_all_snapshot_ids 29'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "solid_asset_b",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
@@ -14036,9 +14272,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -14050,9 +14288,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -14064,9 +14304,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -14078,9 +14320,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -14092,9 +14336,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -14106,9 +14352,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -14234,7 +14482,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "input_mapping_snaps": [
@@ -14249,8 +14498,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -14312,7 +14564,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "input_mapping_snaps": [
@@ -14327,8 +14580,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -14390,7 +14646,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "input_mapping_snaps": [
@@ -14405,8 +14662,11 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -14433,21 +14693,26 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "add_one",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -14458,28 +14723,33 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "div_two",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 30'] = '369ffe24fda1f1e9e6e81eb1009b616f0ac2c373'
+snapshots['test_all_snapshot_ids 30'] = 'edc2b28c5fa9426ae23af7fd34c8b5480979e988'
 
 snapshots['test_all_snapshot_ids 31'] = '''{
   "__class__": "PipelineSnapshot",
@@ -15606,9 +15876,11 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -15620,9 +15892,11 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -15634,9 +15908,11 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -15648,9 +15924,11 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -15662,9 +15940,11 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -15676,9 +15956,11 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -15817,21 +16099,25 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 32'] = 'c662efa7b25d556f05304b0bd36cce258a627022'
+snapshots['test_all_snapshot_ids 32'] = 'ab683c0f16c152186bacc66bbaa3caf9c932dd70'
 
 snapshots['test_all_snapshot_ids 33'] = '''{
   "__class__": "PipelineSnapshot",
@@ -16936,9 +17222,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -16950,9 +17238,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -16964,9 +17254,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -16978,9 +17270,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -16992,9 +17286,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -17006,9 +17302,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -17175,8 +17473,11 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -17184,14 +17485,15 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "required_resource_keys": [
           "op"
         ],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 34'] = '66eff30564d75c7f86fc19659ce1d9451891f81b'
+snapshots['test_all_snapshot_ids 34'] = '8934b685cd5fc62b0b9e4f0e4fa63c5472f1ab74'
 
 snapshots['test_all_snapshot_ids 35'] = '''{
   "__class__": "PipelineSnapshot",
@@ -18104,9 +18406,11 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -18118,9 +18422,11 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -18132,9 +18438,11 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -18146,9 +18454,11 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -18160,9 +18470,11 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -18174,9 +18486,11 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -18241,21 +18555,25 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 36'] = '146cfdbe1fd02685a710c0074b40dc34438f979c'
+snapshots['test_all_snapshot_ids 36'] = 'ebbb672e0aca253df8c20787665ce3946821df03'
 
 snapshots['test_all_snapshot_ids 37'] = '''{
   "__class__": "PipelineSnapshot",
@@ -19177,9 +19495,11 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -19191,9 +19511,11 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -19205,9 +19527,11 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -19219,9 +19543,11 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -19233,9 +19559,11 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -19247,9 +19575,11 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -19333,14 +19663,18 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -19351,28 +19685,33 @@ snapshots['test_all_snapshot_ids 37'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_",
+            "root_manager_key": null
           }
         ],
         "name": "return_hello_world",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 38'] = '89faf63278a415fa4b573877ba8b1a1f17f175cb'
+snapshots['test_all_snapshot_ids 38'] = '34a85f606d5e1435d14eef13364693a756a7c048'
 
 snapshots['test_all_snapshot_ids 39'] = '''{
   "__class__": "PipelineSnapshot",
@@ -20285,9 +20624,11 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -20299,9 +20640,11 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -20313,9 +20656,11 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -20327,9 +20672,11 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -20341,9 +20688,11 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -20355,9 +20704,11 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -20422,23 +20773,27 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 4'] = '87acd7ed959afb70b9e5758920c93d00b1e01397'
+snapshots['test_all_snapshot_ids 4'] = '9dcfc517d40b4a90b6ad86fb97f964a0d5242f78'
 
-snapshots['test_all_snapshot_ids 40'] = '905bc0ea6ddd4394429191cfced5740b0e1f8e60'
+snapshots['test_all_snapshot_ids 40'] = '4cd22925ff3e49486692bed6989c778859fbeb0d'
 
 snapshots['test_all_snapshot_ids 41'] = '''{
   "__class__": "PipelineSnapshot",
@@ -21351,9 +21706,11 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -21365,9 +21722,11 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -21379,9 +21738,11 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -21393,9 +21754,11 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -21407,9 +21770,11 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -21421,9 +21786,11 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -21488,21 +21855,25 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 42'] = 'd342338a59e11a7d7f4c0de7946f86a9dfb6ef8a'
+snapshots['test_all_snapshot_ids 42'] = '1f46d2b9d34fb73263aee58b40500bdab503ed44'
 
 snapshots['test_all_snapshot_ids 43'] = '''{
   "__class__": "PipelineSnapshot",
@@ -22415,9 +22786,11 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -22429,9 +22802,11 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -22443,9 +22818,11 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -22457,9 +22834,11 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -22471,9 +22850,11 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -22485,9 +22866,11 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -22552,21 +22935,25 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 44'] = '76174c25f9177d54ea5c908fc184ccd31a6b0c28'
+snapshots['test_all_snapshot_ids 44'] = '0572ec75d51e7c5ea5510f72d1f7fbd5362eec10'
 
 snapshots['test_all_snapshot_ids 45'] = '''{
   "__class__": "PipelineSnapshot",
@@ -23517,9 +23904,11 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -23531,9 +23920,11 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -23545,9 +23936,11 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -23559,9 +23952,11 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -23573,9 +23968,11 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -23587,9 +23984,11 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -23662,21 +24061,25 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 46'] = 'ddd4ecf53c7ab590fe13ad16989e3be7676af0d7'
+snapshots['test_all_snapshot_ids 46'] = 'b751c57f9a2099a03fd9423fd6410da4ed02e058'
 
 snapshots['test_all_snapshot_ids 47'] = '''{
   "__class__": "PipelineSnapshot",
@@ -24505,9 +24908,11 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -24519,9 +24924,11 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -24533,9 +24940,11 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -24547,9 +24956,11 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -24561,9 +24972,11 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -24575,9 +24988,11 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -24655,7 +25070,8 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "name": "emit_failed_expectation",
         "output_def_snaps": [],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -24665,7 +25081,8 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "name": "emit_successful_expectation",
         "output_def_snaps": [],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -24675,14 +25092,15 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "name": "emit_successful_expectation_no_metadata",
         "output_def_snaps": [],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 48'] = '12c12296c31a3978b9dba16a2ccf6264d9757f93'
+snapshots['test_all_snapshot_ids 48'] = 'ed82b182d0c1bd294146200098317207e4f17a21'
 
 snapshots['test_all_snapshot_ids 49'] = '''{
   "__class__": "PipelineSnapshot",
@@ -25595,9 +26013,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -25609,9 +26029,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -25623,9 +26045,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "InputTypeWithoutHydration": {
@@ -25637,9 +26061,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "InputTypeWithoutHydration",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -25651,9 +26077,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -25665,9 +26093,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -25679,9 +26109,11 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -25765,21 +26197,26 @@ snapshots['test_all_snapshot_ids 49'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "InputTypeWithoutHydration",
             "description": null,
-            "name": "some_input"
+            "name": "some_input",
+            "root_manager_key": null
           }
         ],
         "name": "fail_subset",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -25790,14 +26227,18 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "InputTypeWithoutHydration",
             "dagster_type_key": "InputTypeWithoutHydration",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
@@ -26779,9 +27220,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -26793,9 +27236,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -26807,9 +27252,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -26821,9 +27268,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -26835,9 +27284,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "PoorMansDataFrame": {
@@ -26849,9 +27300,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -26863,9 +27316,11 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -26955,21 +27410,26 @@ snapshots['test_all_snapshot_ids 5'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -26980,28 +27440,33 @@ snapshots['test_all_snapshot_ids 5'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "sum_sq_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 50'] = '586f3bd333897916ac22437f986bca9ab955df80'
+snapshots['test_all_snapshot_ids 50'] = '91126dbcddea3f494649973d87c7bb8a278fd712'
 
 snapshots['test_all_snapshot_ids 51'] = '''{
   "__class__": "PipelineSnapshot",
@@ -27891,9 +28356,11 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -27905,9 +28372,11 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -27919,9 +28388,11 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -27933,9 +28404,11 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -27947,9 +28420,11 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -27961,9 +28436,11 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -28035,14 +28512,15 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "name": "solid_with_list",
         "output_def_snaps": [],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 52'] = '320dd142a1a42be2b9128e7a148cfa44fbc99640'
+snapshots['test_all_snapshot_ids 52'] = '443e69ee2f681f92840490474fc1ec6cfc8189d1'
 
 snapshots['test_all_snapshot_ids 53'] = '''{
   "__class__": "PipelineSnapshot",
@@ -29001,9 +29479,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -29015,9 +29495,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -29029,9 +29511,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -29043,9 +29527,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -29057,9 +29543,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -29071,9 +29559,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -29152,8 +29642,11 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -29161,14 +29654,15 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "required_resource_keys": [
           "R1"
         ],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 54'] = 'a93e2ee8b97732bfc5419ce647964dafee2d1c0e'
+snapshots['test_all_snapshot_ids 54'] = 'fb5e4f8a67b6984f7db2fbcf269f49a7f1d402f9'
 
 snapshots['test_all_snapshot_ids 55'] = '''{
   "__class__": "PipelineSnapshot",
@@ -30163,9 +30657,11 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -30177,9 +30673,11 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -30191,9 +30689,11 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -30205,9 +30705,11 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -30219,9 +30721,11 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -30233,9 +30737,11 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -30376,21 +30882,26 @@ snapshots['test_all_snapshot_ids 55'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "one"
+            "name": "one",
+            "root_manager_key": null
           }
         ],
         "name": "get_input_one",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -30409,21 +30920,26 @@ snapshots['test_all_snapshot_ids 55'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "one"
+            "name": "one",
+            "root_manager_key": null
           }
         ],
         "name": "get_input_two",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -30434,14 +30950,18 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -30452,34 +30972,40 @@ snapshots['test_all_snapshot_ids 55'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "input_one"
+            "name": "input_one",
+            "root_manager_key": null
           },
           {
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "input_two"
+            "name": "input_two",
+            "root_manager_key": null
           }
         ],
         "name": "sum_inputs",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 56'] = '018b72af3761b7b8802019759b521cdfb285dd9f'
+snapshots['test_all_snapshot_ids 56'] = '0488b662f4259e74502eb46fd5a6d4a3b1f9e0dc'
 
 snapshots['test_all_snapshot_ids 57'] = '''{
   "__class__": "PipelineSnapshot",
@@ -31582,9 +32108,11 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -31596,9 +32124,11 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -31610,9 +32140,11 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -31624,9 +32156,11 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -31638,9 +32172,11 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -31652,9 +32188,11 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -31822,28 +32360,36 @@ snapshots['test_all_snapshot_ids 57'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "String",
             "description": null,
-            "name": "inp"
+            "name": "inp",
+            "root_manager_key": null
           }
         ],
         "name": "can_fail",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "String",
             "dagster_type_key": "String",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": false,
             "name": "start_fail"
           },
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "String",
             "dagster_type_key": "String",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": false,
             "name": "start_skip"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -31854,21 +32400,28 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "String",
             "dagster_type_key": "String",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": false,
             "name": "success"
           },
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "String",
             "dagster_type_key": "String",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": false,
             "name": "skip"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -31879,13 +32432,15 @@ snapshots['test_all_snapshot_ids 57'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Nothing",
             "description": null,
-            "name": "start"
+            "name": "start",
+            "root_manager_key": null
           }
         ],
         "name": "no_output",
         "output_def_snaps": [],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -31896,28 +32451,33 @@ snapshots['test_all_snapshot_ids 57'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "value"
+            "name": "value",
+            "root_manager_key": null
           }
         ],
         "name": "passthrough",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 58'] = '99ff2db9d7857c08ad28f4bf6544350da576a852'
+snapshots['test_all_snapshot_ids 58'] = 'a3bdaace98e282d36de71f28b8453feb14d1796e'
 
 snapshots['test_all_snapshot_ids 59'] = '''{
   "__class__": "PipelineSnapshot",
@@ -32839,9 +33399,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -32853,9 +33415,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -32867,9 +33431,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -32881,9 +33447,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -32895,9 +33463,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -32909,9 +33479,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -33007,8 +33579,11 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -33016,7 +33591,8 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "required_resource_keys": [
           "a"
         ],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -33027,15 +33603,19 @@ snapshots['test_all_snapshot_ids 59'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "will_fail",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
@@ -33043,16 +33623,17 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "required_resource_keys": [
           "b"
         ],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 6'] = 'ab653db9ffc5febfbe6dccc7c8333aed724cf7f9'
+snapshots['test_all_snapshot_ids 6'] = 'd34b1f86ff34044159919f263ae70485969de65e'
 
-snapshots['test_all_snapshot_ids 60'] = '11c1fa992cc4e718854d3f03b2425ed37615f9fa'
+snapshots['test_all_snapshot_ids 60'] = 'eb7ca2059a47810d2861bf403e662bb3fc1b578c'
 
 snapshots['test_all_snapshot_ids 61'] = '''{
   "__class__": "PipelineSnapshot",
@@ -33992,9 +34573,11 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -34006,9 +34589,11 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -34020,9 +34605,11 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -34034,9 +34621,11 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -34048,9 +34637,11 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -34062,9 +34653,11 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -34150,14 +34743,18 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -34168,14 +34765,18 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Bool",
             "dagster_type_key": "Bool",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -34186,14 +34787,18 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Int",
             "dagster_type_key": "Int",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -34204,21 +34809,25 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "String",
             "dagster_type_key": "String",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 62'] = '42184fc2bc2b2afe5b901eb337b7e62d33f2d177'
+snapshots['test_all_snapshot_ids 62'] = 'e425797e8c3eb98da90270275cef3965d5b9797d'
 
 snapshots['test_all_snapshot_ids 63'] = '''{
   "__class__": "PipelineSnapshot",
@@ -35131,9 +35740,11 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -35145,9 +35756,11 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -35159,9 +35772,11 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -35173,9 +35788,11 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -35187,9 +35804,11 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -35201,9 +35820,11 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -35268,21 +35889,25 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 64'] = 'ddbcc60f56cdb9f805090599dcb6cdafdc90b3ab'
+snapshots['test_all_snapshot_ids 64'] = '6647ed2577dce616ec219932a19e0cda6a0a0c1f'
 
 snapshots['test_all_snapshot_ids 65'] = '''{
   "__class__": "PipelineSnapshot",
@@ -36195,9 +36820,11 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -36209,9 +36836,11 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -36223,9 +36852,11 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -36237,9 +36868,11 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -36251,9 +36884,11 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -36265,9 +36900,11 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -36332,21 +36969,25 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 66'] = 'b910defa1847639a8bd45baeb5a067a6a6f6eb38'
+snapshots['test_all_snapshot_ids 66'] = '72aeb2132027570fba615a85c5e0267e4f76bb38'
 
 snapshots['test_all_snapshot_ids 67'] = '''{
   "__class__": "PipelineSnapshot",
@@ -37259,9 +37900,11 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -37273,9 +37916,11 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -37287,9 +37932,11 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -37301,9 +37948,11 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -37315,9 +37964,11 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -37329,9 +37980,11 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -37396,14 +38049,18 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "Any",
             "dagster_type_key": "Any",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
@@ -37412,7 +38069,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
   }
 }'''
 
-snapshots['test_all_snapshot_ids 68'] = 'a049e979a72c6900f5f4ba5397b49e4fb80d4a90'
+snapshots['test_all_snapshot_ids 68'] = '05ee360426312d3ebd21284560e7caf14b84ca81'
 
 snapshots['test_all_snapshot_ids 7'] = '''{
   "__class__": "PipelineSnapshot",
@@ -38389,9 +39046,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -38403,9 +39062,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -38417,9 +39078,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -38431,9 +39094,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -38445,9 +39110,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "PoorMansDataFrame": {
@@ -38459,9 +39126,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -38473,9 +39142,11 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -38565,21 +39236,26 @@ snapshots['test_all_snapshot_ids 7'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -38590,28 +39266,33 @@ snapshots['test_all_snapshot_ids 7'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "sum_sq_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 8'] = 'a58d2fc9c6a83da0a4a426024f5829d20d9e94fc'
+snapshots['test_all_snapshot_ids 8'] = '720f77ced0e9480a63251cc07fb605e77ba40b27'
 
 snapshots['test_all_snapshot_ids 9'] = '''{
   "__class__": "PipelineSnapshot",
@@ -39556,9 +40237,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Bool": {
@@ -39570,9 +40253,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Float": {
@@ -39584,9 +40269,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Int": {
@@ -39598,9 +40285,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "Nothing": {
@@ -39612,9 +40301,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "PoorMansDataFrame": {
@@ -39626,9 +40317,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
+        "required_resource_keys": [],
         "type_param_keys": []
       },
       "String": {
@@ -39640,9 +40333,11 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
+        "required_resource_keys": [],
         "type_param_keys": []
       }
     }
@@ -39713,21 +40408,26 @@ snapshots['test_all_snapshot_ids 9'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
         "output_def_snaps": [
           {
             "__class__": "OutputDefSnap",
+            "dagster_type_display_name": "PoorMansDataFrame",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
+            "io_manager_key": "io_manager",
+            "is_dynamic": false,
             "is_required": true,
             "name": "result"
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },

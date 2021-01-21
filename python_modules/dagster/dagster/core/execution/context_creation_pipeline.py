@@ -405,7 +405,6 @@ def construct_execution_context_data(
 
     return SystemExecutionContextData(
         pipeline=context_creation_data.pipeline,
-        mode_def=context_creation_data.mode_def,
         intermediate_storage_def=context_creation_data.intermediate_storage_def,
         pipeline_run=context_creation_data.pipeline_run,
         scoped_resources_builder=scoped_resources_builder,
