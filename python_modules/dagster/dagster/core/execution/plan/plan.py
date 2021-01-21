@@ -58,7 +58,7 @@ from .inputs import (
     UnresolvedStepInput,
 )
 from .outputs import StepOutput, StepOutputHandle, UnresolvedStepOutputHandle
-from .step import ExecutionStep, UnresolvedExecutionStep
+from .step import ExecutionStep, StepKind, UnresolvedExecutionStep
 
 if TYPE_CHECKING:
     from .active import ActiveExecution
@@ -667,6 +667,56 @@ class ExecutionPlan(
 
         # Finally, we build and return the execution plan
         return plan_builder.build()
+
+    @staticmethod
+    def rebuild_step_input(step_input_snap):
+        from dagster.core.snap.execution_plan_snapshot import ExecutionStepInputSnap
+
+        check.inst_param(step_input_snap, "step_input_snap", ExecutionStepInputSnap)
+
+        return (
+            StepInput(
+                step_input_snap.name, step_input_snap.dagster_type_key, step_input_snap.source,
+            )
+            if isinstance(step_input_snap.source, StepInputSource)
+            else UnresolvedStepInput(
+                step_input_snap.name, step_input_snap.dagster_type_key, step_input_snap.source,
+            )
+        )
+
+    @staticmethod
+    def rebuild_from_snapshot(
+        pipeline, pipeline_name, execution_plan_snapshot, environment_config,
+    ):
+        step_dict = {}
+
+        for step_snap in execution_plan_snapshot.steps:
+            input_snaps = step_snap.inputs
+            output_snaps = step_snap.outputs
+
+            step_inputs = [
+                ExecutionPlan.rebuild_step_input(step_input_snap) for step_input_snap in input_snaps
+            ]
+
+            step_outputs = [step_output_snap.step_output for step_output_snap in output_snaps]
+
+            step = (
+                ExecutionStep(
+                    step_snap.step_handle, pipeline_name, step_inputs, step_outputs, step_snap.tags,
+                )
+                if step_snap.kind == StepKind.COMPUTE
+                else UnresolvedExecutionStep(
+                    step_snap.step_handle, pipeline_name, step_inputs, step_outputs, step_snap.tags,
+                )
+            )
+
+            step_dict[step.handle] = step
+
+        step_handles_to_execute = [
+            StepHandle.parse_from_key(key) for key in execution_plan_snapshot.step_keys_to_execute
+        ]
+
+        return ExecutionPlan(pipeline, step_dict, step_handles_to_execute, environment_config)
 
     @property
     def storage_is_persistent(self) -> bool:

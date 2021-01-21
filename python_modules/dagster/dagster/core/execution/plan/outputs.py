@@ -8,6 +8,7 @@ from .handle import UnresolvedStepHandle
 from .objects import TypeCheckData
 
 
+@whitelist_for_serdes
 class StepOutput(
     NamedTuple(
         "_StepOutput",
@@ -102,6 +103,7 @@ class StepOutputHandle(
         )
 
 
+@whitelist_for_serdes
 class UnresolvedStepOutputHandle(
     NamedTuple(
         "_UnresolvedStepOutputHandle",

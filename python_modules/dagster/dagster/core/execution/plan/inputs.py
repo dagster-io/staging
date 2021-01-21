@@ -118,6 +118,7 @@ class StepInputSource(ABC):
         raise NotImplementedError()
 
 
+@whitelist_for_serdes
 class FromRootInputManager(
     NamedTuple("_FromRootInputManager", [("solid_handle", SolidHandle), ("input_name", str)],),
     StepInputSource,
@@ -157,6 +158,7 @@ class FromRootInputManager(
         return {input_def.root_manager_key}
 
 
+@whitelist_for_serdes
 class FromStepOutput(
     NamedTuple(
         "_FromStepOutput",
@@ -273,6 +275,7 @@ def _generate_error_boundary_msg_for_step_input(
     )
 
 
+@whitelist_for_serdes
 class FromConfig(
     NamedTuple("_FromConfig", [("solid_handle", SolidHandle), ("input_name", str)]),
     StepInputSource,
@@ -318,6 +321,7 @@ class FromConfig(
         return dagster_type.loader.compute_loaded_input_version(config_data)
 
 
+@whitelist_for_serdes
 class FromDefaultValue(
     NamedTuple("_FromDefaultValue", [("solid_handle", SolidHandle), ("input_name", str)],),
     StepInputSource,
@@ -344,6 +348,7 @@ class FromDefaultValue(
         return join_and_hash(repr(self._load_value(pipeline_def)))
 
 
+@whitelist_for_serdes
 class FromMultipleSources(
     NamedTuple(
         "_FromMultipleSources",
@@ -446,6 +451,7 @@ def _load_input_with_input_manager(input_manager: "InputManager", context: "Inpu
     return value
 
 
+@whitelist_for_serdes
 class FromPendingDynamicStepOutput(
     NamedTuple(
         "_FromPendingDynamicStepOutput",
@@ -508,6 +514,7 @@ class FromPendingDynamicStepOutput(
         return pipeline_def.get_solid(self.solid_handle).input_def_named(self.input_name)
 
 
+@whitelist_for_serdes
 class FromUnresolvedStepOutput(
     NamedTuple(
         "_FromUnresolvedStepOutput",
@@ -570,6 +577,7 @@ class FromUnresolvedStepOutput(
 IUnresolvedStepInputSource = (FromPendingDynamicStepOutput, FromUnresolvedStepOutput)
 
 
+@whitelist_for_serdes
 class UnresolvedStepInput(
     NamedTuple(
         "_UnresolvedStepInput",
