@@ -19,6 +19,11 @@ from dagster.core.executor.base import Executor
 from dagster.core.executor.init import InitExecutorContext
 from dagster.core.instance import DagsterInstance
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.snap.execution_plan_snapshot import (
+    ExecutionPlanSnapshot,
+    snapshot_from_execution_plan,
+)
+from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 from dagster.core.storage.init import InitIntermediateStorageContext
 from dagster.core.storage.intermediate_storage import IntermediateStorage
 from dagster.core.storage.pipeline_run import PipelineRun
@@ -65,7 +70,7 @@ class ContextCreationData(
         "_ContextCreationData",
         "pipeline environment_config pipeline_run mode_def "
         "intermediate_storage_def executor_def instance resource_keys_to_init "
-        "execution_plan",
+        "execution_plan pipeline_snapshot execution_plan_snapshot",
     )
 ):
     @property
@@ -74,7 +79,7 @@ class ContextCreationData(
 
 
 def create_context_creation_data(
-    execution_plan, run_config, pipeline_run, instance,
+    execution_plan, run_config, pipeline_run, instance, pipeline_snapshot, execution_plan_snapshot,
 ):
     pipeline_def = execution_plan.pipeline.get_definition()
     environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=pipeline_run.mode)
@@ -95,6 +100,8 @@ def create_context_creation_data(
             execution_plan, intermediate_storage_def
         ),
         execution_plan=execution_plan,
+        pipeline_snapshot=pipeline_snapshot,
+        execution_plan_snapshot=execution_plan_snapshot,
     )
 
 
@@ -105,6 +112,8 @@ class ExecutionContextManager(ABC):
         run_config,
         pipeline_run,
         instance,
+        pipeline_snapshot,
+        execution_plan_snapshot,
         scoped_resources_builder_cm=None,
         intermediate_storage=None,
         raise_on_error=False,
@@ -121,6 +130,8 @@ class ExecutionContextManager(ABC):
             pipeline_run,
             instance,
             scoped_resources_builder_cm,
+            pipeline_snapshot,
+            execution_plan_snapshot,
             intermediate_storage,
             raise_on_error,
             resource_instances_to_override,
@@ -159,6 +170,8 @@ class ExecutionContextManager(ABC):
         pipeline_run,
         instance,
         scoped_resources_builder_cm,
+        pipeline_snapshot,
+        execution_plan_snapshot,
         intermediate_storage=None,
         raise_on_error=False,
         resource_instances_to_override=None,
@@ -173,6 +186,14 @@ class ExecutionContextManager(ABC):
         scoped_resources_builder_cm = check.callable_param(
             scoped_resources_builder_cm, "scoped_resources_builder_cm"
         )
+
+        pipeline_snapshot = check.inst_param(
+            pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot
+        )
+        execution_plan_snapshot = check.inst_param(
+            execution_plan_snapshot, "execution_plan_snapshot", ExecutionPlanSnapshot
+        )
+
         intermediate_storage = check.opt_inst_param(
             intermediate_storage, "intermediate_storage_data", IntermediateStorage
         )
@@ -186,7 +207,12 @@ class ExecutionContextManager(ABC):
 
         try:
             context_creation_data = create_context_creation_data(
-                execution_plan, run_config, pipeline_run, instance,
+                execution_plan,
+                run_config,
+                pipeline_run,
+                instance,
+                pipeline_snapshot,
+                execution_plan_snapshot,
             )
 
             log_manager = create_log_manager(context_creation_data)
@@ -293,6 +319,12 @@ class PlanExecutionContextManager(ExecutionContextManager):
         scoped_resources_builder_cm=None,
         raise_on_error=False,
     ):
+        pipeline_def = execution_plan.pipeline.get_definition()
+        pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+        execution_plan_snapshot = snapshot_from_execution_plan(
+            execution_plan, pipeline_def.get_pipeline_snapshot_id(),
+        )
+
         self._retries = check.inst_param(retries, "retries", Retries)
         super(PlanExecutionContextManager, self).__init__(
             execution_plan=execution_plan,
@@ -301,6 +333,8 @@ class PlanExecutionContextManager(ExecutionContextManager):
             instance=instance,
             scoped_resources_builder_cm=scoped_resources_builder_cm,
             raise_on_error=raise_on_error,
+            pipeline_snapshot=pipeline_snapshot,
+            execution_plan_snapshot=execution_plan_snapshot,
         )
 
     @property
@@ -415,6 +449,8 @@ def construct_execution_context_data(
         raise_on_error=raise_on_error,
         retries=retries,
         execution_plan=context_creation_data.execution_plan,
+        pipeline_snapshot=context_creation_data.pipeline_snapshot,
+        execution_plan_snapshot=context_creation_data.execution_plan_snapshot,
     )
 
 
@@ -444,11 +480,19 @@ def scoped_pipeline_context(
     check.opt_inst_param(intermediate_storage, "intermediate_storage", IntermediateStorage)
     check.opt_dict_param(resource_instances_to_override, "resource_instances_to_override")
 
+    pipeline_def = execution_plan.pipeline.get_definition()
+    pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+    execution_plan_snapshot = snapshot_from_execution_plan(
+        execution_plan, pipeline_def.get_pipeline_snapshot_id(),
+    )
+
     initialization_manager = PipelineExecutionContextManager(
         execution_plan,
         run_config,
         pipeline_run,
         instance,
+        pipeline_snapshot=pipeline_snapshot,
+        execution_plan_snapshot=execution_plan_snapshot,
         scoped_resources_builder_cm=scoped_resources_builder_cm,
         intermediate_storage=intermediate_storage,
         raise_on_error=raise_on_error,
