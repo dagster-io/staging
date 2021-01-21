@@ -157,6 +157,8 @@ class _PlanBuilder:
                 if step_input_source is None:
                     continue
 
+                from dagster.core.snap.dagster_types import build_dagster_type_snap
+
                 if isinstance(
                     step_input_source, (FromPendingDynamicStepOutput, FromUnresolvedStepOutput)
                 ):
@@ -164,7 +166,7 @@ class _PlanBuilder:
                     step_inputs.append(
                         UnresolvedStepInput(
                             name=input_name,
-                            dagster_type=input_def.dagster_type,
+                            dagster_type_snap=build_dagster_type_snap(input_def.dagster_type),
                             source=step_input_source,
                         )
                     )
@@ -173,7 +175,7 @@ class _PlanBuilder:
                     step_inputs.append(
                         StepInput(
                             name=input_name,
-                            dagster_type=input_def.dagster_type,
+                            dagster_type_snap=build_dagster_type_snap(input_def.dagster_type),
                             source=step_input_source,
                         )
                     )

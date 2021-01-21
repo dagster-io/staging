@@ -31,18 +31,20 @@ class StepInputData(namedtuple("_StepInputData", "input_name type_check_data")):
         )
 
 
-class StepInput(namedtuple("_StepInput", "name dagster_type source")):
+class StepInput(namedtuple("_StepInput", "name dagster_type_snap source")):
     """Holds information for how to prepare an input for an ExecutionStep"""
 
     def __new__(
-        cls, name, dagster_type, source,
+        cls, name, dagster_type_snap, source,
     ):
-        from dagster.core.types.dagster_type import DagsterType
+        from dagster.core.snap.dagster_types import DagsterTypeSnap
 
         return super(StepInput, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
-            dagster_type=check.inst_param(dagster_type, "dagster_type", DagsterType),
+            dagster_type_snap=check.inst_param(
+                dagster_type_snap, "dagster_type_snap", DagsterTypeSnap
+            ),
             source=check.inst_param(source, "source", StepInputSource),
         )
 
@@ -351,18 +353,20 @@ def _load_input_with_input_manager(root_input_manager, context):
     return value
 
 
-class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type source")):
+class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type_snap source")):
     """Holds information for how to resolve a StepInput once the upstream mapping is done"""
 
     def __new__(
-        cls, name, dagster_type, source,
+        cls, name, dagster_type_snap, source,
     ):
-        from dagster.core.types.dagster_type import DagsterType
+        from dagster.core.snap.dagster_types import DagsterTypeSnap
 
         return super(UnresolvedStepInput, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
-            dagster_type=check.inst_param(dagster_type, "dagster_type", DagsterType),
+            dagster_type_snap=check.inst_param(
+                dagster_type_snap, "dagster_type_snap", DagsterTypeSnap
+            ),
             source=check.inst_param(
                 source, "source", (FromPendingDynamicStepOutput, FromUnresolvedStepOutput)
             ),
@@ -378,7 +382,9 @@ class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type 
 
     def resolve(self, map_key):
         return StepInput(
-            name=self.name, dagster_type=self.dagster_type, source=self.source.resolve(map_key),
+            name=self.name,
+            dagster_type_snap=self.dagster_type_snap,
+            source=self.source.resolve(map_key),
         )
 
     def get_step_output_handle_deps_with_placeholders(self):
