@@ -1122,8 +1122,11 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "output_def_snaps": [
             {
               "__class__": "OutputDefSnap",
+              "dagster_type_display_name": "Any",
               "dagster_type_key": "Any",
               "description": null,
+              "io_manager_key": "io_manager",
+              "is_dynamic": false,
               "is_required": true,
               "name": "result"
             }
@@ -2279,8 +2282,11 @@ snapshots['test_external_repository_data 1'] = '''{
               "output_def_snaps": [
                 {
                   "__class__": "OutputDefSnap",
+                  "dagster_type_display_name": "Any",
                   "dagster_type_key": "Any",
                   "description": null,
+                  "io_manager_key": "io_manager",
+                  "is_dynamic": false,
                   "is_required": true,
                   "name": "result"
                 }

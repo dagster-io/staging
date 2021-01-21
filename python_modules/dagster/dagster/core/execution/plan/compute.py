@@ -5,7 +5,6 @@ from dagster.core.definitions import (
     ExpectationResult,
     Materialization,
     Output,
-    Solid,
     SolidHandle,
 )
 from dagster.core.errors import DagsterInvariantViolationError
@@ -18,8 +17,10 @@ from .outputs import StepOutput
 from .step import ExecutionStep, UnresolvedExecutionStep
 
 
-def _create_step_outputs(solid, handle, environment_config):
-    check.inst_param(solid, "solid", Solid)
+def _create_step_outputs(solid_def_snap, handle, environment_config):
+    from dagster.core.snap.solid import SolidDefSnap
+
+    check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
     check.inst_param(handle, "handle", SolidHandle)
 
     # the environment config has the solid output name configured
@@ -31,42 +32,50 @@ def _create_step_outputs(solid, handle, environment_config):
         config_output_names = config_output_names.union(solid_config.outputs.output_names)
 
     return [
-        StepOutput(output_def=output_def, should_materialize=name in config_output_names)
-        for name, output_def in solid.definition.output_dict.items()
+        StepOutput(
+            solid_handle=handle,
+            output_def_snap=output_def_snap,
+            should_materialize=output_def_snap.name in config_output_names,
+        )
+        for output_def_snap in solid_def_snap.output_def_snaps
     ]
 
 
-def create_unresolved_step(solid, solid_handle, step_inputs, pipeline_name, environment_config):
-    check.inst_param(solid, "solid", Solid)
+def create_unresolved_step(
+    solid_def_snap, solid_handle, step_inputs, pipeline_name, environment_config
+):
+    from dagster.core.snap.solid import SolidDefSnap
+
+    check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
     check.inst_param(solid_handle, "solid_handle", SolidHandle)
     check.list_param(step_inputs, "step_inputs", of_type=(StepInput, UnresolvedStepInput))
     check.str_param(pipeline_name, "pipeline_name")
 
-    from dagster.core.snap.solid import build_core_solid_def_snap
-
     return UnresolvedExecutionStep(
         handle=UnresolvedStepHandle(solid_handle),
         step_inputs=step_inputs,
-        step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
+        step_outputs=_create_step_outputs(solid_def_snap, solid_handle, environment_config),
         pipeline_name=pipeline_name,
-        solid_def_snapshot=build_core_solid_def_snap(solid.definition),
+        solid_def_snapshot=solid_def_snap,
     )
 
 
-def create_compute_step(solid, solid_handle, step_inputs, pipeline_name, environment_config):
-    check.inst_param(solid, "solid", Solid)
+def create_compute_step(
+    solid_def_snap, solid_handle, step_inputs, pipeline_name, environment_config
+):
+    from dagster.core.snap.solid import SolidDefSnap
+
+    check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
     check.inst_param(solid_handle, "solid_handle", SolidHandle)
     check.list_param(step_inputs, "step_inputs", of_type=StepInput)
     check.str_param(pipeline_name, "pipeline_name")
-
-    from dagster.core.snap.solid import build_core_solid_def_snap
 
     return ExecutionStep(
         handle=StepHandle(solid_handle=solid_handle),
         pipeline_name=pipeline_name,
         step_inputs=step_inputs,
-        step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
-        solid_def_snapshot=build_core_solid_def_snap(solid.definition),
+        step_outputs=_create_step_outputs(solid_def_snap, solid_handle, environment_config),
+        solid_def_snapshot=solid_def_snap,
     )
 
 

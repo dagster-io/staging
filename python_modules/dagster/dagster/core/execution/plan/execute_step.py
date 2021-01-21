@@ -72,13 +72,14 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
                         handle=str(step.solid_handle), output=output
                     )
                 )
-            if step.step_output_named(output.output_name).output_def.is_dynamic:
+
+            if step.step_output_named(output.output_name).output_def_snap.is_dynamic:
                 raise DagsterInvariantViolationError(
                     f'Compute for solid "{step.solid_handle}" for output "{output.output_name}" '
                     "defined as dynamic must yield DynamicOutput, got Output."
                 )
         else:
-            if not step.step_output_named(output.output_name).output_def.is_dynamic:
+            if not step.step_output_named(output.output_name).output_def_snap.is_dynamic:
                 raise DagsterInvariantViolationError(
                     f'Compute for solid "{step.solid_handle}" yielded a DynamicOutput, '
                     "but did not use DynamicOutputDefinition."
@@ -94,7 +95,7 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
         seen_outputs.add(output.output_name)
 
     for step_output in step.step_outputs:
-        step_output_def = step_output.output_def
+        step_output_def = step_context.solid_def.output_def_named(step_output.name)
         if not step_output_def.name in seen_outputs and not step_output_def.optional:
             if step_output_def.dagster_type.kind == DagsterTypeKind.NOTHING:
                 step_context.log.info(
@@ -205,7 +206,9 @@ def _type_checked_step_output_event_sequence(step_context, step_output_handle, o
     check.inst_param(output, "output", (Output, DynamicOutput))
 
     step_output = step_context.step.step_output_named(output.output_name)
-    dagster_type = step_output.output_def.dagster_type
+    step_output_def = step_context.solid_def.output_def_named(step_output.name)
+
+    dagster_type = step_output_def.dagster_type
     with user_code_error_boundary(
         DagsterTypeCheckError,
         lambda: (
@@ -357,7 +360,7 @@ def _materializations_to_events(step_context, step_output_handle, materializatio
 
 
 def _set_objects(step_context, step_output, step_output_handle, output):
-    output_def = step_output.output_def
+    output_def = step_context.solid_def.output_def_named(step_output.name)
     output_manager = step_context.get_output_manager(step_output_handle)
     output_context = step_context.get_output_context(step_output_handle)
     with user_code_error_boundary(
@@ -414,7 +417,8 @@ def _create_output_materializations(step_context, output_name, value):
                         solid=step_context.solid.name,
                     ),
                 ):
-                    dagster_type = step_output.output_def.dagster_type
+                    output_def = step_context.solid_def.output_def_named(step_output.name)
+                    dagster_type = output_def.dagster_type
                     materializations = dagster_type.materializer.materialize_runtime_values(
                         step_context, output_spec, value
                     )

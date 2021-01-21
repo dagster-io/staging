@@ -9,6 +9,7 @@ from dagster.core.definitions import (
     PipelineDefinition,
     SolidDefinition,
 )
+from dagster.core.definitions.output import DynamicOutputDefinition
 from dagster.serdes import whitelist_for_serdes
 
 from .dep_snapshot import (
@@ -72,6 +73,9 @@ def build_output_def_snap(output_def):
         dagster_type_key=output_def.dagster_type.key,
         description=output_def.description,
         is_required=output_def.is_required,
+        is_dynamic=isinstance(output_def, DynamicOutputDefinition),
+        dagster_type_display_name=output_def.dagster_type.display_name,
+        io_manager_key=output_def.io_manager_key,
     )
 
 
@@ -284,7 +288,9 @@ ISolidDefSnap = (CompositeSolidDefSnap, SolidDefSnap)
 
 
 @whitelist_for_serdes
-class InputDefSnap(namedtuple("_InputDefSnap", "name dagster_type_key description root_manager_key")):
+class InputDefSnap(
+    namedtuple("_InputDefSnap", "name dagster_type_key description root_manager_key")
+):
     def __new__(cls, name, dagster_type_key, description, root_manager_key=None):
         return super(InputDefSnap, cls).__new__(
             cls,
@@ -296,14 +302,33 @@ class InputDefSnap(namedtuple("_InputDefSnap", "name dagster_type_key descriptio
 
 
 @whitelist_for_serdes
-class OutputDefSnap(namedtuple("_OutputDefSnap", "name dagster_type_key description is_required")):
-    def __new__(cls, name, dagster_type_key, description, is_required):
+class OutputDefSnap(
+    namedtuple(
+        "_OutputDefSnap",
+        "name dagster_type_key description is_required is_dynamic dagster_type_display_name io_manager_key",
+    )
+):
+    def __new__(
+        cls,
+        name,
+        dagster_type_key,
+        description,
+        is_required,
+        is_dynamic=None,
+        dagster_type_display_name=None,
+        io_manager_key=None,
+    ):
         return super(OutputDefSnap, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             description=check.opt_str_param(description, "description"),
             is_required=check.bool_param(is_required, "is_required"),
+            is_dynamic=check.opt_bool_param(is_dynamic, "is_dynamic"),
+            dagster_type_display_name=check.opt_str_param(
+                dagster_type_display_name, "dagster_type_display_name"
+            ),
+            io_manager_key=check.opt_str_param(io_manager_key, "io_manager_key"),
         )
 
 
