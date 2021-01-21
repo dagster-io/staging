@@ -5,21 +5,19 @@ from dagster.core.definitions import (
     ExpectationResult,
     Materialization,
     Output,
-    Solid,
     SolidHandle,
 )
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
-from dagster.core.execution.plan.handle import StepHandle, UnresolvedStepHandle
 
-from .inputs import StepInput, UnresolvedStepInput
 from .outputs import StepOutput
-from .step import ExecutionStep, UnresolvedExecutionStep
 
 
-def _create_step_outputs(solid, handle, environment_config):
-    check.inst_param(solid, "solid", Solid)
+def create_step_outputs(solid_def_snap, handle, environment_config):
+    from dagster.core.snap.solid import SolidDefSnap
+
+    check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
     check.inst_param(handle, "handle", SolidHandle)
 
     # the environment config has the solid output name configured
@@ -31,42 +29,13 @@ def _create_step_outputs(solid, handle, environment_config):
         config_output_names = config_output_names.union(solid_config.outputs.output_names)
 
     return [
-        StepOutput(output_def=output_def, should_materialize=name in config_output_names)
-        for name, output_def in solid.definition.output_dict.items()
+        StepOutput(
+            solid_handle=handle,
+            output_def_snap=output_def_snap,
+            should_materialize=output_def_snap.name in config_output_names,
+        )
+        for output_def_snap in solid_def_snap.output_def_snaps
     ]
-
-
-def create_unresolved_step(solid, solid_handle, step_inputs, pipeline_name, environment_config):
-    check.inst_param(solid, "solid", Solid)
-    check.inst_param(solid_handle, "solid_handle", SolidHandle)
-    check.list_param(step_inputs, "step_inputs", of_type=(StepInput, UnresolvedStepInput))
-    check.str_param(pipeline_name, "pipeline_name")
-
-    return UnresolvedExecutionStep(
-        handle=UnresolvedStepHandle(solid_handle),
-        solid=solid,
-        step_inputs=step_inputs,
-        step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
-        pipeline_name=pipeline_name,
-    )
-
-
-def create_compute_step(solid, solid_handle, step_inputs, pipeline_name, environment_config):
-    check.inst_param(solid, "solid", Solid)
-    check.inst_param(solid_handle, "solid_handle", SolidHandle)
-    check.list_param(step_inputs, "step_inputs", of_type=StepInput)
-    check.str_param(pipeline_name, "pipeline_name")
-
-    return ExecutionStep(
-        handle=StepHandle(solid_handle=solid_handle),
-        pipeline_name=pipeline_name,
-        step_inputs=step_inputs,
-        step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
-        compute_fn=lambda step_context, inputs: _execute_core_compute(
-            step_context.for_compute(), inputs, solid.definition.compute_fn
-        ),
-        solid=solid,
-    )
 
 
 def _yield_compute_results(compute_context, inputs, compute_fn):
@@ -107,7 +76,7 @@ def _yield_compute_results(compute_context, inputs, compute_fn):
             )
 
 
-def _execute_core_compute(compute_context, inputs, compute_fn):
+def execute_core_compute(compute_context, inputs, compute_fn):
     """
     Execute the user-specified compute for the solid. Wrap in an error boundary and do
     all relevant logging and metrics tracking
