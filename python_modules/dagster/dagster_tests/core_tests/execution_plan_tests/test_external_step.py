@@ -137,7 +137,7 @@ def define_sleepy_pipeline():
 
 def initialize_step_context(scratch_dir, instance):
     pipeline_run = PipelineRun(
-        pipeline_name="foo_pipeline",
+        pipeline_name="basic_pipeline",
         run_id=str(uuid.uuid4()),
         run_config=make_run_config(scratch_dir, "external"),
         mode="external",
