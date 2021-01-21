@@ -62,9 +62,6 @@ def create_compute_step(solid, solid_handle, step_inputs, pipeline_name, environ
         pipeline_name=pipeline_name,
         step_inputs=step_inputs,
         step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
-        compute_fn=lambda step_context, inputs: _execute_core_compute(
-            step_context.for_compute(), inputs, solid.definition.compute_fn
-        ),
         solid=solid,
     )
 
@@ -107,7 +104,7 @@ def _yield_compute_results(compute_context, inputs, compute_fn):
             )
 
 
-def _execute_core_compute(compute_context, inputs, compute_fn):
+def execute_core_compute(compute_context, inputs, compute_fn):
     """
     Execute the user-specified compute for the solid. Wrap in an error boundary and do
     all relevant logging and metrics tracking
