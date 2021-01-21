@@ -80,7 +80,7 @@ class DagstermillExecutionContext(AbstractComputeExecutionContext):
 
         This will be a dagstermill-specific shim.
         """
-        return self._pipeline_context.pipeline_def
+        return self._pipeline_context.pipeline.get_definition()
 
     @property
     def resources(self) -> Any:
