@@ -42,12 +42,14 @@ def create_unresolved_step(solid, solid_handle, step_inputs, pipeline_name, envi
     check.list_param(step_inputs, "step_inputs", of_type=(StepInput, UnresolvedStepInput))
     check.str_param(pipeline_name, "pipeline_name")
 
+    from dagster.core.snap.solid import build_core_solid_def_snap
+
     return UnresolvedExecutionStep(
         handle=UnresolvedStepHandle(solid_handle),
-        solid=solid,
         step_inputs=step_inputs,
         step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
         pipeline_name=pipeline_name,
+        solid_def_snapshot=build_core_solid_def_snap(solid.definition()),
     )
 
 
@@ -57,12 +59,14 @@ def create_compute_step(solid, solid_handle, step_inputs, pipeline_name, environ
     check.list_param(step_inputs, "step_inputs", of_type=StepInput)
     check.str_param(pipeline_name, "pipeline_name")
 
+    from dagster.core.snap.solid import build_core_solid_def_snap
+
     return ExecutionStep(
         handle=StepHandle(solid_handle=solid_handle),
         pipeline_name=pipeline_name,
         step_inputs=step_inputs,
         step_outputs=_create_step_outputs(solid, solid_handle, environment_config),
-        solid=solid,
+        solid_def_snapshot=build_core_solid_def_snap(solid.definition()),
     )
 
 
