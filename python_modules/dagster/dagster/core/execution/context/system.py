@@ -687,7 +687,7 @@ def get_output_context(
         metadata=execution_plan.get_step_output(step_output_handle).output_def.metadata,
         mapping_key=step_output_handle.mapping_key,
         config=output_config,
-        solid_def=step.solid.definition,
+        solid_def=step_context.solid_def,
         dagster_type=execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
         log_manager=log_manager,
         version=_step_output_version(execution_plan, step_output_handle)
