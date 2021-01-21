@@ -935,6 +935,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -950,6 +951,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -965,6 +967,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -980,6 +983,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -995,6 +999,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -1010,6 +1015,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -1116,7 +1122,8 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "value"
+            "name": "value",
+            "root_manager_key": null
           }
         ],
         "name": "passthrough",
@@ -1157,7 +1164,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_dep_fan_out 2'] = '01f0b0a3316e0108638e3eb09351ebbd83f11d13'
+snapshots['test_basic_dep_fan_out 2'] = '340623280c78fb70e1585368f9f4dfd5dd90c889'
 
 snapshots['test_basic_fan_in 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2070,6 +2077,7 @@ snapshots['test_basic_fan_in 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -2085,6 +2093,7 @@ snapshots['test_basic_fan_in 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -2100,6 +2109,7 @@ snapshots['test_basic_fan_in 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -2115,6 +2125,7 @@ snapshots['test_basic_fan_in 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -2130,6 +2141,7 @@ snapshots['test_basic_fan_in 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -2145,6 +2157,7 @@ snapshots['test_basic_fan_in 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -2263,7 +2276,8 @@ snapshots['test_basic_fan_in 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Nothing",
             "description": null,
-            "name": "nothing"
+            "name": "nothing",
+            "root_manager_key": null
           }
         ],
         "name": "take_nothings",
@@ -2285,7 +2299,7 @@ snapshots['test_basic_fan_in 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_fan_in 2'] = 'b503b3d94ad97b3c91855902f64758f87485f8d3'
+snapshots['test_basic_fan_in 2'] = 'f8ff502c6b22cfb5bc5210e3ab5d48f4c9e7910b'
 
 snapshots['test_deserialize_solid_def_snaps_multi_type_config 1'] = '''{
   "__class__": "ConfigTypeSnap",
@@ -3231,6 +3245,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -3246,6 +3261,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -3261,6 +3277,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -3276,6 +3293,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -3291,6 +3309,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -3306,6 +3325,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -3389,7 +3409,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_empty_pipeline_snap_props 2'] = '7044e11dead9d22c80d2736e7a20c7aabf87aac7'
+snapshots['test_empty_pipeline_snap_props 2'] = 'b80ff59147e1f506c37cf7b7ecdb5cd8d7ff1c4d'
 
 snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4302,6 +4322,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -4317,6 +4338,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -4332,6 +4354,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -4347,6 +4370,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -4362,6 +4386,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -4377,6 +4402,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -5563,6 +5589,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -5578,6 +5605,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -5593,6 +5621,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -5608,6 +5637,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -5623,6 +5653,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -5638,6 +5669,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -5723,7 +5755,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
   }
 }'''
 
-snapshots['test_pipeline_snap_all_props 2'] = 'e49109d28b56a8461db5a775baec12ecf71c082a'
+snapshots['test_pipeline_snap_all_props 2'] = '7ffd5ab3ab4c6bc838c4a78a2da20899d708679c'
 
 snapshots['test_two_invocations_deps_snap 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6645,6 +6677,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -6660,6 +6693,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -6675,6 +6709,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -6690,6 +6725,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -6705,6 +6741,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -6720,6 +6757,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -6810,4 +6848,4 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_two_invocations_deps_snap 2'] = 'd7ba3eeafbdd017c176d0118b12b00e8c53177dc'
+snapshots['test_two_invocations_deps_snap 2'] = '1950df9ae939175f9f0621a6cf681d817cf1e433'
