@@ -621,6 +621,17 @@ class DauphinSensorNotFoundError(dauphin.ObjectType):
         self.message = f"Sensor {sensor_name} is not present in the currently loaded repository."
 
 
+class DauphinJobNotFoundError(dauphin.ObjectType):
+    class Meta:
+        name = "JobNotFoundError"
+        interfaces = (DauphinError,)
+
+    def __init__(self, job_name):
+        super(DauphinJobNotFoundError, self).__init__()
+        self.name = check.str_param(job_name, "job_name")
+        self.message = f"Job {job_name} is not present in the currently loaded repository."
+
+
 class DauphinPartitionSetNotFoundError(dauphin.ObjectType):
     class Meta:
         name = "PartitionSetNotFoundError"
