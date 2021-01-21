@@ -443,9 +443,7 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
 
     gen = check.opt_generator(
         execute_core_compute(
-            step_context.for_compute(),
-            evaluated_inputs,
-            step_context.step.solid.definition.compute_fn,
+            step_context.for_compute(), evaluated_inputs, step_context.solid_def.compute_fn,
         )
     )
 
