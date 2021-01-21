@@ -247,6 +247,10 @@ class _PlanBuilder:
 def get_step_input_source(
     plan_builder, solid, input_name, input_def, dependency_structure, handle, parent_step_inputs
 ):
+
+    from dagster.core.snap.dagster_types import build_dagster_type_snap
+    from dagster.core.snap.solid import build_input_def_snap
+
     check.inst_param(plan_builder, "plan_builder", _PlanBuilder)
     check.inst_param(solid, "solid", Solid)
     check.str_param(input_name, "input_name")
@@ -260,8 +264,9 @@ def get_step_input_source(
     input_config = solid_config.inputs.get(input_name) if solid_config else None
 
     input_def = solid.definition.input_def_named(input_name)
+    input_def_snap = build_input_def_snap(input_def)
     if input_def.root_manager_key and not dependency_structure.has_deps(input_handle):
-        return FromRootInputManager(input_def=input_def, config_data=input_config)
+        return FromRootInputManager(input_def_snap=input_def_snap, config_data=input_config)
 
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
@@ -269,20 +274,20 @@ def get_step_input_source(
         if isinstance(step_output_handle, UnresolvedStepOutputHandle):
             return FromUnresolvedStepOutput(
                 unresolved_step_output_handle=step_output_handle,
-                input_def=input_def,
+                input_def_snap=input_def_snap,
                 config_data=input_config,
             )
 
         if solid_output_handle.output_def.is_dynamic:
             return FromPendingDynamicStepOutput(
                 step_output_handle=step_output_handle,
-                input_def=input_def,
+                input_def_snap=input_def_snap,
                 config_data=input_config,
             )
 
         return FromStepOutput(
             step_output_handle=step_output_handle,
-            input_def=input_def,
+            input_def_snap=input_def_snap,
             config_data=input_config,
             fan_in=False,
         )
@@ -301,7 +306,7 @@ def get_step_input_source(
                 sources.append(
                     FromStepOutput(
                         step_output_handle=plan_builder.get_output_handle(handle_or_placeholder),
-                        input_def=input_def,
+                        input_def_snap=input_def_snap,
                         config_data=input_config,
                         fan_in=True,
                     )
@@ -312,7 +317,7 @@ def get_step_input_source(
     if solid_config and input_name in solid_config.inputs:
         return FromConfig(
             solid_config.inputs[input_name],
-            dagster_type=input_def.dagster_type,
+            dagster_type_snap=build_dagster_type_snap(input_def.dagster_type),
             input_name=input_name,
         )
 
