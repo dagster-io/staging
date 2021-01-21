@@ -1124,7 +1124,8 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -1142,14 +1143,15 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_basic_dep_fan_out 2'] = '60743c6e45d710388c300096262af921a9a276a2'
+snapshots['test_basic_dep_fan_out 2'] = '4a010d961f05a2301db0d6fefe6e9d0bb8c2720c'
 
 snapshots['test_basic_fan_in 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2237,7 +2239,8 @@ snapshots['test_basic_fan_in 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       },
       {
         "__class__": "SolidDefSnap",
@@ -2262,14 +2265,15 @@ snapshots['test_basic_fan_in 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_basic_fan_in 2'] = '11c4d873a46c6358af1dce54db4d0ac97919cffe'
+snapshots['test_basic_fan_in 2'] = '8530589e9d28b12453ab860aeb535595ddd75173'
 
 snapshots['test_deserialize_solid_def_snaps_multi_type_config 1'] = '''{
   "__class__": "ConfigTypeSnap",
@@ -3359,14 +3363,15 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_empty_pipeline_snap_props 2'] = 'd342338a59e11a7d7f4c0de7946f86a9dfb6ef8a'
+snapshots['test_empty_pipeline_snap_props 2'] = '99dc6c50d048b336799ec32d13710d805415a597'
 
 snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4423,7 +4428,8 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
@@ -5677,7 +5683,8 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
@@ -5686,7 +5693,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
   }
 }'''
 
-snapshots['test_pipeline_snap_all_props 2'] = '9d4d161d17510a0f9a6626eb20a2c0dc3da5e834'
+snapshots['test_pipeline_snap_all_props 2'] = 'b08c440990d98d927704e1f985323807319885f9'
 
 snapshots['test_two_invocations_deps_snap 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6759,11 +6766,12 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
           }
         ],
         "required_resource_keys": [],
-        "tags": {}
+        "tags": {},
+        "version": null
       }
     ]
   },
   "tags": {}
 }'''
 
-snapshots['test_two_invocations_deps_snap 2'] = 'dfdb112ac4fe059d098e0f901aa69f311b8dcb3e'
+snapshots['test_two_invocations_deps_snap 2'] = '54672b41f790a8bd959d77dacd6e3f074159760b'

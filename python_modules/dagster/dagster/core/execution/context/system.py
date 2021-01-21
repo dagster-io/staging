@@ -679,15 +679,17 @@ def get_output_context(
 
     resources = build_resources_for_manager(io_manager_key, step_context) if step_context else None
 
+    pipeline_def = execution_plan.pipeline.get_definition()
+
     return OutputContext(
         step_key=step_output_handle.step_key,
         name=step_output_handle.output_name,
-        pipeline_name=execution_plan.pipeline.get_definition().name,
+        pipeline_name=pipeline_def.name,
         run_id=run_id,
         metadata=execution_plan.get_step_output(step_output_handle).output_def.metadata,
         mapping_key=step_output_handle.mapping_key,
         config=output_config,
-        solid_def=step.solid.definition,
+        solid_def=pipeline_def.get_solid(step.solid_handle).definition,
         dagster_type=execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
         log_manager=log_manager,
         version=_step_output_version(execution_plan, step_output_handle)
