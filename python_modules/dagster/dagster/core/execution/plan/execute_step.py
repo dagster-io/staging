@@ -23,6 +23,7 @@ from dagster.core.errors import (
 )
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemStepExecutionContext
+from dagster.core.execution.plan.compute import execute_core_compute
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
@@ -71,13 +72,14 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
                         handle=str(step.solid_handle), output=output
                     )
                 )
-            if step.step_output_named(output.output_name).output_def.is_dynamic:
+
+            if step.step_output_named(output.output_name).output_def_snap.is_dynamic:
                 raise DagsterInvariantViolationError(
                     f'Compute for solid "{step.solid_handle}" for output "{output.output_name}" '
                     "defined as dynamic must yield DynamicOutput, got Output."
                 )
         else:
-            if not step.step_output_named(output.output_name).output_def.is_dynamic:
+            if not step.step_output_named(output.output_name).output_def_snap.is_dynamic:
                 raise DagsterInvariantViolationError(
                     f'Compute for solid "{step.solid_handle}" yielded a DynamicOutput, '
                     "but did not use DynamicOutputDefinition."
@@ -93,7 +95,7 @@ def _step_output_error_checked_user_event_sequence(step_context, user_event_sequ
         seen_outputs.add(output.output_name)
 
     for step_output in step.step_outputs:
-        step_output_def = step_output.output_def
+        step_output_def = step_context.solid_def.output_def_named(step_output.name)
         if not step_output_def.name in seen_outputs and not step_output_def.optional:
             if step_output_def.dagster_type.kind == DagsterTypeKind.NOTHING:
                 step_context.log.info(
@@ -162,13 +164,12 @@ def _type_checked_event_sequence_for_input(step_context, input_name, input_value
             input_name=input_name,
             input_value=input_value,
             input_type=type(input_value),
-            dagster_type_name=step_input.dagster_type.display_name,
+            dagster_type_name=step_input.dagster_type_snap.display_name,
             step_key=step_context.step.key,
         ),
     ):
-        type_check = _do_type_check(
-            step_context.for_type(step_input.dagster_type), step_input.dagster_type, input_value,
-        )
+        dagster_type = step_context.solid_def.input_def_named(input_name).dagster_type
+        type_check = _do_type_check(step_context.for_type(dagster_type), dagster_type, input_value,)
 
     yield _create_step_input_event(
         step_context, input_name, type_check=type_check, success=type_check.success
@@ -177,10 +178,10 @@ def _type_checked_event_sequence_for_input(step_context, input_name, input_value
     if not type_check.success:
         raise DagsterTypeCheckDidNotPass(
             description='Type check failed for step input "{input_name}" - expected type "{dagster_type}".'.format(
-                input_name=input_name, dagster_type=step_input.dagster_type.display_name,
+                input_name=input_name, dagster_type=step_input.dagster_type_snap.display_name,
             ),
             metadata_entries=type_check.metadata_entries,
-            dagster_type=step_input.dagster_type,
+            dagster_type=dagster_type,
         )
 
 
@@ -205,7 +206,9 @@ def _type_checked_step_output_event_sequence(step_context, step_output_handle, o
     check.inst_param(output, "output", (Output, DynamicOutput))
 
     step_output = step_context.step.step_output_named(output.output_name)
-    dagster_type = step_output.output_def.dagster_type
+    step_output_def = step_context.solid_def.output_def_named(step_output.name)
+
+    dagster_type = step_output_def.dagster_type
     with user_code_error_boundary(
         DagsterTypeCheckError,
         lambda: (
@@ -259,7 +262,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
     inputs = {}
 
     for step_input in step_context.step.step_inputs:
-        if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
+        if step_input.dagster_type_snap.kind == DagsterTypeKind.NOTHING:
             continue
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
@@ -357,7 +360,7 @@ def _materializations_to_events(step_context, step_output_handle, materializatio
 
 
 def _set_objects(step_context, step_output, step_output_handle, output):
-    output_def = step_output.output_def
+    output_def = step_context.solid_def.output_def_named(step_output.name)
     output_manager = step_context.get_output_manager(step_output_handle)
     output_context = step_context.get_output_context(step_output_handle)
     with user_code_error_boundary(
@@ -414,7 +417,8 @@ def _create_output_materializations(step_context, output_name, value):
                         solid=step_context.solid.name,
                     ),
                 ):
-                    dagster_type = step_output.output_def.dagster_type
+                    output_def = step_context.solid_def.output_def_named(step_output.name)
+                    dagster_type = output_def.dagster_type
                     materializations = dagster_type.materializer.materialize_runtime_values(
                         step_context, output_spec, value
                     )
@@ -440,7 +444,12 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
     check.dict_param(evaluated_inputs, "evaluated_inputs", key_type=str)
 
-    gen = check.opt_generator(step_context.step.compute_fn(step_context, evaluated_inputs))
+    gen = check.opt_generator(
+        execute_core_compute(
+            step_context.for_compute(), evaluated_inputs, step_context.solid_def.compute_fn,
+        )
+    )
+
     if not gen:
         return
 

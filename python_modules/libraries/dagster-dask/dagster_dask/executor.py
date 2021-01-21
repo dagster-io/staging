@@ -240,7 +240,7 @@ class DaskExecutor(Executor):
                         pipeline_context.pipeline_run,
                         run_config,
                         [step.key],
-                        pipeline_context.mode_def.name,
+                        pipeline_context.mode_name,
                         instance.get_ref(),
                         key=dask_task_name,
                         resources=get_dask_resource_requirements(step.tags),
