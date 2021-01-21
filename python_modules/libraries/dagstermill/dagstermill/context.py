@@ -1,6 +1,6 @@
 from typing import Any, Dict, Set
 
-from dagster import PipelineDefinition, PipelineRun, SolidDefinition, check
+from dagster import PipelineRun, SolidDefinition, check
 from dagster.core.definitions.dependency import Solid
 from dagster.core.execution.context.compute import AbstractComputeExecutionContext
 from dagster.core.execution.context.system import SystemPipelineExecutionContext
@@ -73,14 +73,6 @@ class DagstermillExecutionContext(AbstractComputeExecutionContext):
     def logging_tags(self) -> Dict[str, str]:
         """dict: The logging tags for the context."""
         return self._pipeline_context.logging_tags
-
-    @property
-    def pipeline_def(self) -> PipelineDefinition:
-        """:class:`dagster.PipelineDefinition`: The pipeline definition for the context.
-
-        This will be a dagstermill-specific shim.
-        """
-        return self._pipeline_context.pipeline_def
 
     @property
     def resources(self) -> Any:
