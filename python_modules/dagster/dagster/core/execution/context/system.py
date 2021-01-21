@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from dagster.core.storage.intermediate_storage import IntermediateStorage
     from dagster.core.instance import DagsterInstance
     from dagster.core.execution.plan.plan import ExecutionPlan
+    from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
+    from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 
 
 class SystemExecutionContextData(
@@ -42,7 +44,7 @@ class SystemExecutionContextData(
         (
             "pipeline_run scoped_resources_builder environment_config pipeline "
             "mode_def intermediate_storage_def instance intermediate_storage "
-            "raise_on_error retries execution_plan"
+            "raise_on_error retries execution_plan pipeline_snapshot execution_plan_snapshot"
         ),
     )
 ):
@@ -64,11 +66,15 @@ class SystemExecutionContextData(
         raise_on_error: bool,
         retries: Retries,
         execution_plan: "ExecutionPlan",
+        pipeline_snapshot: "PipelineSnapshot",
+        execution_plan_snapshot: "ExecutionPlanSnapshot",
     ):
         from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
         from dagster.core.storage.intermediate_storage import IntermediateStorage
         from dagster.core.instance import DagsterInstance
         from dagster.core.execution.plan.plan import ExecutionPlan
+        from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
+        from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 
         return super(SystemExecutionContextData, cls).__new__(
             cls,
@@ -91,6 +97,12 @@ class SystemExecutionContextData(
             raise_on_error=check.bool_param(raise_on_error, "raise_on_error"),
             retries=check.inst_param(retries, "retries", Retries),
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
+            pipeline_snapshot=check.inst_param(
+                pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot
+            ),
+            execution_plan_snapshot=check.inst_param(
+                execution_plan_snapshot, "execution_plan_snapshot", ExecutionPlanSnapshot
+            ),
         )
 
     @property

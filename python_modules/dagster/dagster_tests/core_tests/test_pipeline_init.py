@@ -18,8 +18,8 @@ from dagster.core.execution.resources_init import (
     single_resource_event_generator,
 )
 from dagster.core.log_manager import DagsterLogManager
+from dagster.core.snap.execution_plan_snapshot import snapshot_from_execution_plan
 from dagster.core.system_config.objects import EnvironmentConfig
-from dagster.core.utils import make_new_run_id
 
 
 def test_generator_exit():
@@ -27,7 +27,7 @@ def test_generator_exit():
         try:
             yield "A"
         finally:
-            yield "EXIT"
+            yield "EXIT"  # pylint: disable=finally-yield
 
     gen = generator()
     next(gen)
@@ -85,6 +85,11 @@ def test_clean_event_generator_exit():
     environment_config = EnvironmentConfig.build(pipeline_def)
     execution_plan = create_execution_plan(pipeline_def)
 
+    pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+    execution_plan_snapshot = snapshot_from_execution_plan(
+        execution_plan, pipeline_def.get_pipeline_snapshot_id(),
+    )
+
     resource_name, resource_def = next(iter(pipeline_def.get_default_mode().resource_defs.items()))
     resource_context = InitResourceContext(
         resource_def=resource_def,
@@ -103,7 +108,13 @@ def test_clean_event_generator_exit():
     generator.close()
 
     generator = PipelineExecutionContextManager(  # pylint: disable=protected-access
-        execution_plan, {}, pipeline_run, instance, resource_initialization_manager,
+        execution_plan,
+        {},
+        pipeline_run,
+        instance,
+        pipeline_snapshot,
+        execution_plan_snapshot,
+        resource_initialization_manager,
     ).get_generator()
     next(generator)
     generator.close()
