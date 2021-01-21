@@ -84,41 +84,41 @@ class StepInputSource(ABC):
         return set()
 
     @abstractmethod
-    def compute_version(self, step_versions):
+    def compute_version(self, step_versions, solid_def):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
 
 class FromRootInputManager(
-    namedtuple("_FromRootInputManager", "input_def config_data"), StepInputSource,
+    namedtuple("_FromRootInputManager", "input_def_snap config_data"), StepInputSource,
 ):
     def load_input_object(self, step_context):
         from dagster.core.events import DagsterEvent
 
-        loader = getattr(step_context.resources, self.input_def.root_manager_key)
+        input_def = step_context.solid_def.input_def_named(self.input_def_snap.name)
+
+        loader = getattr(step_context.resources, input_def.root_manager_key)
         load_input_context = step_context.for_input_manager(
-            self.input_def.name,
+            input_def.name,
             self.config_data,
-            metadata=self.input_def.metadata,
-            dagster_type=self.input_def.dagster_type,
+            metadata=input_def.metadata,
+            dagster_type=input_def.dagster_type,
             resource_config=step_context.environment_config.resources[
-                self.input_def.root_manager_key
+                input_def.root_manager_key
             ].get("config", {}),
-            resources=build_resources_for_manager(self.input_def.root_manager_key, step_context),
+            resources=build_resources_for_manager(input_def.root_manager_key, step_context),
         )
         yield _load_input_with_input_manager(loader, load_input_context)
         yield DagsterEvent.loaded_input(
-            step_context,
-            input_name=self.input_def.name,
-            manager_key=self.input_def.root_manager_key,
+            step_context, input_name=input_def.name, manager_key=input_def.root_manager_key,
         )
 
-    def compute_version(self, step_versions):
+    def compute_version(self, step_versions, solid_def):
         # TODO: support versioning for root loaders
         return None
 
     def required_resource_keys(self):
-        return {self.input_def.root_manager_key}
+        return {self.input_def_snap.root_manager_key}
 
 
 class FromStepOutput(
@@ -137,12 +137,6 @@ class FromStepOutput(
             config_data=config_data,
             fan_in=check.bool_param(fan_in, "fan_in"),
         )
-
-    def _input_dagster_type(self):
-        if self.fan_in:
-            return self.input_def.dagster_type.get_inner_type_for_fan_in()
-        else:
-            return self.input_def.dagster_type
 
     @property
     def step_key_dependencies(self):
@@ -192,7 +186,7 @@ class FromStepOutput(
             upstream_step_key=source_handle.step_key,
         )
 
-    def compute_version(self, step_versions):
+    def compute_version(self, step_versions, solid_def):
         if (
             self.step_output_handle.step_key not in step_versions
             or not step_versions[self.step_output_handle.step_key]
@@ -221,12 +215,14 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
     )
 
 
-class FromConfig(namedtuple("_FromConfig", "config_data dagster_type input_name"), StepInputSource):
+class FromConfig(
+    namedtuple("_FromConfig", "config_data dagster_type_snap input_name"), StepInputSource
+):
     """This step input source is configuration to be passed to a type loader"""
 
-    def __new__(cls, config_data, dagster_type, input_name):
+    def __new__(cls, config_data, dagster_type_snap, input_name):
         return super(FromConfig, cls).__new__(
-            cls, config_data=config_data, dagster_type=dagster_type, input_name=input_name
+            cls, config_data=config_data, dagster_type_snap=dagster_type_snap, input_name=input_name
         )
 
     def load_input_object(self, step_context):
@@ -234,17 +230,15 @@ class FromConfig(namedtuple("_FromConfig", "config_data dagster_type input_name"
             DagsterTypeLoadingError,
             msg_fn=_generate_error_boundary_msg_for_step_input(step_context, self.input_name),
         ):
-            return self.dagster_type.loader.construct_from_config_value(
-                step_context, self.config_data
-            )
+            dagster_type = step_context.solid_def.input_def_named(self.input_name).dagster_type
+            return dagster_type.loader.construct_from_config_value(step_context, self.config_data)
 
     def required_resource_keys(self):
-        return (
-            self.dagster_type.loader.required_resource_keys() if self.dagster_type.loader else set()
-        )
+        return self.dagster_type_snap.loader_required_resource_keys
 
-    def compute_version(self, step_versions):
-        return self.dagster_type.loader.compute_loaded_input_version(self.config_data)
+    def compute_version(self, step_versions, solid_def):
+        dagster_type = solid_def.input_def_named(self.input_name).dagster_type
+        return dagster_type.loader.compute_loaded_input_version(self.config_data)
 
 
 class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource):
@@ -258,7 +252,7 @@ class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource
     def load_input_object(self, step_context):
         return self.value
 
-    def compute_version(self, step_versions):
+    def compute_version(self, step_versions, solid_def):
         return join_and_hash(repr(self.value))
 
 
@@ -330,9 +324,12 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
             resource_keys = resource_keys.union(source.required_resource_keys())
         return resource_keys
 
-    def compute_version(self, step_versions):
+    def compute_version(self, step_versions, solid_def):
         return join_and_hash(
-            *[inner_source.compute_version(step_versions) for inner_source in self.sources]
+            *[
+                inner_source.compute_version(step_versions, solid_def)
+                for inner_source in self.sources
+            ]
         )
 
 
