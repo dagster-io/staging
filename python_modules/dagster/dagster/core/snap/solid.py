@@ -61,6 +61,7 @@ def build_input_def_snap(input_def):
         name=input_def.name,
         dagster_type_key=input_def.dagster_type.key,
         description=input_def.description,
+        root_manager_key=input_def.root_manager_key,
     )
 
 
@@ -283,13 +284,14 @@ ISolidDefSnap = (CompositeSolidDefSnap, SolidDefSnap)
 
 
 @whitelist_for_serdes
-class InputDefSnap(namedtuple("_InputDefSnap", "name dagster_type_key description")):
-    def __new__(cls, name, dagster_type_key, description):
+class InputDefSnap(namedtuple("_InputDefSnap", "name dagster_type_key description root_manager_key")):
+    def __new__(cls, name, dagster_type_key, description, root_manager_key=None):
         return super(InputDefSnap, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             description=check.opt_str_param(description, "description"),
+            root_manager_key=check.opt_str_param(root_manager_key, "root_manager_key"),
         )
 
 
