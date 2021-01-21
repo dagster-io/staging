@@ -53,7 +53,7 @@ class DagsterTypeSnap(
     namedtuple(
         "_DagsterTypeSnap",
         "kind key name description display_name is_builtin type_param_keys "
-        "loader_schema_key materializer_schema_key ",
+        "loader_schema_key materializer_schema_key",
     )
 ):
     def __new__(
