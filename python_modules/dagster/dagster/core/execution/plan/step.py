@@ -29,11 +29,11 @@ def is_executable_step(step):
 class ExecutionStep(
     namedtuple(
         "_ExecutionStep",
-        ("handle pipeline_name step_input_dict step_output_dict compute_fn solid logging_tags"),
+        ("handle pipeline_name step_input_dict step_output_dict solid logging_tags"),
     )
 ):
     def __new__(
-        cls, handle, pipeline_name, step_inputs, step_outputs, compute_fn, solid, logging_tags=None,
+        cls, handle, pipeline_name, step_inputs, step_outputs, solid, logging_tags=None,
     ):
         from dagster.core.definitions import Solid
 
@@ -49,9 +49,6 @@ class ExecutionStep(
                 so.name: so
                 for so in check.list_param(step_outputs, "step_outputs", of_type=StepOutput)
             },
-            # Compute_fn is the compute function for the step.
-            # Not to be confused with the compute_fn of the passed in solid.
-            compute_fn=check.callable_param(compute_fn, "compute_fn"),
             solid=check.inst_param(solid, "solid", Solid),
             logging_tags=merge_dicts(
                 {
@@ -220,8 +217,6 @@ class UnresolvedExecutionStep(
         return list(keys)[0]
 
     def resolve(self, resolved_by_step_key, mappings):
-        from .compute import _execute_core_compute
-
         check.invariant(
             self.resolved_by_step_key == resolved_by_step_key,
             "resolving dynamic output step key did not match",
@@ -244,9 +239,6 @@ class UnresolvedExecutionStep(
                         pipeline_name=self.pipeline_name,
                         step_inputs=resolved_inputs,
                         step_outputs=self.step_outputs,
-                        compute_fn=lambda step_context, inputs: _execute_core_compute(
-                            step_context.for_compute(), inputs, solid.definition.compute_fn
-                        ),
                         solid=solid,
                     )
                 )

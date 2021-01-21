@@ -23,6 +23,7 @@ from dagster.core.errors import (
 )
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemStepExecutionContext
+from dagster.core.execution.plan.compute import execute_core_compute
 from dagster.core.execution.plan.inputs import StepInputData
 from dagster.core.execution.plan.objects import StepSuccessData, TypeCheckData
 from dagster.core.execution.plan.outputs import StepOutputData, StepOutputHandle
@@ -440,7 +441,14 @@ def _user_event_sequence_for_step_compute_fn(step_context, evaluated_inputs):
     check.inst_param(step_context, "step_context", SystemStepExecutionContext)
     check.dict_param(evaluated_inputs, "evaluated_inputs", key_type=str)
 
-    gen = check.opt_generator(step_context.step.compute_fn(step_context, evaluated_inputs))
+    gen = check.opt_generator(
+        execute_core_compute(
+            step_context.for_compute(),
+            evaluated_inputs,
+            step_context.step.solid.definition.compute_fn,
+        )
+    )
+
     if not gen:
         return
 
