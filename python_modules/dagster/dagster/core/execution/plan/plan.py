@@ -183,9 +183,13 @@ class _PlanBuilder:
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
             if isinstance(solid.definition, SolidDefinition):
+                from dagster.core.snap.solid import build_core_solid_def_snap
+
+                solid_def_snap = build_core_solid_def_snap(solid.definition)
+
                 if has_unresolved_input:
                     step = create_unresolved_step(
-                        solid=solid,
+                        solid_def_snap=solid_def_snap,
                         solid_handle=handle,
                         step_inputs=step_inputs,
                         environment_config=self.environment_config,
@@ -193,7 +197,7 @@ class _PlanBuilder:
                     )
                 else:
                     step = create_compute_step(
-                        solid=solid,
+                        solid_def_snap=solid_def_snap,
                         solid_handle=handle,
                         step_inputs=step_inputs,
                         environment_config=self.environment_config,
