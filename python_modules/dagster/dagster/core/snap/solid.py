@@ -116,6 +116,7 @@ def build_core_solid_def_snap(solid_def):
         config_field_snap=snap_from_field("config", solid_def.config_field)
         if solid_def.has_config_field
         else None,
+        version=solid_def.version,
     )
 
 
@@ -243,7 +244,7 @@ class SolidDefSnap(
     namedtuple(
         "_SolidDefMeta",
         "name input_def_snaps output_def_snaps description tags required_resource_keys "
-        "config_field_snap",
+        "config_field_snap version",
     )
 ):
     def __new__(
@@ -255,6 +256,7 @@ class SolidDefSnap(
         tags,
         required_resource_keys,
         config_field_snap,
+        version,
     ):
         return super(SolidDefSnap, cls).__new__(
             cls,
@@ -267,6 +269,7 @@ class SolidDefSnap(
                 required_resource_keys,
                 config_field_snap,
             ),
+            version=check.opt_str_param(version, "version"),
         )
 
     def get_input_snap(self, name):
