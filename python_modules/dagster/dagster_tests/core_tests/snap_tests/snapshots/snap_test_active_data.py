@@ -943,6 +943,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "kind": {
             "__enum__": "DagsterTypeKind.ANY"
           },
+          "loader_required_resource_keys": [],
           "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
           "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
           "name": "Any",
@@ -958,6 +959,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "kind": {
             "__enum__": "DagsterTypeKind.SCALAR"
           },
+          "loader_required_resource_keys": [],
           "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
           "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
           "name": "Bool",
@@ -973,6 +975,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "kind": {
             "__enum__": "DagsterTypeKind.SCALAR"
           },
+          "loader_required_resource_keys": [],
           "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
           "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
           "name": "Float",
@@ -988,6 +991,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "kind": {
             "__enum__": "DagsterTypeKind.SCALAR"
           },
+          "loader_required_resource_keys": [],
           "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
           "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
           "name": "Int",
@@ -1003,6 +1007,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "kind": {
             "__enum__": "DagsterTypeKind.NOTHING"
           },
+          "loader_required_resource_keys": [],
           "loader_schema_key": null,
           "materializer_schema_key": null,
           "name": "Nothing",
@@ -1018,6 +1023,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
           "kind": {
             "__enum__": "DagsterTypeKind.SCALAR"
           },
+          "loader_required_resource_keys": [],
           "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
           "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
           "name": "String",
@@ -2094,6 +2100,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "kind": {
                 "__enum__": "DagsterTypeKind.ANY"
               },
+              "loader_required_resource_keys": [],
               "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
               "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
               "name": "Any",
@@ -2109,6 +2116,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "kind": {
                 "__enum__": "DagsterTypeKind.SCALAR"
               },
+              "loader_required_resource_keys": [],
               "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
               "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
               "name": "Bool",
@@ -2124,6 +2132,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "kind": {
                 "__enum__": "DagsterTypeKind.SCALAR"
               },
+              "loader_required_resource_keys": [],
               "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
               "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
               "name": "Float",
@@ -2139,6 +2148,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "kind": {
                 "__enum__": "DagsterTypeKind.SCALAR"
               },
+              "loader_required_resource_keys": [],
               "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
               "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
               "name": "Int",
@@ -2154,6 +2164,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "kind": {
                 "__enum__": "DagsterTypeKind.NOTHING"
               },
+              "loader_required_resource_keys": [],
               "loader_schema_key": null,
               "materializer_schema_key": null,
               "name": "Nothing",
@@ -2169,6 +2180,7 @@ snapshots['test_external_repository_data 1'] = '''{
               "kind": {
                 "__enum__": "DagsterTypeKind.SCALAR"
               },
+              "loader_required_resource_keys": [],
               "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
               "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
               "name": "String",

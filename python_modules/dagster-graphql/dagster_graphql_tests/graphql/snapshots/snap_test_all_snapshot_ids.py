@@ -935,6 +935,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -950,6 +951,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -965,6 +967,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -980,6 +983,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -995,6 +999,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -1010,6 +1015,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -1116,7 +1122,8 @@ snapshots['test_all_snapshot_ids 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_",
+            "root_manager_key": null
           }
         ],
         "name": "after_failure",
@@ -1161,7 +1168,8 @@ snapshots['test_all_snapshot_ids 1'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_",
+            "root_manager_key": null
           }
         ],
         "name": "conditionally_fail",
@@ -1183,7 +1191,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 10'] = '366a5cf30f64dc229feaecec21f7ff90437b7400'
+snapshots['test_all_snapshot_ids 10'] = '418157b914c0bf48e1116e621ba896f39d0af9ce'
 
 snapshots['test_all_snapshot_ids 11'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2169,6 +2177,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -2184,6 +2193,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -2199,6 +2209,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -2214,6 +2225,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -2229,6 +2241,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -2244,6 +2257,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
@@ -2259,6 +2273,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -2371,7 +2386,8 @@ snapshots['test_all_snapshot_ids 11'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "df_expectations_solid",
@@ -2397,7 +2413,8 @@ snapshots['test_all_snapshot_ids 11'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
@@ -2423,7 +2440,8 @@ snapshots['test_all_snapshot_ids 11'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "sum_sq_solid",
@@ -2445,7 +2463,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 12'] = 'b92a4ca3a6f2e799d533058124715d63f31899ad'
+snapshots['test_all_snapshot_ids 12'] = '48e4abbd4b5c5d25ff92682467aeb95aee23c6ea'
 
 snapshots['test_all_snapshot_ids 13'] = '''{
   "__class__": "PipelineSnapshot",
@@ -3440,6 +3458,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -3455,6 +3474,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -3470,6 +3490,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -3485,6 +3506,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -3500,6 +3522,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -3515,6 +3538,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -3682,7 +3706,8 @@ snapshots['test_all_snapshot_ids 13'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "y"
+            "name": "y",
+            "root_manager_key": null
           }
         ],
         "name": "multiply_by_two",
@@ -3708,19 +3733,22 @@ snapshots['test_all_snapshot_ids 13'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "y"
+            "name": "y",
+            "root_manager_key": null
           },
           {
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "ten"
+            "name": "ten",
+            "root_manager_key": null
           },
           {
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "should_fail"
+            "name": "should_fail",
+            "root_manager_key": null
           }
         ],
         "name": "multiply_inputs",
@@ -3742,7 +3770,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 14'] = '5a11037cc959f2bdb6aaeb0a0a1240f4ae82e762'
+snapshots['test_all_snapshot_ids 14'] = '445b1c98855d4cfed8744726e0cb0dfd4195ead8'
 
 snapshots['test_all_snapshot_ids 15'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4760,6 +4788,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -4775,6 +4804,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -4790,6 +4820,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -4805,6 +4836,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -4820,6 +4852,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -4835,6 +4868,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -4993,7 +5027,8 @@ snapshots['test_all_snapshot_ids 15'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "depth"
+            "name": "depth",
+            "root_manager_key": null
           }
         ],
         "name": "fail",
@@ -5021,7 +5056,8 @@ snapshots['test_all_snapshot_ids 15'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "depth"
+            "name": "depth",
+            "root_manager_key": null
           }
         ],
         "name": "reset",
@@ -5062,7 +5098,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 16'] = '427550a45275eaf8f1398485010467c2951ecc26'
+snapshots['test_all_snapshot_ids 16'] = '7cdbc96f5ea587b4e7bc6f896e0d44d047faeb30'
 
 snapshots['test_all_snapshot_ids 17'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6039,6 +6075,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -6054,6 +6091,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -6069,6 +6107,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -6084,6 +6123,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -6099,6 +6139,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -6114,6 +6155,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -6228,7 +6270,8 @@ snapshots['test_all_snapshot_ids 17'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "n"
+            "name": "n",
+            "root_manager_key": null
           }
         ],
         "name": "increment",
@@ -6250,7 +6293,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 18'] = 'a773c6a2695138e3bd4f3fb85335d5b761a6e48d'
+snapshots['test_all_snapshot_ids 18'] = 'b75815aa45a76f61c1f713b3be7fa2a31c0b8476'
 
 snapshots['test_all_snapshot_ids 19'] = '''{
   "__class__": "PipelineSnapshot",
@@ -7163,6 +7206,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -7178,6 +7222,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -7193,6 +7238,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -7208,6 +7254,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -7223,6 +7270,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -7238,6 +7286,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -7323,9 +7372,9 @@ snapshots['test_all_snapshot_ids 19'] = '''{
   }
 }'''
 
-snapshots['test_all_snapshot_ids 2'] = 'e4ec2fe42a90a4ffe25520550e715e230902df7f'
+snapshots['test_all_snapshot_ids 2'] = '31b8fb996ef91ce670282573db3c51676ac1c179'
 
-snapshots['test_all_snapshot_ids 20'] = 'd6e67903d820c28aecb1b7e136aa8f28966d6fd4'
+snapshots['test_all_snapshot_ids 20'] = 'f1f59cce525ad540914ccd5ab0633c2d5c4a9ed0'
 
 snapshots['test_all_snapshot_ids 21'] = '''{
   "__class__": "PipelineSnapshot",
@@ -8270,6 +8319,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -8285,6 +8335,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -8300,6 +8351,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -8315,6 +8367,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -8330,6 +8383,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -8345,6 +8399,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -8436,7 +8491,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 22'] = '11c662024508890a85744b856f080dbee3aadeda'
+snapshots['test_all_snapshot_ids 22'] = '470132f17b25afac5b198d3f2680ed8b8766aa1c'
 
 snapshots['test_all_snapshot_ids 23'] = '''{
   "__class__": "PipelineSnapshot",
@@ -9349,6 +9404,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -9364,6 +9420,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -9379,6 +9436,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -9394,6 +9452,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -9409,6 +9468,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -9424,6 +9484,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -9507,7 +9568,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 24'] = '2200c4349e69d4dfa07bc8fad8f0d7e785039f59'
+snapshots['test_all_snapshot_ids 24'] = '6295846b298a16eab90aafda53d96490cecae034'
 
 snapshots['test_all_snapshot_ids 25'] = '''{
   "__class__": "PipelineSnapshot",
@@ -10502,6 +10563,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -10517,6 +10579,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -10532,6 +10595,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -10547,6 +10611,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -10562,6 +10627,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -10577,6 +10643,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -10694,7 +10761,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 26'] = 'bece24db9e9e45c3d1b9c12b1b7ee1c97e45ea28'
+snapshots['test_all_snapshot_ids 26'] = '011125d549c3193ff8e1715ed5399e57310f6a7d'
 
 snapshots['test_all_snapshot_ids 27'] = '''{
   "__class__": "PipelineSnapshot",
@@ -11699,6 +11766,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -11714,6 +11782,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -11729,6 +11798,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -11744,6 +11814,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -11759,6 +11830,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -11774,6 +11846,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -11857,7 +11930,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 28'] = 'b5441d696c6070e099d5ea24f403aa58bca72be3'
+snapshots['test_all_snapshot_ids 28'] = '614cf3337bc919fed8b3d35f7aea12c87b640ce3'
 
 snapshots['test_all_snapshot_ids 29'] = '''{
   "__class__": "PipelineSnapshot",
@@ -12779,6 +12852,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -12794,6 +12868,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -12809,6 +12884,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -12824,6 +12900,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -12839,6 +12916,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -12854,6 +12932,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -12960,7 +13039,8 @@ snapshots['test_all_snapshot_ids 29'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "solid_asset_b",
@@ -14126,6 +14206,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -14141,6 +14222,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -14156,6 +14238,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -14171,6 +14254,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -14186,6 +14270,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -14201,6 +14286,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -14330,7 +14416,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "input_mapping_snaps": [
@@ -14408,7 +14495,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "input_mapping_snaps": [
@@ -14486,7 +14574,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "input_mapping_snaps": [
@@ -14529,7 +14618,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "add_one",
@@ -14555,7 +14645,8 @@ snapshots['test_all_snapshot_ids 3'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "div_two",
@@ -14577,7 +14668,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 30'] = '977af5f6ad1a608e4436755c7ac73e10236106ea'
+snapshots['test_all_snapshot_ids 30'] = '95ecbef354375d63ec0c4944d23234812e3b0ec8'
 
 snapshots['test_all_snapshot_ids 31'] = '''{
   "__class__": "PipelineSnapshot",
@@ -15704,6 +15795,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -15719,6 +15811,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -15734,6 +15827,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -15749,6 +15843,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -15764,6 +15859,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -15779,6 +15875,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -15936,7 +16033,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 32'] = '946a622f67905a59625d5f900ac732c3b8f10962'
+snapshots['test_all_snapshot_ids 32'] = '450239770e7119db96d1d2c8c677a4021f55c883'
 
 snapshots['test_all_snapshot_ids 33'] = '''{
   "__class__": "PipelineSnapshot",
@@ -17041,6 +17138,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -17056,6 +17154,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -17071,6 +17170,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -17086,6 +17186,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -17101,6 +17202,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -17116,6 +17218,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -17303,7 +17406,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 34'] = '4ed3e0e6dfa7467c1db8f4d43842e352ac9e17fb'
+snapshots['test_all_snapshot_ids 34'] = '4ea8145a712f3a2c74c5a65de2f322a6603abc17'
 
 snapshots['test_all_snapshot_ids 35'] = '''{
   "__class__": "PipelineSnapshot",
@@ -18216,6 +18319,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -18231,6 +18335,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -18246,6 +18351,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -18261,6 +18367,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -18276,6 +18383,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -18291,6 +18399,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -18374,7 +18483,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 36'] = '1fdbf6c93b57c89da9b4590980cf63062e2e744f'
+snapshots['test_all_snapshot_ids 36'] = '88d484a2c7fb807f030c6dc2609208c0b594b737'
 
 snapshots['test_all_snapshot_ids 37'] = '''{
   "__class__": "PipelineSnapshot",
@@ -19296,6 +19405,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -19311,6 +19421,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -19326,6 +19437,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -19341,6 +19453,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -19356,6 +19469,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -19371,6 +19485,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -19477,7 +19592,8 @@ snapshots['test_all_snapshot_ids 37'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "_"
+            "name": "_",
+            "root_manager_key": null
           }
         ],
         "name": "return_hello_world",
@@ -19499,7 +19615,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 38'] = '1ec5c285a675f2c35bcf6352008afd6e2f49e2f4'
+snapshots['test_all_snapshot_ids 38'] = 'c3df5437b387cfcbcf6889b44a852fc2dede0f6d'
 
 snapshots['test_all_snapshot_ids 39'] = '''{
   "__class__": "PipelineSnapshot",
@@ -20412,6 +20528,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -20427,6 +20544,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -20442,6 +20560,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -20457,6 +20576,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -20472,6 +20592,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -20487,6 +20608,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -20570,9 +20692,9 @@ snapshots['test_all_snapshot_ids 39'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 4'] = '7b33ec41d5c0e3bc9a194d207fece4f8d2f57030'
+snapshots['test_all_snapshot_ids 4'] = '7b932dbc436c77ee6693fb19270c288b042c2291'
 
-snapshots['test_all_snapshot_ids 40'] = '03404f08c38345456625db60705667f545ed7df3'
+snapshots['test_all_snapshot_ids 40'] = '2137c58b13cc6aab44ea68cef056892988f764b9'
 
 snapshots['test_all_snapshot_ids 41'] = '''{
   "__class__": "PipelineSnapshot",
@@ -21485,6 +21607,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -21500,6 +21623,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -21515,6 +21639,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -21530,6 +21655,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -21545,6 +21671,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -21560,6 +21687,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -21643,7 +21771,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 42'] = '7044e11dead9d22c80d2736e7a20c7aabf87aac7'
+snapshots['test_all_snapshot_ids 42'] = 'b80ff59147e1f506c37cf7b7ecdb5cd8d7ff1c4d'
 
 snapshots['test_all_snapshot_ids 43'] = '''{
   "__class__": "PipelineSnapshot",
@@ -22556,6 +22684,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -22571,6 +22700,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -22586,6 +22716,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -22601,6 +22732,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -22616,6 +22748,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -22631,6 +22764,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -22714,7 +22848,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 44'] = 'a8b91f5e905d1c133d00adf05329602961cc8284'
+snapshots['test_all_snapshot_ids 44'] = '2a1691037f31059c2a1bf9f99eb5c793cbe63cb3'
 
 snapshots['test_all_snapshot_ids 45'] = '''{
   "__class__": "PipelineSnapshot",
@@ -23665,6 +23799,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -23680,6 +23815,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -23695,6 +23831,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -23710,6 +23847,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -23725,6 +23863,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -23740,6 +23879,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -23831,7 +23971,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 46'] = 'c637df4e0bba6381dded9093a4182179cf99319e'
+snapshots['test_all_snapshot_ids 46'] = 'aece74c6297252175c2a14d3b28b3b7b5db3a479'
 
 snapshots['test_all_snapshot_ids 47'] = '''{
   "__class__": "PipelineSnapshot",
@@ -24660,6 +24800,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -24675,6 +24816,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -24690,6 +24832,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -24705,6 +24848,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -24720,6 +24864,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -24735,6 +24880,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -24846,7 +24992,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 48'] = '5f55b9cb97ac4cf6fb6cef58925506b1be0d3f13'
+snapshots['test_all_snapshot_ids 48'] = 'ed82b182d0c1bd294146200098317207e4f17a21'
 
 snapshots['test_all_snapshot_ids 49'] = '''{
   "__class__": "PipelineSnapshot",
@@ -25759,6 +25905,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -25774,6 +25921,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -25789,6 +25937,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -25804,6 +25953,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "InputTypeWithoutHydration",
@@ -25819,6 +25969,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -25834,6 +25985,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -25849,6 +26001,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -25936,7 +26089,8 @@ snapshots['test_all_snapshot_ids 49'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "InputTypeWithoutHydration",
             "description": null,
-            "name": "some_input"
+            "name": "some_input",
+            "root_manager_key": null
           }
         ],
         "name": "fail_subset",
@@ -26952,6 +27106,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -26967,6 +27122,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -26982,6 +27138,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -26997,6 +27154,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -27012,6 +27170,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -27027,6 +27186,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
@@ -27042,6 +27202,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -27135,7 +27296,8 @@ snapshots['test_all_snapshot_ids 5'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
@@ -27161,7 +27323,8 @@ snapshots['test_all_snapshot_ids 5'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "sum_sq_solid",
@@ -27183,7 +27346,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 50'] = '7ad14493641c3e200e810397b41cd2c1ef33d998'
+snapshots['test_all_snapshot_ids 50'] = 'ccd6b32503906d9af873d8f0739df8e3c727f2e0'
 
 snapshots['test_all_snapshot_ids 51'] = '''{
   "__class__": "PipelineSnapshot",
@@ -28073,6 +28236,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -28088,6 +28252,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -28103,6 +28268,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -28118,6 +28284,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -28133,6 +28300,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -28148,6 +28316,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -28231,7 +28400,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 52'] = '9d99fcc59bcd77a464a19e70faba2443f94a2ba4'
+snapshots['test_all_snapshot_ids 52'] = '443e69ee2f681f92840490474fc1ec6cfc8189d1'
 
 snapshots['test_all_snapshot_ids 53'] = '''{
   "__class__": "PipelineSnapshot",
@@ -29190,6 +29359,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -29205,6 +29375,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -29220,6 +29391,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -29235,6 +29407,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -29250,6 +29423,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -29265,6 +29439,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -29364,7 +29539,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 54'] = '86df84b48eb7b900296176c9a1107105f4a954b4'
+snapshots['test_all_snapshot_ids 54'] = '7ec994f8d590e82d9b8f7ea5a81bde8afd70bf8e'
 
 snapshots['test_all_snapshot_ids 55'] = '''{
   "__class__": "PipelineSnapshot",
@@ -30359,6 +30534,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -30374,6 +30550,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -30389,6 +30566,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -30404,6 +30582,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -30419,6 +30598,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -30434,6 +30614,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -30578,7 +30759,8 @@ snapshots['test_all_snapshot_ids 55'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "one"
+            "name": "one",
+            "root_manager_key": null
           }
         ],
         "name": "get_input_one",
@@ -30612,7 +30794,8 @@ snapshots['test_all_snapshot_ids 55'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "one"
+            "name": "one",
+            "root_manager_key": null
           }
         ],
         "name": "get_input_two",
@@ -30657,13 +30840,15 @@ snapshots['test_all_snapshot_ids 55'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "input_one"
+            "name": "input_one",
+            "root_manager_key": null
           },
           {
             "__class__": "InputDefSnap",
             "dagster_type_key": "Int",
             "description": null,
-            "name": "input_two"
+            "name": "input_two",
+            "root_manager_key": null
           }
         ],
         "name": "sum_inputs",
@@ -30685,7 +30870,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 56'] = 'e3e6ec3be19f9bf53704fe3bec72f3ce67392231'
+snapshots['test_all_snapshot_ids 56'] = '2ee08a86ac3476e4b0bbceb928ae70a29d1d1144'
 
 snapshots['test_all_snapshot_ids 57'] = '''{
   "__class__": "PipelineSnapshot",
@@ -31788,6 +31973,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -31803,6 +31989,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -31818,6 +32005,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -31833,6 +32021,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -31848,6 +32037,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -31863,6 +32053,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -32034,7 +32225,8 @@ snapshots['test_all_snapshot_ids 57'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "String",
             "description": null,
-            "name": "inp"
+            "name": "inp",
+            "root_manager_key": null
           }
         ],
         "name": "can_fail",
@@ -32093,7 +32285,8 @@ snapshots['test_all_snapshot_ids 57'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Nothing",
             "description": null,
-            "name": "start"
+            "name": "start",
+            "root_manager_key": null
           }
         ],
         "name": "no_output",
@@ -32111,7 +32304,8 @@ snapshots['test_all_snapshot_ids 57'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "value"
+            "name": "value",
+            "root_manager_key": null
           }
         ],
         "name": "passthrough",
@@ -32133,7 +32327,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 58'] = '6776a450aa1a839ecbbc48bc7502193f6853287d'
+snapshots['test_all_snapshot_ids 58'] = '7934e5920f5e6c76d1452485062a792981d773e5'
 
 snapshots['test_all_snapshot_ids 59'] = '''{
   "__class__": "PipelineSnapshot",
@@ -33055,6 +33249,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -33070,6 +33265,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -33085,6 +33281,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -33100,6 +33297,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -33115,6 +33313,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -33130,6 +33329,7 @@ snapshots['test_all_snapshot_ids 59'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -33250,7 +33450,8 @@ snapshots['test_all_snapshot_ids 59'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "Any",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "will_fail",
@@ -33274,9 +33475,9 @@ snapshots['test_all_snapshot_ids 59'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 6'] = 'd73da843ee2274205110a7bc2d38c7d6767792c3'
+snapshots['test_all_snapshot_ids 6'] = '4dc92cb29755605eed9bc087dae773fb354c2b55'
 
-snapshots['test_all_snapshot_ids 60'] = 'f6e181e6dfea84f5157d81996ffedc26fa1c925e'
+snapshots['test_all_snapshot_ids 60'] = '4f84b70dd04dab1adbeadc1c6bafad987a029ac5'
 
 snapshots['test_all_snapshot_ids 61'] = '''{
   "__class__": "PipelineSnapshot",
@@ -34216,6 +34417,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -34231,6 +34433,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -34246,6 +34449,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -34261,6 +34465,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -34276,6 +34481,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -34291,6 +34497,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -34452,7 +34659,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 62'] = '2b3d470a0d3801817f5f9c4c14fabf24e4baf75c'
+snapshots['test_all_snapshot_ids 62'] = '914540f2096c0dbeb6bc22449408f4c004312511'
 
 snapshots['test_all_snapshot_ids 63'] = '''{
   "__class__": "PipelineSnapshot",
@@ -35365,6 +35572,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -35380,6 +35588,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -35395,6 +35604,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -35410,6 +35620,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -35425,6 +35636,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -35440,6 +35652,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -35523,7 +35736,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 64'] = '492a9075afd0eb5c606b52d9bd0b583f914883a2'
+snapshots['test_all_snapshot_ids 64'] = '1ab030afd31a541ee5ca5e9d3b767d4eaeb258e0'
 
 snapshots['test_all_snapshot_ids 65'] = '''{
   "__class__": "PipelineSnapshot",
@@ -36436,6 +36649,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -36451,6 +36665,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -36466,6 +36681,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -36481,6 +36697,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -36496,6 +36713,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -36511,6 +36729,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -36594,7 +36813,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 66'] = '56aca3d587c4a2d9de16834eb5efc6c03abcee2a'
+snapshots['test_all_snapshot_ids 66'] = '695429cd70ca28704029b75997a28a3ca0e0e10e'
 
 snapshots['test_all_snapshot_ids 67'] = '''{
   "__class__": "PipelineSnapshot",
@@ -37507,6 +37726,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -37522,6 +37742,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -37537,6 +37758,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -37552,6 +37774,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -37567,6 +37790,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -37582,6 +37806,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -37667,7 +37892,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
   }
 }'''
 
-snapshots['test_all_snapshot_ids 68'] = 'cc609f2b12e14fb7e5bf0ef7fe0a04c004099f2e'
+snapshots['test_all_snapshot_ids 68'] = 'aa0476d962b12eb407bc8d5df13030be95cba8c2'
 
 snapshots['test_all_snapshot_ids 7'] = '''{
   "__class__": "PipelineSnapshot",
@@ -38644,6 +38869,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -38659,6 +38885,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -38674,6 +38901,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -38689,6 +38917,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -38704,6 +38933,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -38719,6 +38949,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
@@ -38734,6 +38965,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -38827,7 +39059,8 @@ snapshots['test_all_snapshot_ids 7'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",
@@ -38853,7 +39086,8 @@ snapshots['test_all_snapshot_ids 7'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "sum_df"
+            "name": "sum_df",
+            "root_manager_key": null
           }
         ],
         "name": "sum_sq_solid",
@@ -38875,7 +39109,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 8'] = 'b04854b8c1f6f549d9bf922b990fdff9d990ddf5'
+snapshots['test_all_snapshot_ids 8'] = 'dc49c4fac011e2ab16953dac7e676ecd5d933208'
 
 snapshots['test_all_snapshot_ids 9'] = '''{
   "__class__": "PipelineSnapshot",
@@ -39820,6 +40054,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.ANY"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "Selector.f2fe6dfdc60a1947a8f8e7cd377a012b47065bc4",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Any",
@@ -39835,6 +40070,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Bool-Selector.be5d518b39e86a43c5f2eecaf538c1f6c7711b59",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Bool",
@@ -39850,6 +40086,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Float-Selector.d00a37e3807d37c9f69cc62997c4a5f4a176e5c3",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Float",
@@ -39865,6 +40102,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.Int-Selector.a9799b971d12ace70a2d8803c883c863417d0725",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "Int",
@@ -39880,6 +40118,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.NOTHING"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": null,
         "materializer_schema_key": null,
         "name": "Nothing",
@@ -39895,6 +40134,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.REGULAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "String",
         "materializer_schema_key": "String",
         "name": "PoorMansDataFrame",
@@ -39910,6 +40150,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
         "kind": {
           "__enum__": "DagsterTypeKind.SCALAR"
         },
+        "loader_required_resource_keys": [],
         "loader_schema_key": "ScalarUnion.String-Selector.e04723c9d9937e3ab21206435b22247cfbe58269",
         "materializer_schema_key": "Selector.e52fa3afbe531d9522fae1206f3ae9d248775742",
         "name": "String",
@@ -39984,7 +40225,8 @@ snapshots['test_all_snapshot_ids 9'] = '''{
             "__class__": "InputDefSnap",
             "dagster_type_key": "PoorMansDataFrame",
             "description": null,
-            "name": "num"
+            "name": "num",
+            "root_manager_key": null
           }
         ],
         "name": "sum_solid",

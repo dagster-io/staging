@@ -89,8 +89,11 @@ def resolve_step_versions_helper(execution_plan):
             Dict[str, Optional[str]]: A dictionary that maps the key of an execution step to a version.
                 If a step has no computed version, then the step key maps to None.
         """
+
+    pipeline_def = execution_plan.pipeline.get_definition()
+
     resource_versions_by_key = resolve_resource_versions(
-        execution_plan.environment_config, execution_plan.pipeline.get_definition()
+        execution_plan.environment_config, pipeline_def,
     )
 
     step_versions = {}  # step_key (str) -> version (str)
@@ -100,8 +103,10 @@ def resolve_step_versions_helper(execution_plan):
         if not is_executable_step(step):
             continue
 
+        solid_def = pipeline_def.get_solid(step.solid_handle)
+
         input_version_dict = {
-            input_name: step_input.source.compute_version(step_versions)
+            input_name: step_input.source.compute_version(step_versions, solid_def)
             for input_name, step_input in step.step_input_dict.items()
         }
         input_versions = [version for version in input_version_dict.values()]
