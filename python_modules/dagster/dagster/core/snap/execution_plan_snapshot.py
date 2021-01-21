@@ -118,7 +118,7 @@ def _snapshot_from_step_input(step_input):
         upstream_output_handles = step_input.get_step_output_handle_dependencies()
     return ExecutionStepInputSnap(
         name=step_input.name,
-        dagster_type_key=step_input.dagster_type.key,
+        dagster_type_key=step_input.dagster_type_snap.key,
         upstream_output_handles=upstream_output_handles,
     )
 
