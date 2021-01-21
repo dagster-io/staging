@@ -25,6 +25,7 @@ def build_dagster_type_snap(dagster_type):
         type_param_keys=dagster_type.type_param_keys,
         loader_schema_key=dagster_type.loader_schema_key,
         materializer_schema_key=dagster_type.materializer_schema_key,
+        required_resource_keys=sorted(list(dagster_type.required_resource_keys)),
     )
 
 
@@ -53,7 +54,7 @@ class DagsterTypeSnap(
     namedtuple(
         "_DagsterTypeSnap",
         "kind key name description display_name is_builtin type_param_keys "
-        "loader_schema_key materializer_schema_key ",
+        "loader_schema_key materializer_schema_key required_resource_keys",
     )
 ):
     def __new__(
@@ -67,6 +68,7 @@ class DagsterTypeSnap(
         type_param_keys,
         loader_schema_key=None,
         materializer_schema_key=None,
+        required_resource_keys=None,
     ):
         return super(DagsterTypeSnap, cls).__new__(
             cls,
@@ -80,5 +82,8 @@ class DagsterTypeSnap(
             loader_schema_key=check.opt_str_param(loader_schema_key, "loader_schema_key"),
             materializer_schema_key=check.opt_str_param(
                 materializer_schema_key, "materializer_schema_key"
+            ),
+            required_resource_keys=check.opt_list_param(
+                required_resource_keys, "required_resource_keys", str
             ),
         )

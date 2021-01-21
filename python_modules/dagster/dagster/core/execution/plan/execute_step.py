@@ -163,13 +163,12 @@ def _type_checked_event_sequence_for_input(step_context, input_name, input_value
             input_name=input_name,
             input_value=input_value,
             input_type=type(input_value),
-            dagster_type_name=step_input.dagster_type.display_name,
+            dagster_type_name=step_input.dagster_type_snap.display_name,
             step_key=step_context.step.key,
         ),
     ):
-        type_check = _do_type_check(
-            step_context.for_type(step_input.dagster_type), step_input.dagster_type, input_value,
-        )
+        dagster_type = step_context.solid_def.input_def_named(input_name).dagster_type
+        type_check = _do_type_check(step_context.for_type(dagster_type), dagster_type, input_value,)
 
     yield _create_step_input_event(
         step_context, input_name, type_check=type_check, success=type_check.success
@@ -178,10 +177,10 @@ def _type_checked_event_sequence_for_input(step_context, input_name, input_value
     if not type_check.success:
         raise DagsterTypeCheckDidNotPass(
             description='Type check failed for step input "{input_name}" - expected type "{dagster_type}".'.format(
-                input_name=input_name, dagster_type=step_input.dagster_type.display_name,
+                input_name=input_name, dagster_type=step_input.dagster_type_snap.display_name,
             ),
             metadata_entries=type_check.metadata_entries,
-            dagster_type=step_input.dagster_type,
+            dagster_type=dagster_type,
         )
 
 
@@ -260,7 +259,7 @@ def core_dagster_event_sequence_for_step(step_context, prior_attempt_count):
     inputs = {}
 
     for step_input in step_context.step.step_inputs:
-        if step_input.dagster_type.kind == DagsterTypeKind.NOTHING:
+        if step_input.dagster_type_snap.kind == DagsterTypeKind.NOTHING:
             continue
 
         for event_or_input_value in ensure_gen(step_input.source.load_input_object(step_context)):
