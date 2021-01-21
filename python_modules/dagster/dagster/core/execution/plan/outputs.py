@@ -1,30 +1,46 @@
-from typing import NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, NamedTuple, Optional, Union
 
 from dagster import check
-from dagster.core.definitions import AssetMaterialization, Materialization, OutputDefinition
+from dagster.core.definitions import AssetMaterialization, Materialization, SolidHandle
 from dagster.serdes import whitelist_for_serdes
 
 from .handle import UnresolvedStepHandle
 from .objects import TypeCheckData
 
+if TYPE_CHECKING:
+    from dagster.core.snap.solid import OutputDefSnap
+
 
 class StepOutput(
-    NamedTuple("_StepOutput", [("output_def", OutputDefinition), ("should_materialize", bool)])
+    NamedTuple(
+        "_StepOutput",
+        [
+            ("solid_handle", SolidHandle),
+            ("output_def_snap", "OutputDefSnap"),
+            ("should_materialize", bool),
+        ],
+    )
 ):
     """Holds the information for an ExecutionStep to process its outputs"""
 
     def __new__(
-        cls, output_def: OutputDefinition, should_materialize: Optional[bool] = None,
+        cls,
+        solid_handle: SolidHandle,
+        output_def_snap: "OutputDefSnap",
+        should_materialize: Optional[bool] = None,
     ):
+        from dagster.core.snap.solid import OutputDefSnap
+
         return super(StepOutput, cls).__new__(
             cls,
-            output_def=check.inst_param(output_def, "output_def", OutputDefinition),
+            solid_handle=check.inst_param(solid_handle, "solid_handle", SolidHandle),
+            output_def_snap=check.inst_param(output_def_snap, "output_def_snap", OutputDefSnap),
             should_materialize=check.bool_param(should_materialize, "should_materialize"),
         )
 
     @property
     def name(self) -> str:
-        return self.output_def.name
+        return self.output_def_snap.name
 
 
 @whitelist_for_serdes
@@ -89,6 +105,7 @@ class StepOutputHandle(
         )
 
 
+@whitelist_for_serdes
 class UnresolvedStepOutputHandle(
     NamedTuple(
         "_UnresolvedStepOutputHandle",
