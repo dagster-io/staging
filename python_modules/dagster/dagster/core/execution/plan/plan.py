@@ -183,9 +183,13 @@ class _PlanBuilder:
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
             if isinstance(solid.definition, SolidDefinition):
+                from dagster.core.snap.solid import build_core_solid_def_snap
+
+                solid_def_snap = build_core_solid_def_snap(solid.definition)
+
                 if has_unresolved_input:
                     step = create_unresolved_step(
-                        solid=solid,
+                        solid_def_snap=solid_def_snap,
                         solid_handle=handle,
                         step_inputs=step_inputs,
                         environment_config=self.environment_config,
@@ -193,7 +197,7 @@ class _PlanBuilder:
                     )
                 else:
                     step = create_compute_step(
-                        solid=solid,
+                        solid_def_snap=solid_def_snap,
                         solid_handle=handle,
                         step_inputs=step_inputs,
                         environment_config=self.environment_config,
@@ -443,7 +447,7 @@ class ExecutionPlan(
         return step.step_output_named(step_output_handle.output_name)
 
     def get_manager_key(self, step_output_handle):
-        return self.get_step_output(step_output_handle).output_def.io_manager_key
+        return self.get_step_output(step_output_handle).output_def_snap.io_manager_key
 
     def has_step(self, handle):
         check.inst_param(handle, "handle", StepHandleUnion)
@@ -706,7 +710,7 @@ def should_skip_step(execution_plan, instance, run_id):
     step = execution_plan.get_step_by_key(step_key)
     for step_input in step.step_inputs:
         for source_handle in step_input.get_step_output_handle_dependencies():
-            if execution_plan.get_step_output(source_handle).output_def.optional:
+            if not execution_plan.get_step_output(source_handle).output_def_snap.is_required:
                 optional_source_handles.add(source_handle)
 
     # early terminate to avoid unnecessary instance/db calls

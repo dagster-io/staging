@@ -72,9 +72,6 @@ class ExecutionStep(
     def solid_handle(self):
         return self.handle.solid_handle
 
-    def get_solid(self, pipeline_def):
-        return pipeline_def.get_solid(self.solid_handle)
-
     @property
     def key(self):
         return self.handle.to_key()
