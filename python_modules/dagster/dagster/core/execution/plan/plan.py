@@ -44,7 +44,7 @@ from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
-from .compute import create_compute_step, create_unresolved_step
+from .compute import create_step_outputs
 from .inputs import (
     FromConfig,
     FromDefaultValue,
@@ -58,7 +58,7 @@ from .inputs import (
     UnresolvedStepInput,
 )
 from .outputs import StepOutput, StepOutputHandle, UnresolvedStepOutputHandle
-from .step import ExecutionStep, UnresolvedExecutionStep
+from .step import ExecutionStep, StepKind, UnresolvedExecutionStep
 
 if TYPE_CHECKING:
     from .active import ActiveExecution
@@ -194,6 +194,8 @@ class _PlanBuilder:
                 if step_input_source is None:
                     continue
 
+                from dagster.core.snap.dagster_types import build_dagster_type_snap
+
                 if isinstance(
                     step_input_source, (FromPendingDynamicStepOutput, FromUnresolvedStepOutput)
                 ):
@@ -201,7 +203,7 @@ class _PlanBuilder:
                     step_inputs.append(
                         UnresolvedStepInput(
                             name=input_name,
-                            dagster_type=input_def.dagster_type,
+                            dagster_type_snap=build_dagster_type_snap(input_def.dagster_type),
                             source=step_input_source,
                         )
                     )
@@ -210,7 +212,7 @@ class _PlanBuilder:
                     step_inputs.append(
                         StepInput(
                             name=input_name,
-                            dagster_type=input_def.dagster_type,
+                            dagster_type_snap=build_dagster_type_snap(input_def.dagster_type),
                             source=step_input_source,
                         )
                     )
@@ -218,21 +220,24 @@ class _PlanBuilder:
             ### 2a. COMPUTE FUNCTION
             # Create and add execution plan step for the solid compute function
             if isinstance(solid.definition, SolidDefinition):
+                step_outputs = create_step_outputs(solid, handle, self.environment_config)
+                tags = solid.definition.tags
+
                 if has_unresolved_input:
-                    step: ExecutionStepUnion = create_unresolved_step(
-                        solid=solid,
-                        solid_handle=handle,
-                        step_inputs=step_inputs,
-                        environment_config=self.environment_config,
+                    step: ExecutionStepUnion = UnresolvedExecutionStep(
+                        handle=UnresolvedStepHandle(solid_handle=handle),
                         pipeline_name=self.pipeline_name,
+                        step_inputs=step_inputs,
+                        step_outputs=step_outputs,
+                        tags=tags,
                     )
                 else:
-                    step = create_compute_step(
-                        solid=solid,
-                        solid_handle=handle,
-                        step_inputs=cast(List[StepInput], step_inputs),
-                        environment_config=self.environment_config,
+                    step = ExecutionStep(
+                        handle=StepHandle(solid_handle=handle),
                         pipeline_name=self.pipeline_name,
+                        step_inputs=cast(List[StepInput], step_inputs),
+                        step_outputs=step_outputs,
+                        tags=tags,
                     )
 
                 self.add_step(step)
@@ -284,6 +289,10 @@ class _PlanBuilder:
 def get_step_input_source(
     plan_builder, solid, input_name, input_def, dependency_structure, handle, parent_step_inputs
 ):
+
+    from dagster.core.snap.dagster_types import build_dagster_type_snap
+    from dagster.core.snap.solid import build_input_def_snap
+
     check.inst_param(plan_builder, "plan_builder", _PlanBuilder)
     check.inst_param(solid, "solid", Solid)
     check.str_param(input_name, "input_name")
@@ -294,11 +303,11 @@ def get_step_input_source(
 
     input_handle = solid.input_handle(input_name)
     solid_config = plan_builder.environment_config.solids.get(str(handle))
-    input_config = solid_config.inputs.get(input_name) if solid_config else None
 
     input_def = solid.definition.input_def_named(input_name)
+    input_def_snap = build_input_def_snap(input_def)
     if input_def.root_manager_key and not dependency_structure.has_deps(input_handle):
-        return FromRootInputManager(input_def=input_def, config_data=input_config)
+        return FromRootInputManager(input_solid_handle=handle, input_def_snap=input_def_snap)
 
     if dependency_structure.has_singular_dep(input_handle):
         solid_output_handle = dependency_structure.get_singular_dep(input_handle)
@@ -306,21 +315,21 @@ def get_step_input_source(
         if isinstance(step_output_handle, UnresolvedStepOutputHandle):
             return FromUnresolvedStepOutput(
                 unresolved_step_output_handle=step_output_handle,
-                input_def=input_def,
-                config_data=input_config,
+                input_solid_handle=handle,
+                input_def_snap=input_def_snap,
             )
 
         if solid_output_handle.output_def.is_dynamic:
             return FromPendingDynamicStepOutput(
                 step_output_handle=step_output_handle,
-                input_def=input_def,
-                config_data=input_config,
+                input_solid_handle=handle,
+                input_def_snap=input_def_snap,
             )
 
         return FromStepOutput(
             step_output_handle=step_output_handle,
-            input_def=input_def,
-            config_data=input_config,
+            input_solid_handle=handle,
+            input_def_snap=input_def_snap,
             fan_in=False,
         )
 
@@ -338,18 +347,19 @@ def get_step_input_source(
                 sources.append(
                     FromStepOutput(
                         step_output_handle=plan_builder.get_output_handle(handle_or_placeholder),
-                        input_def=input_def,
-                        config_data=input_config,
+                        input_solid_handle=handle,
+                        input_def_snap=input_def_snap,
                         fan_in=True,
                     )
                 )
 
-        return FromMultipleSources(sources)
-
+        return FromMultipleSources(
+            input_solid_handle=handle, input_name=input_name, sources=sources
+        )
     if solid_config and input_name in solid_config.inputs:
         return FromConfig(
-            solid_config.inputs[input_name],
-            dagster_type=input_def.dagster_type,
+            input_solid_handle=handle,
+            dagster_type_snap=build_dagster_type_snap(input_def.dagster_type),
             input_name=input_name,
         )
 
@@ -362,7 +372,11 @@ def get_step_input_source(
         # else fall through to Nothing case or raise
 
     if solid.definition.input_has_default(input_name):
-        return FromDefaultValue(solid.definition.default_value_for_input(input_name))
+        return FromDefaultValue(
+            input_solid_handle=handle,
+            input_name=input_name,
+            value=solid.definition.default_value_for_input(input_name),
+        )
 
     # At this point we have an input that is not hooked up to
     # the output of another solid or provided via environment config.
@@ -477,7 +491,7 @@ class ExecutionPlan(
         return step.step_output_named(step_output_handle.output_name)
 
     def get_manager_key(self, step_output_handle: StepOutputHandle) -> str:
-        return self.get_step_output(step_output_handle).output_def.io_manager_key
+        return self.get_step_output(step_output_handle).io_manager_key
 
     def has_step(self, handle: StepHandleUnion) -> bool:
         check.inst_param(handle, "handle", StepHandleTypes)
@@ -670,6 +684,73 @@ class ExecutionPlan(
         # Finally, we build and return the execution plan
         return plan_builder.build()
 
+    @staticmethod
+    def rebuild_step_input(step_input_snap, pipeline_snapshot):
+        from dagster.core.snap.execution_plan_snapshot import ExecutionStepInputSnap
+
+        check.inst_param(step_input_snap, "step_input_snap", ExecutionStepInputSnap)
+
+        return (
+            StepInput(
+                step_input_snap.name,
+                pipeline_snapshot.dagster_type_namespace_snapshot.get_dagster_type_snap(
+                    step_input_snap.dagster_type_key
+                ),
+                step_input_snap.source,
+            )
+            if isinstance(step_input_snap.source, StepInputSource)
+            else UnresolvedStepInput(
+                step_input_snap.name,
+                pipeline_snapshot.dagster_type_namespace_snapshot.get_dagster_type_snap(
+                    step_input_snap.dagster_type_key
+                ),
+                step_input_snap.source,
+            )
+        )
+
+    @staticmethod
+    def rebuild_from_snapshots(
+        pipeline, execution_plan_snapshot, pipeline_snapshot, environment_config,
+    ):
+        step_dict = {}
+
+        for step_snap in execution_plan_snapshot.steps:
+            input_snaps = step_snap.inputs
+            output_snaps = step_snap.outputs
+
+            step_inputs = [
+                ExecutionPlan.rebuild_step_input(step_input_snap, pipeline_snapshot)
+                for step_input_snap in input_snaps
+            ]
+
+            step_outputs = [step_output_snap.step_output for step_output_snap in output_snaps]
+
+            step = (
+                ExecutionStep(
+                    step_snap.step_handle,
+                    pipeline_snapshot.name,
+                    step_inputs,
+                    step_outputs,
+                    step_snap.tags,
+                )
+                if step_snap.kind == StepKind.COMPUTE
+                else UnresolvedExecutionStep(
+                    step_snap.step_handle,
+                    step_inputs,
+                    step_outputs,
+                    pipeline_snapshot.name,
+                    step_snap.tags,
+                )
+            )
+
+            step_dict[step.handle] = step
+
+        step_handles_to_execute = [
+            StepHandle.parse_from_key(key) for key in execution_plan_snapshot.step_keys_to_execute
+        ]
+
+        return ExecutionPlan(pipeline, step_dict, step_handles_to_execute, environment_config)
+
     @property
     def storage_is_persistent(self) -> bool:
         mode_def = self.pipeline_def.get_mode_definition(self.environment_config.mode)
@@ -762,7 +843,7 @@ def should_skip_step(execution_plan: ExecutionPlan, instance: DagsterInstance, r
     step = execution_plan.get_executable_step_by_key(step_key)
     for step_input in step.step_inputs:
         for source_handle in step_input.get_step_output_handle_dependencies():
-            if execution_plan.get_step_output(source_handle).output_def.optional:
+            if not execution_plan.get_step_output(source_handle).is_required:
                 optional_source_handles.add(source_handle)
 
     # early terminate to avoid unnecessary instance/db calls
