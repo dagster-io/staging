@@ -29,6 +29,7 @@ from dagster.core.execution.plan.external_step import (
     step_run_ref_to_step_context,
 )
 from dagster.core.instance import DagsterInstance
+from dagster.core.snap.execution_plan_snapshot import snapshot_from_execution_plan
 from dagster.core.storage.pipeline_run import PipelineRun
 from dagster.utils import safe_tempfile_path, send_interrupt
 from dagster.utils.merger import deep_merge_dicts
@@ -137,18 +138,30 @@ def define_sleepy_pipeline():
 
 def initialize_step_context(scratch_dir, instance):
     pipeline_run = PipelineRun(
-        pipeline_name="foo_pipeline",
+        pipeline_name="basic_pipeline",
         run_id=str(uuid.uuid4()),
         run_config=make_run_config(scratch_dir, "external"),
         mode="external",
     )
 
+    pipeline_def = define_basic_pipeline()
+
     plan = create_execution_plan(
         reconstructable(define_basic_pipeline), pipeline_run.run_config, mode="external"
     )
 
+    pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+    execution_plan_snapshot = snapshot_from_execution_plan(
+        plan, pipeline_def.get_pipeline_snapshot_id(),
+    )
+
     initialization_manager = PipelineExecutionContextManager(
-        plan, pipeline_run.run_config, pipeline_run, instance,
+        plan,
+        pipeline_run.run_config,
+        pipeline_run,
+        instance,
+        pipeline_snapshot=pipeline_snapshot,
+        execution_plan_snapshot=execution_plan_snapshot,
     )
     for _ in initialization_manager.prepare_context():
         pass

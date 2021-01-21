@@ -29,13 +29,19 @@ def is_executable_step(step):
 class ExecutionStep(
     namedtuple(
         "_ExecutionStep",
-        ("handle pipeline_name step_input_dict step_output_dict compute_fn solid logging_tags"),
+        ("handle pipeline_name step_input_dict step_output_dict solid_def_snapshot logging_tags"),
     )
 ):
     def __new__(
-        cls, handle, pipeline_name, step_inputs, step_outputs, compute_fn, solid, logging_tags=None,
+        cls,
+        handle,
+        pipeline_name,
+        step_inputs,
+        step_outputs,
+        solid_def_snapshot,
+        logging_tags=None,
     ):
-        from dagster.core.definitions import Solid
+        from dagster.core.snap.solid import SolidDefSnap
 
         return super(ExecutionStep, cls).__new__(
             cls,
@@ -49,16 +55,14 @@ class ExecutionStep(
                 so.name: so
                 for so in check.list_param(step_outputs, "step_outputs", of_type=StepOutput)
             },
-            # Compute_fn is the compute function for the step.
-            # Not to be confused with the compute_fn of the passed in solid.
-            compute_fn=check.callable_param(compute_fn, "compute_fn"),
-            solid=check.inst_param(solid, "solid", Solid),
+            solid_def_snapshot=check.inst_param(
+                solid_def_snapshot, "solid_def_snapshot", SolidDefSnap
+            ),
             logging_tags=merge_dicts(
                 {
                     "step_key": handle.to_key(),
                     "pipeline": pipeline_name,
                     "solid": handle.solid_handle.name,
-                    "solid_definition": solid.definition.name,
                 },
                 check.opt_dict_param(logging_tags, "logging_tags"),
             ),
@@ -69,20 +73,16 @@ class ExecutionStep(
         return self.handle.solid_handle
 
     @property
-    def tags(self):
-        return self.solid.tags
-
-    @property
-    def hook_defs(self):
-        return self.solid.hook_defs
-
-    @property
     def key(self):
         return self.handle.to_key()
 
     @property
     def solid_name(self):
         return self.solid_handle.name
+
+    @property
+    def tags(self):
+        return self.solid_def_snapshot.tags
 
     @property
     def kind(self):
@@ -127,14 +127,16 @@ class ExecutionStep(
 
 class UnresolvedExecutionStep(
     namedtuple(
-        "_UnresolvedExecutionStep", "handle solid step_input_dict step_output_dict pipeline_name"
+        "_UnresolvedExecutionStep",
+        "handle step_input_dict step_output_dict pipeline_name solid_def_snapshot",
     )
 ):
-    def __new__(cls, handle, solid, step_inputs, step_outputs, pipeline_name):
+    def __new__(cls, handle, step_inputs, step_outputs, pipeline_name, solid_def_snapshot):
+        from dagster.core.snap.solid import SolidDefSnap
+
         return super(UnresolvedExecutionStep, cls).__new__(
             cls,
             handle=check.inst_param(handle, "handle", UnresolvedStepHandle),
-            solid=solid,
             step_input_dict={
                 si.name: si
                 for si in check.list_param(
@@ -146,6 +148,9 @@ class UnresolvedExecutionStep(
                 for so in check.list_param(step_outputs, "step_outputs", of_type=StepOutput)
             },
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
+            solid_def_snapshot=check.inst_param(
+                solid_def_snapshot, "solid_def_snapshot", SolidDefSnap
+            ),
         )
 
     @property
@@ -162,7 +167,7 @@ class UnresolvedExecutionStep(
 
     @property
     def tags(self):
-        return self.solid.tags
+        return self.solid_def_snapshot.tags
 
     @property
     def step_outputs(self):
@@ -220,15 +225,12 @@ class UnresolvedExecutionStep(
         return list(keys)[0]
 
     def resolve(self, resolved_by_step_key, mappings):
-        from .compute import _execute_core_compute
-
         check.invariant(
             self.resolved_by_step_key == resolved_by_step_key,
             "resolving dynamic output step key did not match",
         )
 
         execution_steps = []
-        solid = self.solid
 
         for output_name, mapped_keys in mappings.items():
             if self.resolved_by_output_name != output_name:
@@ -244,10 +246,7 @@ class UnresolvedExecutionStep(
                         pipeline_name=self.pipeline_name,
                         step_inputs=resolved_inputs,
                         step_outputs=self.step_outputs,
-                        compute_fn=lambda step_context, inputs: _execute_core_compute(
-                            step_context.for_compute(), inputs, solid.definition.compute_fn
-                        ),
-                        solid=solid,
+                        solid_def_snapshot=self.solid_def_snapshot,
                     )
                 )
 

@@ -9,6 +9,7 @@ from dagster.core.definitions import (
     PipelineDefinition,
     SolidDefinition,
 )
+from dagster.core.definitions.output import DynamicOutputDefinition
 from dagster.serdes import whitelist_for_serdes
 
 from .dep_snapshot import (
@@ -61,6 +62,7 @@ def build_input_def_snap(input_def):
         name=input_def.name,
         dagster_type_key=input_def.dagster_type.key,
         description=input_def.description,
+        root_manager_key=input_def.root_manager_key,
     )
 
 
@@ -71,6 +73,9 @@ def build_output_def_snap(output_def):
         dagster_type_key=output_def.dagster_type.key,
         description=output_def.description,
         is_required=output_def.is_required,
+        is_dynamic=isinstance(output_def, DynamicOutputDefinition),
+        dagster_type_display_name=output_def.dagster_type.display_name,
+        io_manager_key=output_def.io_manager_key,
     )
 
 
@@ -116,6 +121,7 @@ def build_core_solid_def_snap(solid_def):
         config_field_snap=snap_from_field("config", solid_def.config_field)
         if solid_def.has_config_field
         else None,
+        version=solid_def.version,
     )
 
 
@@ -243,7 +249,7 @@ class SolidDefSnap(
     namedtuple(
         "_SolidDefMeta",
         "name input_def_snaps output_def_snaps description tags required_resource_keys "
-        "config_field_snap",
+        "config_field_snap version",
     )
 ):
     def __new__(
@@ -255,6 +261,7 @@ class SolidDefSnap(
         tags,
         required_resource_keys,
         config_field_snap,
+        version=None,
     ):
         return super(SolidDefSnap, cls).__new__(
             cls,
@@ -267,6 +274,7 @@ class SolidDefSnap(
                 required_resource_keys,
                 config_field_snap,
             ),
+            version=check.opt_str_param(version, "version"),
         )
 
     def get_input_snap(self, name):
@@ -280,25 +288,47 @@ ISolidDefSnap = (CompositeSolidDefSnap, SolidDefSnap)
 
 
 @whitelist_for_serdes
-class InputDefSnap(namedtuple("_InputDefSnap", "name dagster_type_key description")):
-    def __new__(cls, name, dagster_type_key, description):
+class InputDefSnap(
+    namedtuple("_InputDefSnap", "name dagster_type_key description root_manager_key")
+):
+    def __new__(cls, name, dagster_type_key, description, root_manager_key=None):
         return super(InputDefSnap, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             description=check.opt_str_param(description, "description"),
+            root_manager_key=check.opt_str_param(root_manager_key, "root_manager_key"),
         )
 
 
 @whitelist_for_serdes
-class OutputDefSnap(namedtuple("_OutputDefSnap", "name dagster_type_key description is_required")):
-    def __new__(cls, name, dagster_type_key, description, is_required):
+class OutputDefSnap(
+    namedtuple(
+        "_OutputDefSnap",
+        "name dagster_type_key description is_required is_dynamic dagster_type_display_name io_manager_key",
+    )
+):
+    def __new__(
+        cls,
+        name,
+        dagster_type_key,
+        description,
+        is_required,
+        is_dynamic=None,
+        dagster_type_display_name=None,
+        io_manager_key=None,
+    ):
         return super(OutputDefSnap, cls).__new__(
             cls,
             name=check.str_param(name, "name"),
             dagster_type_key=check.str_param(dagster_type_key, "dagster_type_key"),
             description=check.opt_str_param(description, "description"),
             is_required=check.bool_param(is_required, "is_required"),
+            is_dynamic=check.opt_bool_param(is_dynamic, "is_dynamic"),
+            dagster_type_display_name=check.opt_str_param(
+                dagster_type_display_name, "dagster_type_display_name"
+            ),
+            io_manager_key=check.opt_str_param(io_manager_key, "io_manager_key"),
         )
 
 

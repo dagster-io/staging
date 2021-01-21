@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, NamedTuple, Optional, Set
 
 from dagster import check
 from dagster.core.definitions.hook import HookDefinition
-from dagster.core.definitions.mode import ModeDefinition
 from dagster.core.definitions.pipeline import PipelineDefinition
 from dagster.core.definitions.pipeline_base import IPipeline
 from dagster.core.definitions.resource import ScopedResourcesBuilder
@@ -34,6 +33,8 @@ if TYPE_CHECKING:
     from dagster.core.storage.intermediate_storage import IntermediateStorage
     from dagster.core.instance import DagsterInstance
     from dagster.core.execution.plan.plan import ExecutionPlan
+    from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
+    from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 
 
 class SystemExecutionContextData(
@@ -41,8 +42,8 @@ class SystemExecutionContextData(
         "_SystemExecutionContextData",
         (
             "pipeline_run scoped_resources_builder environment_config pipeline "
-            "mode_def intermediate_storage_def instance intermediate_storage "
-            "raise_on_error retries execution_plan"
+            "intermediate_storage_def instance intermediate_storage "
+            "raise_on_error retries execution_plan pipeline_snapshot execution_plan_snapshot"
         ),
     )
 ):
@@ -57,18 +58,21 @@ class SystemExecutionContextData(
         scoped_resources_builder: ScopedResourcesBuilder,
         environment_config: EnvironmentConfig,
         pipeline: IPipeline,
-        mode_def: ModeDefinition,
         intermediate_storage_def: Optional["IntermediateStorageDefinition"],
         instance: "DagsterInstance",
         intermediate_storage: "IntermediateStorage",
         raise_on_error: bool,
         retries: Retries,
         execution_plan: "ExecutionPlan",
+        pipeline_snapshot: "PipelineSnapshot",
+        execution_plan_snapshot: "ExecutionPlanSnapshot",
     ):
         from dagster.core.definitions.intermediate_storage import IntermediateStorageDefinition
         from dagster.core.storage.intermediate_storage import IntermediateStorage
         from dagster.core.instance import DagsterInstance
         from dagster.core.execution.plan.plan import ExecutionPlan
+        from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
+        from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 
         return super(SystemExecutionContextData, cls).__new__(
             cls,
@@ -80,7 +84,6 @@ class SystemExecutionContextData(
                 environment_config, "environment_config", EnvironmentConfig
             ),
             pipeline=check.inst_param(pipeline, "pipeline", IPipeline),
-            mode_def=check.inst_param(mode_def, "mode_def", ModeDefinition),
             intermediate_storage_def=check.opt_inst_param(
                 intermediate_storage_def, "intermediate_storage_def", IntermediateStorageDefinition
             ),
@@ -91,6 +94,12 @@ class SystemExecutionContextData(
             raise_on_error=check.bool_param(raise_on_error, "raise_on_error"),
             retries=check.inst_param(retries, "retries", Retries),
             execution_plan=check.inst_param(execution_plan, "execution_plan", ExecutionPlan),
+            pipeline_snapshot=check.inst_param(
+                pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot
+            ),
+            execution_plan_snapshot=check.opt_inst_param(
+                execution_plan_snapshot, "execution_plan_snapshot", ExecutionPlanSnapshot
+            ),
         )
 
     @property
@@ -102,8 +111,8 @@ class SystemExecutionContextData(
         return self.environment_config.original_config_dict
 
     @property
-    def pipeline_def(self) -> PipelineDefinition:
-        return self.pipeline.get_definition()
+    def pipeline_name(self) -> str:
+        return self.pipeline_run.pipeline_name
 
 
 class SystemExecutionContext:
@@ -142,12 +151,12 @@ class SystemExecutionContext:
         return self._execution_context_data.pipeline
 
     @property
-    def pipeline_def(self) -> PipelineDefinition:
-        return self._execution_context_data.pipeline_def
+    def pipeline_name(self) -> str:
+        return self._execution_context_data.pipeline_name
 
     @property
-    def mode_def(self) -> ModeDefinition:
-        return self._execution_context_data.mode_def
+    def mode_name(self) -> str:
+        return self._execution_context_data.pipeline_run.mode
 
     @property
     def intermediate_storage_def(self) -> "IntermediateStorageDefinition":
@@ -206,15 +215,6 @@ class SystemExecutionContext:
 
     def for_type(self, dagster_type: DagsterType) -> "TypeCheckContext":
         return TypeCheckContext(self._execution_context_data, self.log, dagster_type)
-
-    def using_io_manager(self, step_output_handle: StepOutputHandle) -> bool:
-        # pylint: disable=comparison-with-callable
-        from dagster.core.storage.mem_io_manager import mem_io_manager
-
-        output_manager_key = self.execution_plan.get_step_output(
-            step_output_handle
-        ).output_def.io_manager_key
-        return self.mode_def.resource_defs[output_manager_key] != mem_io_manager
 
 
 class SystemPipelineExecutionContext(SystemExecutionContext):
@@ -290,6 +290,14 @@ class SystemStepExecutionContext(SystemExecutionContext):
     @property
     def solid_def(self) -> SolidDefinition:
         return self.solid.definition
+
+    @property
+    def pipeline_def(self) -> PipelineDefinition:
+        return self._execution_context_data.pipeline.get_definition()
+
+    @property
+    def mode_def(self) -> str:
+        return self.pipeline_def.get_mode_definition(self.mode_name)
 
     @property
     def solid(self) -> "Solid":
@@ -371,7 +379,10 @@ class SystemStepExecutionContext(SystemExecutionContext):
         step_output = self.execution_plan.get_step_output(step_output_handle)
         # backcompat: if intermediate storage is specified, adapt it to object manager
         if self.using_default_intermediate_storage():
-            output_manager = getattr(self.resources, step_output.output_def.io_manager_key)
+            output_def = self.pipeline_def.get_solid(step_output.solid_handle).output_def_named(
+                step_output.name
+            )
+            output_manager = getattr(self.resources, output_def.io_manager_key)
         else:
             from dagster.core.storage.intermediate_storage import IntermediateStorageAdapter
 
@@ -449,6 +460,10 @@ class HookContext(SystemExecutionContext):
     @property
     def step(self) -> ExecutionStep:
         return self._step
+
+    @property
+    def pipeline_def(self) -> PipelineDefinition:
+        return self._execution_context_data.pipeline.get_definition()
 
     @property
     def solid(self) -> "Solid":
@@ -662,7 +677,12 @@ def get_output_context(
     else:
         output_config = None
 
-    io_manager_key = execution_plan.get_step_output(step_output_handle).output_def.io_manager_key
+    pipeline_def = execution_plan.pipeline.get_definition()
+
+    step_output = execution_plan.get_step_output(step_output_handle)
+    output_def = pipeline_def.get_solid(step_output.solid_handle).output_def_named(step_output.name)
+
+    io_manager_key = output_def.io_manager_key
     resource_config = environment_config.resources[io_manager_key].get("config", {})
 
     resources = build_resources_for_manager(io_manager_key, step_context) if step_context else None
@@ -670,13 +690,13 @@ def get_output_context(
     return OutputContext(
         step_key=step_output_handle.step_key,
         name=step_output_handle.output_name,
-        pipeline_name=execution_plan.pipeline.get_definition().name,
+        pipeline_name=pipeline_def.name,
         run_id=run_id,
-        metadata=execution_plan.get_step_output(step_output_handle).output_def.metadata,
+        metadata=output_def.metadata,
         mapping_key=step_output_handle.mapping_key,
         config=output_config,
-        solid_def=step.solid.definition,
-        dagster_type=execution_plan.get_step_output(step_output_handle).output_def.dagster_type,
+        solid_def=pipeline_def.get_solid(step.solid_handle).definition,
+        dagster_type=output_def.dagster_type,
         log_manager=log_manager,
         version=_step_output_version(execution_plan, step_output_handle)
         if MEMOIZED_RUN_TAG in execution_plan.pipeline.get_definition().tags
