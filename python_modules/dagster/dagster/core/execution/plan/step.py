@@ -104,7 +104,7 @@ class ExecutionStep(
 
     @property
     def hook_defs(self) -> FrozenSet["HookDefinition"]:
-        return self.solid.hook_defs
+        return frozenset(self.solid.hook_defs if self.solid.hook_defs else {})
 
     @property
     def key(self) -> str:
