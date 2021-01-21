@@ -303,7 +303,7 @@ def get_required_resource_keys_for_step(execution_step, execution_plan, intermed
 
     # add input type, input loader, and input asset store resource keys
     for step_input in execution_step.step_inputs:
-        resource_keys = resource_keys.union(step_input.dagster_type.required_resource_keys)
+        resource_keys = resource_keys.union(step_input.dagster_type_snap.required_resource_keys)
 
         resource_keys = resource_keys.union(step_input.source.required_resource_keys())
 
