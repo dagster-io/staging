@@ -15,7 +15,8 @@ from dagster.core.execution.resolve_versions import resolve_memoized_execution_p
 from dagster.core.execution.retries import Retries
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_items_from_selection, parse_step_selection
-from dagster.core.snap.execution_plan_snapshot import snapshot_from_execution_plan
+from dagster.core.snap.execution_plan_snapshot import ExecutionPlanSnapshot
+from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 from dagster.core.storage.mem_io_manager import InMemoryIOManager
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -97,20 +98,30 @@ def execute_run_iterator(
                 pipeline_run.solids_to_execute
             )
 
-    # In the future, run execution will be possible in a mode that just uses
-    # the execution plan snapshot that's stored on the run
-    execution_plan = create_execution_plan(
-        pipeline,
-        run_config=pipeline_run.run_config,
-        mode=pipeline_run.mode,
-        step_keys_to_execute=pipeline_run.step_keys_to_execute,
-    )
-
     pipeline_def = pipeline.get_definition()
     pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
-    execution_plan_snapshot = snapshot_from_execution_plan(
-        execution_plan, pipeline_def.get_pipeline_snapshot_id(),
-    )
+
+    if pipeline_run.execution_plan_snapshot_id:
+        execution_plan_snapshot = instance.get_execution_plan_snapshot(
+            pipeline_run.execution_plan_snapshot_id
+        )
+
+        # In the future, run execution will be possible in a mode that just uses
+        # the execution plan snapshot that's stored on the run
+        execution_plan = rebuild_execution_plan_from_snapshots(
+            pipeline,
+            run_config=pipeline_run.run_config,
+            mode=pipeline_run.mode,
+            pipeline_snapshot=pipeline_snapshot,
+            execution_plan_snapshot=execution_plan_snapshot,
+        )
+    else:
+        execution_plan = create_execution_plan(
+            pipeline,
+            run_config=pipeline_run.run_config,
+            mode=pipeline_run.mode,
+            step_keys_to_execute=pipeline_run.step_keys_to_execute,
+        )
 
     return iter(
         _ExecuteRunWithPlanIterable(
@@ -123,7 +134,7 @@ def execute_run_iterator(
                 run_config=pipeline_run.run_config,
                 raise_on_error=False,
                 pipeline_snapshot=pipeline_snapshot,
-                execution_plan_snapshot=execution_plan_snapshot,
+                execution_plan_snapshot=None,
             ),
         )
     )
@@ -194,22 +205,32 @@ def execute_run(
                 pipeline_run.solids_to_execute
             )
 
-    # In the future, run execution will be possible in a mode that just uses
-    # the execution plan snapshot that's stored on the run
-    execution_plan = create_execution_plan(
-        pipeline,
-        run_config=pipeline_run.run_config,
-        mode=pipeline_run.mode,
-        step_keys_to_execute=pipeline_run.step_keys_to_execute,
+    pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
+    execution_plan_snapshot = instance.get_execution_plan_snapshot(
+        pipeline_run.execution_plan_snapshot_id
     )
+
+    if pipeline_run.execution_plan_snapshot_id:
+        execution_plan_snapshot = instance.get_execution_plan_snapshot(
+            pipeline_run.execution_plan_snapshot_id
+        )
+        execution_plan = rebuild_execution_plan_from_snapshots(
+            pipeline,
+            pipeline_run.run_config,
+            pipeline_run.mode,
+            pipeline_snapshot,
+            execution_plan_snapshot,
+        )
+    else:
+        execution_plan = create_execution_plan(
+            pipeline,
+            run_config=pipeline_run.run_config,
+            mode=pipeline_run.mode,
+            step_keys_to_execute=pipeline_run.step_keys_to_execute,
+        )
 
     if is_memoized_run(pipeline_run.tags):
         execution_plan = resolve_memoized_execution_plan(execution_plan)
-
-    pipeline_snapshot = pipeline_def.get_pipeline_snapshot()
-    execution_plan_snapshot = snapshot_from_execution_plan(
-        execution_plan, pipeline_def.get_pipeline_snapshot_id(),
-    )
 
     _execute_run_iterable = _ExecuteRunWithPlanIterable(
         execution_plan=execution_plan,
@@ -221,7 +242,7 @@ def execute_run(
             run_config=pipeline_run.run_config,
             raise_on_error=raise_on_error,
             pipeline_snapshot=pipeline_snapshot,
-            execution_plan_snapshot=execution_plan_snapshot,
+            execution_plan_snapshot=None,
         ),
     )
     event_list = list(_execute_run_iterable)
@@ -692,6 +713,21 @@ def _check_pipeline(pipeline: Union[PipelineDefinition, IPipeline]) -> IPipeline
 
     check.inst_param(pipeline, "pipeline", IPipeline)
     return pipeline
+
+
+def rebuild_execution_plan_from_snapshots(
+    pipeline: IPipeline,
+    run_config: Optional[dict],
+    mode: Optional[str],
+    pipeline_snapshot: PipelineSnapshot,
+    execution_plan_snapshot: ExecutionPlanSnapshot,
+) -> ExecutionPlan:
+    pipeline_def = pipeline.get_definition()
+    environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode)
+
+    return ExecutionPlan.rebuild_from_snapshots(
+        pipeline, execution_plan_snapshot, pipeline_snapshot, environment_config,
+    )
 
 
 def create_execution_plan(
