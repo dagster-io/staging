@@ -34,6 +34,7 @@ EXPECTED_KEYS = set(
         "num_pipelines_in_repo",
         "repo_hash",
         "python_version",
+        "dagster_version",
         "metadata",
         "version",
     ]
