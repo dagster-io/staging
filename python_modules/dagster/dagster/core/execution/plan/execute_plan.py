@@ -12,7 +12,12 @@ from dagster.core.errors import (
 from dagster.core.events import DagsterEvent
 from dagster.core.execution.context.system import SystemExecutionContext, SystemStepExecutionContext
 from dagster.core.execution.plan.execute_step import core_dagster_event_sequence_for_step
-from dagster.core.execution.plan.objects import StepFailureData, StepRetryData, UserFailureData
+from dagster.core.execution.plan.objects import (
+    StepFailureData,
+    StepRetryData,
+    UserFailureData,
+    step_failure_event_from_exc_info,
+)
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.retries import Retries
 from dagster.utils.error import SerializableErrorInfo, serializable_error_info_from_exc_info
@@ -217,7 +222,7 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
     # case (2) in top comment
     except Failure as failure:
-        yield _step_failure_event_from_exc_info(
+        yield step_failure_event_from_exc_info(
             step_context,
             sys.exc_info(),
             UserFailureData(
@@ -231,8 +236,8 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
     # case (3) in top comment
     except DagsterUserCodeExecutionError as dagster_user_error:
-        yield _step_failure_event_from_exc_info(
-            step_context, dagster_user_error.original_exc_info, background=str(dagster_user_error),
+        yield step_failure_event_from_exc_info(
+            step_context, sys.exc_info(), user_code_error=dagster_user_error.original_exc_info,
         )
 
         if step_context.raise_on_error:
@@ -240,30 +245,17 @@ def _dagster_event_sequence_for_step(step_context, retries):
 
     # case (4) in top comment
     except (KeyboardInterrupt, DagsterExecutionInterruptedError) as interrupt_error:
-        yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
+        yield step_failure_event_from_exc_info(step_context, sys.exc_info())
         raise interrupt_error
 
     # case (5) in top comment
     except DagsterError as dagster_error:
-        yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
+        yield step_failure_event_from_exc_info(step_context, sys.exc_info())
 
         if step_context.raise_on_error:
             raise dagster_error
 
     # case (6) in top comment
     except Exception as unexpected_exception:  # pylint: disable=broad-except
-        yield _step_failure_event_from_exc_info(step_context, sys.exc_info())
+        yield step_failure_event_from_exc_info(step_context, sys.exc_info())
         raise unexpected_exception
-
-
-def _step_failure_event_from_exc_info(
-    step_context, exc_info, user_failure_data=None, background=None
-):
-    return DagsterEvent.step_failure_event(
-        step_context=step_context,
-        step_failure_data=StepFailureData(
-            error=serializable_error_info_from_exc_info(exc_info),
-            user_failure_data=user_failure_data,
-            background=background,
-        ),
-    )

@@ -46,13 +46,8 @@ def construct_log_string(synth_props, logging_tags, message_props):
     if hasattr(event_specific_data, "error") and isinstance(
         event_specific_data.error, SerializableErrorInfo
     ):
-        if hasattr(event_specific_data, "background") and event_specific_data.background:
-            error = (
-                "\n\n"
-                + event_specific_data.background
-                + ":\n\n"
-                + event_specific_data.error.to_string()
-            )
+        if hasattr(event_specific_data, "error_display_string"):
+            error = "\n\n" + event_specific_data.error_display_string
         else:
             error = "\n\n" + event_specific_data.error.to_string()
 
