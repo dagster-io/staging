@@ -23,6 +23,7 @@ from functools import wraps
 from logging.handlers import RotatingFileHandler
 
 import click
+import dagster
 import requests
 import yaml
 from dagster import check
@@ -104,11 +105,15 @@ def get_python_version():
     return "{}.{}.{}".format(version.major, version.minor, version.micro)
 
 
+def get_dagster_version():
+    return dagster.__version__
+
+
 class TelemetryEntry(
     namedtuple(
         "TelemetryEntry",
         "action client_time elapsed_time event_id instance_id pipeline_name_hash "
-        "num_pipelines_in_repo repo_hash python_version metadata version",
+        "num_pipelines_in_repo repo_hash python_version dagster_version metadata version",
     )
 ):
     """
@@ -124,6 +129,7 @@ class TelemetryEntry(
     instance_id - Unique id for dagster instance
     pipeline_name_hash - Hash of pipeline name, if any
     python_version - Python version
+    dagster_version - Dagster version
     repo_hash - Hash of repo name, if any
     num_pipelines_in_repo - Number of pipelines in repo, if any
     metadata - More information i.e. pipeline success (boolean)
@@ -172,6 +178,7 @@ class TelemetryEntry(
             num_pipelines_in_repo=num_pipelines_in_repo,
             repo_hash=repo_hash,
             python_version=get_python_version(),
+            dagster_version=get_dagster_version(),
             metadata=metadata,
             version=TELEMETRY_VERSION,
         )
