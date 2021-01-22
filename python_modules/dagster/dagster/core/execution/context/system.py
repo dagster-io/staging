@@ -97,7 +97,7 @@ class SystemExecutionContextData(
             pipeline_snapshot=check.inst_param(
                 pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot
             ),
-            execution_plan_snapshot=check.inst_param(
+            execution_plan_snapshot=check.opt_inst_param(
                 execution_plan_snapshot, "execution_plan_snapshot", ExecutionPlanSnapshot
             ),
         )
