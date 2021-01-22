@@ -3,7 +3,7 @@ from functools import update_wrapper
 from dagster import check
 from dagster.builtins import Int
 from dagster.config.field import Field
-from dagster.core.definitions.configurable import ConfigurableDefinition
+from dagster.core.definitions.configurable import NamedConfigurableDefinition
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.errors import DagsterUnmetExecutorRequirementsError
 from dagster.core.execution.retries import Retries, get_retries_config
@@ -11,10 +11,10 @@ from dagster.core.execution.retries import Retries, get_retries_config
 from .definition_config_schema import convert_user_facing_definition_config_schema
 
 
-class ExecutorDefinition(ConfigurableDefinition):
+class ExecutorDefinition(NamedConfigurableDefinition):
     """
     Args:
-        name (Optional[str]): The name of the executor.
+        name (str): The name of the executor.
         config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data
             available in `init_context.executor_config`.
         executor_creation_fn(Optional[Callable]): Should accept an :py:class:`InitExecutorContext`
@@ -51,7 +51,7 @@ class ExecutorDefinition(ConfigurableDefinition):
 
     def copy_for_configured(self, name, description, config_schema, _):
         return ExecutorDefinition(
-            name=name or self.name,
+            name=name,
             config_schema=config_schema,
             executor_creation_fn=self.executor_creation_fn,
             description=description or self.description,
