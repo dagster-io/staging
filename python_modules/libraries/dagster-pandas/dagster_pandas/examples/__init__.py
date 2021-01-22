@@ -18,7 +18,7 @@ def nb_test_path(name):
     return file_relative_path(__file__, "notebooks/{name}.ipynb".format(name=name))
 
 
-hello_world = dagstermill.define_dagstermill_solid(
+hello_world = dagstermill.dagstermill_solid(
     name="papermill_pandas_hello_world",
     notebook_path=nb_test_path("papermill_pandas_hello_world"),
     input_defs=[InputDefinition(name="df", dagster_type=DataFrame)],

@@ -1,3 +1,5 @@
+"""Deprecated serialization machinery to marshal input and output value across the Jupyter process
+boundary. This machinery has been replaced by dagstermill.io"""
 from dagster import check, seven
 from dagster.core.types.dagster_type import DagsterType, DagsterTypeKind
 
