@@ -168,8 +168,8 @@ class PartitionSetDefinition(
 
         check.failed("Partition name {} not found!".format(name))
 
-    def get_partition_names(self):
-        return [part.name for part in self.get_partitions()]
+    def get_partition_names(self, context):
+        return [part.name for part in self.get_partitions(context.scheduled_execution_time)]
 
     def create_schedule_definition(
         self,
@@ -222,7 +222,7 @@ class PartitionSetDefinition(
                 )
                 return
 
-            if selected_partition.name not in self.get_partition_names():
+            if selected_partition.name not in self.get_partition_names(context):
                 yield SkipReason(
                     f"Partition selector returned a partition {selected_partition.name} not in the partition set."
                 )
