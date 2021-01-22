@@ -3,7 +3,7 @@ from functools import update_wrapper
 from dagster import check
 from dagster.builtins import Int
 from dagster.config.field import Field
-from dagster.core.definitions.configurable import ConfigurableDefinition
+from dagster.core.definitions.configurable import AnonymousConfigurableDefinition
 from dagster.core.definitions.reconstructable import ReconstructablePipeline
 from dagster.core.errors import DagsterUnmetExecutorRequirementsError
 from dagster.core.execution.retries import Retries, get_retries_config
@@ -11,7 +11,7 @@ from dagster.core.execution.retries import Retries, get_retries_config
 from .definition_config_schema import convert_user_facing_definition_config_schema
 
 
-class ExecutorDefinition(ConfigurableDefinition):
+class ExecutorDefinition(AnonymousConfigurableDefinition):
     """
     Args:
         name (Optional[str]): The name of the executor.
@@ -49,9 +49,9 @@ class ExecutorDefinition(ConfigurableDefinition):
     def executor_creation_fn(self):
         return self._executor_creation_fn
 
-    def copy_for_configured(self, name, description, config_schema, _):
+    def copy_for_configured(self, description, config_schema, _):
         return ExecutorDefinition(
-            name=name or self.name,
+            name=self.name,
             config_schema=config_schema,
             executor_creation_fn=self.executor_creation_fn,
             description=description or self.description,
