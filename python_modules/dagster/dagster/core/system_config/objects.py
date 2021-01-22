@@ -166,6 +166,20 @@ class EnvironmentConfig(
             mode=mode,
         )
 
+    def intermediate_storage_def_snap_for_mode_def_snap(self, mode_def_snap):
+        for intermediate_storage_def_snap in mode_def_snap.intermediate_storage_def_snaps:
+            if (
+                intermediate_storage_def_snap.name
+                == self.intermediate_storage.intermediate_storage_name
+            ):
+                return intermediate_storage_def_snap
+
+        check.failed(
+            "Could not find storage mode {}. Should have be caught by config system".format(
+                self.intermediate_storage.intermediate_storage_name
+            )
+        )
+
     def intermediate_storage_def_for_mode(self, mode_definition):
         for intermediate_storage_def in mode_definition.intermediate_storage_defs:
             if intermediate_storage_def.name == self.intermediate_storage.intermediate_storage_name:

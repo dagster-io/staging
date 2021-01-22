@@ -16,6 +16,7 @@ from dagster.core.execution.retries import Retries
 from dagster.core.instance import DagsterInstance, is_memoized_run
 from dagster.core.selector import parse_items_from_selection, parse_step_selection
 from dagster.core.snap.execution_plan_snapshot import snapshot_from_execution_plan
+from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 from dagster.core.storage.mem_io_manager import InMemoryIOManager
 from dagster.core.storage.pipeline_run import PipelineRun, PipelineRunStatus
 from dagster.core.system_config.objects import EnvironmentConfig
@@ -699,6 +700,7 @@ def create_execution_plan(
     run_config: Optional[dict] = None,
     mode: Optional[str] = None,
     step_keys_to_execute: Optional[List[str]] = None,
+    pipeline_snapshot=None,
 ) -> ExecutionPlan:
     pipeline = _check_pipeline(pipeline)
     pipeline_def = pipeline.get_definition()
@@ -710,8 +712,14 @@ def create_execution_plan(
 
     environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode=mode)
 
+    pipeline_snapshot = (
+        pipeline_snapshot
+        if pipeline_snapshot
+        else PipelineSnapshot.from_pipeline_def(pipeline.get_definition())
+    )
+
     return ExecutionPlan.build(
-        pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute
+        pipeline, pipeline_snapshot, environment_config, step_keys_to_execute=step_keys_to_execute
     )
 
 

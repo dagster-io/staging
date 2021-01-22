@@ -1080,6 +1080,18 @@ snapshots['test_all_snapshot_ids 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -1102,6 +1114,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -1200,7 +1213,7 @@ snapshots['test_all_snapshot_ids 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 10'] = '6a66ae574c5cd0139e279e0067cbe424122ca21c'
+snapshots['test_all_snapshot_ids 10'] = '3b9ae9176f283e8362bea1300966beb2dd12e533'
 
 snapshots['test_all_snapshot_ids 11'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2353,6 +2366,18 @@ snapshots['test_all_snapshot_ids 11'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -2375,6 +2400,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -2481,7 +2507,7 @@ snapshots['test_all_snapshot_ids 11'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 12'] = 'e1373044f5dcc5b66078973c2f5fb1b2b0f012a3'
+snapshots['test_all_snapshot_ids 12'] = 'fac074d978dcf3027403f29bee28316282e7429c'
 
 snapshots['test_all_snapshot_ids 13'] = '''{
   "__class__": "PipelineSnapshot",
@@ -3644,6 +3670,18 @@ snapshots['test_all_snapshot_ids 13'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -3666,6 +3704,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -3800,7 +3839,7 @@ snapshots['test_all_snapshot_ids 13'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 14'] = 'f0385fc3803160fd3962a6b0c1990084f93a5ab3'
+snapshots['test_all_snapshot_ids 14'] = '66838dacdccd737958c84892e0186a8e4a0df197'
 
 snapshots['test_all_snapshot_ids 15'] = '''{
   "__class__": "PipelineSnapshot",
@@ -5001,6 +5040,18 @@ snapshots['test_all_snapshot_ids 15'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -5023,6 +5074,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         },
         {
@@ -5037,6 +5089,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
             "type_key": "Shape.dc1eacbaac67d3ef292c2c343ce6fd5c3560d40a"
           },
           "description": null,
+          "is_system_default": false,
           "name": "retry_count"
         }
       ],
@@ -5137,7 +5190,7 @@ snapshots['test_all_snapshot_ids 15'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 16'] = '536a080e1f05ef93c8a24d6b61db9dd5f4483a3b'
+snapshots['test_all_snapshot_ids 16'] = '592a6f7f4b656a170145db68cb76df4d69beb8de'
 
 snapshots['test_all_snapshot_ids 17'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6240,6 +6293,18 @@ snapshots['test_all_snapshot_ids 17'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -6262,6 +6327,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -6338,7 +6404,7 @@ snapshots['test_all_snapshot_ids 17'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 18'] = '6ea64ab69d02b02ee6ab5b320b5fe586e4919b23'
+snapshots['test_all_snapshot_ids 18'] = '6e948f64642f3b2c8a443d784b0b44e3fb8e8b40'
 
 snapshots['test_all_snapshot_ids 19'] = '''{
   "__class__": "PipelineSnapshot",
@@ -7358,6 +7424,18 @@ snapshots['test_all_snapshot_ids 19'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -7380,6 +7458,7 @@ snapshots['test_all_snapshot_ids 19'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -7420,9 +7499,9 @@ snapshots['test_all_snapshot_ids 19'] = '''{
   }
 }'''
 
-snapshots['test_all_snapshot_ids 2'] = '03e8dcc9337c389e5ad70ba4bae5885b6f3d8053'
+snapshots['test_all_snapshot_ids 2'] = '4d04fc95886ab775348496d874d8c203d37c666e'
 
-snapshots['test_all_snapshot_ids 20'] = '1fd26d38e6eb6e392b7fcd3ee833fcf1b1a80ce6'
+snapshots['test_all_snapshot_ids 20'] = 'b8b28fb642d7e9ee2440042d695ab622e3286753'
 
 snapshots['test_all_snapshot_ids 21'] = '''{
   "__class__": "PipelineSnapshot",
@@ -8474,6 +8553,18 @@ snapshots['test_all_snapshot_ids 21'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -8496,6 +8587,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -8542,7 +8634,7 @@ snapshots['test_all_snapshot_ids 21'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 22'] = '766e704f9a39da959a712fcab30c1de2c874ea29'
+snapshots['test_all_snapshot_ids 22'] = '1ec82d2db8a69bb3d9fc6e8fa38848f882ea1626'
 
 snapshots['test_all_snapshot_ids 23'] = '''{
   "__class__": "PipelineSnapshot",
@@ -9562,6 +9654,18 @@ snapshots['test_all_snapshot_ids 23'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -9584,6 +9688,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -9622,7 +9727,7 @@ snapshots['test_all_snapshot_ids 23'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 24'] = '891fbf952a17b4700ad97ee71d8b2d235c56ed4e'
+snapshots['test_all_snapshot_ids 24'] = '078bcca6b42ca869999a48f71d11057d322e6e60'
 
 snapshots['test_all_snapshot_ids 25'] = '''{
   "__class__": "PipelineSnapshot",
@@ -10731,6 +10836,18 @@ snapshots['test_all_snapshot_ids 25'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -10753,6 +10870,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -10821,7 +10939,7 @@ snapshots['test_all_snapshot_ids 25'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 26'] = 'fae4c63fd0ae53a6c92377e434058d8b4551216a'
+snapshots['test_all_snapshot_ids 26'] = 'c50028a0dc283ffbd151059cf11a0ce55cc93312'
 
 snapshots['test_all_snapshot_ids 27'] = '''{
   "__class__": "PipelineSnapshot",
@@ -11933,6 +12051,18 @@ snapshots['test_all_snapshot_ids 27'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -11955,6 +12085,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -11990,7 +12121,7 @@ snapshots['test_all_snapshot_ids 27'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 28'] = '614cf3337bc919fed8b3d35f7aea12c87b640ce3'
+snapshots['test_all_snapshot_ids 28'] = '01a7ab4677037a1917ddae0ee8731be658b5ab24'
 
 snapshots['test_all_snapshot_ids 29'] = '''{
   "__class__": "PipelineSnapshot",
@@ -13038,6 +13169,18 @@ snapshots['test_all_snapshot_ids 29'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -13060,6 +13203,7 @@ snapshots['test_all_snapshot_ids 29'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -14404,6 +14548,18 @@ snapshots['test_all_snapshot_ids 3'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -14426,6 +14582,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -14749,7 +14906,7 @@ snapshots['test_all_snapshot_ids 3'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 30'] = 'edc2b28c5fa9426ae23af7fd34c8b5480979e988'
+snapshots['test_all_snapshot_ids 30'] = '8bd155a2acef81260433622d08bf1ed7ee556e5c'
 
 snapshots['test_all_snapshot_ids 31'] = '''{
   "__class__": "PipelineSnapshot",
@@ -15983,6 +16140,18 @@ snapshots['test_all_snapshot_ids 31'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": "Mode with foo logger",
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -16005,6 +16174,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -16013,6 +16183,18 @@ snapshots['test_all_snapshot_ids 31'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": "Mode with bar logger",
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -16035,6 +16217,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -16043,6 +16226,18 @@ snapshots['test_all_snapshot_ids 31'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": "Mode with multiple loggers",
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -16079,6 +16274,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -16117,7 +16313,7 @@ snapshots['test_all_snapshot_ids 31'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 32'] = 'ab683c0f16c152186bacc66bbaa3caf9c932dd70'
+snapshots['test_all_snapshot_ids 32'] = '90c6beb22b8aa7f7c356adeaf7083f8d3f79a730'
 
 snapshots['test_all_snapshot_ids 33'] = '''{
   "__class__": "PipelineSnapshot",
@@ -17329,6 +17525,18 @@ snapshots['test_all_snapshot_ids 33'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": "Mode that adds things",
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -17351,6 +17559,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         },
         {
@@ -17365,6 +17574,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
             "type_key": "Int"
           },
           "description": null,
+          "is_system_default": false,
           "name": "op"
         }
       ],
@@ -17373,6 +17583,18 @@ snapshots['test_all_snapshot_ids 33'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": "Mode that multiplies things",
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -17395,6 +17617,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         },
         {
@@ -17409,6 +17632,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
             "type_key": "Int"
           },
           "description": null,
+          "is_system_default": false,
           "name": "op"
         }
       ],
@@ -17417,6 +17641,18 @@ snapshots['test_all_snapshot_ids 33'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": "Mode that adds two numbers to thing",
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -17439,6 +17675,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         },
         {
@@ -17453,6 +17690,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
             "type_key": "Shape.fc3adbbf54d7ee8b03e7f0116e13d34e253c5bcf"
           },
           "description": null,
+          "is_system_default": false,
           "name": "op"
         }
       ],
@@ -17493,7 +17731,7 @@ snapshots['test_all_snapshot_ids 33'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 34'] = '8934b685cd5fc62b0b9e4f0e4fa63c5472f1ab74'
+snapshots['test_all_snapshot_ids 34'] = '1abcaf9e2de5e38403fc2e35ad613078b7c51aa0'
 
 snapshots['test_all_snapshot_ids 35'] = '''{
   "__class__": "PipelineSnapshot",
@@ -18513,6 +18751,18 @@ snapshots['test_all_snapshot_ids 35'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -18535,6 +18785,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -18573,7 +18824,7 @@ snapshots['test_all_snapshot_ids 35'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 36'] = 'ebbb672e0aca253df8c20787665ce3946821df03'
+snapshots['test_all_snapshot_ids 36'] = '1979af94683eb76cf785b2c43615ea7fcba57a37'
 
 snapshots['test_all_snapshot_ids 37'] = '''{
   "__class__": "PipelineSnapshot",
@@ -19621,6 +19872,18 @@ snapshots['test_all_snapshot_ids 37'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -19643,6 +19906,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -19711,7 +19975,7 @@ snapshots['test_all_snapshot_ids 37'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 38'] = '34a85f606d5e1435d14eef13364693a756a7c048'
+snapshots['test_all_snapshot_ids 38'] = 'df9176ec7588fec57f0f65ddb45e45a2da23f471'
 
 snapshots['test_all_snapshot_ids 39'] = '''{
   "__class__": "PipelineSnapshot",
@@ -20731,6 +20995,18 @@ snapshots['test_all_snapshot_ids 39'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -20753,6 +21029,7 @@ snapshots['test_all_snapshot_ids 39'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -20791,9 +21068,9 @@ snapshots['test_all_snapshot_ids 39'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 4'] = '9dcfc517d40b4a90b6ad86fb97f964a0d5242f78'
+snapshots['test_all_snapshot_ids 4'] = 'c6b5f456f56808b28859fa0c6d8350dd45649e8c'
 
-snapshots['test_all_snapshot_ids 40'] = '4cd22925ff3e49486692bed6989c778859fbeb0d'
+snapshots['test_all_snapshot_ids 40'] = '2c8278593e313d65e34964dd6586d52bd162b844'
 
 snapshots['test_all_snapshot_ids 41'] = '''{
   "__class__": "PipelineSnapshot",
@@ -21813,6 +22090,18 @@ snapshots['test_all_snapshot_ids 41'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -21835,6 +22124,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -21873,7 +22163,7 @@ snapshots['test_all_snapshot_ids 41'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 42'] = '1f46d2b9d34fb73263aee58b40500bdab503ed44'
+snapshots['test_all_snapshot_ids 42'] = '833ed8763487a6147c78f0aaeabcc73999e1c19c'
 
 snapshots['test_all_snapshot_ids 43'] = '''{
   "__class__": "PipelineSnapshot",
@@ -22893,6 +23183,18 @@ snapshots['test_all_snapshot_ids 43'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -22915,6 +23217,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -22953,7 +23256,7 @@ snapshots['test_all_snapshot_ids 43'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 44'] = '0572ec75d51e7c5ea5510f72d1f7fbd5362eec10'
+snapshots['test_all_snapshot_ids 44'] = '33a957db1f1cfbde9e0e4b18d86e3a4c6956d2f9'
 
 snapshots['test_all_snapshot_ids 45'] = '''{
   "__class__": "PipelineSnapshot",
@@ -24011,6 +24314,18 @@ snapshots['test_all_snapshot_ids 45'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -24033,6 +24348,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -24079,7 +24395,7 @@ snapshots['test_all_snapshot_ids 45'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 46'] = 'b751c57f9a2099a03fd9423fd6410da4ed02e058'
+snapshots['test_all_snapshot_ids 46'] = '2027536bda2bb4dac16fcc13e42fa8364b6d1f69'
 
 snapshots['test_all_snapshot_ids 47'] = '''{
   "__class__": "PipelineSnapshot",
@@ -25029,6 +25345,18 @@ snapshots['test_all_snapshot_ids 47'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -25051,6 +25379,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -25100,7 +25429,7 @@ snapshots['test_all_snapshot_ids 47'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 48'] = 'ed82b182d0c1bd294146200098317207e4f17a21'
+snapshots['test_all_snapshot_ids 48'] = '695bc3a5f78da9daff00fe5e71dd892b04812ad4'
 
 snapshots['test_all_snapshot_ids 49'] = '''{
   "__class__": "PipelineSnapshot",
@@ -26155,6 +26484,18 @@ snapshots['test_all_snapshot_ids 49'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -26177,6 +26518,7 @@ snapshots['test_all_snapshot_ids 49'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -27368,6 +27710,18 @@ snapshots['test_all_snapshot_ids 5'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -27390,6 +27744,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -27466,7 +27821,7 @@ snapshots['test_all_snapshot_ids 5'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 50'] = '91126dbcddea3f494649973d87c7bb8a278fd712'
+snapshots['test_all_snapshot_ids 50'] = 'f21073cdcd9bb405b000bb904cec93b7368b0ecd'
 
 snapshots['test_all_snapshot_ids 51'] = '''{
   "__class__": "PipelineSnapshot",
@@ -28463,6 +28818,18 @@ snapshots['test_all_snapshot_ids 51'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -28485,6 +28852,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -28520,7 +28888,7 @@ snapshots['test_all_snapshot_ids 51'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 52'] = '443e69ee2f681f92840490474fc1ec6cfc8189d1'
+snapshots['test_all_snapshot_ids 52'] = '84d136745d82ddd6f1546f47b8362d6f6c270bf1'
 
 snapshots['test_all_snapshot_ids 53'] = '''{
   "__class__": "PipelineSnapshot",
@@ -29586,6 +29954,18 @@ snapshots['test_all_snapshot_ids 53'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -29616,12 +29996,14 @@ snapshots['test_all_snapshot_ids 53'] = '''{
             "type_key": "Int"
           },
           "description": null,
+          "is_system_default": false,
           "name": "R1"
         },
         {
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -29662,7 +30044,7 @@ snapshots['test_all_snapshot_ids 53'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 54'] = 'fb5e4f8a67b6984f7db2fbcf269f49a7f1d402f9'
+snapshots['test_all_snapshot_ids 54'] = 'b800b9a72ef5b57a225f78a19493da63ab33c836'
 
 snapshots['test_all_snapshot_ids 55'] = '''{
   "__class__": "PipelineSnapshot",
@@ -30832,6 +31214,18 @@ snapshots['test_all_snapshot_ids 55'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -30854,6 +31248,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -31005,7 +31400,7 @@ snapshots['test_all_snapshot_ids 55'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 56'] = '0488b662f4259e74502eb46fd5a6d4a3b1f9e0dc'
+snapshots['test_all_snapshot_ids 56'] = '8f1f9532d605e383add83c35da1c28cc5e98b0bb'
 
 snapshots['test_all_snapshot_ids 57'] = '''{
   "__class__": "PipelineSnapshot",
@@ -32310,6 +32705,18 @@ snapshots['test_all_snapshot_ids 57'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -32332,6 +32739,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -32477,7 +32885,7 @@ snapshots['test_all_snapshot_ids 57'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 58'] = 'a3bdaace98e282d36de71f28b8453feb14d1796e'
+snapshots['test_all_snapshot_ids 58'] = '37d77acaf54103eb9b331670443fe4fcd295c2a2'
 
 snapshots['test_all_snapshot_ids 59'] = '''{
   "__class__": "PipelineSnapshot",
@@ -33525,6 +33933,18 @@ snapshots['test_all_snapshot_ids 59'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -33547,18 +33967,21 @@ snapshots['test_all_snapshot_ids 59'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": false,
           "name": "a"
         },
         {
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": false,
           "name": "b"
         },
         {
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -33631,9 +34054,9 @@ snapshots['test_all_snapshot_ids 59'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 6'] = 'd34b1f86ff34044159919f263ae70485969de65e'
+snapshots['test_all_snapshot_ids 6'] = '803e44fd9bd8627a9d6740d1cc7bd06b5ab47f31'
 
-snapshots['test_all_snapshot_ids 60'] = 'eb7ca2059a47810d2861bf403e662bb3fc1b578c'
+snapshots['test_all_snapshot_ids 60'] = '979848a7f714e8cbcbc8a2c4bdf4db55bcb384d5'
 
 snapshots['test_all_snapshot_ids 61'] = '''{
   "__class__": "PipelineSnapshot",
@@ -34701,6 +35124,18 @@ snapshots['test_all_snapshot_ids 61'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -34723,6 +35158,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -34827,7 +35263,7 @@ snapshots['test_all_snapshot_ids 61'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 62'] = 'e425797e8c3eb98da90270275cef3965d5b9797d'
+snapshots['test_all_snapshot_ids 62'] = '2320f758876c1deb307fedc3d231607bb16665d1'
 
 snapshots['test_all_snapshot_ids 63'] = '''{
   "__class__": "PipelineSnapshot",
@@ -35847,6 +36283,18 @@ snapshots['test_all_snapshot_ids 63'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -35869,6 +36317,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -35907,7 +36356,7 @@ snapshots['test_all_snapshot_ids 63'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 64'] = '6647ed2577dce616ec219932a19e0cda6a0a0c1f'
+snapshots['test_all_snapshot_ids 64'] = '11f37b24caadc06a9f04c3ff90b891083d037907'
 
 snapshots['test_all_snapshot_ids 65'] = '''{
   "__class__": "PipelineSnapshot",
@@ -36927,6 +37376,18 @@ snapshots['test_all_snapshot_ids 65'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -36949,6 +37410,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -36987,7 +37449,7 @@ snapshots['test_all_snapshot_ids 65'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 66'] = '72aeb2132027570fba615a85c5e0267e4f76bb38'
+snapshots['test_all_snapshot_ids 66'] = '026887697ce7134086da3cf6de50eeeaa369ba57'
 
 snapshots['test_all_snapshot_ids 67'] = '''{
   "__class__": "PipelineSnapshot",
@@ -38007,6 +38469,18 @@ snapshots['test_all_snapshot_ids 67'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -38029,6 +38503,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -38069,7 +38544,7 @@ snapshots['test_all_snapshot_ids 67'] = '''{
   }
 }'''
 
-snapshots['test_all_snapshot_ids 68'] = '05ee360426312d3ebd21284560e7caf14b84ca81'
+snapshots['test_all_snapshot_ids 68'] = '37e50a15e0d6d2ce50e6b7d544d5585750f4b1de'
 
 snapshots['test_all_snapshot_ids 7'] = '''{
   "__class__": "PipelineSnapshot",
@@ -39194,6 +39669,18 @@ snapshots['test_all_snapshot_ids 7'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -39216,6 +39703,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -39292,7 +39780,7 @@ snapshots['test_all_snapshot_ids 7'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_all_snapshot_ids 8'] = '720f77ced0e9480a63251cc07fb605e77ba40b27'
+snapshots['test_all_snapshot_ids 8'] = 'd109f9e149e87b29232b3297feba44c5bc9ebcb2'
 
 snapshots['test_all_snapshot_ids 9'] = '''{
   "__class__": "PipelineSnapshot",
@@ -40366,6 +40854,18 @@ snapshots['test_all_snapshot_ids 9'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -40388,6 +40888,7 @@ snapshots['test_all_snapshot_ids 9'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],

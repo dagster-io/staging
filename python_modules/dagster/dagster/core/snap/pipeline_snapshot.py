@@ -164,6 +164,17 @@ class PipelineSnapshot(
 
         return toposort_flatten(upstream_outputs)
 
+    def get_mode_def_snap(self, name):
+        check.str_param(name, "name")
+        for mode_def_snap in self.mode_def_snaps:
+            if mode_def_snap.name == name:
+                return mode_def_snap
+
+        check.failed("Mode {mode} not found".format(mode=name))
+
+    def get_default_mode_def_snap(self):
+        return self.mode_def_snaps[0]
+
 
 def _construct_enum_from_snap(config_type_snap):
     check.list_param(config_type_snap.enum_values, "enum_values", ConfigEnumValueSnap)

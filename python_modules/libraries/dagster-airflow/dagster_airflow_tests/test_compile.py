@@ -1,5 +1,6 @@
 from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.execution.plan.plan import ExecutionPlan
+from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
 from dagster.core.system_config.objects import EnvironmentConfig
 from dagster_airflow.compile import coalesce_execution_steps
 from dagster_test.toys.composition import composition
@@ -10,7 +11,10 @@ def test_compile():
         composition, {"solids": {"add_four": {"inputs": {"num": {"value": 1}}}}},
     )
 
-    plan = ExecutionPlan.build(InMemoryPipeline(composition), environment_config)
+    pipeline = InMemoryPipeline(composition)
+    pipeline_snapshot = PipelineSnapshot.from_pipeline_def(pipeline.get_definition())
+
+    plan = ExecutionPlan.build(pipeline, pipeline_snapshot, environment_config)
 
     res = coalesce_execution_steps(plan)
     assert set(res.keys()) == {

@@ -58,26 +58,33 @@ class _PlanBuilder:
     execution.
     """
 
-    def __init__(self, pipeline, environment_config, mode, step_keys_to_execute):
+    def __init__(self, pipeline, pipeline_snapshot, environment_config, step_keys_to_execute):
+        from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
+
         self.pipeline = check.inst_param(pipeline, "pipeline", IPipeline)
+        self.pipeline_snapshot = check.inst_param(
+            pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot
+        )
+
         self.environment_config = check.inst_param(
             environment_config, "environment_config", EnvironmentConfig
         )
-        check.opt_str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", str)
         self.step_keys_to_execute = step_keys_to_execute
-        self.mode_definition = (
-            pipeline.get_definition().get_mode_definition(mode)
-            if mode is not None
-            else pipeline.get_definition().get_default_mode()
+
+        self.mode_def_snap = (
+            self.pipeline_snapshot.get_mode_def_snap(environment_config.mode)
+            if environment_config.mode is not None
+            else self.pipeline_snapshot.get_default_mode_def_snap()
         )
+
         self._steps = OrderedDict()
         self.step_output_map = dict()
         self._seen_handles = set()
 
     @property
     def pipeline_name(self):
-        return self.pipeline.get_definition().name
+        return self.pipeline_snapshot.name
 
     def add_step(self, step):
         # Keep track of the step keys we've seen so far to ensure we don't add duplicates
@@ -106,7 +113,7 @@ class _PlanBuilder:
 
     def build(self):
         """Builds the execution plan"""
-        check_io_manager_intermediate_storage(self.mode_definition, self.environment_config)
+        check_io_manager_intermediate_storage(self.mode_def_snap, self.environment_config)
 
         pipeline_def = self.pipeline.get_definition()
         # Recursively build the execution plan starting at the root pipeline
@@ -127,7 +134,7 @@ class _PlanBuilder:
             return full_plan
 
     def storage_is_persistent(self):
-        return self.mode_definition.get_intermediate_storage_def(
+        return self.mode_def_snap.get_intermediate_storage_def_snap(
             self.environment_config.intermediate_storage.intermediate_storage_name
         ).is_persistent
 
@@ -599,7 +606,7 @@ class ExecutionPlan(
         return None
 
     @staticmethod
-    def build(pipeline, environment_config, mode=None, step_keys_to_execute=None):
+    def build(pipeline, pipeline_snapshot, environment_config, step_keys_to_execute=None):
         """Here we build a new ExecutionPlan from a pipeline definition and the environment config.
 
         To do this, we iterate through the pipeline's solids in topological order, and hand off the
@@ -608,13 +615,18 @@ class ExecutionPlan(
         Once we've processed the entire pipeline, we invoke _PlanBuilder.build() to construct the
         ExecutionPlan object.
         """
+        from dagster.core.snap.pipeline_snapshot import PipelineSnapshot
+
         check.inst_param(pipeline, "pipeline", IPipeline)
+        check.inst_param(pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot)
         check.inst_param(environment_config, "environment_config", EnvironmentConfig)
-        check.opt_str_param(mode, "mode")
         check.opt_list_param(step_keys_to_execute, "step_keys_to_execute", of_type=str)
 
         plan_builder = _PlanBuilder(
-            pipeline, environment_config, mode=mode, step_keys_to_execute=step_keys_to_execute,
+            pipeline,
+            pipeline_snapshot,
+            environment_config,
+            step_keys_to_execute=step_keys_to_execute,
         )
 
         # Finally, we build and return the execution plan
@@ -662,18 +674,21 @@ class ExecutionPlan(
         return True
 
 
-def check_io_manager_intermediate_storage(mode_def, environment_config):
+def check_io_manager_intermediate_storage(mode_def_snap, environment_config):
     """Only one of io_manager and intermediate_storage should be set."""
     # pylint: disable=comparison-with-callable
     from dagster.core.storage.system_storage import mem_intermediate_storage
 
-    intermediate_storage_def = environment_config.intermediate_storage_def_for_mode(mode_def)
+    intermediate_storage_def_snap = environment_config.intermediate_storage_def_snap_for_mode_def_snap(
+        mode_def_snap
+    )
     intermediate_storage_is_default = (
-        intermediate_storage_def is None or intermediate_storage_def == mem_intermediate_storage
+        intermediate_storage_def_snap is None
+        or intermediate_storage_def_snap.name == mem_intermediate_storage.name
     )
 
-    io_manager = mode_def.resource_defs["io_manager"]
-    io_manager_is_default = io_manager == mem_io_manager
+    io_manager_snap = mode_def_snap.get_resource_def_snap("io_manager")
+    io_manager_is_default = io_manager_snap.is_system_default
 
     if not intermediate_storage_is_default and not io_manager_is_default:
         raise DagsterInvariantViolationError(
@@ -683,7 +698,7 @@ def check_io_manager_intermediate_storage(mode_def, environment_config):
             'ModeDefinition and omit "intermediate_storage" in your run config. To avoid '
             'specifying a default IO manager, omit the "io_manager" key from the '
             "resource_defs argument to your ModeDefinition.".format(
-                intermediate_storage_name=intermediate_storage_def.name
+                intermediate_storage_name=intermediate_storage_def_snap.name
             )
         )
 

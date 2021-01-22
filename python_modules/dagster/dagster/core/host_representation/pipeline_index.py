@@ -82,7 +82,7 @@ class PipelineIndex:
         return self.dep_structure_index.has_invocation(solid_name)
 
     def get_default_mode_name(self):
-        return self.pipeline_snapshot.mode_def_snaps[0].name
+        return self.pipeline_snapshot.get_default_mode_def_snap().name
 
     def has_mode_def(self, name):
         check.str_param(name, "name")
@@ -97,12 +97,7 @@ class PipelineIndex:
         return [mode_def_snap.name for mode_def_snap in self.pipeline_snapshot.mode_def_snaps]
 
     def get_mode_def_snap(self, name):
-        check.str_param(name, "name")
-        for mode_def_snap in self.pipeline_snapshot.mode_def_snaps:
-            if mode_def_snap.name == name:
-                return mode_def_snap
-
-        check.failed("Mode {mode} not found".format(mode=name))
+        return self.pipeline_snapshot.get_mode_def_snap(name)
 
     @property
     def config_schema_snapshot(self):

@@ -1080,6 +1080,18 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -1102,6 +1114,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -1170,7 +1183,7 @@ snapshots['test_basic_dep_fan_out 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_dep_fan_out 2'] = 'b5bd19fd7eae0cab01df74f1bb67a709894b828e'
+snapshots['test_basic_dep_fan_out 2'] = '9b7e34f3b44dc9ca034e73b0d4172992ac745603'
 
 snapshots['test_basic_fan_in 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -2221,6 +2234,18 @@ snapshots['test_basic_fan_in 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -2243,6 +2268,7 @@ snapshots['test_basic_fan_in 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -2311,7 +2337,7 @@ snapshots['test_basic_fan_in 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_basic_fan_in 2'] = 'a95bf6d3baa03966cddcd3c58dcc19f61267328b'
+snapshots['test_basic_fan_in 2'] = '12c35362d399a34157978c623386f861ffa620bd'
 
 snapshots['test_deserialize_solid_def_snaps_multi_type_config 1'] = '''{
   "__class__": "ConfigTypeSnap",
@@ -3364,6 +3390,18 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -3386,6 +3424,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -3424,7 +3463,7 @@ snapshots['test_empty_pipeline_snap_props 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_empty_pipeline_snap_props 2'] = '1f46d2b9d34fb73263aee58b40500bdab503ed44'
+snapshots['test_empty_pipeline_snap_props 2'] = '833ed8763487a6147c78f0aaeabcc73999e1c19c'
 
 snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -4444,6 +4483,18 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -4466,6 +4517,7 @@ snapshots['test_empty_pipeline_snap_snapshot 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -5714,6 +5766,18 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -5736,6 +5800,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -5776,7 +5841,7 @@ snapshots['test_pipeline_snap_all_props 1'] = '''{
   }
 }'''
 
-snapshots['test_pipeline_snap_all_props 2'] = '45b3670aa224943d9b0011fa18df54da6f57efe4'
+snapshots['test_pipeline_snap_all_props 2'] = '53661245ed63badca5995fe7b560b1f67549bda1'
 
 snapshots['test_two_invocations_deps_snap 1'] = '''{
   "__class__": "PipelineSnapshot",
@@ -6812,6 +6877,18 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
     {
       "__class__": "ModeDefSnap",
       "description": null,
+      "intermediate_storage_def_snaps": [
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": true,
+          "name": "filesystem"
+        },
+        {
+          "__class__": "IntermediateStorageDefSnap",
+          "is_persistent": false,
+          "name": "in_memory"
+        }
+      ],
       "logger_def_snaps": [
         {
           "__class__": "LoggerDefSnap",
@@ -6834,6 +6911,7 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
           "__class__": "ResourceDefSnap",
           "config_field_snap": null,
           "description": null,
+          "is_system_default": true,
           "name": "io_manager"
         }
       ],
@@ -6872,4 +6950,4 @@ snapshots['test_two_invocations_deps_snap 1'] = '''{
   "tags": {}
 }'''
 
-snapshots['test_two_invocations_deps_snap 2'] = '0dae15d18998023e7c029b514dbb044e43c87f5a'
+snapshots['test_two_invocations_deps_snap 2'] = 'ead99b99d8a99733fd84bcee0e61836c9d75806a'

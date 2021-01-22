@@ -1050,6 +1050,18 @@ snapshots['test_external_pipeline_data 1'] = '''{
       {
         "__class__": "ModeDefSnap",
         "description": null,
+        "intermediate_storage_def_snaps": [
+          {
+            "__class__": "IntermediateStorageDefSnap",
+            "is_persistent": true,
+            "name": "filesystem"
+          },
+          {
+            "__class__": "IntermediateStorageDefSnap",
+            "is_persistent": false,
+            "name": "in_memory"
+          }
+        ],
         "logger_def_snaps": [
           {
             "__class__": "LoggerDefSnap",
@@ -1072,6 +1084,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
             "__class__": "ResourceDefSnap",
             "config_field_snap": null,
             "description": null,
+            "is_system_default": true,
             "name": "io_manager"
           }
         ],
@@ -1080,6 +1093,18 @@ snapshots['test_external_pipeline_data 1'] = '''{
       {
         "__class__": "ModeDefSnap",
         "description": null,
+        "intermediate_storage_def_snaps": [
+          {
+            "__class__": "IntermediateStorageDefSnap",
+            "is_persistent": true,
+            "name": "filesystem"
+          },
+          {
+            "__class__": "IntermediateStorageDefSnap",
+            "is_persistent": false,
+            "name": "in_memory"
+          }
+        ],
         "logger_def_snaps": [
           {
             "__class__": "LoggerDefSnap",
@@ -1102,6 +1127,7 @@ snapshots['test_external_pipeline_data 1'] = '''{
             "__class__": "ResourceDefSnap",
             "config_field_snap": null,
             "description": null,
+            "is_system_default": true,
             "name": "io_manager"
           }
         ],
@@ -2210,6 +2236,18 @@ snapshots['test_external_repository_data 1'] = '''{
           {
             "__class__": "ModeDefSnap",
             "description": null,
+            "intermediate_storage_def_snaps": [
+              {
+                "__class__": "IntermediateStorageDefSnap",
+                "is_persistent": true,
+                "name": "filesystem"
+              },
+              {
+                "__class__": "IntermediateStorageDefSnap",
+                "is_persistent": false,
+                "name": "in_memory"
+              }
+            ],
             "logger_def_snaps": [
               {
                 "__class__": "LoggerDefSnap",
@@ -2232,6 +2270,7 @@ snapshots['test_external_repository_data 1'] = '''{
                 "__class__": "ResourceDefSnap",
                 "config_field_snap": null,
                 "description": null,
+                "is_system_default": true,
                 "name": "io_manager"
               }
             ],
@@ -2240,6 +2279,18 @@ snapshots['test_external_repository_data 1'] = '''{
           {
             "__class__": "ModeDefSnap",
             "description": null,
+            "intermediate_storage_def_snaps": [
+              {
+                "__class__": "IntermediateStorageDefSnap",
+                "is_persistent": true,
+                "name": "filesystem"
+              },
+              {
+                "__class__": "IntermediateStorageDefSnap",
+                "is_persistent": false,
+                "name": "in_memory"
+              }
+            ],
             "logger_def_snaps": [
               {
                 "__class__": "LoggerDefSnap",
@@ -2262,6 +2313,7 @@ snapshots['test_external_repository_data 1'] = '''{
                 "__class__": "ResourceDefSnap",
                 "config_field_snap": null,
                 "description": null,
+                "is_system_default": true,
                 "name": "io_manager"
               }
             ],
