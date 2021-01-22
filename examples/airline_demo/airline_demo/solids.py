@@ -22,7 +22,7 @@ from dagster import (
 )
 from dagster.core.types.dagster_type import create_string_type
 from dagster_aws.s3 import S3Coordinate
-from dagstermill import define_dagstermill_solid
+from dagstermill import dagstermill_solid
 from pyspark.sql import DataFrame
 from sqlalchemy import text
 
@@ -47,7 +47,7 @@ def _notebook_path(name):
 
 # start_solids_marker_3
 def notebook_solid(name, notebook_path, input_defs, output_defs, required_resource_keys):
-    return define_dagstermill_solid(
+    return dagstermill_solid(
         name,
         _notebook_path(notebook_path),
         input_defs,

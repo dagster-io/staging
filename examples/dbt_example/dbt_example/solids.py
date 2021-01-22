@@ -4,7 +4,7 @@ from dagster import Array, InputDefinition, OutputDefinition, solid
 from dagster.utils import file_relative_path
 from dagster_dbt import dbt_cli_run, dbt_cli_test
 from dagster_dbt.cli.types import DbtCliOutput
-from dagstermill import define_dagstermill_solid
+from dagstermill import dagstermill_solid
 
 CEREAL_DATASET_URL = "https://gist.githubusercontent.com/mgasner/bd2c0f66dff4a9f01855cfa6870b1fce/raw/2de62a57fb08da7c58d6480c987077cf91c783a1/cereal.csv"
 
@@ -50,7 +50,7 @@ test_cereals_models = dbt_cli_test.configured(
 )
 
 
-analyze_cereals = define_dagstermill_solid(
+analyze_cereals = dagstermill_solid(
     "analyze_cereals",
     file_relative_path(__file__, "notebooks/Analyze Cereals.ipynb"),
     input_defs=[InputDefinition("run_results", dagster_type=DbtCliOutput)],
