@@ -3,7 +3,7 @@ Dagstermill
 
 .. currentmodule:: dagstermill
 
-.. autofunction:: define_dagstermill_solid
+.. autofunction:: dagstermill_solid
 
 .. autofunction:: get_context
 
@@ -15,3 +15,5 @@ Dagstermill
     :members:
 
 .. autoclass:: DagstermillError
+
+.. autofunction:: define_dagstermill_solid

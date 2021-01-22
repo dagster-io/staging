@@ -10,10 +10,12 @@ import { ExampleReferenceLink } from 'components/ExampleReference';
 
 # Data Science with Notebooks
 
-- [Notebooks as solids](#notebooks-as-solids)
-- [Expressing dependencies](#expressing-dependencies)
-- [The notebook context](#the-notebook-context)
-- [Results and custom materializations](#results-and-custom-materializations)
+- [Data Science with Notebooks](#data-science-with-notebooks)
+  - [Notebooks as solids](#notebooks-as-solids)
+  - [Expressing dependencies](#expressing-dependencies)
+  - [The notebook context](#the-notebook-context)
+  - [Results and custom materializations](#results-and-custom-materializations)
+  - [References](#references)
 
 Fast iteration, the literate combination of arbitrary code with markdown
 blocks, and inline plotting make notebooks an indispensible tool for
@@ -65,7 +67,7 @@ are then locked away in the .ipynb format, can only be reproduced using
 a complex Jupyter setup, and are only programmatically accessible within
 the notebook context.
 
-We can simply turn a notebook into a solid using <PyObject module="dagstermill" object="define_dagstermill_solid" />.
+We can simply turn a notebook into a solid using <PyObject module="dagstermill" object="dagstermill_solid" />.
 Once we create a solid, we can start to make its outputs more accessible.
 
 ```python literalinclude showLines emphasize-lines=6-8 caption=iris_pipeline.py

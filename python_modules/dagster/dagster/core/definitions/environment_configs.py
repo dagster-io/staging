@@ -201,7 +201,7 @@ def get_input_manager_input_field(solid, input_def, resource_defs):
         raise DagsterInvalidDefinitionError(
             f'Input "{input_def.name}" for solid "{solid.name}" requires root_manager_key '
             f'"{input_def.root_manager_key}", but the resource definition provided is not an '
-            "IInputManagerDefinition"
+            "IInputManagerDefinition. Use the @io_manager decorator to define IO managers."
         )
 
     input_config_schema = resource_defs[input_def.root_manager_key].input_config_schema
@@ -262,7 +262,7 @@ def get_output_manager_output_field(solid, output_def, resource_defs):
         raise DagsterInvalidDefinitionError(
             f'Output "{output_def.name}" for solid "{solid.name}" requires io_manager_key '
             f'"{output_def.io_manager_key}", but the resource definition provided is not an '
-            "IOutputManagerDefinition"
+            "IOutputManagerDefinition. Use the @io_manager decorator to define IO managers."
         )
     output_manager_def = resource_defs[output_def.io_manager_key]
     if (
