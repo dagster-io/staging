@@ -1,7 +1,12 @@
 from collections import namedtuple
 
 from dagster import check
-from dagster.core.execution.plan.inputs import StepInput, UnresolvedStepInput
+from dagster.core.execution.plan.inputs import (
+    IUnresolvedStepInputSource,
+    StepInput,
+    StepInputSource,
+    UnresolvedStepInput,
+)
 from dagster.core.execution.plan.outputs import StepOutput, StepOutputHandle
 from dagster.core.execution.plan.plan import ExecutionPlan
 from dagster.core.execution.plan.step import ExecutionStep, StepKind, UnresolvedExecutionStep
@@ -57,9 +62,11 @@ class ExecutionPlanSnapshotErrorData(namedtuple("_ExecutionPlanSnapshotErrorData
 
 @whitelist_for_serdes
 class ExecutionStepSnap(
-    namedtuple("_ExecutionStepSnap", "key inputs outputs solid_handle_id kind metadata_items")
+    namedtuple(
+        "_ExecutionStepSnap", "key inputs outputs solid_handle_id kind metadata_items is_resolved"
+    )
 ):
-    def __new__(cls, key, inputs, outputs, solid_handle_id, kind, metadata_items):
+    def __new__(cls, key, inputs, outputs, solid_handle_id, kind, metadata_items, is_resolved=None):
         return super(ExecutionStepSnap, cls).__new__(
             cls,
             key=check.str_param(key, "key"),
@@ -70,14 +77,15 @@ class ExecutionStepSnap(
             metadata_items=check.list_param(
                 metadata_items, "metadata_items", ExecutionPlanMetadataItemSnap
             ),
+            is_resolved=check.opt_bool_param(is_resolved, "is_resolved"),
         )
 
 
 @whitelist_for_serdes
 class ExecutionStepInputSnap(
-    namedtuple("_ExecutionStepInputSnap", "name dagster_type_key upstream_output_handles")
+    namedtuple("_ExecutionStepInputSnap", "name dagster_type_key upstream_output_handles source")
 ):
-    def __new__(cls, name, dagster_type_key, upstream_output_handles):
+    def __new__(cls, name, dagster_type_key, upstream_output_handles, source=None):
         return super(ExecutionStepInputSnap, cls).__new__(
             cls,
             check.str_param(name, "name"),
@@ -85,6 +93,7 @@ class ExecutionStepInputSnap(
             check.list_param(
                 upstream_output_handles, "upstream_output_handles", of_type=StepOutputHandle
             ),
+            check.opt_inst_param(source, "source", (StepInputSource, IUnresolvedStepInputSource)),
         )
 
     @property
@@ -120,6 +129,7 @@ def _snapshot_from_step_input(step_input):
         name=step_input.name,
         dagster_type_key=step_input.dagster_type_snap.key,
         upstream_output_handles=upstream_output_handles,
+        source=step_input.source,
     )
 
 
@@ -152,6 +162,7 @@ def _snapshot_from_execution_step(execution_step):
         )
         if execution_step.tags
         else [],
+        is_resolved=isinstance(execution_step, ExecutionStep),
     )
 
 
