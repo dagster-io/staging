@@ -44,6 +44,7 @@ class DauphinSchedule(dauphin.ObjectType):
     partition_set = dauphin.Field("PartitionSet")
 
     futureTicks = dauphin.NonNull("FutureJobTicks", cursor=dauphin.Float(), limit=dauphin.Int())
+    futureTick = dauphin.NonNull("FutureJobTick", tickTimestamp=dauphin.NonNull(dauphin.Int))
 
     def resolve_id(self, _):
         return "%s:%s" % (self.name, self.pipeline_name)
@@ -77,11 +78,17 @@ class DauphinSchedule(dauphin.ObjectType):
             tick_times.append(next(time_iter).timestamp())
 
         future_ticks = [
-            graphene_info.schema.type_named("FutureJobTick")(tick_time) for tick_time in tick_times
+            graphene_info.schema.type_named("FutureJobTick")(self._schedule_state, tick_time)
+            for tick_time in tick_times
         ]
 
         return graphene_info.schema.type_named("FutureJobTicks")(
             results=future_ticks, cursor=tick_times[-1] + 1
+        )
+
+    def resolve_futureTick(self, graphene_info, tickTimestamp):
+        return graphene_info.schema.type_named("FutureJobTick")(
+            self._schedule_state, float(tickTimestamp)
         )
 
     def __init__(self, graphene_info, external_schedule):
