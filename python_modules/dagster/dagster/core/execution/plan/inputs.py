@@ -88,6 +88,7 @@ class StepInputSource(ABC):
         raise NotImplementedError()
 
 
+@whitelist_for_serdes
 class FromRootInputManager(
     namedtuple("_FromRootInputManager", "input_solid_handle input_def_snap"), StepInputSource,
 ):
@@ -125,6 +126,7 @@ class FromRootInputManager(
         return {self.input_def_snap.root_manager_key}
 
 
+@whitelist_for_serdes
 class FromStepOutput(
     namedtuple("_FromStepOutput", "step_output_handle input_solid_handle input_def_snap fan_in"),
     StepInputSource,
@@ -230,6 +232,7 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
     )
 
 
+@whitelist_for_serdes
 class FromConfig(
     namedtuple("_FromConfig", "input_solid_handle dagster_type_snap input_name"), StepInputSource,
 ):
@@ -270,6 +273,7 @@ class FromConfig(
         return dagster_type.loader.compute_loaded_input_version(config_data)
 
 
+@whitelist_for_serdes
 class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource):
     """This step input source is the default value declared on the InputDefinition"""
 
@@ -285,6 +289,7 @@ class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource
         return join_and_hash(repr(self.value))
 
 
+@whitelist_for_serdes
 class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInputSource):
     """This step input is fans-in multiple sources in to a single input. The input will receive a list."""
 
@@ -379,46 +384,7 @@ def _load_input_with_input_manager(root_input_manager, context):
     return value
 
 
-class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type_snap source")):
-    """Holds information for how to resolve a StepInput once the upstream mapping is done"""
-
-    def __new__(
-        cls, name, dagster_type_snap, source,
-    ):
-        from dagster.core.snap.dagster_types import DagsterTypeSnap
-
-        return super(UnresolvedStepInput, cls).__new__(
-            cls,
-            name=check.str_param(name, "name"),
-            dagster_type_snap=check.inst_param(
-                dagster_type_snap, "dagster_type_snap", DagsterTypeSnap
-            ),
-            source=check.inst_param(
-                source, "source", (FromPendingDynamicStepOutput, FromUnresolvedStepOutput)
-            ),
-        )
-
-    @property
-    def resolved_by_step_key(self):
-        return self.source.resolved_by_step_key
-
-    @property
-    def resolved_by_output_name(self):
-        return self.source.resolved_by_output_name
-
-    def resolve(self, map_key):
-        return StepInput(
-            name=self.name,
-            dagster_type_snap=self.dagster_type_snap,
-            source=self.source.resolve(map_key),
-        )
-
-    def get_step_output_handle_deps_with_placeholders(self):
-        """Return StepOutputHandles with placeholders, unresolved step keys and None mapping keys"""
-
-        return [self.source.get_step_output_handle_dep_with_placeholder()]
-
-
+@whitelist_for_serdes
 class FromPendingDynamicStepOutput(
     namedtuple(
         "_FromPendingDynamicStepOutput", "step_output_handle input_solid_handle input_def_snap",
@@ -475,6 +441,7 @@ class FromPendingDynamicStepOutput(
         return set()
 
 
+@whitelist_for_serdes
 class FromUnresolvedStepOutput(
     namedtuple(
         "_FromUnresolvedStepOutput",
@@ -524,3 +491,45 @@ class FromUnresolvedStepOutput(
 
     def required_resource_keys(self):
         return set()
+
+
+IUnresolvedStepInputSource = (FromPendingDynamicStepOutput, FromUnresolvedStepOutput)
+
+
+@whitelist_for_serdes
+class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type_snap source")):
+    """Holds information for how to resolve a StepInput once the upstream mapping is done"""
+
+    def __new__(
+        cls, name, dagster_type_snap, source,
+    ):
+        from dagster.core.snap.dagster_types import DagsterTypeSnap
+
+        return super(UnresolvedStepInput, cls).__new__(
+            cls,
+            name=check.str_param(name, "name"),
+            dagster_type_snap=check.inst_param(
+                dagster_type_snap, "dagster_type_snap", DagsterTypeSnap
+            ),
+            source=check.inst_param(source, "source", IUnresolvedStepInputSource),
+        )
+
+    @property
+    def resolved_by_step_key(self):
+        return self.source.resolved_by_step_key
+
+    @property
+    def resolved_by_output_name(self):
+        return self.source.resolved_by_output_name
+
+    def resolve(self, map_key):
+        return StepInput(
+            name=self.name,
+            dagster_type_snap=self.dagster_type_snap,
+            source=self.source.resolve(map_key),
+        )
+
+    def get_step_output_handle_deps_with_placeholders(self):
+        """Return StepOutputHandles with placeholders, unresolved step keys and None mapping keys"""
+
+        return [self.source.get_step_output_handle_dep_with_placeholder()]

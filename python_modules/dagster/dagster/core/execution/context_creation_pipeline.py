@@ -113,7 +113,7 @@ class ExecutionContextManager(ABC):
         pipeline_run,
         instance,
         pipeline_snapshot,
-        execution_plan_snapshot,
+        execution_plan_snapshot=None,
         scoped_resources_builder_cm=None,
         intermediate_storage=None,
         raise_on_error=False,
@@ -190,7 +190,7 @@ class ExecutionContextManager(ABC):
         pipeline_snapshot = check.inst_param(
             pipeline_snapshot, "pipeline_snapshot", PipelineSnapshot
         )
-        execution_plan_snapshot = check.inst_param(
+        execution_plan_snapshot = check.opt_inst_param(
             execution_plan_snapshot, "execution_plan_snapshot", ExecutionPlanSnapshot
         )
 

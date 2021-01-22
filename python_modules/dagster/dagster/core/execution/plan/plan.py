@@ -28,7 +28,7 @@ from dagster.core.system_config.objects import EnvironmentConfig
 from dagster.core.types.dagster_type import DagsterTypeKind
 from dagster.core.utils import toposort
 
-from .compute import create_compute_step, create_unresolved_step
+from .compute import create_step_outputs
 from .inputs import (
     FromConfig,
     FromDefaultValue,
@@ -41,7 +41,7 @@ from .inputs import (
     StepInputSource,
     UnresolvedStepInput,
 )
-from .outputs import StepOutputHandle, UnresolvedStepOutputHandle
+from .outputs import StepOutput, StepOutputHandle, UnresolvedStepOutputHandle
 from .step import ExecutionStep, UnresolvedExecutionStep
 
 StepHandleUnion = (StepHandle, UnresolvedStepHandle, ResolvedFromDynamicStepHandle)
@@ -187,21 +187,24 @@ class _PlanBuilder:
 
                 solid_def_snap = build_core_solid_def_snap(solid.definition)
 
+                step_outputs = create_step_outputs(solid_def_snap, handle, self.environment_config)
+                tags = solid.definition.tags
+
                 if has_unresolved_input:
-                    step = create_unresolved_step(
-                        solid_def_snap=solid_def_snap,
-                        solid_handle=handle,
-                        step_inputs=step_inputs,
-                        environment_config=self.environment_config,
+                    step = UnresolvedExecutionStep(
+                        handle=StepHandle(solid_handle=handle),
                         pipeline_name=self.pipeline_name,
+                        step_inputs=step_inputs,
+                        step_outputs=step_outputs,
+                        tags=tags,
                     )
                 else:
-                    step = create_compute_step(
-                        solid_def_snap=solid_def_snap,
-                        solid_handle=handle,
-                        step_inputs=step_inputs,
-                        environment_config=self.environment_config,
+                    step = ExecutionStep(
+                        handle=StepHandle(solid_handle=handle),
                         pipeline_name=self.pipeline_name,
+                        step_inputs=step_inputs,
+                        step_outputs=step_outputs,
+                        tags=tags,
                     )
 
                 self.add_step(step)
@@ -610,6 +613,79 @@ class ExecutionPlan(
 
         # Finally, we build and return the execution plan
         return plan_builder.build()
+
+    @staticmethod
+    def rebuild_step_input(step_input_snap, pipeline_snapshot):
+        from dagster.core.snap.execution_plan_snapshot import ExecutionStepInputSnap
+
+        check.inst_param(step_input_snap, "step_input_snap", ExecutionStepInputSnap)
+
+        return StepInput(
+            step_input_snap.name,
+            pipeline_snapshot.dagster_type_namespace_snapshot.get_dagster_type_snap(
+                step_input_snap.dagster_type_key
+            ),
+            step_input_snap.source,
+        )
+
+    @staticmethod
+    def rebuild_step_output(step_output_snap):
+        from dagster.core.snap.execution_plan_snapshot import ExecutionStepOutputSnap
+
+        check.inst_param(step_output_snap, "step_output_snap", ExecutionStepOutputSnap)
+
+        return StepOutput(
+            step_output_snap.solid_handle,
+            step_output_snap.output_def_snap,
+            step_output_snap.should_materialize,
+        )
+
+    @staticmethod
+    def rebuild_from_snapshots(
+        pipeline, execution_plan_snapshot, pipeline_snapshot, environment_config
+    ):
+        step_dict = {}
+
+        for step_snap in execution_plan_snapshot.steps:
+            solid_handle = SolidHandle.from_string(step_snap.solid_handle_id)
+
+            input_snaps = step_snap.inputs
+            output_snaps = step_snap.outputs
+
+            step_inputs = [
+                ExecutionPlan.rebuild_step_input(step_input_snap, pipeline_snapshot)
+                for step_input_snap in input_snaps
+            ]
+
+            step_outputs = [
+                ExecutionPlan.rebuild_step_output(step_output_snap)
+                for step_output_snap in output_snaps
+            ]
+
+            step = (
+                ExecutionStep(
+                    StepHandle(solid_handle),
+                    pipeline_snapshot.name,
+                    step_inputs,
+                    step_outputs,
+                    step_snap.tags,
+                )
+                if step_snap.is_resolved
+                else UnresolvedExecutionStep(
+                    StepHandle(solid_handle),
+                    pipeline_snapshot.name,
+                    step_inputs,
+                    step_outputs,
+                    step_snap.tags,
+                )
+            )
+
+            step_dict[step.handle] = step
+
+        step_keys_to_execute = execution_plan_snapshot.step_keys_to_execute
+        step_handles_to_execute = [StepHandle.parse_from_key(key) for key in step_keys_to_execute]
+
+        return ExecutionPlan(pipeline, step_dict, step_handles_to_execute, environment_config)
 
     @property
     def storage_is_persistent(self):
