@@ -24,6 +24,7 @@ export interface IExecutionSession {
   runConfigYaml: string;
   base: {presetName: string} | {partitionsSetName: string; partitionName: string | null} | null;
   mode: string | null;
+  needsRefresh: boolean;
   solidSelection: string[] | null;
   solidSelectionQuery: string | null;
   tags: PipelineRunTag[] | null;
@@ -82,6 +83,7 @@ export function applyCreateSession(
         runConfigYaml: '',
         mode: null,
         base: null,
+        needsRefresh: false,
         solidSelection: null,
         solidSelectionQuery: '*',
         tags: null,
@@ -165,3 +167,22 @@ export function useStorage(repositoryName: string, pipelineName: string): Storag
 
   return [getStorageDataForNamespace(namespace), onSave];
 }
+
+export const invalidateConfigsForRepo = (repoName: string, pipelineNames: string[]) => {
+  pipelineNames.forEach((pipelineName) => {
+    const namespace = `${repoName}.${pipelineName}`;
+    const data: IStorageData | undefined = getJSONForKey(getKey(namespace));
+    if (data) {
+      const withBase = Object.keys(data.sessions).filter(
+        (sessionKey) => data.sessions[sessionKey].base !== null,
+      );
+      if (withBase.length) {
+        const withUpdates = withBase.reduce(
+          (accum, sessionKey) => applyChangesToSession(accum, sessionKey, {needsRefresh: true}),
+          data,
+        );
+        writeStorageDataForNamespace(namespace, withUpdates);
+      }
+    }
+  });
+};

@@ -3,6 +3,7 @@ import {Button, Icon, Intent, Spinner, Tooltip} from '@blueprintjs/core';
 import * as React from 'react';
 
 import {SharedToaster} from 'src/app/DomUtils';
+import {invalidateConfigsForRepo} from 'src/app/LocalStorage';
 import {ShortcutHandler} from 'src/app/ShortcutHandler';
 import {
   ReloadRepositoryLocationMutation,
@@ -61,6 +62,20 @@ export const useRepositoryLocationReload = (location: string, onReload: OnReload
 
     // clears and re-fetches all the queries bound to the UI
     apollo.resetStore();
+
+    // Update run config localStorage, which may now be out of date.
+    const repositories =
+      data?.reloadRepositoryLocation.__typename === 'RepositoryLocation'
+        ? data.reloadRepositoryLocation.repositories
+        : [];
+
+    repositories.forEach((repo) => {
+      const {name, pipelines} = repo;
+      invalidateConfigsForRepo(
+        name,
+        pipelines.map((pipeline) => pipeline.name),
+      );
+    });
   };
 
   return {reloading, onClick};
@@ -100,6 +115,17 @@ const RELOAD_REPOSITORY_LOCATION_MUTATION = gql`
   mutation ReloadRepositoryLocationMutation($location: String!) {
     reloadRepositoryLocation(repositoryLocationName: $location) {
       __typename
+      ... on RepositoryLocation {
+        id
+        repositories {
+          id
+          name
+          pipelines {
+            id
+            name
+          }
+        }
+      }
       ... on ReloadNotSupported {
         message
       }
