@@ -10,14 +10,11 @@ from dagster.core.definitions import (
 from dagster.core.errors import DagsterInvariantViolationError
 from dagster.core.execution.context.compute import SolidExecutionContext
 from dagster.core.execution.context.system import SystemComputeExecutionContext
-from dagster.core.execution.plan.handle import StepHandle, UnresolvedStepHandle
 
-from .inputs import StepInput, UnresolvedStepInput
 from .outputs import StepOutput
-from .step import ExecutionStep, UnresolvedExecutionStep
 
 
-def _create_step_outputs(solid_def_snap, handle, environment_config):
+def create_step_outputs(solid_def_snap, handle, environment_config):
     from dagster.core.snap.solid import SolidDefSnap
 
     check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
@@ -39,44 +36,6 @@ def _create_step_outputs(solid_def_snap, handle, environment_config):
         )
         for output_def_snap in solid_def_snap.output_def_snaps
     ]
-
-
-def create_unresolved_step(
-    solid_def_snap, solid_handle, step_inputs, pipeline_name, environment_config
-):
-    from dagster.core.snap.solid import SolidDefSnap
-
-    check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
-    check.inst_param(solid_handle, "solid_handle", SolidHandle)
-    check.list_param(step_inputs, "step_inputs", of_type=(StepInput, UnresolvedStepInput))
-    check.str_param(pipeline_name, "pipeline_name")
-
-    return UnresolvedExecutionStep(
-        handle=UnresolvedStepHandle(solid_handle),
-        step_inputs=step_inputs,
-        step_outputs=_create_step_outputs(solid_def_snap, solid_handle, environment_config),
-        pipeline_name=pipeline_name,
-        solid_def_snapshot=solid_def_snap,
-    )
-
-
-def create_compute_step(
-    solid_def_snap, solid_handle, step_inputs, pipeline_name, environment_config
-):
-    from dagster.core.snap.solid import SolidDefSnap
-
-    check.inst_param(solid_def_snap, "solid_def_snap", SolidDefSnap)
-    check.inst_param(solid_handle, "solid_handle", SolidHandle)
-    check.list_param(step_inputs, "step_inputs", of_type=StepInput)
-    check.str_param(pipeline_name, "pipeline_name")
-
-    return ExecutionStep(
-        handle=StepHandle(solid_handle=solid_handle),
-        pipeline_name=pipeline_name,
-        step_inputs=step_inputs,
-        step_outputs=_create_step_outputs(solid_def_snap, solid_handle, environment_config),
-        solid_def_snapshot=solid_def_snap,
-    )
 
 
 def _yield_compute_results(compute_context, inputs, compute_fn):

@@ -33,6 +33,7 @@ class StepHandle(namedtuple("_StepHandle", "solid_handle")):
         return StepHandle(SolidHandle.from_string(string))
 
 
+@whitelist_for_serdes
 class UnresolvedStepHandle(namedtuple("_UnresolvedStepHandle", "solid_handle")):
     """A reference to an UnresolvedExecutionStep in an execution"""
 

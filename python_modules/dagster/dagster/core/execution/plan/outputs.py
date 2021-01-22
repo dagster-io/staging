@@ -80,6 +80,7 @@ class StepOutputHandle(namedtuple("_StepOutputHandle", "step_key output_name map
         )
 
 
+@whitelist_for_serdes
 class UnresolvedStepOutputHandle(
     namedtuple(
         "_UnresolvedStepOutputHandle",

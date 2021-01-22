@@ -2,6 +2,7 @@ from collections import namedtuple
 from enum import Enum
 
 from dagster import check
+from dagster.core.definitions.utils import validate_tags
 from dagster.serdes import whitelist_for_serdes
 from dagster.utils import merge_dicts
 
@@ -29,20 +30,12 @@ def is_executable_step(step):
 class ExecutionStep(
     namedtuple(
         "_ExecutionStep",
-        ("handle pipeline_name step_input_dict step_output_dict solid_def_snapshot logging_tags"),
+        ("handle pipeline_name step_input_dict step_output_dict tags logging_tags"),
     )
 ):
     def __new__(
-        cls,
-        handle,
-        pipeline_name,
-        step_inputs,
-        step_outputs,
-        solid_def_snapshot,
-        logging_tags=None,
+        cls, handle, pipeline_name, step_inputs, step_outputs, tags, logging_tags=None,
     ):
-        from dagster.core.snap.solid import SolidDefSnap
-
         return super(ExecutionStep, cls).__new__(
             cls,
             handle=check.inst_param(handle, "handle", (StepHandle, ResolvedFromDynamicStepHandle)),
@@ -55,9 +48,7 @@ class ExecutionStep(
                 so.name: so
                 for so in check.list_param(step_outputs, "step_outputs", of_type=StepOutput)
             },
-            solid_def_snapshot=check.inst_param(
-                solid_def_snapshot, "solid_def_snapshot", SolidDefSnap
-            ),
+            tags=validate_tags(check.opt_dict_param(tags, "tags", key_type=str)),
             logging_tags=merge_dicts(
                 {
                     "step_key": handle.to_key(),
@@ -79,10 +70,6 @@ class ExecutionStep(
     @property
     def solid_name(self):
         return self.solid_handle.name
-
-    @property
-    def tags(self):
-        return self.solid_def_snapshot.tags
 
     @property
     def kind(self):
@@ -127,13 +114,10 @@ class ExecutionStep(
 
 class UnresolvedExecutionStep(
     namedtuple(
-        "_UnresolvedExecutionStep",
-        "handle step_input_dict step_output_dict pipeline_name solid_def_snapshot",
+        "_UnresolvedExecutionStep", "handle step_input_dict step_output_dict pipeline_name tags",
     )
 ):
-    def __new__(cls, handle, step_inputs, step_outputs, pipeline_name, solid_def_snapshot):
-        from dagster.core.snap.solid import SolidDefSnap
-
+    def __new__(cls, handle, step_inputs, step_outputs, pipeline_name, tags):
         return super(UnresolvedExecutionStep, cls).__new__(
             cls,
             handle=check.inst_param(handle, "handle", UnresolvedStepHandle),
@@ -148,9 +132,7 @@ class UnresolvedExecutionStep(
                 for so in check.list_param(step_outputs, "step_outputs", of_type=StepOutput)
             },
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            solid_def_snapshot=check.inst_param(
-                solid_def_snapshot, "solid_def_snapshot", SolidDefSnap
-            ),
+            tags=check.opt_dict_param(tags, "tags", key_type=str),
         )
 
     @property
@@ -164,10 +146,6 @@ class UnresolvedExecutionStep(
     @property
     def kind(self):
         return StepKind.UNRESOLVED
-
-    @property
-    def tags(self):
-        return self.solid_def_snapshot.tags
 
     @property
     def step_outputs(self):
@@ -246,7 +224,7 @@ class UnresolvedExecutionStep(
                         pipeline_name=self.pipeline_name,
                         step_inputs=resolved_inputs,
                         step_outputs=self.step_outputs,
-                        solid_def_snapshot=self.solid_def_snapshot,
+                        tags=self.tags,
                     )
                 )
 

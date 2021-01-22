@@ -103,7 +103,7 @@ def resolve_step_versions_helper(execution_plan):
         if not is_executable_step(step):
             continue
 
-        solid_def = pipeline_def.get_solid(step.solid_handle)
+        solid_def = pipeline_def.get_solid(step.solid_handle).definition
 
         input_version_dict = {
             input_name: step_input.source.compute_version(
@@ -114,13 +114,13 @@ def resolve_step_versions_helper(execution_plan):
         input_versions = [version for version in input_version_dict.values()]
 
         solid_name = str(step.solid_handle)
-        solid_def_version = step.solid_def_snapshot.version
+        solid_def_version = solid_def.version
         solid_config_version = resolve_config_version(
             execution_plan.environment_config.solids[solid_name].config
         )
         hashed_resources = [
             resource_versions_by_key[resource_key]
-            for resource_key in step.solid_def_snapshot.required_resource_keys
+            for resource_key in solid_def.required_resource_keys
         ]
         solid_resources_version = join_and_hash(*hashed_resources)
         solid_version = join_and_hash(
