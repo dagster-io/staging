@@ -83,14 +83,13 @@ class StepInputSource(ABC):
         return set()
 
     @abstractmethod
-    def compute_version(self, step_versions, solid_def):
+    def compute_version(self, step_versions, solid_def, environment_config):
         """See resolve_step_versions in resolve_versions.py for explanation of step_versions"""
         raise NotImplementedError()
 
 
 class FromRootInputManager(
-    namedtuple("_FromRootInputManager", "input_solid_handle input_def_snap config_data"),
-    StepInputSource,
+    namedtuple("_FromRootInputManager", "input_solid_handle input_def_snap"), StepInputSource,
 ):
     def load_input_object(self, step_context):
         from dagster.core.events import DagsterEvent
@@ -99,10 +98,13 @@ class FromRootInputManager(
             self.input_def_snap.name
         )
 
+        solid_config = step_context.environment_config.solids.get(str(self.input_solid_handle))
+        config_data = solid_config.inputs.get(self.input_def_snap.name) if solid_config else None
+
         loader = getattr(step_context.resources, input_def.root_manager_key)
         load_input_context = step_context.for_input_manager(
             input_def.name,
-            self.config_data,
+            config_data,
             metadata=input_def.metadata,
             dagster_type=input_def.dagster_type,
             resource_config=step_context.environment_config.resources[
@@ -115,7 +117,7 @@ class FromRootInputManager(
             step_context, input_name=input_def.name, manager_key=input_def.root_manager_key,
         )
 
-    def compute_version(self, step_versions, solid_def):
+    def compute_version(self, step_versions, solid_def, environment_config):
         # TODO: support versioning for root loaders
         return None
 
@@ -124,14 +126,12 @@ class FromRootInputManager(
 
 
 class FromStepOutput(
-    namedtuple(
-        "_FromStepOutput", "step_output_handle input_solid_handle input_def_snap config_data fan_in"
-    ),
+    namedtuple("_FromStepOutput", "step_output_handle input_solid_handle input_def_snap fan_in"),
     StepInputSource,
 ):
     """This step input source is the output of a previous step"""
 
-    def __new__(cls, step_output_handle, input_solid_handle, input_def_snap, config_data, fan_in):
+    def __new__(cls, step_output_handle, input_solid_handle, input_def_snap, fan_in):
         from dagster.core.snap.solid import InputDefSnap
 
         return super(FromStepOutput, cls).__new__(
@@ -143,7 +143,6 @@ class FromStepOutput(
                 input_solid_handle, "input_solid_handle", SolidHandle,
             ),
             input_def_snap=check.inst_param(input_def_snap, "input_def_snap", InputDefSnap),
-            config_data=config_data,
             fan_in=check.bool_param(fan_in, "fan_in"),
         )
 
@@ -166,9 +165,12 @@ class FromStepOutput(
             self.input_def_snap.name
         )
 
+        solid_config = step_context.environment_config.solids.get(str(self.input_solid_handle))
+        config_data = solid_config.inputs.get(self.input_def_snap.name) if solid_config else None
+
         return step_context.for_input_manager(
             input_def.name,
-            self.config_data,
+            config_data,
             input_def.metadata,
             input_def.dagster_type,
             self.step_output_handle,
@@ -199,7 +201,7 @@ class FromStepOutput(
             upstream_step_key=source_handle.step_key,
         )
 
-    def compute_version(self, step_versions, solid_def):
+    def compute_version(self, step_versions, solid_def, environment_config):
         if (
             self.step_output_handle.step_key not in step_versions
             or not step_versions[self.step_output_handle.step_key]
@@ -229,16 +231,14 @@ def _generate_error_boundary_msg_for_step_input(context, input_name):
 
 
 class FromConfig(
-    namedtuple("_FromConfig", "config_data input_solid_handle dagster_type_snap input_name"),
-    StepInputSource,
+    namedtuple("_FromConfig", "input_solid_handle dagster_type_snap input_name"), StepInputSource,
 ):
     """This step input source is configuration to be passed to a type loader"""
 
-    def __new__(cls, config_data, input_solid_handle, dagster_type_snap, input_name):
+    def __new__(cls, input_solid_handle, dagster_type_snap, input_name):
         return super(FromConfig, cls).__new__(
             cls,
             input_solid_handle=input_solid_handle,
-            config_data=config_data,
             dagster_type_snap=dagster_type_snap,
             input_name=input_name,
         )
@@ -253,14 +253,21 @@ class FromConfig(
                 .input_def_named(self.input_name)
                 .dagster_type
             )
-            return dagster_type.loader.construct_from_config_value(step_context, self.config_data)
+
+            solid_config = step_context.environment_config.solids.get(str(self.input_solid_handle))
+            config_data = solid_config.inputs.get(self.input_name) if solid_config else None
+
+            return dagster_type.loader.construct_from_config_value(step_context, config_data)
 
     def required_resource_keys(self):
         return self.dagster_type_snap.loader_required_resource_keys
 
-    def compute_version(self, step_versions, solid_def):
+    def compute_version(self, step_versions, solid_def, environment_config):
+        solid_config = environment_config.solids.get(str(self.input_solid_handle))
+        config_data = solid_config.inputs.get(self.input_name) if solid_config else None
+
         dagster_type = solid_def.input_def_named(self.input_name).dagster_type
-        return dagster_type.loader.compute_loaded_input_version(self.config_data)
+        return dagster_type.loader.compute_loaded_input_version(config_data)
 
 
 class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource):
@@ -274,7 +281,7 @@ class FromDefaultValue(namedtuple("_FromDefaultValue", "value"), StepInputSource
     def load_input_object(self, step_context):
         return self.value
 
-    def compute_version(self, step_versions, solid_def):
+    def compute_version(self, step_versions, solid_def, environment_config):
         return join_and_hash(repr(self.value))
 
 
@@ -346,10 +353,10 @@ class FromMultipleSources(namedtuple("_FromMultipleSources", "sources"), StepInp
             resource_keys = resource_keys.union(source.required_resource_keys())
         return resource_keys
 
-    def compute_version(self, step_versions, solid_def):
+    def compute_version(self, step_versions, solid_def, environment_config):
         return join_and_hash(
             *[
-                inner_source.compute_version(step_versions, solid_def)
+                inner_source.compute_version(step_versions, solid_def, environment_config)
                 for inner_source in self.sources
             ]
         )
@@ -414,8 +421,7 @@ class UnresolvedStepInput(namedtuple("_UnresolvedStepInput", "name dagster_type_
 
 class FromPendingDynamicStepOutput(
     namedtuple(
-        "_FromPendingDynamicStepOutput",
-        "step_output_handle input_solid_handle input_def_snap config_data",
+        "_FromPendingDynamicStepOutput", "step_output_handle input_solid_handle input_def_snap",
     ),
 ):
     """
@@ -423,7 +429,7 @@ class FromPendingDynamicStepOutput(
     Once that step completes successfully, this will resolve once per DynamicOutput.
     """
 
-    def __new__(cls, step_output_handle, input_solid_handle, input_def_snap, config_data):
+    def __new__(cls, step_output_handle, input_solid_handle, input_def_snap):
         # Model the unknown mapping key from known execution step
         # using a StepOutputHandle with None mapping_key.
         check.inst_param(step_output_handle, "step_output_handle", StepOutputHandle)
@@ -438,7 +444,6 @@ class FromPendingDynamicStepOutput(
                 input_solid_handle, "input_solid_handle", SolidHandle
             ),
             input_def_snap=check.inst_param(input_def_snap, "input_def_snap", InputDefSnap),
-            config_data=config_data,
         )
 
     @property
@@ -459,7 +464,6 @@ class FromPendingDynamicStepOutput(
             ),
             input_solid_handle=self.input_solid_handle,
             input_def_snap=self.input_def_snap,
-            config_data=self.config_data,
             fan_in=False,
         )
 
@@ -474,7 +478,7 @@ class FromPendingDynamicStepOutput(
 class FromUnresolvedStepOutput(
     namedtuple(
         "_FromUnresolvedStepOutput",
-        "unresolved_step_output_handle input_solid_handle input_def_snap config_data",
+        "unresolved_step_output_handle input_solid_handle input_def_snap",
     ),
 ):
     """
@@ -482,9 +486,7 @@ class FromUnresolvedStepOutput(
     for example indirectly downstream from a step with dynamic output.
     """
 
-    def __new__(
-        cls, unresolved_step_output_handle, input_solid_handle, input_def_snap, config_data
-    ):
+    def __new__(cls, unresolved_step_output_handle, input_solid_handle, input_def_snap):
         from dagster.core.snap.solid import InputDefSnap
 
         return super(FromUnresolvedStepOutput, cls).__new__(
@@ -498,7 +500,6 @@ class FromUnresolvedStepOutput(
                 input_solid_handle, "input_solid_handle", SolidHandle
             ),
             input_def_snap=check.inst_param(input_def_snap, "input_def_snap", InputDefSnap),
-            config_data=config_data,
         )
 
     @property
@@ -515,7 +516,6 @@ class FromUnresolvedStepOutput(
             step_output_handle=self.unresolved_step_output_handle.resolve(mapping_key),
             input_solid_handle=self.input_solid_handle,
             input_def_snap=self.input_def_snap,
-            config_data=self.config_data,
             fan_in=False,
         )
 

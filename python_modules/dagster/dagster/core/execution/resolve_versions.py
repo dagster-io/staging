@@ -106,7 +106,9 @@ def resolve_step_versions_helper(execution_plan):
         solid_def = pipeline_def.get_solid(step.solid_handle)
 
         input_version_dict = {
-            input_name: step_input.source.compute_version(step_versions, solid_def)
+            input_name: step_input.source.compute_version(
+                step_versions, solid_def, execution_plan.environment_config
+            )
             for input_name, step_input in step.step_input_dict.items()
         }
         input_versions = [version for version in input_version_dict.values()]
