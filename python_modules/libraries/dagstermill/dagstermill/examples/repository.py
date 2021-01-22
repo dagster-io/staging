@@ -10,6 +10,7 @@ from dagster import (
     Int,
     List,
     ModeDefinition,
+    Optional,
     OutputDefinition,
     ResourceDefinition,
     String,
@@ -343,6 +344,44 @@ def yield_obj_pipeline():
     yield_obj()
 
 
+default_tag = test_nb_solid("tags", output_defs=[OutputDefinition(Optional[String])])
+
+
+@pipeline(mode_defs=default_mode_defs)
+def default_tag_pipeline():
+    default_tag()
+
+
+custom_tag = test_nb_solid(
+    "tags", output_defs=[OutputDefinition(Optional[String])], tags={"metadata": "some_metadata"},
+)
+
+
+@pipeline(mode_defs=default_mode_defs)
+def custom_tag_pipeline():
+    custom_tag()
+
+
+default_description = test_nb_solid("description", output_defs=[OutputDefinition(String)])
+
+
+@pipeline(mode_defs=default_mode_defs)
+def default_description_pipeline():
+    default_description()
+
+
+custom_description = test_nb_solid(
+    "description",
+    output_defs=[OutputDefinition(String)],
+    description="custom, user-provided description",
+)
+
+
+@pipeline(mode_defs=default_mode_defs)
+def custom_description_pipeline():
+    custom_description()
+
+
 @repository
 def notebook_repo():
     pipelines = [
@@ -360,6 +399,10 @@ def notebook_repo():
         reimport_pipeline,
         yield_3_pipeline,
         yield_obj_pipeline,
+        default_tag_pipeline,
+        custom_tag_pipeline,
+        default_description_pipeline,
+        custom_description_pipeline,
     ]
     if DAGSTER_PANDAS_PRESENT and SKLEARN_PRESENT and MATPLOTLIB_PRESENT:
         pipelines += [tutorial_pipeline]

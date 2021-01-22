@@ -344,6 +344,36 @@ def test_hello_logging():
 
 
 @pytest.mark.notebook_test
+def test_default_tag():
+    with exec_for_test("default_tag_pipeline") as result:
+        assert result.success
+        assert result.result_for_solid("tags").output_value() == None
+
+
+@pytest.mark.notebook_test
+def test_custom_tag():
+    with exec_for_test("custom_tag_pipeline") as result:
+        assert result.success
+        assert result.result_for_solid("tags").output_value() == "some_metadata"
+
+
+@pytest.mark.notebook_test
+def test_default_description():
+    with exec_for_test("default_description_pipeline") as result:
+        assert result.success
+        solid_output = result.result_for_solid("description").output_value()
+        assert solid_output.startswith("This solid is backed by the notebook at ")
+
+
+@pytest.mark.notebook_test
+def test_custom_description():
+    with exec_for_test("custom_description_pipeline") as result:
+        assert result.success
+        solid_output = result.result_for_solid("description").output_value()
+        assert solid_output == "custom, user-provided description"
+
+
+@pytest.mark.notebook_test
 def test_reimport():
     with exec_for_test("reimport_pipeline") as result:
         assert result.success

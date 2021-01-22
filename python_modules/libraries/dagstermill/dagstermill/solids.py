@@ -274,6 +274,8 @@ def define_dagstermill_solid(
     required_resource_keys=None,
     output_notebook=None,
     asset_key_prefix=None,
+    description=None,
+    tags=None,
 ):
     """Wrap a Jupyter notebook in a solid.
 
@@ -293,6 +295,8 @@ def define_dagstermill_solid(
             py:class:`~dagster_aws.s3.S3FileHandle`.
         asset_key_prefix (Optional[Union[List[str], str]]): If set, will be used to prefix the
             asset keys for materialized notebooks.
+        description (Optional[str]): If set, description used for solid
+        tags (Optional[Dict[str, str]]): If set, additional tags used to annotate solid
 
     Returns:
         :py:class:`~dagster.SolidDefinition`
@@ -311,6 +315,14 @@ def define_dagstermill_solid(
 
     asset_key_prefix = check.opt_list_param(asset_key_prefix, "asset_key_prefix", of_type=str)
 
+    default_description = "This solid is backed by the notebook at {path}".format(
+        path=notebook_path
+    )
+    description = check.opt_str_param(description, "description", default=default_description)
+
+    user_tags = check.opt_dict_param(tags, "tags")
+    default_tags = {"notebook_path": notebook_path, "kind": "ipynb"}
+
     return SolidDefinition(
         name=name,
         input_defs=input_defs,
@@ -325,6 +337,6 @@ def define_dagstermill_solid(
         ),
         config_schema=config_schema,
         required_resource_keys=required_resource_keys,
-        description="This solid is backed by the notebook at {path}".format(path=notebook_path),
-        tags={"notebook_path": notebook_path, "kind": "ipynb"},
+        description=description,
+        tags={**default_tags, **user_tags},
     )
