@@ -26,16 +26,6 @@ class ConfigurableDefinition(ABC):
     def config_field(self) -> Optional[Field]:
         return None if not self.config_schema else self.config_schema.as_field()
 
-    @abstractmethod
-    def copy_for_configured(
-        self,
-        name: Optional[str],
-        description: Optional[str],
-        config_schema: IDefinitionConfigSchema,
-        config_or_config_fn: Union[Any, Callable[[Any], Any]],
-    ):
-        raise NotImplementedError()
-
     def apply_config_mapping(self, config: Any) -> EvaluateValueResult:
         """
         Applies user-provided config mapping functions to the given configuration and validates the
@@ -62,40 +52,6 @@ class ConfigurableDefinition(ABC):
             else EvaluateValueResult.for_value(config)
         )
 
-    def configured(
-        self,
-        config_or_config_fn: Any,
-        config_schema: Optional[Dict[str, Any]] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-    ):
-        """
-        Wraps this object in an object of the same type that provides configuration to the inner
-        object.
-
-        Args:
-            config_or_config_fn (Union[Any, Callable[[Any], Any]]): Either (1) Run configuration
-                that fully satisfies this object's config schema or (2) A function that accepts run
-                configuration and returns run configuration that fully satisfies this object's
-                config schema.  In the latter case, config_schema must be specified.  When
-                passing a function, it's easiest to use :py:func:`configured`.
-            config_schema (ConfigSchema): If config_or_config_fn is a function, the config schema
-                that its input must satisfy.
-            name (Optional[str]): Name of the new definition. If not specified, inherits the name
-                of the definition being configured. Note: some definitions (e.g. ResourceDefinition)
-                are unnamed and this will error if a name is passed.
-            description (Optional[str]): Name of the new definition. If not specified, inherits the name
-                of the definition being configured.
-
-        Returns (ConfigurableDefinition): A configured version of this object.
-        """
-
-        new_config_schema = ConfiguredDefinitionConfigSchema(
-            self, convert_user_facing_definition_config_schema(config_schema), config_or_config_fn
-        )
-
-        return self.copy_for_configured(name, description, new_config_schema, config_or_config_fn)
-
     def _name_for_configured_node(
         self,
         old_name: Optional[str],
@@ -118,6 +74,100 @@ class ConfigurableDefinition(ABC):
                 )
             )
         return name
+
+
+class AnonymousConfigurableDefinition(ConfigurableDefinition):
+    """For definitions that dont require globally unique names, configured does not require a name
+    parameter"""
+
+    def configured(
+        self,
+        config_or_config_fn: Any,
+        config_schema: Optional[Dict[str, Any]] = None,
+        description: Optional[str] = None,
+    ):
+        """
+        Wraps this object in an object of the same type that provides configuration to the inner
+        object.
+
+        Args:
+            config_or_config_fn (Union[Any, Callable[[Any], Any]]): Either (1) Run configuration
+                that fully satisfies this object's config schema or (2) A function that accepts run
+                configuration and returns run configuration that fully satisfies this object's
+                config schema.  In the latter case, config_schema must be specified.  When
+                passing a function, it's easiest to use :py:func:`configured`.
+            config_schema (ConfigSchema): If config_or_config_fn is a function, the config schema
+                that its input must satisfy.
+            description (Optional[str]): Name of the new definition. If not specified, inherits the
+                name of the definition being configured.
+
+        Returns (ConfigurableDefinition): A configured version of this object.
+        """
+
+        new_config_schema = ConfiguredDefinitionConfigSchema(
+            self, convert_user_facing_definition_config_schema(config_schema), config_or_config_fn
+        )
+
+        return self.copy_for_configured(description, new_config_schema, config_or_config_fn)
+
+    @abstractmethod
+    def copy_for_configured(
+        self,
+        description: Optional[str],
+        config_schema: IDefinitionConfigSchema,
+        config_or_config_fn: Union[Any, Callable[[Any], Any]],
+    ):
+        raise NotImplementedError()
+
+
+class NamedConfigurableDefinition(ConfigurableDefinition):
+    """For definitions that require globally unique names, configured should accept name as a
+    top-level positional arg"""
+
+    def configured(
+        self,
+        name: str,
+        config_or_config_fn: Any,
+        config_schema: Optional[Dict[str, Any]] = None,
+        description: Optional[str] = None,
+    ):
+        """
+        Wraps this object in an object of the same type that provides configuration to the inner
+        object.
+
+        Args:
+            name (str): Name of the new definition. Since this is intended for entities that require
+                globally unique names, is a required arg.
+            config_or_config_fn (Union[Any, Callable[[Any], Any]]): Either (1) Run configuration
+                that fully satisfies this object's config schema or (2) A function that accepts run
+                configuration and returns run configuration that fully satisfies this object's
+                config schema.  In the latter case, config_schema must be specified.  When
+                passing a function, it's easiest to use :py:func:`configured`.
+            config_schema (ConfigSchema): If config_or_config_fn is a function, the config schema
+                that its input must satisfy.
+            description (Optional[str]): Name of the new definition. If not specified, inherits the name
+                of the definition being configured.
+
+        Returns (ConfigurableDefinition): A configured version of this object.
+        """
+
+        name = check.str_param(name, "name")
+
+        new_config_schema = ConfiguredDefinitionConfigSchema(
+            self, convert_user_facing_definition_config_schema(config_schema), config_or_config_fn
+        )
+
+        return self.copy_for_configured(name, description, new_config_schema, config_or_config_fn)
+
+    @abstractmethod
+    def copy_for_configured(
+        self,
+        name: str,
+        description: Optional[str],
+        config_schema: IDefinitionConfigSchema,
+        config_or_config_fn: Union[Any, Callable[[Any], Any]],
+    ):
+        raise NotImplementedError()
 
 
 def _check_configurable_param(configurable: ConfigurableDefinition) -> Any:
