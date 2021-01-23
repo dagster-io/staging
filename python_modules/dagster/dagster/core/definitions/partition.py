@@ -1,5 +1,7 @@
+import inspect
 from collections import namedtuple
 
+import pendulum
 from dagster import check
 from dagster.core.definitions.schedule import ScheduleDefinition, ScheduleExecutionContext
 from dagster.core.errors import DagsterInvalidDefinitionError, DagsterInvariantViolationError
@@ -35,7 +37,7 @@ def last_empty_partition(context, partition_set_def):
     partition_set_def = check.inst_param(
         partition_set_def, "partition_set_def", PartitionSetDefinition
     )
-    partitions = partition_set_def.get_partitions()
+    partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
     if not partitions:
         return None
     selected = None
@@ -54,7 +56,7 @@ def first_partition(context, partition_set_def=None):
         partition_set_def, "partition_set_def", PartitionSetDefinition
     )
 
-    partitions = partition_set_def.get_partitions()
+    partitions = partition_set_def.get_partitions(context.scheduled_execution_time)
     if not partitions:
         return None
 
@@ -99,7 +101,9 @@ class PartitionSetDefinition(
         run_config_fn_for_partition=lambda _partition: {},
         tags_fn_for_partition=lambda _partition: {},
     ):
-        def _wrap(x):
+        partition_fn_param_count = len(inspect.signature(partition_fn).parameters)
+
+        def _wrap_partition(x):
             if isinstance(x, Partition):
                 return x
             if isinstance(x, str):
@@ -108,13 +112,24 @@ class PartitionSetDefinition(
                 "Expected <Partition> | <str>, received {type}".format(type=type(x))
             )
 
+        def _wrap_partition_fn(execution_time=None):
+            if not execution_time:
+                execution_time = pendulum.now()
+
+            check.callable_param(partition_fn, "partition_fn")
+
+            if partition_fn_param_count == 1:
+                obj_list = partition_fn(execution_time)
+            else:
+                obj_list = partition_fn()
+
+            return [_wrap_partition(obj) for obj in obj_list]
+
         return super(PartitionSetDefinition, cls).__new__(
             cls,
             name=check_valid_name(name),
             pipeline_name=check.str_param(pipeline_name, "pipeline_name"),
-            partition_fn=lambda: [
-                _wrap(x) for x in check.callable_param(partition_fn, "partition_fn")()
-            ],
+            partition_fn=_wrap_partition_fn,
             solid_selection=check.opt_nullable_list_param(
                 solid_selection, "solid_selection", of_type=str
             ),
@@ -138,8 +153,8 @@ class PartitionSetDefinition(
 
         return tags
 
-    def get_partitions(self):
-        return self.partition_fn()
+    def get_partitions(self, execution_time=None):
+        return self.partition_fn(execution_time)
 
     def get_partition(self, name):
         for partition in self.get_partitions():
