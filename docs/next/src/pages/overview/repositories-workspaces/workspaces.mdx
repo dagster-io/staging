@@ -148,7 +148,7 @@ that's responsible for serving information about your repositories. This can be 
 complex system architectures that deploy user code separately from Dagit.
 
 The Dagster gRPC server needs to have access to your code. To initialize the server, run
-the `dagster api grpc` command and pass it a target file or module to load.
+`python -m dagster.grpc` and pass it a target file or module to load.
 
 Similar to when specifying code in your `workspace.yaml`, the target can be either a
 python file or installed python package, and you can use an 'attribute' flag to
@@ -159,16 +159,16 @@ You also need to specify a host and either a post or socket to run the server on
 
 ```
 # Load gRPC Server using python file:
-dagster api grpc --python-file /path/to/file.py --host 0.0.0.0 --port 4266
-dagster api grpc --python-file /path/to/file.py --host 0.0.0.0 --port /path/to/socket
+python -m dagster.grpc --python-file /path/to/file.py --host 0.0.0.0 --port 4266
+python -m dagster.grpc --python-file /path/to/file.py --host 0.0.0.0 --port /path/to/socket
 
 # Load gRPC Server using python package:
-dagster api grpc --package-name my_package_name --host 0.0.0.0 --port 4266
-dagster api grpc --package-name my_package_name --host 0.0.0.0 --socket /path/to/socket
+python -m dagster.grpc --package-name my_package_name --host 0.0.0.0 --port 4266
+python -m dagster.grpc --package-name my_package_name --host 0.0.0.0 --socket /path/to/socket
 
 # Specify an attribute within the target to load a specific repository:
-dagster api grpc --python-file /path/to/file.py --attribute my_repository --host 0.0.0.0 --port 4266
-dagster api grpc --package-name my_package_name --attribute my_repository --host 0.0.0.0 --port 4266
+python -m dagster.grpc --python-file /path/to/file.py --attribute my_repository --host 0.0.0.0 --port 4266
+python -m dagster.grpc --package-name my_package_name --attribute my_repository --host 0.0.0.0 --port 4266
 ```
 
 Then, in your `workspace.yaml`, you can configure a new gRPC server repository location to load:
