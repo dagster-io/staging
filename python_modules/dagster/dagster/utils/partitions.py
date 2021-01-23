@@ -30,7 +30,7 @@ def schedule_partition_range(
             )
         )
 
-    def get_schedule_range_partitions():
+    def get_schedule_range_partitions(execution_time=None):
         tz = timezone if timezone else pendulum.now().timezone.name
         _start = (
             start.in_tz(tz)
@@ -38,7 +38,9 @@ def schedule_partition_range(
             else pendulum.instance(start, tz=tz)
         )
 
-        if not end:
+        if not end and execution_time:
+            _end = execution_time
+        elif not end:
             _end = pendulum.now(tz)
         elif isinstance(end, pendulum.Pendulum):
             _end = end.in_tz(tz)
@@ -220,7 +222,9 @@ def create_offset_partition_selector(execution_time_to_partition_fn):
 
         partition_time = execution_time_to_partition_fn(context.scheduled_execution_time)
 
-        for partition in reversed(partition_set_def.get_partitions()):
+        for partition in reversed(
+            partition_set_def.get_partitions(context.scheduled_execution_time)
+        ):
             if partition.value.isoformat() == partition_time.isoformat():
                 return partition
 
