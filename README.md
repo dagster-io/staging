@@ -9,7 +9,7 @@
 
 # Dagster
 
-Dagster is a data orchestrator for machine learning, analytics, and ETL
+Dagster is a data orchestrator for machine learning, analytics, and ETL.
 
 Dagster lets you define pipelines in terms of the data flow between reusable, logical components, then test locally and run anywhere. With a unified view of pipelines and the assets they produce, Dagster can schedule and orchestrate Pandas, Spark, SQL, or anything else that Python can invoke.
 
