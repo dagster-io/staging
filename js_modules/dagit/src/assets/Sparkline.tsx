@@ -27,10 +27,6 @@ export const Sparkline: React.FunctionComponent<{
     ctx.scale(1, -1);
     ctx.translate(0, -height);
 
-    if (data.xAxis === 'time') {
-      ctx.scale(-1, 1);
-      ctx.translate(-width, 0);
-    }
     ctx.beginPath();
     ctx.strokeStyle = Colors.BLUE3;
     ctx.lineWidth = 3;

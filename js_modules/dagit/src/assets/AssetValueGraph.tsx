@@ -57,9 +57,6 @@ export const AssetValueGraph: React.FunctionComponent<{
         props.data.xAxis === 'time'
           ? {
               type: 'time',
-              ticks: {
-                reverse: true,
-              },
               scaleLabel: {
                 display: true,
                 labelString: 'Timestamp',

@@ -69,13 +69,11 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
   // down through the component tree.
   const isPartitioned = asset.assetMaterializations.some((m) => m.partition);
 
-  const assetMaterializations = [...asset.assetMaterializations]
-    .sort(
-      (a, b) =>
-        (xAxis === 'partition' && (a.partition || '').localeCompare(b.partition || '')) ||
-        Number(a.materializationEvent.timestamp) - Number(b.materializationEvent.timestamp),
-    )
-    .reverse();
+  const assetMaterializations = [...asset.assetMaterializations].sort(
+    (a, b) =>
+      (xAxis === 'partition' && (a.partition || '').localeCompare(b.partition || '')) ||
+      Number(a.materializationEvent.timestamp) - Number(b.materializationEvent.timestamp),
+  );
 
   const graphDataByMetadataLabel = extractNumericData(assetMaterializations, xAxis);
   const [graphedLabels, setGraphedLabels] = React.useState(() =>
@@ -151,7 +149,7 @@ const AssetViewWithData: React.FunctionComponent<{asset: AssetQuery_assetOrError
       {activeTab === 'list' ? (
         <AssetMaterializationTable
           isPartitioned={isPartitioned}
-          materializations={assetMaterializations}
+          materializations={[...assetMaterializations].reverse()}
         />
       ) : (
         <>
