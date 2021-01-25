@@ -1,12 +1,13 @@
 import os
 import subprocess
+from typing import List
 
 import yaml
 
 DAGIT_PATH = "js_modules/dagit"
 
 
-def buildkite_yaml_for_steps(steps):
+def buildkite_yaml_for_steps(steps: list) -> str:
     return yaml.dump(
         {
             "env": {
@@ -22,7 +23,7 @@ def buildkite_yaml_for_steps(steps):
     )
 
 
-def check_for_release():
+def check_for_release() -> bool:
     try:
         git_tag = str(
             subprocess.check_output(
@@ -42,7 +43,7 @@ def check_for_release():
     return False
 
 
-def is_phab_and_dagit_only():
+def is_phab_and_dagit_only() -> bool:
     branch_name = os.getenv("BUILDKITE_BRANCH")
     if branch_name is None:
         branch_name = (
@@ -68,7 +69,7 @@ def is_phab_and_dagit_only():
         return False
 
 
-def network_buildkite_container(network_name):
+def network_buildkite_container(network_name: str) -> List[str]:
     return [
         # hold onto your hats, this is docker networking at its best. First, we figure out
         # the name of the currently running container...
@@ -76,21 +77,19 @@ def network_buildkite_container(network_name):
         r'export CONTAINER_NAME=`docker ps --filter "id=\${CONTAINER_ID}" --format "{{.Names}}"`',
         # then, we dynamically bind this container into the user-defined bridge
         # network to make the target containers visible...
-        "docker network connect {network_name} \\${{CONTAINER_NAME}}".format(
-            network_name=network_name
-        ),
+        f"docker network connect {network_name} \\${{CONTAINER_NAME}}",
     ]
 
 
-def connect_sibling_docker_container(network_name, container_name, env_variable):
+def connect_sibling_docker_container(
+    network_name: str, container_name: str, env_variable: str
+) -> List[str]:
     return [
         # Now, we grab the IP address of the target container from within the target
         # bridge network and export it; this will let the tox tests talk to the target cot.
         (
-            "export {env_variable}=`docker inspect --format "
-            "'{{{{ .NetworkSettings.Networks.{network_name}.IPAddress }}}}' "
-            "{container_name}`".format(
-                network_name=network_name, container_name=container_name, env_variable=env_variable
-            )
+            f"export {env_variable}=`docker inspect --format "
+            f"'{{{{ .NetworkSettings.Networks.{network_name}.IPAddress }}}}' "
+            f"{container_name}`"
         )
     ]

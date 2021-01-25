@@ -462,7 +462,7 @@ def coverage_step():
             "coveralls",  # add '--merge=coverage.js.json' to report JS coverage
         )
         .on_python_image(
-            "buildkite-coverage:py3.8.7-{version}".format(version=COVERAGE_IMAGE_VERSION),
+            f"buildkite-coverage:py3.8.7-{COVERAGE_IMAGE_VERSION}",
             [
                 "COVERALLS_REPO_TOKEN",  # exported by /env in ManagedSecretsBucket
                 "CI_NAME",
