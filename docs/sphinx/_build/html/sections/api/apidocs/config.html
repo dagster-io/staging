@@ -1,0 +1,535 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Config &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Errors" href="errors.html" />
+    <link rel="prev" title="Dagster CLI" href="cli.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="cli.html" title="Previous document">Dagster CLI</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="errors.html" title="Next document">Errors</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="config">
+<h1>Config<a class="headerlink" href="#config" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="config-types">
+<h2>Config Types<a class="headerlink" href="#config-types" title="Permalink to this headline">¶</a></h2>
+<p>The following types are used to describe the schema of configuration
+data via <code class="docutils literal notranslate"><span class="pre">config</span></code>. They are used in conjunction with the
+builtin types above.</p>
+<dl class="class">
+<dt id="dagster.ConfigSchema">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">ConfigSchema</code><a class="reference internal" href="../../../_modules/dagster/config/config_schema.html#ConfigSchema"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ConfigSchema" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is a placeholder type. Any time that it appears in documentation, it means that any of
+the following types are acceptable:</p>
+<ol class="arabic simple">
+<li><p>A Python scalar type that resolves to a Dagster config type
+(<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">bool</span></code></a>,
+or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>). For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&#64;solid(config_schema=int)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&#64;solid(config_schema=str)</span></code></p></li>
+</ul>
+</li>
+<li><p>A built-in python collection (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a>, or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a>).
+<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a> is exactly equivalent to <a class="reference internal" href="#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a> [
+<a class="reference internal" href="types.html#dagster.Any" title="dagster.Any"><code class="xref py py-class docutils literal notranslate"><span class="pre">Any</span></code></a> ] and <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">dict</span></code></a> is equivalent to
+<a class="reference internal" href="#dagster.Permissive" title="dagster.Permissive"><code class="xref py py-class docutils literal notranslate"><span class="pre">Permissive</span></code></a>. For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&#64;solid(config_schema=list)</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&#64;solid(config_schema=dict)</span></code></p></li>
+</ul>
+</li>
+<li><p>A Dagster config type:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="types.html#dagster.Any" title="dagster.Any"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.Bool" title="dagster.Bool"><code class="xref py py-data docutils literal notranslate"><span class="pre">Bool</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Enum" title="dagster.Enum"><code class="xref py py-data docutils literal notranslate"><span class="pre">Enum</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.Float" title="dagster.Float"><code class="xref py py-data docutils literal notranslate"><span class="pre">Float</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.Int" title="dagster.Int"><code class="xref py py-data docutils literal notranslate"><span class="pre">Int</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.IntSource" title="dagster.IntSource"><code class="xref py py-data docutils literal notranslate"><span class="pre">IntSource</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Noneable" title="dagster.Noneable"><code class="xref py py-data docutils literal notranslate"><span class="pre">Noneable</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Permissive" title="dagster.Permissive"><code class="xref py py-class docutils literal notranslate"><span class="pre">Permissive</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.ScalarUnion" title="dagster.ScalarUnion"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScalarUnion</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Selector" title="dagster.Selector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Selector</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Shape" title="dagster.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">Shape</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.String" title="dagster.String"><code class="xref py py-data docutils literal notranslate"><span class="pre">String</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.StringSource" title="dagster.StringSource"><code class="xref py py-data docutils literal notranslate"><span class="pre">StringSource</span></code></a></p></li>
+</ul>
+</li>
+<li><p>A bare python dictionary, which will be automatically wrapped in
+<a class="reference internal" href="#dagster.Shape" title="dagster.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">Shape</span></code></a>. Values of the dictionary are resolved recursively
+according to the same rules. For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">{'some_config':</span> <span class="pre">str}</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">Shape({'some_config:</span> <span class="pre">str})</span></code>.</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">{'some_config1':</span> <span class="pre">{'some_config2':</span> <span class="pre">str}}</span></code> is equivalent to</dt><dd><p><code class="docutils literal notranslate"><span class="pre">Shape({'some_config1:</span> <span class="pre">Shape({'some_config2:</span> <span class="pre">str})})</span></code>.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</li>
+<li><p>A bare python list of length one, whose single element will be wrapped in a
+<a class="reference internal" href="#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a> is resolved recursively according to the same
+rules. For example:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">[str]</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">Array[str]</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[[str]]</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">Array[Array[str]]</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[{'some_config':</span> <span class="pre">str}]</span></code> is equivalent to <code class="docutils literal notranslate"><span class="pre">Array(Shape({'some_config:</span> <span class="pre">str}))</span></code>.</p></li>
+</ul>
+</li>
+<li><p>An instance of <a class="reference internal" href="#dagster.Field" title="dagster.Field"><code class="xref py py-class docutils literal notranslate"><span class="pre">Field</span></code></a>.</p></li>
+</ol>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Field">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Field</code><span class="sig-paren">(</span><em class="sig-param">config</em>, <em class="sig-param">default_value=&lt;class 'dagster.config.field_utils.__FieldValueSentinel'&gt;</em>, <em class="sig-param">is_required=None</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/field.html#Field"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Field" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines the schema for a configuration field.</p>
+<p>Fields are used in config schema instead of bare types when one wants to add a description,
+a default value, or to mark it as not required.</p>
+<p>Config fields are parsed according to their schemas in order to yield values available at
+pipeline execution time through the config system. Config fields can be set on solids, on
+loaders and materializers for custom, and on other pluggable components of the system, such as
+resources, loggers, and executors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config</strong> (<em>Any</em>) – <p>The schema for the config. This value can be any of:</p>
+<ol class="arabic simple">
+<li><p>A Python primitive type that resolves to a Dagster config type
+(<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">bool</span></code></a>,
+<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>, or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">list</span></code></a>).</p></li>
+<li><p>A Dagster config type:</p>
+<ul>
+<li><p><a class="reference internal" href="types.html#dagster.Any" title="dagster.Any"><code class="xref py py-data docutils literal notranslate"><span class="pre">Any</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.Bool" title="dagster.Bool"><code class="xref py py-data docutils literal notranslate"><span class="pre">Bool</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Enum" title="dagster.Enum"><code class="xref py py-data docutils literal notranslate"><span class="pre">Enum</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.Float" title="dagster.Float"><code class="xref py py-data docutils literal notranslate"><span class="pre">Float</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.Int" title="dagster.Int"><code class="xref py py-data docutils literal notranslate"><span class="pre">Int</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.IntSource" title="dagster.IntSource"><code class="xref py py-data docutils literal notranslate"><span class="pre">IntSource</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Noneable" title="dagster.Noneable"><code class="xref py py-data docutils literal notranslate"><span class="pre">Noneable</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Permissive" title="dagster.Permissive"><code class="xref py py-class docutils literal notranslate"><span class="pre">Permissive</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.ScalarUnion" title="dagster.ScalarUnion"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScalarUnion</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Selector" title="dagster.Selector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Selector</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.Shape" title="dagster.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">Shape</span></code></a></p></li>
+<li><p><a class="reference internal" href="types.html#dagster.String" title="dagster.String"><code class="xref py py-data docutils literal notranslate"><span class="pre">String</span></code></a></p></li>
+<li><p><a class="reference internal" href="#dagster.StringSource" title="dagster.StringSource"><code class="xref py py-data docutils literal notranslate"><span class="pre">StringSource</span></code></a></p></li>
+</ul>
+</li>
+<li><p>A bare python dictionary, which will be automatically wrapped in
+<a class="reference internal" href="#dagster.Shape" title="dagster.Shape"><code class="xref py py-class docutils literal notranslate"><span class="pre">Shape</span></code></a>. Values of the dictionary are resolved recursively
+according to the same rules.</p></li>
+<li><p>A bare python list of length one which itself is config type.
+Becomes <a class="reference internal" href="#dagster.Array" title="dagster.Array"><code class="xref py py-class docutils literal notranslate"><span class="pre">Array</span></code></a> with list element as an argument.</p></li>
+</ol>
+</p></li>
+<li><p><strong>default_value</strong> (<em>Any</em>) – <p>A default value for this field, conformant to the schema set by the <code class="docutils literal notranslate"><span class="pre">dagster_type</span></code>
+argument. If a default value is provided, <code class="docutils literal notranslate"><span class="pre">is_required</span></code> should be <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p>
+<p>Note: for config types that do post processing such as Enum, this value must be
+the pre processed version, ie use <code class="docutils literal notranslate"><span class="pre">ExampleEnum.VALUE.name</span></code> instead of
+<code class="docutils literal notranslate"><span class="pre">ExampleEnum.VALUE</span></code></p>
+</p></li>
+<li><p><strong>is_required</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Whether the presence of this field is required. Defaults to true. If <code class="docutils literal notranslate"><span class="pre">is_required</span></code>
+is <code class="docutils literal notranslate"><span class="pre">True</span></code>, no default value should be provided.</p></li>
+<li><p><strong>description</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – A human-readable description of this config field.</p></li>
+</ul>
+</dd>
+</dl>
+<p>Examples:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;word&#39;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;I am a word.&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;repeats&#39;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">repeat_word</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s1">&#39;word&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s1">&#39;repeats&#39;</span><span class="p">]</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Selector">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Selector</code><span class="sig-paren">(</span><em class="sig-param">fields</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/field_utils.html#Selector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Selector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a config field requiring the user to select one option.</p>
+<p>Selectors are used when you want to be able to present several different options in config but
+allow only one to be selected. For example, a single input might be read in from either a csv
+file or a parquet file, but not both at once.</p>
+<p>Note that in some other type systems this might be called an ‘input union’.</p>
+<p>Functionally, a selector is like a <a class="reference internal" href="types.html#dagster.Dict" title="dagster.Dict"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>, except that only one key from the dict can
+be specified in valid config.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fields</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="#dagster.Field" title="dagster.Field"><em>Field</em></a><em>]</em>) – The fields from which the user must select.</p>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="n">Field</span><span class="p">(</span>
+        <span class="n">Selector</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s1">&#39;haw&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;whom&#39;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s1">&#39;honua&#39;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)},</span>
+                <span class="s1">&#39;cn&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;whom&#39;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s1">&#39;世界&#39;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)},</span>
+                <span class="s1">&#39;en&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;whom&#39;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">String</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s1">&#39;world&#39;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)},</span>
+            <span class="p">}</span>
+        <span class="p">),</span>
+        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">default_value</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;en&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;whom&#39;</span><span class="p">:</span> <span class="s1">&#39;world&#39;</span><span class="p">}},</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">hello_world_with_default</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">if</span> <span class="s1">&#39;haw&#39;</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Aloha </span><span class="si">{whom}</span><span class="s1">!&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">whom</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s1">&#39;haw&#39;</span><span class="p">][</span><span class="s1">&#39;whom&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s1">&#39;cn&#39;</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;你好，</span><span class="si">{whom}</span><span class="s1">!&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">whom</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s1">&#39;cn&#39;</span><span class="p">][</span><span class="s1">&#39;whom&#39;</span><span class="p">])</span>
+    <span class="k">if</span> <span class="s1">&#39;en&#39;</span> <span class="ow">in</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s1">&#39;Hello, </span><span class="si">{whom}</span><span class="s1">!&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">whom</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="p">[</span><span class="s1">&#39;en&#39;</span><span class="p">][</span><span class="s1">&#39;whom&#39;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Permissive">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Permissive</code><span class="sig-paren">(</span><em class="sig-param">fields=None</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/field_utils.html#Permissive"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Permissive" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a config dict with a partially specified schema.</p>
+<p>A permissive dict allows partial specification of the config schema. Any fields with a
+specified schema will be type checked. Other fields will be allowed, but will be ignored by
+the type checker.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fields</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="#dagster.Field" title="dagster.Field"><em>Field</em></a><em>]</em>) – The partial specification of the config dict.</p>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="n">Field</span><span class="p">(</span><span class="n">Permissive</span><span class="p">({</span><span class="s1">&#39;required&#39;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">String</span><span class="p">)})))</span>
+<span class="k">def</span> <span class="nf">partially_specified_config</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Shape">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Shape</code><span class="sig-paren">(</span><em class="sig-param">fields</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/field_utils.html#Shape"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schema for configuration data with string keys and typed values via <a class="reference internal" href="#dagster.Field" title="dagster.Field"><code class="xref py py-class docutils literal notranslate"><span class="pre">Field</span></code></a>.</p>
+<p>Unlike <a class="reference internal" href="#dagster.Permissive" title="dagster.Permissive"><code class="xref py py-class docutils literal notranslate"><span class="pre">Permissive</span></code></a>, unspecified fields are not allowed and will throw a
+<a class="reference internal" href="errors.html#dagster.DagsterInvalidConfigError" title="dagster.DagsterInvalidConfigError"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagsterInvalidConfigError</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>fields</strong> (<em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="#dagster.Field" title="dagster.Field"><em>Field</em></a><em>]</em>) – The specification of the config dict.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Array">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Array</code><span class="sig-paren">(</span><em class="sig-param">inner_type</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/config_type.html#Array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines an array (list) configuration type that contains values of type <code class="docutils literal notranslate"><span class="pre">inner_type</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>inner_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.8)"><em>type</em></a>) – The type of the values that this configuration type can contain.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Noneable">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Noneable</code><span class="sig-paren">(</span><em class="sig-param">inner_type</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/config_type.html#Noneable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Noneable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a configuration type that is the union of <code class="docutils literal notranslate"><span class="pre">NoneType</span></code> and the type <code class="docutils literal notranslate"><span class="pre">inner_type</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>inner_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.8)"><em>type</em></a>) – The type of the values that this configuration type can contain.</p>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">Noneable</span><span class="p">(</span><span class="nb">str</span><span class="p">)}</span>
+
+<span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello&quot;</span><span class="p">}</span>  <span class="c1"># Ok</span>
+<span class="n">config</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>     <span class="c1"># Ok</span>
+<span class="n">config</span><span class="o">=</span><span class="p">{}</span>                 <span class="c1"># Error</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.Enum">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Enum</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">enum_values</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/config_type.html#Enum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Enum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a enum configuration type that allows one of a defined set of possible values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the enum configuration type.</p></li>
+<li><p><strong>enum_values</strong> (<em>List</em><em>[</em><a class="reference internal" href="#dagster.EnumValue" title="dagster.EnumValue"><em>EnumValue</em></a><em>]</em>) – The set of possible values for the enum configuration type.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="n">Field</span><span class="p">(</span>
+        <span class="n">Enum</span><span class="p">(</span>
+            <span class="s1">&#39;CowboyType&#39;</span><span class="p">,</span>
+            <span class="p">[</span>
+                <span class="n">EnumValue</span><span class="p">(</span><span class="s1">&#39;good&#39;</span><span class="p">),</span>
+                <span class="n">EnumValue</span><span class="p">(</span><span class="s1">&#39;bad&#39;</span><span class="p">),</span>
+                <span class="n">EnumValue</span><span class="p">(</span><span class="s1">&#39;ugly&#39;</span><span class="p">),</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">resolve_standoff</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="c1"># ...</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.EnumValue">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">EnumValue</code><span class="sig-paren">(</span><em class="sig-param">config_value</em>, <em class="sig-param">python_value=None</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/config_type.html#EnumValue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.EnumValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define an entry in a <a class="reference internal" href="#dagster.Enum" title="dagster.Enum"><code class="xref py py-class docutils literal notranslate"><span class="pre">Enum</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config_value</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The string representation of the config to accept when passed.</p></li>
+<li><p><strong>python_value</strong> (<em>Optional</em><em>[</em><em>Any</em><em>]</em>) – The python value to convert the enum entry in to. Defaults to the <code class="docutils literal notranslate"><span class="pre">config_value</span></code>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the enum entry.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.ScalarUnion">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">ScalarUnion</code><span class="sig-paren">(</span><em class="sig-param">scalar_type</em>, <em class="sig-param">non_scalar_schema</em>, <em class="sig-param">_key=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/config/config_type.html#ScalarUnion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ScalarUnion" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a configuration type that accepts a scalar value OR a non-scalar value like a
+<a class="reference internal" href="types.html#dagster.List" title="dagster.List"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>, <a class="reference internal" href="types.html#dagster.Dict" title="dagster.Dict"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>, or <a class="reference internal" href="#dagster.Selector" title="dagster.Selector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Selector</span></code></a>.</p>
+<p>This allows runtime scalars to be configured without a dictionary with the key <code class="docutils literal notranslate"><span class="pre">value</span></code> and
+instead just use the scalar value directly. However this still leaves the option to
+load scalars from a json or pickle file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>scalar_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#type" title="(in Python v3.8)"><em>type</em></a>) – The scalar type of values that this configuration type can hold. For example,
+<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">int</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">float</span></code></a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">bool</span></code></a>,
+or <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="docutils literal notranslate"><span class="pre">str</span></code></a>.</p></li>
+<li><p><strong>non_scalar_schema</strong> (<a class="reference internal" href="#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a>) – The schema of a non-scalar Dagster configuration type. For example, <a class="reference internal" href="types.html#dagster.List" title="dagster.List"><code class="xref py py-class docutils literal notranslate"><span class="pre">List</span></code></a>,
+<a class="reference internal" href="types.html#dagster.Dict" title="dagster.Dict"><code class="xref py py-class docutils literal notranslate"><span class="pre">Dict</span></code></a>, or <a class="reference internal" href="#dagster.Selector" title="dagster.Selector"><code class="xref py py-class docutils literal notranslate"><span class="pre">Selector</span></code></a>.</p></li>
+<li><p><strong>key</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The configuation type’s unique key. If not set, then the key will be set to
+<code class="docutils literal notranslate"><span class="pre">ScalarUnion.{scalar_type}-{non_scalar_schema}</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">solids</span><span class="p">:</span>
+  <span class="nt">transform_word</span><span class="p">:</span>
+    <span class="nt">inputs</span><span class="p">:</span>
+      <span class="nt">word</span><span class="p">:</span>
+        <span class="nt">value</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">foobar</span>
+</pre></div>
+</div>
+<p>becomes, optionally,</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">solids</span><span class="p">:</span>
+  <span class="nt">transform_word</span><span class="p">:</span>
+    <span class="nt">inputs</span><span class="p">:</span>
+      <span class="nt">word</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">foobar</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.StringSource">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">StringSource</code><a class="headerlink" href="#dagster.StringSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use this type when you want to read a string config value from an environment variable. The value
+passed to a config field of this type may either be a string literal, or a selector describing
+how to look up the value from the executing process’s environment variables.</p>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="n">StringSource</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">secret_solid</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span>
+
+<span class="n">execute_solid</span><span class="p">(</span>
+    <span class="n">secret_solid</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;solids&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;secret_solid&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="s1">&#39;test_value&#39;</span><span class="p">}}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">execute_solid</span><span class="p">(</span>
+    <span class="n">secret_solid</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;solids&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;secret_solid&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;VERY_SECRET_ENV_VARIABLE&#39;</span><span class="p">}}}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.IntSource">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">IntSource</code><a class="headerlink" href="#dagster.IntSource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use this type when you want to read an integer config value from an environment variable. The
+value passed to a config field of this type may either be a integer literal, or a selector
+describing how to look up the value from the executing process’s environment variables.</p>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="n">IntSource</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">secret_int_solid</span><span class="p">(</span><span class="n">context</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">solid_config</span>
+
+<span class="n">execute_solid</span><span class="p">(</span>
+    <span class="n">secret_int_solid</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;solids&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;secret_int_solid&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+
+<span class="n">execute_solid</span><span class="p">(</span>
+    <span class="n">secret_int_solid</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span>
+        <span class="s1">&#39;solids&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;secret_int_solid&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;env&#39;</span><span class="p">:</span> <span class="s1">&#39;VERY_SECRET_ENV_VARIABLE_INT&#39;</span><span class="p">}}}</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="config-utilities">
+<h2>Config Utilities<a class="headerlink" href="#config-utilities" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.configured">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">configured</code><span class="sig-paren">(</span><em class="sig-param">configurable: dagster.core.definitions.configurable.ConfigurableDefinition</em>, <em class="sig-param">config_schema: Optional[Dict[str</em>, <em class="sig-param">Any]] = None</em>, <em class="sig-param">**kwargs: Any</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/configurable.html#configured"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.configured" title="Permalink to this definition">¶</a></dt>
+<dd><p>A decorator that makes it easy to create a function-configured version of an object.
+The following definition types can be configured using this function:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="solids.html#dagster.CompositeSolidDefinition" title="dagster.CompositeSolidDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">CompositeSolidDefinition</span></code></a></p></li>
+<li><p><a class="reference internal" href="internals.html#dagster.ExecutorDefinition" title="dagster.ExecutorDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExecutorDefinition</span></code></a></p></li>
+<li><p><a class="reference internal" href="internals.html#dagster.IntermediateStorageDefinition" title="dagster.IntermediateStorageDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">IntermediateStorageDefinition</span></code></a></p></li>
+<li><p><a class="reference internal" href="loggers.html#dagster.LoggerDefinition" title="dagster.LoggerDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">LoggerDefinition</span></code></a></p></li>
+<li><p><a class="reference internal" href="modes-resources.html#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDefinition</span></code></a></p></li>
+<li><p><a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">SolidDefinition</span></code></a></p></li>
+</ul>
+<p>If the config that will be supplied to the object is constant, you may alternatively invoke this
+and call the result with a dict of config values to be curried. Examples of both strategies
+below.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>configurable</strong> (<em>ConfigurableDefinition</em>) – An object that can be configured.</p></li>
+<li><p><strong>config_schema</strong> (<a class="reference internal" href="#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a>) – The config schema that the inputs to the decorated function
+must satisfy.</p></li>
+<li><p><strong>**kwargs</strong> – Arbitrary keyword arguments that will be passed to the initializer of the returned
+object.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>(Callable[[Union[Any, Callable[[Any], Any]]], ConfigurableDefinition])</p>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dev_s3</span> <span class="o">=</span> <span class="n">configured</span><span class="p">(</span><span class="n">s3_resource</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;dev_s3&quot;</span><span class="p">)({</span><span class="s1">&#39;bucket&#39;</span><span class="p">:</span> <span class="s1">&#39;dev&#39;</span><span class="p">})</span>
+
+<span class="nd">@configured</span><span class="p">(</span><span class="n">s3_resource</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">dev_s3</span><span class="p">(</span><span class="n">_</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;bucket&#39;</span><span class="p">:</span> <span class="s1">&#39;dev&#39;</span><span class="p">}</span>
+
+<span class="nd">@configured</span><span class="p">(</span><span class="n">s3_resource</span><span class="p">,</span> <span class="p">{</span><span class="s1">&#39;bucket_prefix&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">}):</span>
+<span class="k">def</span> <span class="nf">dev_s3</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s1">&#39;bucket&#39;</span><span class="p">:</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;bucket_prefix&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;dev&#39;</span><span class="p">}</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="cli.html" title="Previous document">Dagster CLI</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="errors.html" title="Next document">Errors</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

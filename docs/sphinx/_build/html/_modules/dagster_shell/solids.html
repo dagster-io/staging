@@ -1,0 +1,295 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_shell.solids &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_shell.solids</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Enum</span><span class="p">,</span>
+    <span class="n">EnumValue</span><span class="p">,</span>
+    <span class="n">Failure</span><span class="p">,</span>
+    <span class="n">Field</span><span class="p">,</span>
+    <span class="n">InputDefinition</span><span class="p">,</span>
+    <span class="n">Noneable</span><span class="p">,</span>
+    <span class="n">Nothing</span><span class="p">,</span>
+    <span class="n">OutputDefinition</span><span class="p">,</span>
+    <span class="n">Permissive</span><span class="p">,</span>
+    <span class="n">check</span><span class="p">,</span>
+    <span class="n">solid</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">execute</span><span class="p">,</span> <span class="n">execute_script_file</span>
+
+
+<span class="k">def</span> <span class="nf">shell_solid_config</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;env&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">Noneable</span><span class="p">(</span><span class="n">Permissive</span><span class="p">()),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;An optional dict of environment variables to pass to the subprocess. &quot;</span>
+            <span class="s2">&quot;Defaults to using os.environ.copy().&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;output_logging&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">Enum</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="s2">&quot;OutputType&quot;</span><span class="p">,</span>
+                <span class="n">enum_values</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">EnumValue</span><span class="p">(</span><span class="s2">&quot;STREAM&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Stream script stdout/stderr.&quot;</span><span class="p">),</span>
+                    <span class="n">EnumValue</span><span class="p">(</span>
+                        <span class="s2">&quot;BUFFER&quot;</span><span class="p">,</span>
+                        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Buffer shell script stdout/stderr, then log upon completion.&quot;</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="n">EnumValue</span><span class="p">(</span><span class="s2">&quot;NONE&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;No logging&quot;</span><span class="p">),</span>
+                <span class="p">],</span>
+            <span class="p">),</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;BUFFER&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;cwd&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">Noneable</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Working directory in which to execute shell script&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="shell_solid"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_shell.html#dagster_shell.shell_solid">[docs]</a><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;shell_solid&quot;</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+        <span class="s2">&quot;This solid executes a shell command it receives as input.</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="s2">&quot;This solid is suitable for uses where the command to execute is generated dynamically by &quot;</span>
+        <span class="s2">&quot;upstream solids. If you know the command to execute at pipeline construction time, &quot;</span>
+        <span class="s2">&quot;consider `shell_command_solid` instead.&quot;</span>
+    <span class="p">),</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;shell_command&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)],</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">)],</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="n">shell_solid_config</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">shell_solid</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">shell_command</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This solid executes a shell command it receives as input.</span>
+
+<span class="sd">    This solid is suitable for uses where the command to execute is generated dynamically by</span>
+<span class="sd">    upstream solids. If you know the command to execute at pipeline construction time, consider</span>
+<span class="sd">    `shell_command_solid` instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">output</span><span class="p">,</span> <span class="n">return_code</span> <span class="o">=</span> <span class="n">execute</span><span class="p">(</span>
+        <span class="n">shell_command</span><span class="o">=</span><span class="n">shell_command</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span>
+    <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">return_code</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">Failure</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Shell command execution failed with output: </span><span class="si">{output}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">output</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">output</span></div>
+
+
+<div class="viewcode-block" id="create_shell_command_solid"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_shell.html#dagster_shell.create_shell_command_solid">[docs]</a><span class="k">def</span> <span class="nf">create_shell_command_solid</span><span class="p">(</span>
+    <span class="n">shell_command</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function is a factory that constructs solids to execute a shell command.</span>
+
+<span class="sd">    Note that you can only use `shell_command_solid` if you know the command you&#39;d like to execute</span>
+<span class="sd">    at pipeline construction time. If you&#39;d like to construct shell commands dynamically during</span>
+<span class="sd">    pipeline execution and pass them between solids, you should use `shell_solid` instead.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. literalinclude:: ../../../../../python_modules/libraries/dagster-shell/dagster_shell_tests/example_shell_command_solid.py</span>
+<span class="sd">       :language: python</span>
+
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell_command (str): The shell command that the constructed solid will execute.</span>
+<span class="sd">        name (str): The name of the constructed solid.</span>
+<span class="sd">        description (Optional[str]): Human-readable description of this solid.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Set of resource handles required by this solid.</span>
+<span class="sd">            Setting this ensures that resource spin up for the required resources will occur before</span>
+<span class="sd">            the shell command is executed.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary metadata for the solid. Frameworks may</span>
+<span class="sd">            expect and require certain metadata to be attached to a solid. Users should generally</span>
+<span class="sd">            not set metadata directly. Values that are not strings will be json encoded and must meet</span>
+<span class="sd">            the criteria that `json.loads(json.dumps(value)) == value`.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        Failure: Raised when the shell command returns a non-zero exit code.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        SolidDefinition: Returns the constructed solid definition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">shell_command</span><span class="p">,</span> <span class="s2">&quot;shell_command&quot;</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;start&quot;</span><span class="p">,</span> <span class="n">Nothing</span><span class="p">)],</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">)],</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="n">shell_solid_config</span><span class="p">(),</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_shell_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">return_code</span> <span class="o">=</span> <span class="n">execute</span><span class="p">(</span>
+            <span class="n">shell_command</span><span class="o">=</span><span class="n">shell_command</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_code</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Failure</span><span class="p">(</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Shell command execution failed with output: </span><span class="si">{output}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">output</span><span class="o">=</span><span class="n">output</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">return</span> <span class="n">_shell_solid</span></div>
+
+
+<div class="viewcode-block" id="create_shell_script_solid"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_shell.html#dagster_shell.create_shell_script_solid">[docs]</a><span class="k">def</span> <span class="nf">create_shell_script_solid</span><span class="p">(</span>
+    <span class="n">shell_script_path</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;create_shell_script_solid&quot;</span><span class="p">,</span> <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function is a factory which constructs a solid that will execute a shell command read</span>
+<span class="sd">    from a script file.</span>
+
+<span class="sd">    Any kwargs passed to this function will be passed along to the underlying :func:`@solid</span>
+<span class="sd">    &lt;dagster.solid&gt;` decorator. However, note that overriding ``config`` or ``output_defs`` is not</span>
+<span class="sd">    supported.</span>
+
+<span class="sd">    You might consider using :func:`@composite_solid &lt;dagster.composite_solid&gt;` to wrap this solid</span>
+<span class="sd">    in the cases where you&#39;d like to configure the shell solid with different config fields.</span>
+
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. literalinclude:: ../../../../../python_modules/libraries/dagster-shell/dagster_shell_tests/example_shell_script_solid.py</span>
+<span class="sd">       :language: python</span>
+
+
+<span class="sd">    Args:</span>
+<span class="sd">        shell_script_path (str): The script file to execute.</span>
+<span class="sd">        name (str, optional): The name of this solid. Defaults to &quot;create_shell_script_solid&quot;.</span>
+<span class="sd">        input_defs (List[InputDefinition], optional): input definitions for the solid. Defaults to</span>
+<span class="sd">            a single Nothing input.</span>
+
+<span class="sd">    Raises:</span>
+<span class="sd">        Failure: Raised when the shell command returns a non-zero exit code.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        SolidDefinition: Returns the constructed solid definition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">shell_script_path</span><span class="p">,</span> <span class="s2">&quot;shell_script_path&quot;</span><span class="p">)</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">InputDefinition</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;output_defs&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Overriding output_defs for shell solid is not supported.&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="s2">&quot;config&quot;</span> <span class="ow">in</span> <span class="n">kwargs</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Overriding config for shell solid is not supported.&quot;</span><span class="p">)</span>
+
+    <span class="nd">@solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;description&quot;</span><span class="p">,</span> <span class="s2">&quot;A solid to invoke a shell command.&quot;</span><span class="p">),</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span> <span class="ow">or</span> <span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;start&quot;</span><span class="p">,</span> <span class="n">Nothing</span><span class="p">)],</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="s2">&quot;result&quot;</span><span class="p">)],</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="n">shell_solid_config</span><span class="p">(),</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">def</span> <span class="nf">_shell_script_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">return_code</span> <span class="o">=</span> <span class="n">execute_script_file</span><span class="p">(</span>
+            <span class="n">shell_script_path</span><span class="o">=</span><span class="n">shell_script_path</span><span class="p">,</span> <span class="n">log</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="o">.</span><span class="n">solid_config</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">return_code</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Failure</span><span class="p">(</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Shell command execution failed with output: </span><span class="si">{output}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">output</span><span class="o">=</span><span class="n">output</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">output</span>
+
+    <span class="k">return</span> <span class="n">_shell_script_solid</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

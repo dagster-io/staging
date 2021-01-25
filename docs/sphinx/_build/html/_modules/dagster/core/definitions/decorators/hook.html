@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.decorators.hook &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.decorators.hook</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+
+<span class="kn">from</span> <span class="nn">...decorator_utils</span> <span class="kn">import</span> <span class="n">split_function_parameters</span><span class="p">,</span> <span class="n">validate_decorated_fn_positionals</span>
+<span class="kn">from</span> <span class="nn">..events</span> <span class="kn">import</span> <span class="n">HookExecutionResult</span>
+<span class="kn">from</span> <span class="nn">..hook</span> <span class="kn">import</span> <span class="n">HookDefinition</span>
+
+
+<span class="k">class</span> <span class="nc">_Hook</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">expected_positionals</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="s2">&quot;event_list&quot;</span><span class="p">]</span>
+        <span class="n">fn_positionals</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">split_function_parameters</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+        <span class="n">missing_positional</span> <span class="o">=</span> <span class="n">validate_decorated_fn_positionals</span><span class="p">(</span><span class="n">fn_positionals</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing_positional</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;&#39;</span><span class="si">{hook_name}</span><span class="s2">&#39; decorated function does not have required positional &quot;</span>
+                <span class="s2">&quot;parameter &#39;</span><span class="si">{missing_param}</span><span class="s2">&#39;. Hook functions should only have keyword arguments &quot;</span>
+                <span class="s2">&quot;that match input names and a first positional parameter named &#39;context&#39; and &quot;</span>
+                <span class="s2">&quot;a second positional parameter named &#39;event_list&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">hook_name</span><span class="o">=</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">missing_param</span><span class="o">=</span><span class="n">missing_positional</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">hook_def</span> <span class="o">=</span> <span class="n">HookDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">hook_fn</span><span class="o">=</span><span class="n">fn</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">hook_def</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">hook_def</span>
+
+
+<span class="k">def</span> <span class="nf">event_list_hook</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a generic hook with the specified parameters from the decorated function.</span>
+
+<span class="sd">    This decorator is currently used internally by Dagster machinery to support success_hook and</span>
+<span class="sd">    failure_hook.</span>
+
+<span class="sd">    The user-defined hook function requires two parameters:</span>
+<span class="sd">    - A `context` object is passed as the first parameter. The context is an instance of</span>
+<span class="sd">        :py:class:`context &lt;HookContext&gt;`, and provides access to system</span>
+<span class="sd">        information, such as loggers (context.log), resources (context.resources), the solid</span>
+<span class="sd">        (context.solid) and its execution step (context.step) which triggers this hook.</span>
+<span class="sd">    - An `event_list` object is passed as the second paramter. It provides the full event list of the</span>
+<span class="sd">        associated execution step.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of this hook.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the</span>
+<span class="sd">            hook.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @event_list_hook(required_resource_keys={&#39;slack&#39;})</span>
+<span class="sd">            def slack_on_materializations(context, event_list):</span>
+<span class="sd">                for event in event_list:</span>
+<span class="sd">                    if event.event_type == DagsterEventType.STEP_MATERIALIZATION:</span>
+<span class="sd">                        message = &#39;{solid} has materialized an asset {key}.&#39;.format(</span>
+<span class="sd">                            solid=context.solid.name,</span>
+<span class="sd">                            key=event.asset_key</span>
+<span class="sd">                        )</span>
+<span class="sd">                        # send a slack message every time a materialization event occurs</span>
+<span class="sd">                        context.resources.slack.send_message(message)</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># This case is for when decorator is used bare, without arguments.</span>
+    <span class="c1"># e.g. @event_list_hook versus @event_list_hook()</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">required_resource_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_Hook</span><span class="p">()(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_Hook</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="success_hook"><a class="viewcode-back" href="../../../../../sections/api/apidocs/hooks.html#dagster.success_hook">[docs]</a><span class="k">def</span> <span class="nf">success_hook</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a hook on step success events with the specified parameters from the decorated function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of this hook.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the</span>
+<span class="sd">            hook.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @success_hook(required_resource_keys={&#39;slack&#39;})</span>
+<span class="sd">            def slack_on_success(context):</span>
+<span class="sd">                message = &#39;solid {} succeeded&#39;.format(context.solid.name)</span>
+<span class="sd">                context.resources.slack.send_message(message)</span>
+
+<span class="sd">            @success_hook</span>
+<span class="sd">            def do_something_on_success(context):</span>
+<span class="sd">                do_something()</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">expected_positionals</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;context&quot;</span><span class="p">]</span>
+        <span class="n">fn_positionals</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">split_function_parameters</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+        <span class="n">missing_positional</span> <span class="o">=</span> <span class="n">validate_decorated_fn_positionals</span><span class="p">(</span><span class="n">fn_positionals</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing_positional</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;@success_hook &#39;</span><span class="si">{hook_name}</span><span class="s2">&#39; decorated function does not have required positional &quot;</span>
+                <span class="s2">&quot;parameter &#39;</span><span class="si">{missing_param}</span><span class="s2">&#39;. Hook functions should only have keyword arguments &quot;</span>
+                <span class="s2">&quot;that match input names and a first positional parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">hook_name</span><span class="o">=</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">missing_param</span><span class="o">=</span><span class="n">missing_positional</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">_name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="nd">@event_list_hook</span><span class="p">(</span><span class="n">_name</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">_success_hook</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">event_list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">event_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_step_success</span><span class="p">:</span>
+                    <span class="n">fn</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">HookExecutionResult</span><span class="p">(</span><span class="n">hook_name</span><span class="o">=</span><span class="n">_name</span><span class="p">,</span> <span class="n">is_skipped</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="c1"># hook is skipped when fn didn&#39;t run</span>
+            <span class="k">return</span> <span class="n">HookExecutionResult</span><span class="p">(</span><span class="n">hook_name</span><span class="o">=</span><span class="n">_name</span><span class="p">,</span> <span class="n">is_skipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_success_hook</span>
+
+    <span class="c1"># This case is for when decorator is used bare, without arguments, i.e. @success_hook</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">required_resource_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wrapper</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">wrapper</span></div>
+
+
+<div class="viewcode-block" id="failure_hook"><a class="viewcode-back" href="../../../../../sections/api/apidocs/hooks.html#dagster.failure_hook">[docs]</a><span class="k">def</span> <span class="nf">failure_hook</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a hook on step failure events with the specified parameters from the decorated function.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of this hook.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the</span>
+<span class="sd">            hook.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @failure_hook(required_resource_keys={&#39;slack&#39;})</span>
+<span class="sd">            def slack_on_failure(context):</span>
+<span class="sd">                message = &#39;solid {} failed&#39;.format(context.solid.name)</span>
+<span class="sd">                context.resources.slack.send_message(message)</span>
+
+<span class="sd">            @failure_hook</span>
+<span class="sd">            def do_something_on_failure(context):</span>
+<span class="sd">                do_something()</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">expected_positionals</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;context&quot;</span><span class="p">]</span>
+        <span class="n">fn_positionals</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">split_function_parameters</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+        <span class="n">missing_positional</span> <span class="o">=</span> <span class="n">validate_decorated_fn_positionals</span><span class="p">(</span><span class="n">fn_positionals</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing_positional</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;@failure_hook &#39;</span><span class="si">{hook_name}</span><span class="s2">&#39; decorated function does not have required positional &quot;</span>
+                <span class="s2">&quot;parameter &#39;</span><span class="si">{missing_param}</span><span class="s2">&#39;. Hook functions should only have keyword arguments &quot;</span>
+                <span class="s2">&quot;that match input names and a first positional parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">hook_name</span><span class="o">=</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">missing_param</span><span class="o">=</span><span class="n">missing_positional</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">_name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="nd">@event_list_hook</span><span class="p">(</span><span class="n">_name</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">_failure_hook</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">event_list</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">event_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_step_failure</span><span class="p">:</span>
+                    <span class="n">fn</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">HookExecutionResult</span><span class="p">(</span><span class="n">hook_name</span><span class="o">=</span><span class="n">_name</span><span class="p">,</span> <span class="n">is_skipped</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="c1"># hook is skipped when fn didn&#39;t run</span>
+            <span class="k">return</span> <span class="n">HookExecutionResult</span><span class="p">(</span><span class="n">hook_name</span><span class="o">=</span><span class="n">_name</span><span class="p">,</span> <span class="n">is_skipped</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_failure_hook</span>
+
+    <span class="c1"># This case is for when decorator is used bare, without arguments, i.e. @failure_hook</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">required_resource_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">wrapper</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">wrapper</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

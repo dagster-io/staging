@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Orchestration on Celery + Docker &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Orchestration on Celery + Kubernetes" href="dagster_celery_k8s.html" />
+    <link rel="prev" title="Celery (dagster_celery)" href="dagster_celery.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_celery.html" title="Previous document">Celery (dagster_celery)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_celery_k8s.html" title="Next document">Orchestration on Celery + Kubernetes</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="orchestration-on-celery-docker">
+<h1>Orchestration on Celery + Docker<a class="headerlink" href="#orchestration-on-celery-docker" title="Permalink to this headline">¶</a></h1>
+</div>
+<div class="section" id="apis">
+<h1>APIs<a class="headerlink" href="#apis" title="Permalink to this headline">¶</a></h1>
+<dl class="data">
+<dt id="dagster_celery_docker.celery_docker_executor">
+<code class="sig-prename descclassname">dagster_celery_docker.</code><code class="sig-name descname">celery_docker_executor</code><em class="property"> ExecutorDefinition</em><a class="reference internal" href="../../../../_modules/dagster_celery_docker/executor.html#celery_docker_executor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_celery_docker.celery_docker_executor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Celery-based executor which launches tasks in docker containers.</p>
+<p>The Celery executor exposes config settings for the underlying Celery app under
+the <code class="docutils literal notranslate"><span class="pre">config_source</span></code> key. This config corresponds to the “new lowercase settings” introduced
+in Celery version 4.0 and the object constructed from config will be passed to the
+<a class="reference external" href="http://docs.celeryproject.org/en/latest/reference/celery.html#celery.Celery" title="(in Celery v4.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">celery.Celery</span></code></a> constructor as its <code class="docutils literal notranslate"><span class="pre">config_source</span></code> argument.
+(See <a class="reference external" href="https://docs.celeryproject.org/en/latest/userguide/configuration.html">https://docs.celeryproject.org/en/latest/userguide/configuration.html</a> for details.)</p>
+<p>The executor also exposes the <code class="docutils literal notranslate"><span class="pre">broker</span></code>, <cite>backend</cite>, and <code class="docutils literal notranslate"><span class="pre">include</span></code> arguments to the
+<a class="reference external" href="http://docs.celeryproject.org/en/latest/reference/celery.html#celery.Celery" title="(in Celery v4.3)"><code class="xref py py-class docutils literal notranslate"><span class="pre">celery.Celery</span></code></a> constructor.</p>
+<p>In the most common case, you may want to modify the <code class="docutils literal notranslate"><span class="pre">broker</span></code> and <code class="docutils literal notranslate"><span class="pre">backend</span></code> (e.g., to use
+Redis instead of RabbitMQ). We expect that <code class="docutils literal notranslate"><span class="pre">config_source</span></code> will be less frequently
+modified, but that when solid executions are especially fast or slow, or when there are
+different requirements around idempotence or retry, it may make sense to execute pipelines
+with variations on these settings.</p>
+<p>If you’d like to configure a Celery Docker executor in addition to the
+<a class="reference internal" href="../execution.html#dagster.default_executors" title="dagster.default_executors"><code class="xref py py-class docutils literal notranslate"><span class="pre">default_executors</span></code></a>, you should add it to the <code class="docutils literal notranslate"><span class="pre">executor_defs</span></code> defined on a
+<a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">ModeDefinition</span><span class="p">,</span> <span class="n">default_executors</span><span class="p">,</span> <span class="n">pipeline</span>
+<span class="kn">from</span> <span class="nn">dagster_celery_docker.executor</span> <span class="kn">import</span> <span class="n">celery_docker_executor</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span><span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span>
+    <span class="n">ModeDefinition</span><span class="p">(</span><span class="n">executor_defs</span><span class="o">=</span><span class="n">default_executors</span> <span class="o">+</span> <span class="p">[</span><span class="n">celery_docker_executor</span><span class="p">])</span>
+<span class="p">])</span>
+<span class="k">def</span> <span class="nf">celery_enabled_pipeline</span><span class="p">():</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+<p>Then you can configure the executor as follows:</p>
+<div class="highlight-YAML notranslate"><div class="highlight"><pre><span></span><span class="nt">execution</span><span class="p">:</span>
+  <span class="nt">celery-docker</span><span class="p">:</span>
+    <span class="nt">config</span><span class="p">:</span>
+
+      <span class="nt">docker</span><span class="p">:</span>
+        <span class="nt">image</span><span class="p">:</span> <span class="s">&#39;my_repo.com/image_name:latest&#39;</span>
+        <span class="nt">registry</span><span class="p">:</span>
+          <span class="nt">url</span><span class="p">:</span> <span class="s">&#39;my_repo.com&#39;</span>
+          <span class="nt">username</span><span class="p">:</span> <span class="s">&#39;my_user&#39;</span>
+          <span class="nt">password</span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt">env</span><span class="p">:</span> <span class="s">&#39;DOCKER_PASSWORD&#39;</span><span class="p p-Indicator">}</span>
+        <span class="nt">env_vars</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&quot;DAGSTER_HOME&quot;</span><span class="p p-Indicator">]</span> <span class="c1"># environment vars to pass from celery worker to docker</span>
+
+      <span class="nt">broker</span><span class="p">:</span> <span class="s">&#39;pyamqp://guest@localhost//&#39;</span>  <span class="c1"># Optional[str]: The URL of the Celery broker</span>
+      <span class="nt">backend</span><span class="p">:</span> <span class="s">&#39;rpc://&#39;</span> <span class="c1"># Optional[str]: The URL of the Celery results backend</span>
+      <span class="nt">include</span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;my_module&#39;</span><span class="p p-Indicator">]</span> <span class="c1"># Optional[List[str]]: Modules every worker should import</span>
+      <span class="nt">config_source</span><span class="p">:</span> <span class="c1"># Dict[str, Any]: Any additional parameters to pass to the</span>
+          <span class="c1">#...       # Celery workers. This dict will be passed as the `config_source`</span>
+          <span class="c1">#...       # argument of celery.Celery().</span>
+</pre></div>
+</div>
+<p>Note that the YAML you provide here must align with the configuration with which the Celery
+workers on which you hope to run were started. If, for example, you point the executor at a
+different broker than the one your workers are listening to, the workers will never be able to
+pick up tasks for execution.</p>
+<p>In deployments where the celery_k8s_job_executor is used all appropriate celery and dagster_celery
+commands must be invoked with the <cite>-A dagster_celery_docker.app</cite> argument.</p>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_celery.html" title="Previous document">Celery (dagster_celery)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_celery_k8s.html" title="Next document">Orchestration on Celery + Kubernetes</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,263 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_dbt.types &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_dbt.types</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dateutil</span> <span class="kn">import</span> <span class="n">parser</span>
+
+
+<div class="viewcode-block" id="StepTiming"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.StepTiming">[docs]</a><span class="k">class</span> <span class="nc">StepTiming</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_StepTiming&quot;</span><span class="p">,</span> <span class="s2">&quot;name started_at completed_at&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;The timing information of an executed step for a dbt node (model).</span>
+
+<span class="sd">    Note that users should not construct instances of this class directly. This class is intended to be</span>
+<span class="sd">    constructed from the JSON output of dbt commands.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str): The name of the executed step.</span>
+<span class="sd">        started_at (datetime.datetime): An ISO string timestamp of when the step started executing.</span>
+<span class="sd">        completed_at (datetime.datetime): An ISO string timestamp of when the step completed</span>
+<span class="sd">            execution.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">started_at</span><span class="p">:</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">completed_at</span><span class="p">:</span> <span class="n">datetime</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">started_at</span><span class="p">,</span> <span class="s2">&quot;started_at&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">completed_at</span><span class="p">,</span> <span class="s2">&quot;completed_at&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">duration</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">timedelta</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;datetime.timedelta: The execution duration of the step.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">completed_at</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">started_at</span></div>
+
+
+<div class="viewcode-block" id="NodeResult"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.NodeResult">[docs]</a><span class="k">class</span> <span class="nc">NodeResult</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_NodeResult&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;node error status execution_time thread_id step_timings table fail warn skip&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The result of executing a dbt node (model).</span>
+
+<span class="sd">    Note that users should not construct instances of this class directly. This class is intended to be</span>
+<span class="sd">    constructed from the JSON output of dbt commands.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        node (Dict[str, Any]): Details about the executed dbt node (model).</span>
+<span class="sd">        error (Optional[str]): An error message if an error occurred.</span>
+<span class="sd">        fail (Optional[Any]): The ``fail`` field from the results of the executed dbt node.</span>
+<span class="sd">        warn (Optional[Any]): The ``warn`` field from the results of the executed dbt node.</span>
+<span class="sd">        skip (Optional[Any]): The ``skip`` field from the results of the executed dbt node.</span>
+<span class="sd">        status (Optional[Union[str,int]]): The status of the executed dbt node (model).</span>
+<span class="sd">        execution_time (float): The execution duration (in seconds) of the dbt node (model).</span>
+<span class="sd">        thread_id (str): The dbt thread identifier that executed the dbt node (model).</span>
+<span class="sd">        step_timings (List[StepTiming]): The timings for each step in the executed dbt node</span>
+<span class="sd">            (model).</span>
+<span class="sd">        table (Optional[Dict]): Details about the table/view that is created from executing a</span>
+<span class="sd">            `run_sql &lt;https://docs.getdbt.com/reference/commands/rpc#executing-a-query&gt;`_</span>
+<span class="sd">            command on an dbt RPC server.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">node</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span>
+        <span class="n">error</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">thread_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_timings</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">StepTiming</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">table</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">fail</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">warn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">skip</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">step_timings</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">step_timings</span><span class="p">,</span> <span class="s2">&quot;step_timings&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">StepTiming</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">node</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">),</span>
+            <span class="n">status</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_float_param</span><span class="p">(</span><span class="n">execution_time</span><span class="p">,</span> <span class="s2">&quot;execution_time&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">thread_id</span><span class="p">,</span> <span class="s2">&quot;thread_id&quot;</span><span class="p">),</span>
+            <span class="n">step_timings</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="s2">&quot;table&quot;</span><span class="p">),</span>
+            <span class="n">fail</span><span class="p">,</span>
+            <span class="n">warn</span><span class="p">,</span>
+            <span class="n">skip</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="NodeResult.from_dict"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.NodeResult.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;NodeResult&quot;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Constructs an instance of :class:`NodeResult &lt;dagster_dbt.NodeResult&gt;` from a dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            d (Dict[str, Any]): A dictionary with key-values to construct a :class:`NodeResult</span>
+<span class="sd">                &lt;dagster_dbt.NodeResult&gt;`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            NodeResult: An instance of :class:`NodeResult &lt;dagster_dbt.NodeResult&gt;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">node</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">dict_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;node&quot;</span><span class="p">)</span>
+        <span class="n">error</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)</span>
+        <span class="n">execution_time</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">float_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;execution_time&quot;</span><span class="p">)</span>
+        <span class="n">thread_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;thread_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;timing&quot;</span><span class="p">)</span>
+        <span class="n">step_timings</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">StepTiming</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">],</span>
+                <span class="n">started_at</span><span class="o">=</span><span class="n">parser</span><span class="o">.</span><span class="n">isoparse</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;started_at&quot;</span><span class="p">]),</span>
+                <span class="n">completed_at</span><span class="o">=</span><span class="n">parser</span><span class="o">.</span><span class="n">isoparse</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;completed_at&quot;</span><span class="p">]),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;timing&quot;</span><span class="p">],</span> <span class="n">of_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="n">table</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;table&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">step_timings</span><span class="o">=</span><span class="n">step_timings</span><span class="p">,</span>
+            <span class="n">node</span><span class="o">=</span><span class="n">node</span><span class="p">,</span>
+            <span class="n">error</span><span class="o">=</span><span class="n">error</span><span class="p">,</span>
+            <span class="n">execution_time</span><span class="o">=</span><span class="n">execution_time</span><span class="p">,</span>
+            <span class="n">thread_id</span><span class="o">=</span><span class="n">thread_id</span><span class="p">,</span>
+            <span class="n">table</span><span class="o">=</span><span class="n">table</span><span class="p">,</span>
+        <span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="DbtResult"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DbtResult">[docs]</a><span class="k">class</span> <span class="nc">DbtResult</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_DbtResult&quot;</span><span class="p">,</span> <span class="s2">&quot;logs results generated_at elapsed_time&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;The results of executing a dbt command.</span>
+
+<span class="sd">    Note that users should not construct instances of this class directly. This class is intended to be</span>
+<span class="sd">    constructed from the JSON output of dbt commands.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        logs (List[Dict[str, Any]]): JSON log output from the dbt process.</span>
+<span class="sd">        results (List[NodeResult]]): Details about each executed dbt node (model) in the run.</span>
+<span class="sd">        generated_at (str): An ISO string timestamp of when the run result was generated by dbt.</span>
+<span class="sd">        elapsed_time (float): The execution duration (in seconds) of the run.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">logs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]],</span>
+        <span class="n">results</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">NodeResult</span><span class="p">],</span>
+        <span class="n">generated_at</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">elapsed_time</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">logs</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">),</span>
+            <span class="n">results</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">generated_at</span><span class="p">,</span> <span class="s2">&quot;generated_at&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_float_param</span><span class="p">(</span><span class="n">elapsed_time</span><span class="p">,</span> <span class="s2">&quot;elapsed_time&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DbtResult.from_dict"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dbt.html#dagster_dbt.DbtResult.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="s2">&quot;DbtResult&quot;</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Constructs an instance of :class:`DbtResult &lt;dagster_dbt.DbtResult&gt;` from a dictionary.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            d (Dict[str, Any]): A dictionary with key-values to construct a :class:`DbtResult</span>
+<span class="sd">                &lt;dagster_dbt.DbtResult&gt;`.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DbtResult: An instance of :class:`DbtResult &lt;dagster_dbt.DbtResult&gt;`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;logs&quot;</span><span class="p">)</span>
+        <span class="n">logs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;logs&quot;</span><span class="p">],</span> <span class="n">of_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;results&quot;</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">NodeResult</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">is_list</span><span class="p">(</span><span class="n">d</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">],</span> <span class="n">of_type</span><span class="o">=</span><span class="n">Dict</span><span class="p">)]</span>
+        <span class="n">generated_at</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;generated_at&quot;</span><span class="p">)</span>
+        <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">float_elem</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="s2">&quot;elapsed_time&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">logs</span><span class="o">=</span><span class="n">logs</span><span class="p">,</span> <span class="n">results</span><span class="o">=</span><span class="n">results</span><span class="p">,</span> <span class="n">generated_at</span><span class="o">=</span><span class="n">generated_at</span><span class="p">,</span> <span class="n">elapsed_time</span><span class="o">=</span><span class="n">elapsed_time</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">results</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

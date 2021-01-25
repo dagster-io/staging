@@ -1,0 +1,332 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Modes &amp; Resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Partitions" href="partitions.html" />
+    <link rel="prev" title="Loggers" href="loggers.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="loggers.html" title="Previous document">Loggers</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="partitions.html" title="Next document">Partitions</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="modes-resources">
+<h1>Modes &amp; Resources<a class="headerlink" href="#modes-resources" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="modes">
+<h2>Modes<a class="headerlink" href="#modes" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster.ModeDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">ModeDefinition</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/mode.html#ModeDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ModeDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a mode in which a pipeline can operate.</p>
+<p>A mode provides pipelines with a set of resource implementations, loggers, system storages,
+and executors.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the mode. Must be unique within the
+<a class="reference internal" href="pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineDefinition</span></code></a> to which the mode is attached. (default: “default”).</p></li>
+<li><p><strong>resource_defs</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><em>ResourceDefinition</em></a><em>]</em><em>]</em>) – A dictionary of string resource
+keys to their implementations. Individual solids may require resources to be present by
+these keys.</p></li>
+<li><p><strong>logger_defs</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="loggers.html#dagster.LoggerDefinition" title="dagster.LoggerDefinition"><em>LoggerDefinition</em></a><em>]</em><em>]</em>) – A dictionary of string logger
+identifiers to their implementations.</p></li>
+<li><p><strong>executor_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="internals.html#dagster.ExecutorDefinition" title="dagster.ExecutorDefinition"><em>ExecutorDefinition</em></a><em>]</em><em>]</em>) – The set of executors available when
+executing in this mode. By default, this will be the ‘in_process’ and ‘multiprocess’
+executors (<a class="reference internal" href="execution.html#dagster.default_executors" title="dagster.default_executors"><code class="xref py py-data docutils literal notranslate"><span class="pre">default_executors</span></code></a>).</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the mode.</p></li>
+<li><p><strong>intermediate_storage_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="internals.html#dagster.IntermediateStorageDefinition" title="dagster.IntermediateStorageDefinition"><em>IntermediateStorageDefinition</em></a><em>]</em><em>]</em>) – The set of intermediate storage
+options available when executing in this mode. By default, this will be the ‘in_memory’
+and ‘filesystem’ system storages.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<hr class="docutils" />
+<div class="section" id="resources">
+<h2>Resources<a class="headerlink" href="#resources" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.resource">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">resource</code><span class="sig-paren">(</span><em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">version=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/resource.html#resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a resource.</p>
+<p>The decorated function should accept an <a class="reference internal" href="#dagster.InitResourceContext" title="dagster.InitResourceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">InitResourceContext</span></code></a> and return an instance of
+the resource. This function will become the <code class="docutils literal notranslate"><span class="pre">resource_fn</span></code> of an underlying
+<a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDefinition</span></code></a>.</p>
+<p>If the decorated function yields once rather than returning (in the manner of functions
+decorable with <a class="reference external" href="https://docs.python.org/3/library/contextlib.html#contextlib.contextmanager" title="(in Python v3.8)"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;contextlib.contextmanager</span></code></a>) then
+the body of the function after the yield will be run after execution resolves, allowing users
+to write their own teardown/cleanup logic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the config. Configuration data available in
+<cite>init_context.resource_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the resource.</p></li>
+<li><p><strong>version</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – (Experimental) The version of a resource function. Two wrapped
+resource functions should only have the same version if they produce the same resource
+definition when provided with the same inputs.</p></li>
+<li><p><strong>required_resource_keys</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Keys for the resources required by this resource.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.ResourceDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">ResourceDefinition</code><span class="sig-paren">(</span><em class="sig-param">resource_fn=None</em>, <em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">version=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/resource.html#ResourceDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ResourceDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Core class for defining resources.</p>
+<p>Resources are scoped ways to make external resources (like database connections) available to
+solids during pipeline execution and to clean up after execution resolves.</p>
+<p>If resource_fn yields once rather than returning (in the manner of functions decorable with
+<a class="reference external" href="https://docs.python.org/3/library/contextlib.html#contextlib.contextmanager" title="(in Python v3.8)"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;contextlib.contextmanager</span></code></a>) then the body of the
+function after the yield will be run after execution resolves, allowing users to write their
+own teardown/cleanup logic.</p>
+<p>Depending on your executor, resources may be instantiated and cleaned up more than once in a
+pipeline execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resource_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.InitResourceContext" title="dagster.InitResourceContext"><em>InitResourceContext</em></a><em>]</em><em>, </em><em>Any</em><em>]</em>) – User-provided function to instantiate
+the resource, which will be made available to solid executions keyed on the
+<code class="docutils literal notranslate"><span class="pre">context.resources</span></code> object.</p></li>
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the config. Configuration data
+available in <cite>init_context.resource_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the resource.</p></li>
+<li><p><strong>required_resource_keys</strong> – (Optional[Set[str]]) Keys for the resources required by this
+resource. A DagsterInvariantViolationError will be raised during initialization if
+dependencies are cyclic.</p></li>
+<li><p><strong>version</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – (Experimental) The version of the resource’s definition fn. Two
+wrapped resource functions should only have the same version if they produce the same
+resource definition when provided with the same inputs.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="dagster.ResourceDefinition.hardcoded_resource">
+<em class="property">static </em><code class="sig-name descname">hardcoded_resource</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/resource.html#ResourceDefinition.hardcoded_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ResourceDefinition.hardcoded_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper function that creates a <code class="docutils literal notranslate"><span class="pre">ResourceDefinition</span></code> with a hardcoded object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Any</em>) – A hardcoded object which helps mock the resource.</p></li>
+<li><p><strong>description</strong> (<em>[</em><em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – The description of the resource. Defaults to None.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A hardcoded resource.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[<a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition">ResourceDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.ResourceDefinition.mock_resource">
+<em class="property">static </em><code class="sig-name descname">mock_resource</code><span class="sig-paren">(</span><em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/resource.html#ResourceDefinition.mock_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ResourceDefinition.mock_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper function that creates a <code class="docutils literal notranslate"><span class="pre">ResourceDefinition</span></code> which wraps a <code class="docutils literal notranslate"><span class="pre">mock.MagicMock</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>description</strong> (<em>[</em><em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – The description of the resource. Defaults to None.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A resource that creates the magic methods automatically and helps</dt><dd><p>you mock existing resources.</p>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[<a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition">ResourceDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.ResourceDefinition.none_resource">
+<em class="property">static </em><code class="sig-name descname">none_resource</code><span class="sig-paren">(</span><em class="sig-param">description=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/resource.html#ResourceDefinition.none_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ResourceDefinition.none_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>A helper function that returns a none resource.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>description</strong> (<em>[</em><em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – The description of the resource. Defaults to None.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A resource that does nothing.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[<a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition">ResourceDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.InitResourceContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">InitResourceContext</code><a class="reference internal" href="../../../_modules/dagster/core/execution/context/init.html#InitResourceContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.InitResourceContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Resource-specific initialization context.</p>
+<dl class="attribute">
+<dt id="dagster.InitResourceContext.resource_config">
+<code class="sig-name descname">resource_config</code><a class="headerlink" href="#dagster.InitResourceContext.resource_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The configuration data provided by the environment config. The schema
+for this data is defined by the <code class="docutils literal notranslate"><span class="pre">config_field</span></code> argument to
+<a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDefinition</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitResourceContext.resource_def">
+<code class="sig-name descname">resource_def</code><a class="headerlink" href="#dagster.InitResourceContext.resource_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The definition of the resource currently being
+constructed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.ResourceDefinition" title="dagster.ResourceDefinition">ResourceDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitResourceContext.pipeline_run">
+<code class="sig-name descname">pipeline_run</code><a class="headerlink" href="#dagster.InitResourceContext.pipeline_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pipeline run in context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="internals.html#dagster.PipelineRun" title="dagster.PipelineRun">PipelineRun</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitResourceContext.run_id">
+<code class="sig-name descname">run_id</code><a class="headerlink" href="#dagster.InitResourceContext.run_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The id for this run of the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitResourceContext.log_manager">
+<code class="sig-name descname">log_manager</code><a class="headerlink" href="#dagster.InitResourceContext.log_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>The log manager for this run of the pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="internals.html#dagster.DagsterLogManager" title="dagster.DagsterLogManager">DagsterLogManager</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InitResourceContext.resources">
+<code class="sig-name descname">resources</code><a class="headerlink" href="#dagster.InitResourceContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>The resources that are available to the resource that we are
+initalizing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>ScopedResources</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="loggers.html" title="Previous document">Loggers</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="partitions.html" title="Next document">Partitions</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

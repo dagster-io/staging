@@ -1,0 +1,363 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.partition &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.partition</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.schedule</span> <span class="kn">import</span> <span class="n">ScheduleDefinition</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span><span class="p">,</span> <span class="n">PipelineRunStatus</span><span class="p">,</span> <span class="n">PipelineRunsFilter</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.tags</span> <span class="kn">import</span> <span class="n">check_tags</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">merge_dicts</span>
+
+<span class="kn">from</span> <span class="nn">.mode</span> <span class="kn">import</span> <span class="n">DEFAULT_MODE_NAME</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+
+<span class="k">def</span> <span class="nf">by_name</span><span class="p">(</span><span class="n">partition</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">partition</span><span class="o">.</span><span class="n">name</span>
+
+
+<div class="viewcode-block" id="Partition"><a class="viewcode-back" href="../../../../sections/api/apidocs/partitions.html#dagster.Partition">[docs]</a><span class="k">class</span> <span class="nc">Partition</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_Partition&quot;</span><span class="p">,</span> <span class="p">(</span><span class="s2">&quot;value name&quot;</span><span class="p">))):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Partition is the representation of a logical slice across an axis of a pipeline&#39;s work</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        value (Any): The object for this partition</span>
+<span class="sd">        name (str): Name for this partition</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">Partition</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)),</span> <span class="n">value</span><span class="o">=</span><span class="n">value</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">last_empty_partition</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partition_set_def</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span><span class="p">)</span>
+    <span class="n">partition_set_def</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+        <span class="n">partition_set_def</span><span class="p">,</span> <span class="s2">&quot;partition_set_def&quot;</span><span class="p">,</span> <span class="n">PartitionSetDefinition</span>
+    <span class="p">)</span>
+    <span class="n">partitions</span> <span class="o">=</span> <span class="n">partition_set_def</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">partitions</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">partition</span> <span class="ow">in</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">partitions</span><span class="p">):</span>
+        <span class="n">filters</span> <span class="o">=</span> <span class="n">PipelineRunsFilter</span><span class="o">.</span><span class="n">for_partition</span><span class="p">(</span><span class="n">partition_set_def</span><span class="p">,</span> <span class="n">partition</span><span class="p">)</span>
+        <span class="n">matching</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">get_runs</span><span class="p">(</span><span class="n">filters</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">run</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">PipelineRunStatus</span><span class="o">.</span><span class="n">SUCCESS</span> <span class="k">for</span> <span class="n">run</span> <span class="ow">in</span> <span class="n">matching</span><span class="p">):</span>
+            <span class="n">selected</span> <span class="o">=</span> <span class="n">partition</span>
+            <span class="k">break</span>
+    <span class="k">return</span> <span class="n">selected</span>
+
+
+<span class="k">def</span> <span class="nf">first_partition</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">partition_set_def</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span><span class="p">)</span>
+    <span class="n">partition_set_def</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+        <span class="n">partition_set_def</span><span class="p">,</span> <span class="s2">&quot;partition_set_def&quot;</span><span class="p">,</span> <span class="n">PartitionSetDefinition</span>
+    <span class="p">)</span>
+
+    <span class="n">partitions</span> <span class="o">=</span> <span class="n">partition_set_def</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">()</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">partitions</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">partitions</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="PartitionSetDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/partitions.html#dagster.PartitionSetDefinition">[docs]</a><span class="k">class</span> <span class="nc">PartitionSetDefinition</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_PartitionSetDefinition&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;name pipeline_name partition_fn solid_selection mode &quot;</span>
+            <span class="s2">&quot;user_defined_run_config_fn_for_partition user_defined_tags_fn_for_partition&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Defines a partition set, representing the set of slices making up an axis of a pipeline</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): Name for this partition set</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline definition</span>
+<span class="sd">        partition_fn (Callable[void, List[Partition]]): User-provided function to define the set of</span>
+<span class="sd">            valid partition objects.</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute with this partition. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The mode to apply when executing this partition. (default: &#39;default&#39;)</span>
+<span class="sd">        run_config_fn_for_partition (Callable[[Partition], [Dict]]): A</span>
+<span class="sd">            function that takes a :py:class:`~dagster.Partition` and returns the run</span>
+<span class="sd">            configuration that parameterizes the execution for this partition, as a dict</span>
+<span class="sd">        tags_fn_for_partition (Callable[[Partition], Optional[dict[str, str]]]): A function that</span>
+<span class="sd">            takes a :py:class:`~dagster.Partition` and returns a list of key value pairs that will</span>
+<span class="sd">            be added to the generated run for this partition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">partition_fn</span><span class="p">,</span>
+        <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_partition</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="n">tags_fn_for_partition</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_partition</span><span class="p">:</span> <span class="p">{},</span>
+    <span class="p">):</span>
+        <span class="k">def</span> <span class="nf">_wrap</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">Partition</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">x</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">Partition</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;Expected &lt;Partition&gt; | &lt;str&gt;, received </span><span class="si">{type}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">x</span><span class="p">))</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">PartitionSetDefinition</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">partition_fn</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">[</span>
+                <span class="n">_wrap</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">partition_fn</span><span class="p">,</span> <span class="s2">&quot;partition_fn&quot;</span><span class="p">)()</span>
+            <span class="p">],</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+                <span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">),</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">),</span>
+            <span class="n">user_defined_run_config_fn_for_partition</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span>
+                <span class="n">run_config_fn_for_partition</span><span class="p">,</span> <span class="s2">&quot;run_config_fn_for_partition&quot;</span>
+            <span class="p">),</span>
+            <span class="n">user_defined_tags_fn_for_partition</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span>
+                <span class="n">tags_fn_for_partition</span><span class="p">,</span> <span class="s2">&quot;tags_fn_for_partition&quot;</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run_config_for_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_defined_run_config_fn_for_partition</span><span class="p">(</span><span class="n">partition</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">tags_for_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition</span><span class="p">):</span>
+        <span class="n">user_tags</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">user_defined_tags_fn_for_partition</span><span class="p">(</span><span class="n">partition</span><span class="p">)</span>
+        <span class="n">check_tags</span><span class="p">(</span><span class="n">user_tags</span><span class="p">,</span> <span class="s2">&quot;user_tags&quot;</span><span class="p">)</span>
+
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">merge_dicts</span><span class="p">(</span><span class="n">user_tags</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="o">.</span><span class="n">tags_for_partition_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">tags</span>
+
+    <span class="k">def</span> <span class="nf">get_partitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">partition_fn</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_partition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">partition</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">partition</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">partition</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span><span class="s2">&quot;Partition name </span><span class="si">{}</span><span class="s2"> not found!&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">get_partition_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">part</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">part</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_partitions</span><span class="p">()]</span>
+
+    <span class="k">def</span> <span class="nf">create_schedule_definition</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">schedule_name</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">partition_selector</span><span class="p">,</span>
+        <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a ScheduleDefinition from a PartitionSetDefinition.</span>
+
+<span class="sd">        Arguments:</span>
+<span class="sd">            schedule_name (str): The name of the schedule.</span>
+<span class="sd">            cron_schedule (str): A valid cron string for the schedule</span>
+<span class="sd">            partition_selector (Callable[ScheduleExecutionContext, PartitionSetDefinition],</span>
+<span class="sd">            Partition): Function that determines the partition to use at a given execution time.</span>
+<span class="sd">            For time-based partition sets, will likely be either `identity_partition_selector` or a</span>
+<span class="sd">            selector returned by `create_offset_partition_selector`.</span>
+<span class="sd">            should_execute (Optional[function]): Function that runs at schedule execution time that</span>
+<span class="sd">            determines whether a schedule should execute. Defaults to a function that always returns</span>
+<span class="sd">            ``True``.</span>
+<span class="sd">            environment_vars (Optional[dict]): The environment variables to set for the schedule.</span>
+<span class="sd">            execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">                with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ScheduleDefinition: The generated ScheduleDefinition for the partition selector</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">,</span> <span class="s2">&quot;schedule_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cron_schedule</span><span class="p">,</span> <span class="s2">&quot;cron_schedule&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">should_execute</span><span class="p">,</span> <span class="s2">&quot;should_execute&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">environment_vars</span><span class="p">,</span> <span class="s2">&quot;environment_vars&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">partition_selector</span><span class="p">,</span> <span class="s2">&quot;partition_selector&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">execution_timezone</span><span class="p">,</span> <span class="s2">&quot;execution_timezone&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_should_execute_wrapper</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span><span class="p">)</span>
+            <span class="n">selected_partition</span> <span class="o">=</span> <span class="n">partition_selector</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_partition</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">selected_partition</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_partition_names</span><span class="p">():</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">should_execute</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">should_execute</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_run_config_fn_wrapper</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span><span class="p">)</span>
+            <span class="n">selected_partition</span> <span class="o">=</span> <span class="n">partition_selector</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_partition</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">selected_partition</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_partition_names</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                    <span class="s2">&quot;The partition selection function `</span><span class="si">{selector}</span><span class="s2">` did not return &quot;</span>
+                    <span class="s2">&quot;a partition from PartitionSet </span><span class="si">{partition_set}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">selector</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">partition_selector</span><span class="p">,</span> <span class="s2">&quot;__name__&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">partition_selector</span><span class="p">)),</span>
+                        <span class="n">partition_set</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_config_for_partition</span><span class="p">(</span><span class="n">selected_partition</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_tags_fn_wrapper</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">ScheduleExecutionContext</span><span class="p">)</span>
+            <span class="n">selected_partition</span> <span class="o">=</span> <span class="n">partition_selector</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">selected_partition</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                    <span class="s2">&quot;The partition selection function `</span><span class="si">{selector}</span><span class="s2">` did not return &quot;</span>
+                    <span class="s2">&quot;a partition from PartitionSet </span><span class="si">{partition_set}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">selector</span><span class="o">=</span><span class="nb">getattr</span><span class="p">(</span><span class="n">partition_selector</span><span class="p">,</span> <span class="s2">&quot;__name__&quot;</span><span class="p">,</span> <span class="nb">repr</span><span class="p">(</span><span class="n">partition_selector</span><span class="p">)),</span>
+                        <span class="n">partition_set</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tags_for_partition</span><span class="p">(</span><span class="n">selected_partition</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">PartitionScheduleDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">schedule_name</span><span class="p">,</span>
+            <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">run_config_fn</span><span class="o">=</span><span class="n">_run_config_fn_wrapper</span><span class="p">,</span>
+            <span class="n">tags_fn</span><span class="o">=</span><span class="n">_tags_fn_wrapper</span><span class="p">,</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">_should_execute_wrapper</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">partition_set</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">PartitionScheduleDefinition</span><span class="p">(</span><span class="n">ScheduleDefinition</span><span class="p">):</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_partition_set&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="p">,</span>
+        <span class="n">tags_fn</span><span class="p">,</span>
+        <span class="n">solid_selection</span><span class="p">,</span>
+        <span class="n">mode</span><span class="p">,</span>
+        <span class="n">should_execute</span><span class="p">,</span>
+        <span class="n">environment_vars</span><span class="p">,</span>
+        <span class="n">partition_set</span><span class="p">,</span>
+        <span class="n">run_config_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PartitionScheduleDefinition</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">run_config_fn</span><span class="o">=</span><span class="n">run_config_fn</span><span class="p">,</span>
+            <span class="n">tags_fn</span><span class="o">=</span><span class="n">tags_fn</span><span class="p">,</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">should_execute</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_partition_set</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+            <span class="n">partition_set</span><span class="p">,</span> <span class="s2">&quot;partition_set&quot;</span><span class="p">,</span> <span class="n">PartitionSetDefinition</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_partition_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partition_set</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

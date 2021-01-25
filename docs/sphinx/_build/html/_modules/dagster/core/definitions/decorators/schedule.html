@@ -1,0 +1,711 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.decorators.schedule &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.decorators.schedule</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">warnings</span>
+
+<span class="kn">import</span> <span class="nn">pendulum</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.partition</span> <span class="kn">import</span> <span class="n">PartitionSetDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.partitions</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_DATE_FORMAT</span><span class="p">,</span>
+    <span class="n">DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE</span><span class="p">,</span>
+    <span class="n">DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE</span><span class="p">,</span>
+    <span class="n">DEFAULT_MONTHLY_FORMAT</span><span class="p">,</span>
+    <span class="n">create_offset_partition_selector</span><span class="p">,</span>
+    <span class="n">schedule_partition_range</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">..mode</span> <span class="kn">import</span> <span class="n">DEFAULT_MODE_NAME</span>
+<span class="kn">from</span> <span class="nn">..schedule</span> <span class="kn">import</span> <span class="n">ScheduleDefinition</span>
+
+<span class="c1"># Error messages are long</span>
+<span class="c1"># pylint: disable=C0301</span>
+
+
+<div class="viewcode-block" id="schedule"><a class="viewcode-back" href="../../../../../sections/api/apidocs/schedules-sensors.html#dagster.schedule">[docs]</a><span class="k">def</span> <span class="nf">schedule</span><span class="p">(</span>
+    <span class="n">cron_schedule</span><span class="p">,</span>
+    <span class="n">pipeline_name</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+    <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a schedule.</span>
+
+<span class="sd">    The decorated function will be called as the ``run_config_fn`` of the underlying</span>
+<span class="sd">    :py:class:`~dagster.ScheduleDefinition` and should take a</span>
+<span class="sd">    :py:class:`~dagster.ScheduleExecutionContext` as its only argument, returning the environment</span>
+<span class="sd">    dict for the scheduled execution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        cron_schedule (str): A valid cron string specifying when the schedule will run, e.g.,</span>
+<span class="sd">            ``&#39;45 23 * * 6&#39;`` for a schedule that runs at 11:45 PM every Saturday.</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the schedule runs.</span>
+<span class="sd">        name (Optional[str]): The name of the schedule to create.</span>
+<span class="sd">        tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach</span>
+<span class="sd">            to the scheduled runs.</span>
+<span class="sd">        tags_fn (Optional[Callable[[ScheduleExecutionContext], Optional[Dict[str, str]]]]): A function</span>
+<span class="sd">            that generates tags to attach to the schedules runs. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a dictionary of tags (string</span>
+<span class="sd">            key-value pairs). You may set only one of ``tags`` and ``tags_fn``.</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the schedule runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The pipeline mode in which to execute this schedule.</span>
+<span class="sd">            (Default: &#39;default&#39;)</span>
+<span class="sd">        should_execute (Optional[Callable[[ScheduleExecutionContext], bool]]): A function that runs at</span>
+<span class="sd">            schedule execution tie to determine whether a schedule should execute or skip. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the</span>
+<span class="sd">            schedule should execute). Defaults to a function that always returns ``True``.</span>
+<span class="sd">        environment_vars (Optional[Dict[str, str]]): Any environment variables to set when executing</span>
+<span class="sd">            the schedule.</span>
+<span class="sd">        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">            with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">schedule_name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="k">return</span> <span class="n">ScheduleDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">schedule_name</span><span class="p">,</span>
+            <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">run_config_fn</span><span class="o">=</span><span class="n">fn</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+            <span class="n">tags_fn</span><span class="o">=</span><span class="n">tags_fn</span><span class="p">,</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">should_execute</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">inner</span></div>
+
+
+<div class="viewcode-block" id="monthly_schedule"><a class="viewcode-back" href="../../../../../sections/api/apidocs/schedules-sensors.html#dagster.monthly_schedule">[docs]</a><span class="k">def</span> <span class="nf">monthly_schedule</span><span class="p">(</span>
+    <span class="n">pipeline_name</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_day_of_month</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">execution_time</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="n">tags_fn_for_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+    <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a schedule that runs monthly.</span>
+
+<span class="sd">    The decorated function will be called as the ``run_config_fn`` of the underlying</span>
+<span class="sd">    :py:class:`~dagster.ScheduleDefinition` and should take a</span>
+<span class="sd">    :py:class:`~dagster.ScheduleExecutionContext` as its only argument, returning the environment</span>
+<span class="sd">    dict for the scheduled execution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the schedule runs.</span>
+<span class="sd">        start_date (datetime.datetime): The date from which to run the schedule.</span>
+<span class="sd">        name (Optional[str]): The name of the schedule to create.</span>
+<span class="sd">        execution_day_of_month (int): The day of the month on which to run the schedule (must be</span>
+<span class="sd">            between 0 and 31).</span>
+<span class="sd">        execution_time (datetime.time): The time at which to execute the schedule.</span>
+<span class="sd">        tags_fn_for_date (Optional[Callable[[datetime.datetime], Optional[Dict[str, str]]]]): A</span>
+<span class="sd">            function that generates tags to attach to the schedules runs. Takes the date of the</span>
+<span class="sd">            schedule run and returns a dictionary of tags (string key-value pairs).</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the schedule runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The pipeline mode in which to execute this schedule.</span>
+<span class="sd">            (Default: &#39;default&#39;)</span>
+<span class="sd">        should_execute (Optional[Callable[ScheduleExecutionContext, bool]]): A function that runs at</span>
+<span class="sd">            schedule execution tie to determine whether a schedule should execute or skip. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the</span>
+<span class="sd">            schedule should execute). Defaults to a function that always returns ``True``.</span>
+<span class="sd">        environment_vars (Optional[Dict[str, str]]): Any environment variables to set when executing</span>
+<span class="sd">            the schedule.</span>
+<span class="sd">        end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to</span>
+<span class="sd">            current time.</span>
+<span class="sd">        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">            with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">tags_fn_for_date</span><span class="p">,</span> <span class="s2">&quot;tags_fn_for_date&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">should_execute</span><span class="p">,</span> <span class="s2">&quot;should_execute&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">environment_vars</span><span class="p">,</span> <span class="s2">&quot;environment_vars&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">execution_day_of_month</span><span class="p">,</span> <span class="s2">&quot;execution_day&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_time</span><span class="p">,</span> <span class="s2">&quot;execution_time&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">execution_timezone</span><span class="p">,</span> <span class="s2">&quot;execution_timezone&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">(</span>
+        <span class="n">start_date</span><span class="o">.</span><span class="n">day</span> <span class="o">!=</span> <span class="mi">1</span>
+        <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">hour</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">second</span> <span class="o">!=</span> <span class="mi">0</span>
+    <span class="p">):</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;`start_date` must be at the beginning of the first day of the month for a monthly &quot;</span>
+            <span class="s2">&quot;schedule. Use `execution_day_of_month` and `execution_time` to execute the schedule &quot;</span>
+            <span class="s2">&quot;at a specific time within the month. For example, to run the schedule at 3AM on the &quot;</span>
+            <span class="s2">&quot;23rd of each month starting in October, your schedule definition would look like:&quot;</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">@monthly_schedule(</span>
+<span class="sd">    start_date=datetime.datetime(2020, 10, 1),</span>
+<span class="sd">    execution_day_of_month=23,</span>
+<span class="sd">    execution_time=datetime.time(3, 0)</span>
+<span class="sd">):</span>
+<span class="sd">def my_schedule_definition(_):</span>
+<span class="sd">    ...</span>
+<span class="sd">&quot;&quot;&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">execution_day_of_month</span> <span class="o">&lt;=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">execution_day_of_month</span> <span class="o">&gt;</span> <span class="mi">31</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+            <span class="s2">&quot;`execution_day_of_month=</span><span class="si">{}</span><span class="s2">` is not valid for monthly schedule. Execution day must be &quot;</span>
+            <span class="s2">&quot;between 1 and 31&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">execution_day_of_month</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">cron_schedule</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{minute}</span><span class="s2"> </span><span class="si">{hour}</span><span class="s2"> </span><span class="si">{day}</span><span class="s2"> * *&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">minute</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">minute</span><span class="p">,</span> <span class="n">hour</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">hour</span><span class="p">,</span> <span class="n">day</span><span class="o">=</span><span class="n">execution_day_of_month</span>
+    <span class="p">)</span>
+
+    <span class="n">fmt</span> <span class="o">=</span> <span class="n">DEFAULT_MONTHLY_FORMAT</span>
+
+    <span class="n">execution_time_to_partition_fn</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">hour</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">months</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="n">execution_day_of_month</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">partition_fn</span> <span class="o">=</span> <span class="n">schedule_partition_range</span><span class="p">(</span>
+        <span class="n">start_date</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="n">end_date</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">fmt</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
+        <span class="n">timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">schedule_name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">tags_fn_for_date</span><span class="p">:</span>
+            <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">tags_fn_for_date</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="n">partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_partitions&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">partition_fn</span><span class="o">=</span><span class="n">partition_fn</span><span class="p">,</span>
+            <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">fn</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">),</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">tags_fn_for_partition</span><span class="o">=</span><span class="n">tags_fn_for_partition_value</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+            <span class="n">schedule_name</span><span class="p">,</span>
+            <span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">should_execute</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">partition_selector</span><span class="o">=</span><span class="n">create_offset_partition_selector</span><span class="p">(</span>
+                <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span>
+            <span class="p">),</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">inner</span></div>
+
+
+<div class="viewcode-block" id="weekly_schedule"><a class="viewcode-back" href="../../../../../sections/api/apidocs/schedules-sensors.html#dagster.weekly_schedule">[docs]</a><span class="k">def</span> <span class="nf">weekly_schedule</span><span class="p">(</span>
+    <span class="n">pipeline_name</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_day_of_week</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+    <span class="n">execution_time</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="n">tags_fn_for_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+    <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a schedule that runs weekly.</span>
+
+<span class="sd">    The decorated function will be called as the ``run_config_fn`` of the underlying</span>
+<span class="sd">    :py:class:`~dagster.ScheduleDefinition` and should take a</span>
+<span class="sd">    :py:class:`~dagster.ScheduleExecutionContext` as its only argument, returning the environment</span>
+<span class="sd">    dict for the scheduled execution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the schedule runs.</span>
+<span class="sd">        start_date (datetime.datetime): The date from which to run the schedule.</span>
+<span class="sd">        name (Optional[str]): The name of the schedule to create.</span>
+<span class="sd">        execution_day_of_week (int): The day of the week on which to run the schedule. Must be</span>
+<span class="sd">            between 0 (Sunday) and 6 (Saturday).</span>
+<span class="sd">        execution_time (datetime.time): The time at which to execute the schedule.</span>
+<span class="sd">        tags_fn_for_date (Optional[Callable[[datetime.datetime], Optional[Dict[str, str]]]]): A</span>
+<span class="sd">            function that generates tags to attach to the schedules runs. Takes the date of the</span>
+<span class="sd">            schedule run and returns a dictionary of tags (string key-value pairs).</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the schedule runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The pipeline mode in which to execute this schedule.</span>
+<span class="sd">            (Default: &#39;default&#39;)</span>
+<span class="sd">        should_execute (Optional[Callable[ScheduleExecutionContext, bool]]): A function that runs at</span>
+<span class="sd">            schedule execution tie to determine whether a schedule should execute or skip. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the</span>
+<span class="sd">            schedule should execute). Defaults to a function that always returns ``True``.</span>
+<span class="sd">        environment_vars (Optional[Dict[str, str]]): Any environment variables to set when executing</span>
+<span class="sd">            the schedule.</span>
+<span class="sd">        end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to</span>
+<span class="sd">            current time.</span>
+<span class="sd">        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">            with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">tags_fn_for_date</span><span class="p">,</span> <span class="s2">&quot;tags_fn_for_date&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">should_execute</span><span class="p">,</span> <span class="s2">&quot;should_execute&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">environment_vars</span><span class="p">,</span> <span class="s2">&quot;environment_vars&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">execution_day_of_week</span><span class="p">,</span> <span class="s2">&quot;execution_day_of_week&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_time</span><span class="p">,</span> <span class="s2">&quot;execution_time&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">execution_timezone</span><span class="p">,</span> <span class="s2">&quot;execution_timezone&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">start_date</span><span class="o">.</span><span class="n">hour</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">second</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;`start_date` must be at the beginning of a day for a weekly schedule. &quot;</span>
+            <span class="s2">&quot;Use `execution_time` to execute the schedule at a specific time of day. For example, &quot;</span>
+            <span class="s2">&quot;to run the schedule at 3AM each Tuesday starting on 10/20/2020, your schedule &quot;</span>
+            <span class="s2">&quot;definition would look like:&quot;</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">@weekly_schedule(</span>
+<span class="sd">    start_date=datetime.datetime(2020, 10, 20),</span>
+<span class="sd">    execution_day_of_week=1,</span>
+<span class="sd">    execution_time=datetime.time(3, 0)</span>
+<span class="sd">):</span>
+<span class="sd">def my_schedule_definition(_):</span>
+<span class="sd">    ...</span>
+<span class="sd">&quot;&quot;&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">execution_day_of_week</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">execution_day_of_week</span> <span class="o">&gt;=</span> <span class="mi">7</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+            <span class="s2">&quot;`execution_day_of_week=</span><span class="si">{}</span><span class="s2">` is not valid for weekly schedule. Execution day must be &quot;</span>
+            <span class="s2">&quot;between 0 [Sunday] and 6 [Saturday]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">execution_day_of_week</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="n">cron_schedule</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{minute}</span><span class="s2"> </span><span class="si">{hour}</span><span class="s2"> * * </span><span class="si">{day}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">minute</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">minute</span><span class="p">,</span> <span class="n">hour</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">hour</span><span class="p">,</span> <span class="n">day</span><span class="o">=</span><span class="n">execution_day_of_week</span>
+    <span class="p">)</span>
+
+    <span class="n">fmt</span> <span class="o">=</span> <span class="n">DEFAULT_DATE_FORMAT</span>
+
+    <span class="n">day_difference</span> <span class="o">=</span> <span class="p">(</span><span class="n">execution_day_of_week</span> <span class="o">-</span> <span class="p">(</span><span class="n">start_date</span><span class="o">.</span><span class="n">weekday</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">%</span> <span class="mi">7</span>
+
+    <span class="n">execution_time_to_partition_fn</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">hour</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">weeks</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="n">day_difference</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">partition_fn</span> <span class="o">=</span> <span class="n">schedule_partition_range</span><span class="p">(</span>
+        <span class="n">start_date</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="n">end_date</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">fmt</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
+        <span class="n">timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">schedule_name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">tags_fn_for_date</span><span class="p">:</span>
+            <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">tags_fn_for_date</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="n">partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_partitions&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">partition_fn</span><span class="o">=</span><span class="n">partition_fn</span><span class="p">,</span>
+            <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">fn</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">),</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">tags_fn_for_partition</span><span class="o">=</span><span class="n">tags_fn_for_partition_value</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+            <span class="n">schedule_name</span><span class="p">,</span>
+            <span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">should_execute</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">partition_selector</span><span class="o">=</span><span class="n">create_offset_partition_selector</span><span class="p">(</span>
+                <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">inner</span></div>
+
+
+<div class="viewcode-block" id="daily_schedule"><a class="viewcode-back" href="../../../../../sections/api/apidocs/schedules-sensors.html#dagster.daily_schedule">[docs]</a><span class="k">def</span> <span class="nf">daily_schedule</span><span class="p">(</span>
+    <span class="n">pipeline_name</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_time</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="n">tags_fn_for_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+    <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a schedule that runs daily.</span>
+
+<span class="sd">    The decorated function will be called as the ``run_config_fn`` of the underlying</span>
+<span class="sd">    :py:class:`~dagster.ScheduleDefinition` and should take a</span>
+<span class="sd">    :py:class:`~dagster.ScheduleExecutionContext` as its only argument, returning the environment</span>
+<span class="sd">    dict for the scheduled execution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the schedule runs.</span>
+<span class="sd">        start_date (datetime.datetime): The date from which to run the schedule.</span>
+<span class="sd">        name (Optional[str]): The name of the schedule to create.</span>
+<span class="sd">        execution_time (datetime.time): The time at which to execute the schedule.</span>
+<span class="sd">        tags_fn_for_date (Optional[Callable[[datetime.datetime], Optional[Dict[str, str]]]]): A</span>
+<span class="sd">            function that generates tags to attach to the schedules runs. Takes the date of the</span>
+<span class="sd">            schedule run and returns a dictionary of tags (string key-value pairs).</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the schedule runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The pipeline mode in which to execute this schedule.</span>
+<span class="sd">            (Default: &#39;default&#39;)</span>
+<span class="sd">        should_execute (Optional[Callable[ScheduleExecutionContext, bool]]): A function that runs at</span>
+<span class="sd">            schedule execution tie to determine whether a schedule should execute or skip. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the</span>
+<span class="sd">            schedule should execute). Defaults to a function that always returns ``True``.</span>
+<span class="sd">        environment_vars (Optional[Dict[str, str]]): Any environment variables to set when executing</span>
+<span class="sd">            the schedule.</span>
+<span class="sd">        end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to</span>
+<span class="sd">            current time.</span>
+<span class="sd">        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">            with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_time</span><span class="p">,</span> <span class="s2">&quot;execution_time&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">tags_fn_for_date</span><span class="p">,</span> <span class="s2">&quot;tags_fn_for_date&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">should_execute</span><span class="p">,</span> <span class="s2">&quot;should_execute&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">environment_vars</span><span class="p">,</span> <span class="s2">&quot;environment_vars&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">execution_timezone</span><span class="p">,</span> <span class="s2">&quot;execution_timezone&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">start_date</span><span class="o">.</span><span class="n">hour</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">second</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;`start_date` must be at the beginning of a day for a daily schedule. &quot;</span>
+            <span class="s2">&quot;Use `execution_time` to execute the schedule at a specific time of day. For example, &quot;</span>
+            <span class="s2">&quot;to run the schedule at 3AM each day starting on 10/20/2020, your schedule &quot;</span>
+            <span class="s2">&quot;definition would look like:&quot;</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">@daily_schedule(</span>
+<span class="sd">    start_date=datetime.datetime(2020, 10, 20),</span>
+<span class="sd">    execution_time=datetime.time(3, 0)</span>
+<span class="sd">):</span>
+<span class="sd">def my_schedule_definition(_):</span>
+<span class="sd">    ...</span>
+<span class="sd">&quot;&quot;&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">cron_schedule</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{minute}</span><span class="s2"> </span><span class="si">{hour}</span><span class="s2"> * * *&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">minute</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">minute</span><span class="p">,</span> <span class="n">hour</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">hour</span>
+    <span class="p">)</span>
+
+    <span class="n">fmt</span> <span class="o">=</span> <span class="n">DEFAULT_DATE_FORMAT</span>
+
+    <span class="n">execution_time_to_partition_fn</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">hour</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">minute</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">,)</span>
+    <span class="p">)</span>
+
+    <span class="n">partition_fn</span> <span class="o">=</span> <span class="n">schedule_partition_range</span><span class="p">(</span>
+        <span class="n">start_date</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="n">end_date</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">fmt</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
+        <span class="n">timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">schedule_name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">tags_fn_for_date</span><span class="p">:</span>
+            <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">tags_fn_for_date</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="n">partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_partitions&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">partition_fn</span><span class="o">=</span><span class="n">partition_fn</span><span class="p">,</span>
+            <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">fn</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">),</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">tags_fn_for_partition</span><span class="o">=</span><span class="n">tags_fn_for_partition_value</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+            <span class="n">schedule_name</span><span class="p">,</span>
+            <span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">should_execute</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">partition_selector</span><span class="o">=</span><span class="n">create_offset_partition_selector</span><span class="p">(</span>
+                <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">inner</span></div>
+
+
+<div class="viewcode-block" id="hourly_schedule"><a class="viewcode-back" href="../../../../../sections/api/apidocs/schedules-sensors.html#dagster.hourly_schedule">[docs]</a><span class="k">def</span> <span class="nf">hourly_schedule</span><span class="p">(</span>
+    <span class="n">pipeline_name</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="p">,</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_time</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+    <span class="n">tags_fn_for_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
+    <span class="n">should_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">environment_vars</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a schedule that runs hourly.</span>
+
+<span class="sd">    The decorated function will be called as the ``run_config_fn`` of the underlying</span>
+<span class="sd">    :py:class:`~dagster.ScheduleDefinition` and should take a</span>
+<span class="sd">    :py:class:`~dagster.ScheduleExecutionContext` as its only argument, returning the environment</span>
+<span class="sd">    dict for the scheduled execution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute when the schedule runs.</span>
+<span class="sd">        start_date (datetime.datetime): The date from which to run the schedule.</span>
+<span class="sd">        name (Optional[str]): The name of the schedule to create. By default, this will be the name</span>
+<span class="sd">            of the decorated function.</span>
+<span class="sd">        execution_time (datetime.time): The time at which to execute the schedule. Only the minutes</span>
+<span class="sd">            component will be respected -- the hour should be 0, and will be ignored if it is not 0.</span>
+<span class="sd">        tags_fn_for_date (Optional[Callable[[datetime.datetime], Optional[Dict[str, str]]]]): A</span>
+<span class="sd">            function that generates tags to attach to the schedules runs. Takes the date of the</span>
+<span class="sd">            schedule run and returns a dictionary of tags (string key-value pairs).</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute when the schedule runs. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">        mode (Optional[str]): The pipeline mode in which to execute this schedule.</span>
+<span class="sd">            (Default: &#39;default&#39;)</span>
+<span class="sd">        should_execute (Optional[Callable[ScheduleExecutionContext, bool]]): A function that runs at</span>
+<span class="sd">            schedule execution tie to determine whether a schedule should execute or skip. Takes a</span>
+<span class="sd">            :py:class:`~dagster.ScheduleExecutionContext` and returns a boolean (``True`` if the</span>
+<span class="sd">            schedule should execute). Defaults to a function that always returns ``True``.</span>
+<span class="sd">        environment_vars (Optional[Dict[str, str]]): Any environment variables to set when executing</span>
+<span class="sd">            the schedule.</span>
+<span class="sd">        end_date (Optional[datetime.datetime]): The last time to run the schedule to, defaults to</span>
+<span class="sd">            current time.</span>
+<span class="sd">        execution_timezone (Optional[str]): Timezone in which the schedule should run. Only works</span>
+<span class="sd">            with DagsterDaemonScheduler, and must be set when using that scheduler.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;start_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;end_date&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">tags_fn_for_date</span><span class="p">,</span> <span class="s2">&quot;tags_fn_for_date&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">should_execute</span><span class="p">,</span> <span class="s2">&quot;should_execute&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">environment_vars</span><span class="p">,</span> <span class="s2">&quot;environment_vars&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_time</span><span class="p">,</span> <span class="s2">&quot;execution_time&quot;</span><span class="p">,</span> <span class="n">datetime</span><span class="o">.</span><span class="n">time</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">execution_timezone</span><span class="p">,</span> <span class="s2">&quot;execution_timezone&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">start_date</span><span class="o">.</span><span class="n">minute</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">start_date</span><span class="o">.</span><span class="n">second</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;`start_date` must be at the beginning of the hour for an hourly schedule. &quot;</span>
+            <span class="s2">&quot;Use `execution_time` to execute the schedule at a specific time within the hour. For &quot;</span>
+            <span class="s2">&quot;example, to run the schedule each hour at 15 minutes past the hour starting at 3AM &quot;</span>
+            <span class="s2">&quot;on 10/20/2020, your schedule definition would look like:&quot;</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">@hourly_schedule(</span>
+<span class="sd">    start_date=datetime.datetime(2020, 10, 20, 3),</span>
+<span class="sd">    execution_time=datetime.time(0, 15)</span>
+<span class="sd">):</span>
+<span class="sd">def my_schedule_definition(_):</span>
+<span class="sd">    ...</span>
+<span class="sd">&quot;&quot;&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">execution_time</span><span class="o">.</span><span class="n">hour</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+            <span class="s2">&quot;Hourly schedule </span><span class="si">{schedule_name}</span><span class="s2"> created with:</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;</span><span class="se">\t</span><span class="s2">schedule_time=datetime.time(hour=</span><span class="si">{hour}</span><span class="s2">, minute=</span><span class="si">{minute}</span><span class="s2">, ...).&quot;</span>
+            <span class="s2">&quot;Since this is an hourly schedule, the hour parameter will be ignored and the schedule &quot;</span>
+            <span class="s2">&quot;will run on the </span><span class="si">{minute}</span><span class="s2"> mark for the previous hour interval. Replace &quot;</span>
+            <span class="s2">&quot;datetime.time(hour=</span><span class="si">{hour}</span><span class="s2">, minute=</span><span class="si">{minute}</span><span class="s2">, ...) with &quot;</span>
+            <span class="s2">&quot;datetime.time(minute=</span><span class="si">{minute}</span><span class="s2">, ...) to fix this warning.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">cron_schedule</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{minute}</span><span class="s2"> * * * *&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">minute</span><span class="o">=</span><span class="n">execution_time</span><span class="o">.</span><span class="n">minute</span><span class="p">)</span>
+
+    <span class="n">fmt</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">DEFAULT_HOURLY_FORMAT_WITH_TIMEZONE</span>
+        <span class="k">if</span> <span class="n">execution_timezone</span>
+        <span class="k">else</span> <span class="n">DEFAULT_HOURLY_FORMAT_WITHOUT_TIMEZONE</span>
+    <span class="p">)</span>
+
+    <span class="n">execution_time_to_partition_fn</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">pendulum</span><span class="o">.</span><span class="n">instance</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span>
+        <span class="n">hours</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">minutes</span><span class="o">=</span><span class="p">(</span><span class="n">execution_time</span><span class="o">.</span><span class="n">minute</span> <span class="o">-</span> <span class="n">start_date</span><span class="o">.</span><span class="n">minute</span><span class="p">)</span> <span class="o">%</span> <span class="mi">60</span>
+    <span class="p">)</span>
+
+    <span class="n">partition_fn</span> <span class="o">=</span> <span class="n">schedule_partition_range</span><span class="p">(</span>
+        <span class="n">start_date</span><span class="p">,</span>
+        <span class="n">end</span><span class="o">=</span><span class="n">end_date</span><span class="p">,</span>
+        <span class="n">cron_schedule</span><span class="o">=</span><span class="n">cron_schedule</span><span class="p">,</span>
+        <span class="n">fmt</span><span class="o">=</span><span class="n">fmt</span><span class="p">,</span>
+        <span class="n">timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">inner</span><span class="p">(</span><span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">schedule_name</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">or</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">tags_fn_for_date</span><span class="p">:</span>
+            <span class="n">tags_fn_for_partition_value</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">tags_fn_for_date</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
+
+        <span class="n">partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">_partitions&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="n">partition_fn</span><span class="o">=</span><span class="n">partition_fn</span><span class="p">,</span>
+            <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="k">lambda</span> <span class="n">partition</span><span class="p">:</span> <span class="n">fn</span><span class="p">(</span><span class="n">partition</span><span class="o">.</span><span class="n">value</span><span class="p">),</span>
+            <span class="n">solid_selection</span><span class="o">=</span><span class="n">solid_selection</span><span class="p">,</span>
+            <span class="n">tags_fn_for_partition</span><span class="o">=</span><span class="n">tags_fn_for_partition_value</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+            <span class="n">schedule_name</span><span class="p">,</span>
+            <span class="n">cron_schedule</span><span class="p">,</span>
+            <span class="n">should_execute</span><span class="o">=</span><span class="n">should_execute</span><span class="p">,</span>
+            <span class="n">environment_vars</span><span class="o">=</span><span class="n">environment_vars</span><span class="p">,</span>
+            <span class="n">partition_selector</span><span class="o">=</span><span class="n">create_offset_partition_selector</span><span class="p">(</span>
+                <span class="n">execution_time_to_partition_fn</span><span class="o">=</span><span class="n">execution_time_to_partition_fn</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">execution_timezone</span><span class="o">=</span><span class="n">execution_timezone</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">inner</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

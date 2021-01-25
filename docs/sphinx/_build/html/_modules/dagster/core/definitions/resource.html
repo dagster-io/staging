@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.resource &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.resource</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.config</span> <span class="kn">import</span> <span class="n">is_callable_valid_config_arg</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.configurable</span> <span class="kn">import</span> <span class="n">ConfigurableDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span> <span class="n">DagsterUnknownResourceError</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_arg_warning</span>
+
+<span class="kn">from</span> <span class="nn">..decorator_utils</span> <span class="kn">import</span> <span class="n">split_function_parameters</span><span class="p">,</span> <span class="n">validate_decorated_fn_positionals</span>
+<span class="kn">from</span> <span class="nn">.definition_config_schema</span> <span class="kn">import</span> <span class="n">convert_user_facing_definition_config_schema</span>
+
+
+<div class="viewcode-block" id="ResourceDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/modes-resources.html#dagster_dbt.ResourceDefinition">[docs]</a><span class="k">class</span> <span class="nc">ResourceDefinition</span><span class="p">(</span><span class="n">ConfigurableDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Core class for defining resources.</span>
+
+<span class="sd">    Resources are scoped ways to make external resources (like database connections) available to</span>
+<span class="sd">    solids during pipeline execution and to clean up after execution resolves.</span>
+
+<span class="sd">    If resource_fn yields once rather than returning (in the manner of functions decorable with</span>
+<span class="sd">    :py:func:`@contextlib.contextmanager &lt;python:contextlib.contextmanager&gt;`) then the body of the</span>
+<span class="sd">    function after the yield will be run after execution resolves, allowing users to write their</span>
+<span class="sd">    own teardown/cleanup logic.</span>
+
+<span class="sd">    Depending on your executor, resources may be instantiated and cleaned up more than once in a</span>
+<span class="sd">    pipeline execution.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        resource_fn (Callable[[InitResourceContext], Any]): User-provided function to instantiate</span>
+<span class="sd">            the resource, which will be made available to solid executions keyed on the</span>
+<span class="sd">            ``context.resources`` object.</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data</span>
+<span class="sd">            available in `init_context.resource_config`.</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the resource.</span>
+<span class="sd">        required_resource_keys: (Optional[Set[str]]) Keys for the resources required by this</span>
+<span class="sd">            resource. A DagsterInvariantViolationError will be raised during initialization if</span>
+<span class="sd">            dependencies are cyclic.</span>
+<span class="sd">        version (Optional[str]): (Experimental) The version of the resource&#39;s definition fn. Two</span>
+<span class="sd">            wrapped resource functions should only have the same version if they produce the same</span>
+<span class="sd">            resource definition when provided with the same inputs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">resource_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">EXPECTED_POSITIONALS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">]</span>
+        <span class="n">fn_positionals</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">split_function_parameters</span><span class="p">(</span><span class="n">resource_fn</span><span class="p">,</span> <span class="n">EXPECTED_POSITIONALS</span><span class="p">)</span>
+        <span class="n">missing_positional</span> <span class="o">=</span> <span class="n">validate_decorated_fn_positionals</span><span class="p">(</span><span class="n">fn_positionals</span><span class="p">,</span> <span class="n">EXPECTED_POSITIONALS</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">missing_positional</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;@resource &#39;</span><span class="si">{resource_name}</span><span class="s2">&#39; decorated function does not have required &quot;</span>
+                <span class="s2">&quot;positional parameter &#39;</span><span class="si">{missing_param}</span><span class="s2">&#39;. Resource functions should only have keyword &quot;</span>
+                <span class="s2">&quot;arguments that match input names and a first positional parameter.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">resource_name</span><span class="o">=</span><span class="n">resource_fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">missing_param</span><span class="o">=</span><span class="n">missing_positional</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resource_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">resource_fn</span><span class="p">,</span> <span class="s2">&quot;resource_fn&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_schema</span> <span class="o">=</span> <span class="n">convert_user_facing_definition_config_schema</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_version</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">version</span><span class="p">:</span>
+            <span class="n">experimental_arg_warning</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="s2">&quot;ResourceDefinition.__init__&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">resource_fn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resource_fn</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_schema</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">version</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_version</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span>
+
+<div class="viewcode-block" id="ResourceDefinition.none_resource"><a class="viewcode-back" href="../../../../sections/api/apidocs/modes-resources.html#dagster_dbt.ResourceDefinition.none_resource">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">none_resource</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A helper function that returns a none resource.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            description ([Optional[str]]): The description of the resource. Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            [ResourceDefinition]: A resource that does nothing.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ResourceDefinition</span><span class="o">.</span><span class="n">hardcoded_resource</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResourceDefinition.hardcoded_resource"><a class="viewcode-back" href="../../../../sections/api/apidocs/modes-resources.html#dagster_dbt.ResourceDefinition.hardcoded_resource">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">hardcoded_resource</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A helper function that creates a ``ResourceDefinition`` with a hardcoded object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            value (Any): A hardcoded object which helps mock the resource.</span>
+<span class="sd">            description ([Optional[str]]): The description of the resource. Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            [ResourceDefinition]: A hardcoded resource.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ResourceDefinition</span><span class="p">(</span><span class="n">resource_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_init_context</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ResourceDefinition.mock_resource"><a class="viewcode-back" href="../../../../sections/api/apidocs/modes-resources.html#dagster_dbt.ResourceDefinition.mock_resource">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">mock_resource</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A helper function that creates a ``ResourceDefinition`` which wraps a ``mock.MagicMock``.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            description ([Optional[str]]): The description of the resource. Defaults to None.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            [ResourceDefinition]: A resource that creates the magic methods automatically and helps</span>
+<span class="sd">                you mock existing resources.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ResourceDefinition</span><span class="o">.</span><span class="n">hardcoded_resource</span><span class="p">(</span>
+            <span class="n">value</span><span class="o">=</span><span class="n">seven</span><span class="o">.</span><span class="n">mock</span><span class="o">.</span><span class="n">MagicMock</span><span class="p">(),</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">string_resource</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ResourceDefinition</span><span class="p">(</span>
+            <span class="n">resource_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">init_context</span><span class="p">:</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">copy_for_configured</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">config_schema</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;ResourceDefintions do not have names&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ResourceDefinition</span><span class="p">(</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">resource_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_fn</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">_ResourceDecoratorCallable</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="o">=</span> <span class="n">config_schema</span>  <span class="c1"># checked by underlying definition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="n">resource_def</span> <span class="o">=</span> <span class="n">ResourceDefinition</span><span class="p">(</span>
+            <span class="n">resource_fn</span><span class="o">=</span><span class="n">fn</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">resource_def</span><span class="p">,</span> <span class="n">wrapped</span><span class="o">=</span><span class="n">fn</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">resource_def</span>
+
+
+<div class="viewcode-block" id="resource"><a class="viewcode-back" href="../../../../sections/api/apidocs/modes-resources.html#dagster_dbt.resource">[docs]</a><span class="k">def</span> <span class="nf">resource</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define a resource.</span>
+
+<span class="sd">    The decorated function should accept an :py:class:`InitResourceContext` and return an instance of</span>
+<span class="sd">    the resource. This function will become the ``resource_fn`` of an underlying</span>
+<span class="sd">    :py:class:`ResourceDefinition`.</span>
+
+<span class="sd">    If the decorated function yields once rather than returning (in the manner of functions</span>
+<span class="sd">    decorable with :py:func:`@contextlib.contextmanager &lt;python:contextlib.contextmanager&gt;`) then</span>
+<span class="sd">    the body of the function after the yield will be run after execution resolves, allowing users</span>
+<span class="sd">    to write their own teardown/cleanup logic.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data available in</span>
+<span class="sd">            `init_context.resource_config`.</span>
+<span class="sd">        description(Optional[str]): A human-readable description of the resource.</span>
+<span class="sd">        version (Optional[str]): (Experimental) The version of a resource function. Two wrapped</span>
+<span class="sd">            resource functions should only have the same version if they produce the same resource</span>
+<span class="sd">            definition when provided with the same inputs.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Keys for the resources required by this resource.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># This case is for when decorator is used bare, without arguments.</span>
+    <span class="c1"># E.g. @resource versus @resource()</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_callable_valid_config_arg</span><span class="p">(</span><span class="n">config_schema</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_ResourceDecoratorCallable</span><span class="p">()(</span><span class="n">config_schema</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_wrap</span><span class="p">(</span><span class="n">resource_fn</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_ResourceDecoratorCallable</span><span class="p">(</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+        <span class="p">)(</span><span class="n">resource_fn</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_wrap</span></div>
+
+
+<span class="k">class</span> <span class="nc">ScopedResourcesBuilder</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ScopedResourcesBuilder&quot;</span><span class="p">,</span> <span class="s2">&quot;resource_instance_dict&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;There are concepts in the codebase (e.g. solids, system storage) that receive</span>
+<span class="sd">    only the resources that they have specified in required_resource_keys.</span>
+<span class="sd">    ScopedResourcesBuilder is responsible for dynamically building a class with</span>
+<span class="sd">    only those required resources and returning an instance of that class.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">resource_instance_dict</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ScopedResourcesBuilder</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">resource_instance_dict</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+                <span class="n">resource_instance_dict</span><span class="p">,</span> <span class="s2">&quot;resource_instance_dict&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">build</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="p">):</span>
+
+        <span class="sd">&quot;&quot;&quot;We dynamically create a type that has the resource keys as properties, to enable dotting into</span>
+<span class="sd">        the resources from a context.</span>
+
+<span class="sd">        For example, given:</span>
+
+<span class="sd">        resources = {&#39;foo&#39;: &lt;some resource&gt;, &#39;bar&#39;: &lt;some other resource&gt;}</span>
+
+<span class="sd">        then this will create the type Resource(namedtuple(&#39;foo bar&#39;))</span>
+
+<span class="sd">        and then binds the specified resources into an instance of this object, which can be consumed</span>
+<span class="sd">        as, e.g., context.resources.foo.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span>
+            <span class="n">required_resource_keys</span><span class="p">,</span> <span class="s2">&quot;required_resource_keys&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="c1"># it is possible that the surrounding context does NOT have the required resource keys</span>
+        <span class="c1"># because we are building a context for steps that we are not going to execute (e.g. in the</span>
+        <span class="c1"># resume/retry case, in order to generate copy intermediates events)</span>
+        <span class="n">resource_instance_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">resource_instance_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">required_resource_keys</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">resource_instance_dict</span>
+        <span class="p">}</span>
+
+        <span class="k">class</span> <span class="nc">ScopedResources</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;Resources&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">resource_instance_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()))):</span>
+            <span class="k">def</span> <span class="fm">__getattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">attr</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">DagsterUnknownResourceError</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ScopedResources</span><span class="p">(</span><span class="o">**</span><span class="n">resource_instance_dict</span><span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

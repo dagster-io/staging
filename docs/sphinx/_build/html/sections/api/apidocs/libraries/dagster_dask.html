@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dask (dagster_dask) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Databricks (dagster_databricks)" href="dagster_databricks.html" />
+    <link rel="prev" title="Cron (dagster_cron)" href="dagster_cron.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_cron.html" title="Previous document">Cron (dagster_cron)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_databricks.html" title="Next document">Databricks (dagster_databricks)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="dask-dagster-dask">
+<h1>Dask (dagster_dask)<a class="headerlink" href="#dask-dagster-dask" title="Permalink to this headline">¶</a></h1>
+<p>See also the <a class="reference external" href="https://docs.dagster.io/deploying/dask/">Dask deployment guide</a>.</p>
+<dl class="data">
+<dt id="dagster_dask.dask_executor">
+<code class="sig-prename descclassname">dagster_dask.</code><code class="sig-name descname">dask_executor</code><em class="property"> ExecutorDefinition</em><a class="reference internal" href="../../../../_modules/dagster_dask/executor.html#dask_executor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_dask.dask_executor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dask-based executor.</p>
+<p>The ‘cluster’ can be one of the following:
+(‘existing’, ‘local’, ‘yarn’, ‘ssh’, ‘pbs’, ‘moab’, ‘sge’, ‘lsf’, ‘slurm’, ‘oar’, ‘kube’).</p>
+<p>If the Dask executor is used without providing executor-specific config, a local Dask cluster
+will be created (as when calling <a class="reference external" href="https://distributed.dask.org/en/latest/api.html#distributed.Client" title="(in Dask.distributed v2.8.1+13.g447b2c2a)"><code class="xref py py-class docutils literal notranslate"><span class="pre">dask.distributed.Client()</span></code></a>
+with <code class="xref py py-class docutils literal notranslate"><span class="pre">dask.distributed.LocalCluster()</span></code>).</p>
+<p>The Dask executor optionally takes the following config:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cluster:
+    {
+        local?: # takes distributed.LocalCluster parameters
+            {
+                timeout?: 5,  # Timeout duration for initial connection to the scheduler
+                n_workers?: 4  # Number of workers to start
+                threads_per_worker?: 1 # Number of threads per each worker
+            }
+    }
+</pre></div>
+</div>
+<p>If you’d like to configure a dask executor in addition to the
+<a class="reference internal" href="../execution.html#dagster.default_executors" title="dagster.default_executors"><code class="xref py py-class docutils literal notranslate"><span class="pre">default_executors</span></code></a>, you should add it to the <code class="docutils literal notranslate"><span class="pre">executor_defs</span></code> defined on a
+<a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ModeDefinition</span></code></a> as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">ModeDefinition</span><span class="p">,</span> <span class="n">default_executors</span><span class="p">,</span> <span class="n">pipeline</span>
+<span class="kn">from</span> <span class="nn">dagster_dask</span> <span class="kn">import</span> <span class="n">dask_executor</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span><span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">executor_defs</span><span class="o">=</span><span class="n">default_executors</span> <span class="o">+</span> <span class="p">[</span><span class="n">dask_executor</span><span class="p">])])</span>
+<span class="k">def</span> <span class="nf">dask_enabled_pipeline</span><span class="p">():</span>
+    <span class="k">pass</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_cron.html" title="Previous document">Cron (dagster_cron)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_databricks.html" title="Next document">Databricks (dagster_databricks)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

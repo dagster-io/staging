@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.config.config_schema &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.config.config_schema</h1><div class="highlight"><pre>
+<div class="viewcode-block" id="ConfigSchema"><a class="viewcode-back" href="../../../sections/api/apidocs/config.html#dagster.ConfigSchema">[docs]</a><span></span><span class="k">class</span> <span class="nc">ConfigSchema</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;This is a placeholder type. Any time that it appears in documentation, it means that any of</span>
+<span class="sd">    the following types are acceptable:</span>
+
+<span class="sd">    #. A Python scalar type that resolves to a Dagster config type</span>
+<span class="sd">       (:py:class:`~python:int`, :py:class:`~python:float`, :py:class:`~python:bool`,</span>
+<span class="sd">       or :py:class:`~python:str`). For example:</span>
+
+<span class="sd">       * ``@solid(config_schema=int)``</span>
+<span class="sd">       * ``@solid(config_schema=str)``</span>
+
+<span class="sd">    #. A built-in python collection (:py:class:`~python:list`, or :py:class:`~python:dict`).</span>
+<span class="sd">       :py:class:`~python:list` is exactly equivalent to :py:class:`~dagster.Array` [</span>
+<span class="sd">       :py:class:`~dagster.Any` ] and :py:class:`~python:dict` is equivalent to</span>
+<span class="sd">       :py:class:`~dagster.Permissive`. For example:</span>
+
+<span class="sd">       * ``@solid(config_schema=list)``</span>
+<span class="sd">       * ``@solid(config_schema=dict)``</span>
+
+<span class="sd">    #. A Dagster config type:</span>
+
+<span class="sd">       * :py:data:`~dagster.Any`</span>
+<span class="sd">       * :py:class:`~dagster.Array`</span>
+<span class="sd">       * :py:data:`~dagster.Bool`</span>
+<span class="sd">       * :py:data:`~dagster.Enum`</span>
+<span class="sd">       * :py:data:`~dagster.Float`</span>
+<span class="sd">       * :py:data:`~dagster.Int`</span>
+<span class="sd">       * :py:data:`~dagster.IntSource`</span>
+<span class="sd">       * :py:data:`~dagster.Noneable`</span>
+<span class="sd">       * :py:class:`~dagster.Permissive`</span>
+<span class="sd">       * :py:class:`~dagster.ScalarUnion`</span>
+<span class="sd">       * :py:class:`~dagster.Selector`</span>
+<span class="sd">       * :py:class:`~dagster.Shape`</span>
+<span class="sd">       * :py:data:`~dagster.String`</span>
+<span class="sd">       * :py:data:`~dagster.StringSource`</span>
+
+
+<span class="sd">    #. A bare python dictionary, which will be automatically wrapped in</span>
+<span class="sd">       :py:class:`~dagster.Shape`. Values of the dictionary are resolved recursively</span>
+<span class="sd">       according to the same rules. For example:</span>
+
+<span class="sd">       * ``{&#39;some_config&#39;: str}`` is equivalent to ``Shape({&#39;some_config: str})``.</span>
+
+<span class="sd">       * ``{&#39;some_config1&#39;: {&#39;some_config2&#39;: str}}`` is equivalent to</span>
+<span class="sd">            ``Shape({&#39;some_config1: Shape({&#39;some_config2: str})})``.</span>
+
+<span class="sd">    #. A bare python list of length one, whose single element will be wrapped in a</span>
+<span class="sd">       :py:class:`~dagster.Array` is resolved recursively according to the same</span>
+<span class="sd">       rules. For example:</span>
+
+<span class="sd">       * ``[str]`` is equivalent to ``Array[str]``.</span>
+
+<span class="sd">       * ``[[str]]`` is equivalent to ``Array[Array[str]]``.</span>
+
+<span class="sd">       * ``[{&#39;some_config&#39;: str}]`` is equivalent to ``Array(Shape({&#39;some_config: str}))``.</span>
+
+<span class="sd">    #. An instance of :py:class:`~dagster.Field`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span>
+            <span class="s2">&quot;ConfigSchema is a placeholder type and should not be instantiated.&quot;</span>
+        <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

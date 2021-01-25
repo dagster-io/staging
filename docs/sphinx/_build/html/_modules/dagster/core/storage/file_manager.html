@@ -1,0 +1,357 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.file_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.file_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">io</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">uuid</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">abstractproperty</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">BinaryIO</span><span class="p">,</span> <span class="n">TextIO</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.config</span> <span class="kn">import</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">dagster.config.source</span> <span class="kn">import</span> <span class="n">StringSource</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.resource</span> <span class="kn">import</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.decorator</span> <span class="kn">import</span> <span class="n">usable_as_dagster_type</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">mkdir_p</span>
+
+<span class="kn">from</span> <span class="nn">.temp_file_manager</span> <span class="kn">import</span> <span class="n">TempfileManager</span>
+
+
+<span class="c1"># pylint: disable=no-init</span>
+<div class="viewcode-block" id="FileHandle"><a class="viewcode-back" href="../../../../sections/api/apidocs/types.html#dagster.core.storage.file_manager.FileHandle">[docs]</a><span class="nd">@usable_as_dagster_type</span>
+<span class="k">class</span> <span class="nc">FileHandle</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A reference to a file as manipulated by a FileManager</span>
+
+<span class="sd">    Subclasses may handle files that are resident on the local file system, in an object store, or</span>
+<span class="sd">    in any arbitrary place where a file can be stored.</span>
+
+<span class="sd">    This exists to handle the very common case where you wish to write a computation that reads,</span>
+<span class="sd">    transforms, and writes files, but where you also want the same code to work in local development</span>
+<span class="sd">    as well as on a cluster where the files will be stored in a globally available object store</span>
+<span class="sd">    such as S3.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">path_desc</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A representation of the file path for display purposes only.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="LocalFileHandle"><a class="viewcode-back" href="../../../../sections/api/apidocs/types.html#dagster.core.storage.file_manager.LocalFileHandle">[docs]</a><span class="nd">@usable_as_dagster_type</span>
+<span class="k">class</span> <span class="nc">LocalFileHandle</span><span class="p">(</span><span class="n">FileHandle</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A reference to a file on a local filesystem.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_path</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;The file&#39;s path.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">path_desc</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;A representation of the file path for display purposes only.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_path</span></div>
+
+
+<div class="viewcode-block" id="FileManager"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager">[docs]</a><span class="k">class</span> <span class="nc">FileManager</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># pylint: disable=no-init</span>
+    <span class="sd">&quot;&quot;&quot;Base class for all file managers in dagster.</span>
+<span class="sd">    </span>
+<span class="sd">    The file manager is an interface that can be implemented by resources to provide abstract</span>
+<span class="sd">    access to a file system such as local disk, S3, or other cloud storage.</span>
+
+<span class="sd">    For examples of usage, see the documentation of the concrete file manager implementations.</span>
+
+<span class="sd">    In 0.10.x, this abstraction will be deprecated in favor of the :py:class:`~dagster.IOManager`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="FileManager.copy_handle_to_local_temp"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager.copy_handle_to_local_temp">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">copy_handle_to_local_temp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">:</span> <span class="n">FileHandle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Copy a file represented by a file handle to a temp file.</span>
+
+<span class="sd">        In an implementation built around an object store such as S3, this method would be expected</span>
+<span class="sd">        to download the file from S3 to local filesystem in a location assigned by the standard</span>
+<span class="sd">        library&#39;s :py:mod:`python:tempfile` module.</span>
+
+<span class="sd">        Temp files returned by this method are *not* guaranteed to be reusable across solid</span>
+<span class="sd">        boundaries. For files that must be available across solid boundaries, use the</span>
+<span class="sd">        :py:meth:`~dagster.core.storage.file_manager.FileManager.read`,</span>
+<span class="sd">        :py:meth:`~dagster.core.storage.file_manager.FileManager.read_data`,</span>
+<span class="sd">        :py:meth:`~dagster.core.storage.file_manager.FileManager.write`, and </span>
+<span class="sd">        :py:meth:`~dagster.core.storage.file_manager.FileManager.write_data` methods.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_handle (FileHandle): The handle to the file to make available as a local temp file.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: Path to the local temp file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FileManager.delete_local_temp"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager.delete_local_temp">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">delete_local_temp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete all local temporary files created by previous calls to</span>
+<span class="sd">        :py:meth:`~dagster.core.storage.file_manager.FileManager.copy_handle_to_local_temp`.</span>
+<span class="sd">        </span>
+<span class="sd">        Should typically only be called by framework implementors.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FileManager.read"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager.read">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">:</span> <span class="n">FileHandle</span><span class="p">,</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">TextIO</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Return a file-like stream for the file handle.</span>
+<span class="sd">        </span>
+<span class="sd">        This may incur an expensive network call for file managers backed by object stores</span>
+<span class="sd">        such as S3.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_handle (FileHandle): The file handle to make available as a stream.</span>
+<span class="sd">            mode (str): The mode in which to open the file. Default: ``&quot;rb&quot;``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Union[TextIO, BinaryIO]: A file-like stream.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FileManager.read_data"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager.read_data">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">:</span> <span class="n">FileHandle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bytes</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return the bytes for a given file handle. This may incur an expensive network</span>
+<span class="sd">        call for file managers backed by object stores such as s3.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_handle (FileHandle): The file handle for which to return bytes.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bytes: Bytes for a given file handle.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FileManager.write"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager.write">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">file_obj</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">TextIO</span><span class="p">,</span> <span class="n">BinaryIO</span><span class="p">],</span> <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">ext</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FileHandle</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Write the bytes contained within the given file object into the file manager.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            file_obj (Union[TextIO, StringIO]): A file-like object.</span>
+<span class="sd">            mode (Optional[str]): The mode in which to write the file into the file manager.</span>
+<span class="sd">                Default: ``&quot;wb&quot;``.</span>
+<span class="sd">            ext (Optional[str]): For file managers that support file extensions, the extension with</span>
+<span class="sd">                which to write the file. Default: ``None``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            FileHandle: A handle to the newly created file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="FileManager.write_data"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.FileManager.write_data">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">write_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="nb">bytes</span><span class="p">,</span> <span class="n">ext</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FileHandle</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Write raw bytes into the file manager.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            data (bytes): The bytes to write into the file manager.</span>
+<span class="sd">            ext (Optional[str]): For file managers that support file extensions, the extension with</span>
+<span class="sd">                which to write the file. Default: ``None``.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            FileHandle: A handle to the newly created file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span></div></div>
+
+
+<div class="viewcode-block" id="local_file_manager"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.file_manager.local_file_manager">[docs]</a><span class="nd">@resource</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)})</span>
+<span class="k">def</span> <span class="nf">local_file_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;FileManager that provides abstract access to a local filesystem.</span>
+<span class="sd">    </span>
+<span class="sd">    Implements the :py:class:`~dagster.core.storage.file_manager.FileManager` API.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        import tempfile</span>
+
+<span class="sd">        from dagster import ModeDefinition, local_file_manager, pipeline, solid</span>
+
+
+<span class="sd">        @solid(required_resource_keys={&quot;file_manager&quot;})</span>
+<span class="sd">        def write_files(context):</span>
+<span class="sd">            fh_1 = context.resources.file_manager.write_data(b&quot;foo&quot;)</span>
+
+<span class="sd">            with tempfile.NamedTemporaryFile(&quot;w+&quot;) as fd:</span>
+<span class="sd">                fd.write(&quot;bar&quot;)</span>
+<span class="sd">                fd.seek(0)</span>
+<span class="sd">                fh_2 = context.resources.file_manager.write(fd, mode=&quot;w&quot;, ext=&quot;.txt&quot;)</span>
+
+<span class="sd">            return (fh_1, fh_2)</span>
+
+
+<span class="sd">        @solid(required_resource_keys={&quot;file_manager&quot;})</span>
+<span class="sd">        def read_files(context, file_handles):</span>
+<span class="sd">            fh_1, fh_2 = file_handles</span>
+<span class="sd">            assert context.resources.file_manager.read_data(fh_2) == b&quot;bar&quot;</span>
+<span class="sd">            fd = context.resources.file_manager.read(fh_2, mode=&quot;r&quot;)</span>
+<span class="sd">            assert fd.read() == &quot;foo&quot;</span>
+<span class="sd">            fd.close()</span>
+
+
+<span class="sd">        @pipeline(mode_defs=[ModeDefinition(resource_defs={&quot;file_manager&quot;: local_file_manager})])</span>
+<span class="sd">        def files_pipeline():</span>
+<span class="sd">            read_files(write_files())</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">LocalFileManager</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">])</span></div>
+
+
+<span class="k">def</span> <span class="nf">check_file_like_obj</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">obj</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s2">&quot;read&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="s2">&quot;write&quot;</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">LocalFileManager</span><span class="p">(</span><span class="n">FileManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">base_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir_ensured</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_file_manager</span> <span class="o">=</span> <span class="n">TempfileManager</span><span class="p">()</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">for_instance</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">LocalFileManager</span><span class="p">(</span><span class="n">instance</span><span class="o">.</span><span class="n">file_manager_directory</span><span class="p">(</span><span class="n">run_id</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">ensure_base_dir_exists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir_ensured</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">mkdir_p</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_base_dir_ensured</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">copy_handle_to_local_temp</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="s2">&quot;file_handle&quot;</span><span class="p">,</span> <span class="n">FileHandle</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">handle_obj</span><span class="p">:</span>
+            <span class="n">temp_file_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temp_file_manager</span><span class="o">.</span><span class="n">tempfile</span><span class="p">()</span>
+            <span class="n">temp_file_obj</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">handle_obj</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+            <span class="n">temp_name</span> <span class="o">=</span> <span class="n">temp_file_obj</span><span class="o">.</span><span class="n">name</span>
+            <span class="n">temp_file_obj</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">temp_name</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="s2">&quot;file_handle&quot;</span><span class="p">,</span> <span class="n">LocalFileHandle</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="n">mode</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;r&quot;</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">},</span> <span class="s2">&quot;mode&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_handle</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_obj</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">file_obj</span>
+
+    <span class="k">def</span> <span class="nf">read_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_handle</span><span class="p">):</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">file_handle</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">file_obj</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">write_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">io</span><span class="o">.</span><span class="n">BytesIO</span><span class="p">(</span><span class="n">data</span><span class="p">),</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="n">ext</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_obj</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;wb&quot;</span><span class="p">,</span> <span class="n">ext</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check_file_like_obj</span><span class="p">(</span><span class="n">file_obj</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="s2">&quot;ext&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensure_base_dir_exists</span><span class="p">()</span>
+
+        <span class="n">dest_file_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">())</span> <span class="o">+</span> <span class="p">((</span><span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="n">ext</span><span class="p">)</span> <span class="k">if</span> <span class="n">ext</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">dest_file_path</span><span class="p">,</span> <span class="n">mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">dest_file_obj</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copyfileobj</span><span class="p">(</span><span class="n">file_obj</span><span class="p">,</span> <span class="n">dest_file_obj</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">LocalFileHandle</span><span class="p">(</span><span class="n">dest_file_path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete_local_temp</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_file_manager</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

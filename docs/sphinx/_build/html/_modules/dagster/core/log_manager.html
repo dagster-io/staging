@@ -1,0 +1,359 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.log_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.log_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span><span class="p">,</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.utils</span> <span class="kn">import</span> <span class="n">make_new_run_id</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">frozendict</span><span class="p">,</span> <span class="n">merge_dicts</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">SerializableErrorInfo</span>
+
+<span class="n">DAGSTER_META_KEY</span> <span class="o">=</span> <span class="s2">&quot;dagster_meta&quot;</span>
+
+
+<span class="n">PYTHON_LOGGING_LEVELS_MAPPING</span> <span class="o">=</span> <span class="n">frozendict</span><span class="p">(</span>
+    <span class="n">OrderedDict</span><span class="p">({</span><span class="s2">&quot;CRITICAL&quot;</span><span class="p">:</span> <span class="mi">50</span><span class="p">,</span> <span class="s2">&quot;ERROR&quot;</span><span class="p">:</span> <span class="mi">40</span><span class="p">,</span> <span class="s2">&quot;WARNING&quot;</span><span class="p">:</span> <span class="mi">30</span><span class="p">,</span> <span class="s2">&quot;INFO&quot;</span><span class="p">:</span> <span class="mi">20</span><span class="p">,</span> <span class="s2">&quot;DEBUG&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">})</span>
+<span class="p">)</span>
+
+<span class="n">PYTHON_LOGGING_LEVELS_ALIASES</span> <span class="o">=</span> <span class="n">frozendict</span><span class="p">(</span><span class="n">OrderedDict</span><span class="p">({</span><span class="s2">&quot;FATAL&quot;</span><span class="p">:</span> <span class="s2">&quot;CRITICAL&quot;</span><span class="p">,</span> <span class="s2">&quot;WARN&quot;</span><span class="p">:</span> <span class="s2">&quot;WARNING&quot;</span><span class="p">}))</span>
+
+<span class="n">PYTHON_LOGGING_LEVELS_NAMES</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="n">level_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">level_name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span>
+            <span class="nb">list</span><span class="p">(</span><span class="n">PYTHON_LOGGING_LEVELS_MAPPING</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">+</span> <span class="nb">list</span><span class="p">(</span><span class="n">PYTHON_LOGGING_LEVELS_ALIASES</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="p">)</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_dump_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+    <span class="c1"># dump namedtuples as objects instead of arrays</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="s2">&quot;_asdict&quot;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">_asdict</span><span class="p">())</span>
+
+    <span class="k">return</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">construct_log_string</span><span class="p">(</span><span class="n">synth_props</span><span class="p">,</span> <span class="n">logging_tags</span><span class="p">,</span> <span class="n">message_props</span><span class="p">):</span>
+    <span class="c1"># Handle this explicitly</span>
+    <span class="n">dagster_event</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">message_props</span><span class="p">[</span><span class="s2">&quot;dagster_event&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">_asdict</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;dagster_event&quot;</span> <span class="ow">in</span> <span class="n">message_props</span> <span class="k">else</span> <span class="p">{}</span>
+    <span class="p">)</span>
+
+    <span class="n">event_specific_data</span> <span class="o">=</span> <span class="n">dagster_event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;event_specific_data&quot;</span><span class="p">)</span>
+    <span class="n">stack</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">event_specific_data</span><span class="p">,</span> <span class="s2">&quot;error&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span>
+        <span class="n">event_specific_data</span><span class="o">.</span><span class="n">error</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span>
+    <span class="p">):</span>
+        <span class="n">stack</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">error</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+
+    <span class="n">log_source_prefix</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;resource:</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">logging_tags</span><span class="p">[</span><span class="s2">&quot;resource_name&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="s2">&quot;resource_name&quot;</span> <span class="ow">in</span> <span class="n">logging_tags</span>
+        <span class="k">else</span> <span class="n">message_props</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pipeline_name&quot;</span><span class="p">,</span> <span class="s2">&quot;system&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot; - &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+        <span class="nb">filter</span><span class="p">(</span>
+            <span class="kc">None</span><span class="p">,</span>
+            <span class="p">(</span>
+                <span class="n">log_source_prefix</span><span class="p">,</span>
+                <span class="n">synth_props</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;run_id&quot;</span><span class="p">),</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">dagster_event</span><span class="p">[</span><span class="s2">&quot;pid&quot;</span><span class="p">])</span> <span class="k">if</span> <span class="n">dagster_event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pid&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">logging_tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;step_key&quot;</span><span class="p">),</span>
+                <span class="n">dagster_event</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;event_type_value&quot;</span><span class="p">),</span>
+                <span class="n">synth_props</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;orig_message&quot;</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">prefix</span> <span class="o">+</span> <span class="n">stack</span>
+
+
+<span class="k">def</span> <span class="nf">coerce_valid_log_level</span><span class="p">(</span><span class="n">log_level</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a log level into an integer for consumption by the low-level Python logging API.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">log_level</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">log_level</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">log_level</span><span class="p">,</span> <span class="s2">&quot;log_level&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+        <span class="n">log_level</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="n">PYTHON_LOGGING_LEVELS_NAMES</span><span class="p">,</span>
+        <span class="s2">&quot;Bad value for log level </span><span class="si">{level}</span><span class="s2">: permissible values are </span><span class="si">{levels}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">level</span><span class="o">=</span><span class="n">log_level</span><span class="p">,</span>
+            <span class="n">levels</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="p">[</span><span class="s2">&quot;&#39;</span><span class="si">{}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">level_name</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span> <span class="k">for</span> <span class="n">level_name</span> <span class="ow">in</span> <span class="n">PYTHON_LOGGING_LEVELS_NAMES</span><span class="p">]</span>
+            <span class="p">),</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+    <span class="n">log_level</span> <span class="o">=</span> <span class="n">PYTHON_LOGGING_LEVELS_ALIASES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">log_level</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span> <span class="n">log_level</span><span class="o">.</span><span class="n">upper</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">PYTHON_LOGGING_LEVELS_MAPPING</span><span class="p">[</span><span class="n">log_level</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="DagsterLogManager"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager">[docs]</a><span class="k">class</span> <span class="nc">DagsterLogManager</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_DagsterLogManager&quot;</span><span class="p">,</span> <span class="s2">&quot;run_id logging_tags loggers&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Centralized dispatch for logging from user code.</span>
+
+<span class="sd">    Handles the construction of uniform structured log messages and passes them through to the</span>
+<span class="sd">    underlying loggers.</span>
+
+<span class="sd">    An instance of the log manager is made available to solids as ``context.log``. Users should not</span>
+<span class="sd">    initialize instances of the log manager directly. To configure custom loggers, set the</span>
+<span class="sd">    ``logger_defs`` on a :py:class:`ModeDefinition` for a pipeline.</span>
+
+<span class="sd">    The log manager supports standard convenience methods like those exposed by the Python standard</span>
+<span class="sd">    library :py:mod:`python:logging` module (i.e., within the body of a solid,</span>
+<span class="sd">    ``context.log.{debug, info, warning, warn, error, critical, fatal}``).</span>
+
+<span class="sd">    The underlying integer API can also be called directly using, e.g.</span>
+<span class="sd">    ``context.log.log(5, msg)``, and the log manager will delegate to the ``log`` method</span>
+<span class="sd">    defined on each of the loggers it manages.</span>
+
+<span class="sd">    User-defined custom log levels are not supported, and calls to, e.g.,</span>
+<span class="sd">    ``context.log.trace`` or ``context.log.notice`` will result in hard exceptions **at runtime**.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">logging_tags</span><span class="p">,</span> <span class="n">loggers</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">DagsterLogManager</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">run_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">),</span>
+            <span class="n">logging_tags</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span>
+                <span class="n">logging_tags</span><span class="p">,</span> <span class="s2">&quot;logging_tags&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">),</span>
+            <span class="n">loggers</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">loggers</span><span class="p">,</span> <span class="s2">&quot;loggers&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">Logger</span><span class="p">),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="DagsterLogManager.with_tags"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.with_tags">[docs]</a>    <span class="k">def</span> <span class="nf">with_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">new_tags</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add new tags in &quot;new_tags&quot; to the set of tags attached to this log manager instance, and</span>
+<span class="sd">        return a new DagsterLogManager with the merged set of tags.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            tags (Dict[str,str]): Dictionary of tags</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DagsterLogManager: a new DagsterLogManager namedtuple with updated tags for the same</span>
+<span class="sd">                run ID and loggers.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">logging_tags</span><span class="o">=</span><span class="n">merge_dicts</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">,</span> <span class="n">new_tags</span><span class="p">))</span></div>
+
+    <span class="k">def</span> <span class="nf">_prepare_message</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">orig_message</span><span class="p">,</span> <span class="n">message_props</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">orig_message</span><span class="p">,</span> <span class="s2">&quot;orig_message&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;message_props&quot;</span><span class="p">)</span>
+
+        <span class="c1"># These are todos to further align with the Python logging API</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="s2">&quot;extra&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;do not allow until explicit support is handled&quot;</span>
+        <span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="s2">&quot;exc_info&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;do not allow until explicit support is handled&quot;</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Reserved keys in the message_props -- these are system generated.</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="s2">&quot;orig_message&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;orig_message reserved value&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="s2">&quot;message&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;message reserved value&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="s2">&quot;log_message_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;log_message_id reserved value&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="s2">&quot;log_timestamp&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">message_props</span><span class="p">,</span> <span class="s2">&quot;log_timestamp reserved value&quot;</span><span class="p">)</span>
+
+        <span class="n">log_message_id</span> <span class="o">=</span> <span class="n">make_new_run_id</span><span class="p">()</span>
+
+        <span class="n">log_timestamp</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+
+        <span class="n">synth_props</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;orig_message&quot;</span><span class="p">:</span> <span class="n">orig_message</span><span class="p">,</span>
+            <span class="s2">&quot;log_message_id&quot;</span><span class="p">:</span> <span class="n">log_message_id</span><span class="p">,</span>
+            <span class="s2">&quot;log_timestamp&quot;</span><span class="p">:</span> <span class="n">log_timestamp</span><span class="p">,</span>
+            <span class="s2">&quot;run_id&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="c1"># We first generate all props for the purpose of producing the semi-structured</span>
+        <span class="c1"># log message via _kv_messsage</span>
+        <span class="n">all_props</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span>
+            <span class="n">itertools</span><span class="o">.</span><span class="n">chain</span><span class="p">(</span><span class="n">synth_props</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging_tags</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">message_props</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="p">)</span>
+
+        <span class="c1"># So here we use the arbitrary key DAGSTER_META_KEY to store a dictionary of</span>
+        <span class="c1"># all the meta information that dagster injects into log message.</span>
+        <span class="c1"># The python logging module, in its infinite wisdom, actually takes all the</span>
+        <span class="c1"># keys in extra and unconditionally smashes them into the internal dictionary</span>
+        <span class="c1"># of the logging.LogRecord class. We used a reserved key here to avoid naming</span>
+        <span class="c1"># collisions with internal variables of the LogRecord class.</span>
+        <span class="c1"># See __init__.py:363 (makeLogRecord) in the python 3.6 logging module source</span>
+        <span class="c1"># for the gory details.</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">construct_log_string</span><span class="p">(</span><span class="n">synth_props</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">,</span> <span class="n">message_props</span><span class="p">),</span>
+            <span class="p">{</span><span class="n">DAGSTER_META_KEY</span><span class="p">:</span> <span class="n">all_props</span><span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">orig_message</span><span class="p">,</span> <span class="n">message_props</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Invoke the underlying loggers for a given log level.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            level (Union[str, int]): An integer represeting a Python logging level or one of the</span>
+<span class="sd">                standard Python string representations of a logging level.</span>
+<span class="sd">            orig_message (str): The log message generated in user code.</span>
+<span class="sd">            message_props (dict): Additional properties for the structured log message.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">loggers</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">level</span> <span class="o">=</span> <span class="n">coerce_valid_log_level</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+
+        <span class="n">message</span><span class="p">,</span> <span class="n">extra</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_prepare_message</span><span class="p">(</span><span class="n">orig_message</span><span class="p">,</span> <span class="n">message_props</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">logger_</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">loggers</span><span class="p">:</span>
+            <span class="n">logger_</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">message</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="n">extra</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DagsterLogManager.log"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.log">[docs]</a>    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Invoke the underlying loggers for a given integer log level.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            level (int): An integer represeting a Python logging level.</span>
+<span class="sd">            orig_message (str): The message to log.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;msg&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="s2">&quot;level&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">level</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DagsterLogManager.debug"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.debug">[docs]</a>    <span class="k">def</span> <span class="nf">debug</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log at the ``logging.DEBUG`` level.</span>
+
+<span class="sd">        The message will be automatically adorned with contextual information about the name</span>
+<span class="sd">        of the pipeline, the name of the solid, etc., so it is generally unnecessary to include</span>
+<span class="sd">        this type of information in the log message.</span>
+
+<span class="sd">        You can optionally additional key-value pairs to an individual log message using the kwargs</span>
+<span class="sd">        to this method.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            msg (str): The message to log.</span>
+<span class="sd">            **kwargs (Optional[Any]): Any additional key-value pairs for only this log message.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;msg&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DagsterLogManager.info"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.info">[docs]</a>    <span class="k">def</span> <span class="nf">info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log at the ``logging.INFO`` level.</span>
+
+<span class="sd">        See :py:meth:`~DagsterLogManager.debug`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;msg&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">INFO</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DagsterLogManager.warning"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.warning">[docs]</a>    <span class="k">def</span> <span class="nf">warning</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log at the ``logging.WARNING`` level.</span>
+
+<span class="sd">        See :py:meth:`~DagsterLogManager.debug`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;msg&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">WARNING</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="c1"># Define the alias .warn()</span>
+    <span class="n">warn</span> <span class="o">=</span> <span class="n">warning</span>
+    <span class="sd">&quot;&quot;&quot;Alias for :py:meth:`~DagsterLogManager.warning`&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="DagsterLogManager.error"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.error">[docs]</a>    <span class="k">def</span> <span class="nf">error</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log at the ``logging.ERROR`` level.</span>
+
+<span class="sd">        See :py:meth:`~DagsterLogManager.debug`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;msg&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DagsterLogManager.critical"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.DagsterLogManager.critical">[docs]</a>    <span class="k">def</span> <span class="nf">critical</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Log at the ``logging.CRITICAL`` level.</span>
+
+<span class="sd">        See :py:meth:`~DagsterLogManager.debug`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s2">&quot;msg&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">CRITICAL</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">)</span></div>
+
+    <span class="c1"># Define the alias .fatal()</span>
+    <span class="n">fatal</span> <span class="o">=</span> <span class="n">critical</span>
+    <span class="sd">&quot;&quot;&quot;Alias for :py:meth:`~DagsterLogManager.critical`&quot;&quot;&quot;</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

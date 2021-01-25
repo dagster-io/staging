@@ -1,0 +1,355 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dagstermill &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Lakehouse (experimental)" href="lakehouse.html" />
+    <link rel="prev" title="Twilio (dagster_twilio)" href="dagster_twilio.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_twilio.html" title="Previous document">Twilio (dagster_twilio)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="lakehouse.html" title="Next document">Lakehouse (experimental)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="dagstermill">
+<h1>Dagstermill<a class="headerlink" href="#dagstermill" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="dagstermill.define_dagstermill_solid">
+<code class="sig-prename descclassname">dagstermill.</code><code class="sig-name descname">define_dagstermill_solid</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">notebook_path</em>, <em class="sig-param">input_defs=None</em>, <em class="sig-param">output_defs=None</em>, <em class="sig-param">config_schema=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">output_notebook=None</em>, <em class="sig-param">asset_key_prefix=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagstermill/solids.html#define_dagstermill_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagstermill.define_dagstermill_solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrap a Jupyter notebook in a solid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the solid.</p></li>
+<li><p><strong>notebook_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Path to the backing notebook.</p></li>
+<li><p><strong>input_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="../solids.html#dagster.InputDefinition" title="dagster.InputDefinition"><em>InputDefinition</em></a><em>]</em><em>]</em>) – The solid’s inputs.</p></li>
+<li><p><strong>output_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="../solids.html#dagster.OutputDefinition" title="dagster.OutputDefinition"><em>OutputDefinition</em></a><em>]</em><em>]</em>) – The solid’s outputs. Your notebook should
+call <a class="reference internal" href="#dagstermill.yield_result" title="dagstermill.yield_result"><code class="xref py py-func docutils literal notranslate"><span class="pre">yield_result()</span></code></a> to yield each of these outputs.</p></li>
+<li><p><strong>required_resource_keys</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – The string names of any required resources.</p></li>
+<li><p><strong>output_notebook</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – If set, will be used as the name of an injected output of
+type <a class="reference internal" href="../types.html#dagster.FileHandle" title="dagster.FileHandle"><code class="xref py py-class docutils literal notranslate"><span class="pre">FileHandle</span></code></a> that will point to the executed notebook (in
+addition to the <a class="reference internal" href="../solids.html#dagster.AssetMaterialization" title="dagster.AssetMaterialization"><code class="xref py py-class docutils literal notranslate"><span class="pre">AssetMaterialization</span></code></a> that is always created). This
+respects the <a class="reference internal" href="../internals.html#dagster.core.storage.file_manager.FileManager" title="dagster.core.storage.file_manager.FileManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">FileManager</span></code></a> configured on
+the pipeline resources via the “file_manager” resource key, so, e.g.,
+if <a class="reference internal" href="dagster_aws.html#dagster_aws.s3.s3_file_manager" title="dagster_aws.s3.s3_file_manager"><code class="xref py py-class docutils literal notranslate"><span class="pre">s3_file_manager</span></code></a> is configured, the output will be a :
+py:class:<cite>~dagster_aws.s3.S3FileHandle</cite>.</p></li>
+<li><p><strong>asset_key_prefix</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – If set, will be used to prefix the
+asset keys for materialized notebooks.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><a class="reference internal" href="../solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">SolidDefinition</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagstermill.get_context">
+<code class="sig-prename descclassname">dagstermill.</code><code class="sig-name descname">get_context</code><span class="sig-paren">(</span><em class="sig-param">solid_config=None</em>, <em class="sig-param">mode_def=None</em>, <em class="sig-param">run_config=None</em><span class="sig-paren">)</span><a class="headerlink" href="#dagstermill.get_context" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a dagstermill execution context for interactive exploration and development.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>solid_config</strong> (<em>Optional</em><em>[</em><em>Any</em><em>]</em>) – If specified, this value will be made available on the
+context as its <code class="docutils literal notranslate"><span class="pre">solid_config</span></code> property.</p></li>
+<li><p><strong>mode_def</strong> (Optional[<a class="reference internal" href="../modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.ModeDefinition</span></code></a>]) – If specified, defines the mode to
+use to construct the context. Specify this if you would like a context constructed
+with specific <code class="docutils literal notranslate"><span class="pre">resource_defs</span></code> or <code class="docutils literal notranslate"><span class="pre">logger_defs</span></code>. By default, an ephemeral mode
+with a console logger will be constructed.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – The environment config dict with which to construct
+the context.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><a class="reference internal" href="#dagstermill.DagstermillExecutionContext" title="dagstermill.DagstermillExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">DagstermillExecutionContext</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagstermill.yield_event">
+<code class="sig-prename descclassname">dagstermill.</code><code class="sig-name descname">yield_event</code><span class="sig-paren">(</span><em class="sig-param">dagster_event</em><span class="sig-paren">)</span><a class="headerlink" href="#dagstermill.yield_event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Yield a dagster event directly from notebook code.</p>
+<p>When called interactively or in development, returns its input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>dagster_event</strong> (Union[<code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.Materialization</span></code>, <a class="reference internal" href="../solids.html#dagster.ExpectationResult" title="dagster.ExpectationResult"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.ExpectationResult</span></code></a>, <a class="reference internal" href="../solids.html#dagster.TypeCheck" title="dagster.TypeCheck"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.TypeCheck</span></code></a>, <a class="reference internal" href="../solids.html#dagster.Failure" title="dagster.Failure"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.Failure</span></code></a>]) – An event to yield back to Dagster.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagstermill.yield_result">
+<code class="sig-prename descclassname">dagstermill.</code><code class="sig-name descname">yield_result</code><span class="sig-paren">(</span><em class="sig-param">value</em>, <em class="sig-param">output_name='result'</em><span class="sig-paren">)</span><a class="headerlink" href="#dagstermill.yield_result" title="Permalink to this definition">¶</a></dt>
+<dd><p>Yield a result directly from notebook code.</p>
+<p>When called interactively or in development, returns its input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Any</em>) – The value to yield.</p></li>
+<li><p><strong>output_name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the result to yield (default: <code class="docutils literal notranslate"><span class="pre">'result'</span></code>).</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagstermill.DagstermillExecutionContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagstermill.</code><code class="sig-name descname">DagstermillExecutionContext</code><span class="sig-paren">(</span><em class="sig-param">pipeline_context: dagster.core.execution.context.system.SystemPipelineExecutionContext, resource_keys_to_init: Set[str], solid_name: str, solid_config: Any = None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagstermill/context.html#DagstermillExecutionContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagstermill.DagstermillExecutionContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dagstermill-specific execution context.</p>
+<p>Do not initialize directly: use <a class="reference internal" href="#dagstermill.get_context" title="dagstermill.get_context"><code class="xref py py-func docutils literal notranslate"><span class="pre">dagstermill.get_context()</span></code></a>.</p>
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.environment_config">
+<em class="property">property </em><code class="sig-name descname">environment_config</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.environment_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The environment_config for the context</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.EnvironmentConfig</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.get_tag">
+<code class="sig-name descname">get_tag</code><span class="sig-paren">(</span><em class="sig-param">key: str</em><span class="sig-paren">)</span> &#x2192; str<a class="reference internal" href="../../../../_modules/dagstermill/context.html#DagstermillExecutionContext.get_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.get_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get a logging tag defined on the context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The key to get.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.has_tag">
+<code class="sig-name descname">has_tag</code><span class="sig-paren">(</span><em class="sig-param">key: str</em><span class="sig-paren">)</span> &#x2192; bool<a class="reference internal" href="../../../../_modules/dagstermill/context.html#DagstermillExecutionContext.has_tag"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.has_tag" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a logging tag is defined on the context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The key to check.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.log">
+<em class="property">property </em><code class="sig-name descname">log</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>The log manager for the context.</p>
+<p>Call, e.g., <code class="docutils literal notranslate"><span class="pre">log.info()</span></code> to log messages through the Dagster machinery.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="../internals.html#dagster.DagsterLogManager" title="dagster.DagsterLogManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.DagsterLogManager</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.logging_tags">
+<em class="property">property </em><code class="sig-name descname">logging_tags</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.logging_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>The logging tags for the context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.pipeline_def">
+<em class="property">property </em><code class="sig-name descname">pipeline_def</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.pipeline_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pipeline definition for the context.</p>
+<p>This will be a dagstermill-specific shim.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="../pipeline.html#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.PipelineDefinition</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.pipeline_run">
+<em class="property">property </em><code class="sig-name descname">pipeline_run</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.pipeline_run" title="Permalink to this definition">¶</a></dt>
+<dd><p>The pipeline run for the context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="../internals.html#dagster.PipelineRun" title="dagster.PipelineRun"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.PipelineRun</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.resources">
+<em class="property">property </em><code class="sig-name descname">resources</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dynamically-created type whose properties allow access to
+resources.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>collections.namedtuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.run_config">
+<em class="property">property </em><code class="sig-name descname">run_config</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.run_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The run_config for the context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.run_id">
+<em class="property">property </em><code class="sig-name descname">run_id</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.run_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The run_id for the context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.solid">
+<em class="property">property </em><code class="sig-name descname">solid</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>The solid for the context.</p>
+<p>In interactive contexts, this may be a dagstermill-specific shim, depending whether a
+solid definition was passed to <code class="docutils literal notranslate"><span class="pre">dagstermill.get_context</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.Solid</span></code></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.solid_config">
+<em class="property">property </em><code class="sig-name descname">solid_config</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.solid_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dynamically-created type whose properties allow access to
+solid-specific config.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>collections.namedtuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagstermill.DagstermillExecutionContext.solid_def">
+<em class="property">property </em><code class="sig-name descname">solid_def</code><a class="headerlink" href="#dagstermill.DagstermillExecutionContext.solid_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The solid definition for the context.</p>
+<p>In interactive contexts, this may be a dagstermill-specific shim, depending whether a
+solid definition was passed to <code class="docutils literal notranslate"><span class="pre">dagstermill.get_context</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="../solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">dagster.SolidDefinition</span></code></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagstermill.DagstermillError">
+<em class="property">class </em><code class="sig-prename descclassname">dagstermill.</code><code class="sig-name descname">DagstermillError</code><a class="reference internal" href="../../../../_modules/dagstermill/errors.html#DagstermillError"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagstermill.DagstermillError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for errors raised by dagstermill.</p>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_twilio.html" title="Previous document">Twilio (dagster_twilio)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="lakehouse.html" title="Next document">Lakehouse (experimental)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

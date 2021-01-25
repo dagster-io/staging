@@ -1,0 +1,321 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.compute_log_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.compute_log_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">atexit</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">rx</span> <span class="kn">import</span> <span class="n">Observable</span>
+
+<span class="n">MAX_BYTES_FILE_READ</span> <span class="o">=</span> <span class="mi">33554432</span>  <span class="c1"># 32 MB</span>
+<span class="n">MAX_BYTES_CHUNK_READ</span> <span class="o">=</span> <span class="mi">4194304</span>  <span class="c1"># 4 MB</span>
+
+
+<span class="k">class</span> <span class="nc">ComputeIOType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">STDOUT</span> <span class="o">=</span> <span class="s2">&quot;stdout&quot;</span>
+    <span class="n">STDERR</span> <span class="o">=</span> <span class="s2">&quot;stderr&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">ComputeLogFileData</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;ComputeLogFileData&quot;</span><span class="p">,</span> <span class="s2">&quot;path data cursor size download_url&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Representation of a chunk of compute execution log data&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">cursor</span><span class="p">,</span> <span class="n">size</span><span class="p">,</span> <span class="n">download_url</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ComputeLogFileData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">path</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">),</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">),</span>
+            <span class="n">cursor</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="s2">&quot;cursor&quot;</span><span class="p">),</span>
+            <span class="n">size</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">size</span><span class="p">,</span> <span class="s2">&quot;size&quot;</span><span class="p">),</span>
+            <span class="n">download_url</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">download_url</span><span class="p">,</span> <span class="s2">&quot;download_url&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="ComputeLogManager"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.compute_log_manager.ComputeLogManager">[docs]</a><span class="k">class</span> <span class="nc">ComputeLogManager</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract base class for storing unstructured compute logs (stdout/stderr) from the compute</span>
+<span class="sd">    steps of pipeline solids.&quot;&quot;&quot;</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">watch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Watch the stdout/stderr for a given execution for a given run_id / step_key and persist it.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_run (PipelineRun): The pipeline run config</span>
+<span class="sd">            step_key (Optional[String]): The step_key for a compute step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">enabled</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+            <span class="k">yield</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_watch_start</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_watch_logs</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+            <span class="k">yield</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_watch_finish</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_watch_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method to watch the stdout/stderr logs for a given run_id / step_key.  Kept separate from</span>
+<span class="sd">        blessed `watch` method, which triggers all the start/finish hooks that are necessary to</span>
+<span class="sd">        implement the different remote implementations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_run (PipelineRun): The pipeline run config</span>
+<span class="sd">            step_key (Optional[String]): The step_key for a compute step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">get_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the local path of the logfile for a given execution step.  This determines the</span>
+<span class="sd">        location on the local filesystem to which stdout/stderr will be rerouted.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the pipeline run.</span>
+<span class="sd">            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)</span>
+<span class="sd">            io_type (ComputeIOType): Flag indicating the I/O type, either ComputeIOType.STDOUT or</span>
+<span class="sd">                ComputeIOType.STDERR</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">is_watch_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Flag indicating when computation for a given execution step has completed.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the pipeline run.</span>
+<span class="sd">            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Boolean</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">on_watch_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook called when starting to watch compute logs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_run (PipelineRun): The pipeline run config</span>
+<span class="sd">            step_key (Optional[String]): The step_key for a compute step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">on_watch_finish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook called when computation for a given execution step is finished.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_run (PipelineRun): The pipeline run config</span>
+<span class="sd">            step_key (Optional[String]): The step_key for a compute step</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">download_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a URL where the logs can be downloaded.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the pipeline run.</span>
+<span class="sd">            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)</span>
+<span class="sd">            io_type (ComputeIOType): Flag indicating the I/O type, either stdout or stderr</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            String</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">read_logs_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=</span><span class="n">MAX_BYTES_FILE_READ</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get compute log data for a given compute step.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the pipeline run.</span>
+<span class="sd">            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)</span>
+<span class="sd">            io_type (ComputeIOType): Flag indicating the I/O type, either stdout or stderr</span>
+<span class="sd">            cursor (Optional[Int]): Starting cursor (byte) of log file</span>
+<span class="sd">            max_bytes (Optional[Int]): Maximum number of bytes to be read and returned</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ComputeLogFileData</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">enabled</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">_pipeline_run</span><span class="p">,</span> <span class="n">_step_key</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook for disabling compute log capture.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            _step_key (Optional[String]): The step_key for a compute step</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Boolean</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">on_subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subscription</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook for managing streaming subscriptions for log data from `dagit`</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            subscription (ComputeLogSubscription): subscription object which manages when to send</span>
+<span class="sd">                back data to the subscriber</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">observable</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return an Observable which streams back log data from the execution logs for a given</span>
+<span class="sd">        compute step.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the pipeline run.</span>
+<span class="sd">            key (str): The unique descriptor of the execution step (e.g. `solid_invocation.compute`)</span>
+<span class="sd">            io_type (ComputeIOType): Flag indicating the I/O type, either stdout or stderr</span>
+<span class="sd">            cursor (Optional[Int]): Starting cursor (byte) of log file</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Observable</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">io_type</span><span class="p">,</span> <span class="s2">&quot;io_type&quot;</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="s2">&quot;cursor&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cursor</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">subscription</span> <span class="o">=</span> <span class="n">ComputeLogSubscription</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">on_subscribe</span><span class="p">(</span><span class="n">subscription</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Observable</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">subscription</span><span class="p">)</span>  <span class="c1"># pylint: disable=E1101</span>
+
+    <span class="k">def</span> <span class="nf">dispose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+
+<span class="k">class</span> <span class="nc">ComputeLogSubscription</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Observable object that generates ComputeLogFileData objects as compute step execution logs</span>
+<span class="sd">    are written</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">manager</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">manager</span> <span class="o">=</span> <span class="n">manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span> <span class="n">run_id</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="n">key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">io_type</span> <span class="o">=</span> <span class="n">io_type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observer</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">atexit</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_clean</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observer</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observer</span> <span class="o">=</span> <span class="n">observer</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fetch</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">is_watch_completed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">complete</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">fetch</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">observer</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">should_fetch</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">while</span> <span class="n">should_fetch</span><span class="p">:</span>
+            <span class="n">update</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">manager</span><span class="o">.</span><span class="n">read_logs_file</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">io_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=</span><span class="n">MAX_BYTES_CHUNK_READ</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="ow">or</span> <span class="n">update</span><span class="o">.</span><span class="n">cursor</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">observer</span><span class="o">.</span><span class="n">on_next</span><span class="p">(</span><span class="n">update</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cursor</span> <span class="o">=</span> <span class="n">update</span><span class="o">.</span><span class="n">cursor</span>
+            <span class="n">should_fetch</span> <span class="o">=</span> <span class="n">update</span><span class="o">.</span><span class="n">data</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">update</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="n">MAX_BYTES_CHUNK_READ</span>
+
+    <span class="k">def</span> <span class="nf">complete</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">observer</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observer</span><span class="o">.</span><span class="n">on_completed</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">complete</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observer</span> <span class="o">=</span> <span class="kc">None</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

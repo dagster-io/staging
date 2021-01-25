@@ -1,0 +1,252 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.system_storage &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.system_storage</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.config</span> <span class="kn">import</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorageDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.intermediate_storage</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">intermediate_storage</span> <span class="k">as</span> <span class="n">intermediate_storage_fn</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.io_manager</span> <span class="kn">import</span> <span class="n">io_manager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.type_storage</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">TypeStoragePluginRegistry</span><span class="p">,</span>
+    <span class="n">construct_type_storage_plugin_registry</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.system_config.objects</span> <span class="kn">import</span> <span class="n">EnvironmentConfig</span>
+
+<span class="kn">from</span> <span class="nn">.init</span> <span class="kn">import</span> <span class="n">InitIntermediateStorageContext</span>
+<span class="kn">from</span> <span class="nn">.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorageAdapter</span><span class="p">,</span> <span class="n">ObjectStoreIntermediateStorage</span>
+<span class="kn">from</span> <span class="nn">.object_store</span> <span class="kn">import</span> <span class="n">FilesystemObjectStore</span><span class="p">,</span> <span class="n">InMemoryObjectStore</span><span class="p">,</span> <span class="n">ObjectStore</span>
+
+
+<span class="k">def</span> <span class="nf">build_intermediate_storage_from_object_store</span><span class="p">(</span>
+    <span class="n">object_store</span><span class="p">,</span> <span class="n">init_context</span><span class="p">,</span> <span class="n">root_for_run_id</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;constructs an IntermediateStorage object from an object store and an init_context</span>
+<span class="sd">        Call from within an intermediate_storage_definition</span>
+<span class="sd">        Args:</span>
+<span class="sd">            object_store(ObjectStore): The object store on which to base the intermediate store.</span>
+<span class="sd">            init_context(InitIntermediateStorageContext):  the context from which to create the intermediates manager</span>
+<span class="sd">            root_for_run_id_creator(Callable[[str], str]):</span>
+<span class="sd">                        a function that converts from your run ID to the root of your object storage paths</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    <span class="n">object_store</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">object_store</span><span class="p">,</span> <span class="s2">&quot;object_store&quot;</span><span class="p">,</span> <span class="n">ObjectStore</span><span class="p">)</span>
+    <span class="n">root_for_run_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">root_for_run_id</span><span class="p">,</span> <span class="s2">&quot;root_for_run_id&quot;</span><span class="p">)</span>
+    <span class="n">init_context</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">init_context</span><span class="p">,</span> <span class="s2">&quot;init_context&quot;</span><span class="p">,</span> <span class="n">InitIntermediateStorageContext</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ObjectStoreIntermediateStorage</span><span class="p">(</span>
+        <span class="n">object_store</span><span class="o">=</span><span class="n">object_store</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="n">root_for_run_id</span><span class="o">=</span><span class="n">root_for_run_id</span><span class="p">,</span>
+        <span class="n">type_storage_plugin_registry</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">type_storage_plugin_registry</span>
+        <span class="k">if</span> <span class="n">init_context</span><span class="o">.</span><span class="n">type_storage_plugin_registry</span>
+        <span class="k">else</span> <span class="n">TypeStoragePluginRegistry</span><span class="p">(</span><span class="n">types_to_register</span><span class="o">=</span><span class="p">[]),</span>
+    <span class="p">)</span>
+
+
+<div class="viewcode-block" id="mem_intermediate_storage"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.mem_intermediate_storage">[docs]</a><span class="nd">@intermediate_storage_fn</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;in_memory&quot;</span><span class="p">,</span> <span class="n">is_persistent</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="nb">set</span><span class="p">())</span>
+<span class="k">def</span> <span class="nf">mem_intermediate_storage</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The default in-memory intermediate storage.</span>
+
+<span class="sd">    In-memory intermediate storage is the default on any pipeline run that does</span>
+<span class="sd">    not configure any custom intermediate storage.</span>
+
+<span class="sd">    Keep in mind when using this storage that intermediates will not be persisted after the pipeline</span>
+<span class="sd">    run ends. Use a persistent intermediate storage like :py:func:`fs_intermediate_storage` to</span>
+<span class="sd">    persist intermediates and take advantage of advanced features like pipeline re-execution.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">object_store</span> <span class="o">=</span> <span class="n">InMemoryObjectStore</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">build_intermediate_storage_from_object_store</span><span class="p">(</span>
+        <span class="n">object_store</span><span class="o">=</span><span class="n">object_store</span><span class="p">,</span> <span class="n">init_context</span><span class="o">=</span><span class="n">init_context</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fs_intermediate_storage"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.fs_intermediate_storage">[docs]</a><span class="nd">@intermediate_storage_fn</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;filesystem&quot;</span><span class="p">,</span>
+    <span class="n">is_persistent</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="nb">set</span><span class="p">(),</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">fs_intermediate_storage</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The default filesystem intermediate storage.</span>
+
+<span class="sd">    Filesystem system storage is available by default on any :py:class:`ModeDefinition` that does</span>
+<span class="sd">    not provide custom system storages. To select it, include a fragment such as the following in</span>
+<span class="sd">    config:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        intermediate_storage:</span>
+<span class="sd">          filesystem:</span>
+<span class="sd">            base_dir: &#39;/path/to/dir/&#39;</span>
+
+<span class="sd">    You may omit the ``base_dir`` config value, in which case the filesystem storage will use</span>
+<span class="sd">    the :py:class:`DagsterInstance`-provided default.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">object_store</span> <span class="o">=</span> <span class="n">FilesystemObjectStore</span><span class="p">()</span>
+    <span class="n">override_dir</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">intermediate_storage_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;base_dir&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">override_dir</span><span class="p">:</span>
+        <span class="n">root_for_run_id</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="n">override_dir</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">root_for_run_id</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">intermediates_directory</span>
+
+    <span class="k">return</span> <span class="n">build_intermediate_storage_from_object_store</span><span class="p">(</span>
+        <span class="n">object_store</span><span class="p">,</span> <span class="n">init_context</span><span class="p">,</span> <span class="n">root_for_run_id</span><span class="o">=</span><span class="n">root_for_run_id</span>
+    <span class="p">)</span></div>
+
+
+<span class="n">default_intermediate_storage_defs</span> <span class="o">=</span> <span class="p">[</span><span class="n">mem_intermediate_storage</span><span class="p">,</span> <span class="n">fs_intermediate_storage</span><span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;The default &#39;in_memory&#39; and &#39;filesystem&#39; intermediate storage definitions.</span>
+
+<span class="sd">Framework authors seeking to add their own intermediate storage definitions can extend this list as follows:</span>
+
+<span class="sd">.. code-block:: python</span>
+
+<span class="sd">    custom_storage_mode = ModeDefinition(</span>
+<span class="sd">        ...,</span>
+<span class="sd">        intermediate_storage_defs=default_intermediate_storage_defs + [custom_intermediate_storage_def]</span>
+<span class="sd">    )</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="io_manager_from_intermediate_storage"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.io_manager_from_intermediate_storage">[docs]</a><span class="k">def</span> <span class="nf">io_manager_from_intermediate_storage</span><span class="p">(</span><span class="n">intermediate_storage_def</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define an :py:class:`IOManagerDefinition` from an existing :py:class:`IntermediateStorageDefinition`.</span>
+
+<span class="sd">    This method is used to adapt an existing user-defined intermediate storage to a IO manager</span>
+<span class="sd">    resource, for example:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        my_io_manager_def = io_manager_from_intermediate_storage(my_intermediate_storage_def)</span>
+
+<span class="sd">        @pipeline(mode_defs=[ModeDefinition(resource_defs={&quot;io_manager&quot;: my_io_manager_def})])</span>
+<span class="sd">        def my_pipeline():</span>
+<span class="sd">            ...</span>
+
+
+<span class="sd">    Args:</span>
+<span class="sd">        intermediate_storage_def (IntermediateStorageDefinition): The intermediate storage definition</span>
+<span class="sd">            to be converted to an IO manager definition.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        IOManagerDefinition</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+        <span class="n">intermediate_storage_def</span><span class="p">,</span> <span class="s2">&quot;intermediate_storage_def&quot;</span><span class="p">,</span> <span class="n">IntermediateStorageDefinition</span>
+    <span class="p">)</span>
+
+    <span class="nd">@io_manager</span>
+    <span class="k">def</span> <span class="nf">_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+        <span class="n">pipeline_run</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">pipeline_run</span>
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">instance_for_backwards_compat</span>
+        <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">pipeline_def_for_backwards_compat</span>
+        <span class="c1"># depend on InitResourceContext.instance_for_backwards_compat and pipeline_def_for_backwards_compat</span>
+        <span class="n">environment_config</span> <span class="o">=</span> <span class="n">EnvironmentConfig</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+            <span class="n">pipeline_def</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_config</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">mode</span>
+        <span class="p">)</span>
+        <span class="n">mode_def</span> <span class="o">=</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_mode_definition</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">mode</span><span class="p">)</span>
+
+        <span class="n">intermediate_storage_context</span> <span class="o">=</span> <span class="n">InitIntermediateStorageContext</span><span class="p">(</span>
+            <span class="n">pipeline_def</span><span class="o">=</span><span class="n">pipeline_def</span><span class="p">,</span>
+            <span class="n">mode_def</span><span class="o">=</span><span class="n">mode_def</span><span class="p">,</span>
+            <span class="n">intermediate_storage_def</span><span class="o">=</span><span class="n">intermediate_storage_def</span><span class="p">,</span>
+            <span class="n">pipeline_run</span><span class="o">=</span><span class="n">pipeline_run</span><span class="p">,</span>
+            <span class="n">instance</span><span class="o">=</span><span class="n">instance</span><span class="p">,</span>
+            <span class="n">environment_config</span><span class="o">=</span><span class="n">environment_config</span><span class="p">,</span>
+            <span class="n">type_storage_plugin_registry</span><span class="o">=</span><span class="n">construct_type_storage_plugin_registry</span><span class="p">(</span>
+                <span class="n">pipeline_def</span><span class="p">,</span> <span class="n">intermediate_storage_def</span>
+            <span class="p">),</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">resources</span><span class="p">,</span>
+            <span class="n">intermediate_storage_config</span><span class="o">=</span><span class="n">environment_config</span><span class="o">.</span><span class="n">intermediate_storage</span><span class="o">.</span><span class="n">intermediate_storage_config</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">intermediate_storage</span> <span class="o">=</span> <span class="n">intermediate_storage_def</span><span class="o">.</span><span class="n">intermediate_storage_creation_fn</span><span class="p">(</span>
+            <span class="n">intermediate_storage_context</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">IntermediateStorageAdapter</span><span class="p">(</span><span class="n">intermediate_storage</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_io_manager</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

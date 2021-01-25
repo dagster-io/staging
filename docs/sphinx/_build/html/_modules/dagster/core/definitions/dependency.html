@@ -1,0 +1,835 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.dependency &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.dependency</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span><span class="p">,</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">whitelist_for_serdes</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">frozentags</span>
+
+<span class="kn">from</span> <span class="nn">.hook</span> <span class="kn">import</span> <span class="n">HookDefinition</span>
+<span class="kn">from</span> <span class="nn">.input</span> <span class="kn">import</span> <span class="n">FanInInputPointer</span><span class="p">,</span> <span class="n">InputDefinition</span><span class="p">,</span> <span class="n">InputPointer</span>
+<span class="kn">from</span> <span class="nn">.output</span> <span class="kn">import</span> <span class="n">OutputDefinition</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_OUTPUT</span><span class="p">,</span> <span class="n">struct_to_string</span><span class="p">,</span> <span class="n">validate_tags</span>
+
+
+<div class="viewcode-block" id="SolidInvocation"><a class="viewcode-back" href="../../../../sections/api/apidocs/pipeline.html#dagster.SolidInvocation">[docs]</a><span class="k">class</span> <span class="nc">SolidInvocation</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;Solid&quot;</span><span class="p">,</span> <span class="s2">&quot;name alias tags hook_defs&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;Identifies an instance of a solid in a pipeline dependency structure.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): Name of the solid of which this is an instance.</span>
+<span class="sd">        alias (Optional[str]): Name specific to this instance of the solid. Necessary when there are</span>
+<span class="sd">            multiple instances of the same solid.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Optional tags values to extend or override those</span>
+<span class="sd">            set on the solid definition.</span>
+<span class="sd">        hook_defs (Optional[Set[HookDefinition]]): A set of hook definitions applied to the</span>
+<span class="sd">            solid instance.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            pipeline = PipelineDefinition(</span>
+<span class="sd">                solid_defs=[solid_1, solid_2]</span>
+<span class="sd">                dependencies={</span>
+<span class="sd">                    SolidInvocation(&#39;solid_1&#39;, alias=&#39;other_name&#39;) : {</span>
+<span class="sd">                        &#39;input_name&#39; : DependencyDefinition(&#39;solid_1&#39;),</span>
+<span class="sd">                    },</span>
+<span class="sd">                    &#39;solid_2&#39; : {</span>
+<span class="sd">                        &#39;input_name&#39;: DependencyDefinition(&#39;other_name&#39;),</span>
+<span class="sd">                    },</span>
+<span class="sd">                }</span>
+<span class="sd">            )</span>
+
+<span class="sd">    In general, users should prefer not to construct this class directly or use the</span>
+<span class="sd">    :py:class:`PipelineDefinition` API that requires instances of this class. Instead, use the</span>
+<span class="sd">    :py:func:`@pipeline &lt;pipeline&gt;` API:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @pipeline</span>
+<span class="sd">        def pipeline():</span>
+<span class="sd">            other_name = solid_1.alias(&#39;other_name&#39;)</span>
+<span class="sd">            solid_2(other_name(solid_1))</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hook_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="n">alias</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">alias</span><span class="p">,</span> <span class="s2">&quot;alias&quot;</span><span class="p">)</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">frozentags</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">))</span>
+        <span class="n">hook_defs</span> <span class="o">=</span> <span class="nb">frozenset</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">hook_defs</span><span class="p">,</span> <span class="s2">&quot;hook_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">HookDefinition</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">SolidInvocation</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">alias</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">hook_defs</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">Solid</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Solid invocation within a pipeline. Defined by its name inside the pipeline.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str):</span>
+<span class="sd">            Name of the solid inside the pipeline. Must be unique per-pipeline.</span>
+<span class="sd">        definition (NodeDefinition):</span>
+<span class="sd">            Definition of the Node.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">definition</span><span class="p">,</span> <span class="n">graph_definition</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">hook_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.graph</span> <span class="kn">import</span> <span class="n">GraphDefinition</span>
+        <span class="kn">from</span> <span class="nn">.solid</span> <span class="kn">import</span> <span class="n">NodeDefinition</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">definition</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="s2">&quot;definition&quot;</span><span class="p">,</span> <span class="n">NodeDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">graph_definition</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+            <span class="n">graph_definition</span><span class="p">,</span> <span class="s2">&quot;graph_definition&quot;</span><span class="p">,</span> <span class="n">GraphDefinition</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_additional_tags</span> <span class="o">=</span> <span class="n">validate_tags</span><span class="p">(</span><span class="n">tags</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hook_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">hook_defs</span><span class="p">,</span> <span class="s2">&quot;hook_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">HookDefinition</span><span class="p">)</span>
+
+        <span class="n">input_handles</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">input_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">input_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">input_handles</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">SolidInputHandle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_def</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input_handles</span> <span class="o">=</span> <span class="n">input_handles</span>
+
+        <span class="n">output_handles</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">output_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">output_handles</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">SolidOutputHandle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_def</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_output_handles</span> <span class="o">=</span> <span class="n">output_handles</span>
+
+    <span class="k">def</span> <span class="nf">input_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_handles</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">output_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_handles</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">input_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_handles</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">output_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_output_handles</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">has_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">has_input</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">input_def_named</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">input_def_named</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">has_output</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">output_def_named</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_def_named</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_composite</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.graph</span> <span class="kn">import</span> <span class="n">GraphDefinition</span>
+
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="p">,</span> <span class="n">GraphDefinition</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">input_dict</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_dict</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">updated_with</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_additional_tags</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">container_maps_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph_definition</span><span class="o">.</span><span class="n">input_mapping_for_pointer</span><span class="p">(</span><span class="n">InputPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">))</span>
+            <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">container_mapped_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_definition</span><span class="o">.</span><span class="n">input_mapping_for_pointer</span><span class="p">(</span><span class="n">InputPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">container_maps_fan_in_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">graph_definition</span><span class="o">.</span><span class="n">input_mapping_for_pointer</span><span class="p">(</span>
+                <span class="n">FanInInputPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">container_mapped_fan_in_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_definition</span><span class="o">.</span><span class="n">input_mapping_for_pointer</span><span class="p">(</span>
+            <span class="n">FanInInputPointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">fan_in_index</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hook_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hook_defs</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">SolidHandle</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_SolidHandle&quot;</span><span class="p">,</span> <span class="s2">&quot;name parent&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parent</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SolidHandle</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">),</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">parent</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">path</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a list representation of the handle.</span>
+
+<span class="sd">        Inverse of SolidHandle.from_path.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str]:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">cur</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">while</span> <span class="n">cur</span><span class="p">:</span>
+            <span class="n">path</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cur</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">cur</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">parent</span>
+        <span class="n">path</span><span class="o">.</span><span class="n">reverse</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">path</span>
+
+    <span class="k">def</span> <span class="nf">to_string</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Return a unique string representation of the handle.</span>
+
+<span class="sd">        Inverse of SolidHandle.from_string.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">parent</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">is_or_descends_from</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if the handle is or descends from another handle.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            handle (SolidHandle): The handle to check against.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool:</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;handle&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">idx</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">path</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">idx</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">!=</span> <span class="n">handle</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="n">idx</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">pop</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ancestor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a copy of the handle with some of its ancestors pruned.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ancestor (SolidHandle): Handle to an ancestor of the current handle.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            SolidHandle:</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            handle = SolidHandle(&#39;baz&#39;, SolidHandle(&#39;bar&#39;, SolidHandle(&#39;foo&#39;, None)))</span>
+<span class="sd">            ancestor = SolidHandle(&#39;bar&#39;, SolidHandle(&#39;foo&#39;, None))</span>
+<span class="sd">            assert handle.pop(ancestor) == SolidHandle(&#39;baz&#39;, None)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">ancestor</span><span class="p">,</span> <span class="s2">&quot;ancestor&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">is_or_descends_from</span><span class="p">(</span><span class="n">ancestor</span><span class="p">),</span>
+            <span class="s2">&quot;Handle </span><span class="si">{handle}</span><span class="s2"> does not descend from </span><span class="si">{ancestor}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">handle</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span> <span class="n">ancestor</span><span class="o">=</span><span class="n">ancestor</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">SolidHandle</span><span class="o">.</span><span class="n">from_path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">ancestor</span><span class="o">.</span><span class="n">path</span><span class="p">)</span> <span class="p">:])</span>
+
+    <span class="k">def</span> <span class="nf">with_ancestor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ancestor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a copy of the handle with an ancestor grafted on.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            ancestor (SolidHandle): Handle to the new ancestor.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            SolidHandle:</span>
+
+<span class="sd">        Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            handle = SolidHandle(&#39;baz&#39;, SolidHandle(&#39;bar&#39;, SolidHandle(&#39;foo&#39;, None)))</span>
+<span class="sd">            ancestor = SolidHandle(&#39;quux&#39; None)</span>
+<span class="sd">            assert handle.with_ancestor(ancestor) == SolidHandle(</span>
+<span class="sd">                &#39;baz&#39;, SolidHandle(&#39;bar&#39;, SolidHandle(&#39;foo&#39;, SolidHandle(&#39;quux&#39;, None)))</span>
+<span class="sd">            )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">ancestor</span><span class="p">,</span> <span class="s2">&quot;ancestor&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">SolidHandle</span><span class="o">.</span><span class="n">from_path</span><span class="p">((</span><span class="n">ancestor</span><span class="o">.</span><span class="n">path</span> <span class="k">if</span> <span class="n">ancestor</span> <span class="k">else</span> <span class="p">[])</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_path</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;path&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="n">cur</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">cur</span> <span class="o">=</span> <span class="n">SolidHandle</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">path</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="n">parent</span><span class="o">=</span><span class="n">cur</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cur</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_string</span><span class="p">(</span><span class="n">handle_str</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">handle_str</span><span class="p">,</span> <span class="s2">&quot;handle_str&quot;</span><span class="p">)</span>
+
+        <span class="n">path</span> <span class="o">=</span> <span class="n">handle_str</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SolidHandle</span><span class="o">.</span><span class="n">from_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">dict_repr</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method makes it possible to load a potentially nested SolidHandle after a</span>
+<span class="sd">        roundtrip through json.loads(json.dumps(SolidHandle._asdict()))&quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">dict_repr</span><span class="p">,</span> <span class="s2">&quot;dict_repr&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="s2">&quot;name&quot;</span> <span class="ow">in</span> <span class="n">dict_repr</span><span class="p">,</span> <span class="s2">&quot;Dict representation of SolidHandle must have a &#39;name&#39; key&quot;</span>
+        <span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="s2">&quot;parent&quot;</span> <span class="ow">in</span> <span class="n">dict_repr</span><span class="p">,</span> <span class="s2">&quot;Dict representation of SolidHandle must have a &#39;parent&#39; key&quot;</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dict_repr</span><span class="p">[</span><span class="s2">&quot;parent&quot;</span><span class="p">],</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
+            <span class="n">dict_repr</span><span class="p">[</span><span class="s2">&quot;parent&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SolidHandle</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">dict_repr</span><span class="p">[</span><span class="s2">&quot;parent&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;parent&quot;</span><span class="p">:</span> <span class="n">dict_repr</span><span class="p">[</span><span class="s2">&quot;parent&quot;</span><span class="p">][</span><span class="mi">1</span><span class="p">],}</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">SolidHandle</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">dict_repr</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;parent&quot;</span><span class="p">]})</span>
+
+
+<span class="k">class</span> <span class="nc">SolidInputHandle</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_SolidInputHandle&quot;</span><span class="p">,</span> <span class="s2">&quot;solid input_def&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">solid</span><span class="p">,</span> <span class="n">input_def</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SolidInputHandle</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid</span><span class="p">,</span> <span class="s2">&quot;solid&quot;</span><span class="p">,</span> <span class="n">Solid</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">input_def</span><span class="p">,</span> <span class="s2">&quot;input_def&quot;</span><span class="p">,</span> <span class="n">InputDefinition</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_inner_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">struct_to_string</span><span class="p">(</span>
+            <span class="s2">&quot;SolidInputHandle&quot;</span><span class="p">,</span> <span class="n">solid_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">input_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_str</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_str</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span>
+
+
+<span class="k">class</span> <span class="nc">SolidOutputHandle</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_SolidOutputHandle&quot;</span><span class="p">,</span> <span class="s2">&quot;solid output_def&quot;</span><span class="p">)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">solid</span><span class="p">,</span> <span class="n">output_def</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SolidOutputHandle</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid</span><span class="p">,</span> <span class="s2">&quot;solid&quot;</span><span class="p">,</span> <span class="n">Solid</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">output_def</span><span class="p">,</span> <span class="s2">&quot;output_def&quot;</span><span class="p">,</span> <span class="n">OutputDefinition</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_inner_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">struct_to_string</span><span class="p">(</span>
+            <span class="s2">&quot;SolidOutputHandle&quot;</span><span class="p">,</span> <span class="n">solid_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_str</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_str</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">solid_name</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_dynamic</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">is_dynamic</span>
+
+
+<span class="k">class</span> <span class="nc">InputToOutputHandleDict</span><span class="p">(</span><span class="n">defaultdict</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">defaultdict</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">defaultdict</span><span class="o">.</span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="n">SolidOutputHandle</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="nb">list</span><span class="p">)):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span>
+                <span class="s2">&quot;Value must be SolidOutoutHandle or List[SolidOutputHandle], got </span><span class="si">{val}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">val</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">defaultdict</span><span class="o">.</span><span class="fm">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_create_handle_dict</span><span class="p">(</span><span class="n">solid_dict</span><span class="p">,</span> <span class="n">dep_dict</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">.composition</span> <span class="kn">import</span> <span class="n">MappedInputPlaceholder</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">solid_dict</span><span class="p">,</span> <span class="s2">&quot;solid_dict&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="n">Solid</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">two_dim_dict_param</span><span class="p">(</span><span class="n">dep_dict</span><span class="p">,</span> <span class="s2">&quot;dep_dict&quot;</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="n">IDependencyDefinition</span><span class="p">)</span>
+
+    <span class="n">handle_dict</span> <span class="o">=</span> <span class="n">InputToOutputHandleDict</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">solid_name</span><span class="p">,</span> <span class="n">input_dict</span> <span class="ow">in</span> <span class="n">dep_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">from_solid</span> <span class="o">=</span> <span class="n">solid_dict</span><span class="p">[</span><span class="n">solid_name</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">input_name</span><span class="p">,</span> <span class="n">dep_def</span> <span class="ow">in</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">dep_def</span><span class="o">.</span><span class="n">is_multi</span><span class="p">():</span>
+                <span class="n">handles</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">inner_dep</span> <span class="ow">in</span> <span class="n">dep_def</span><span class="o">.</span><span class="n">get_dependencies_and_mappings</span><span class="p">():</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">inner_dep</span><span class="p">,</span> <span class="n">DependencyDefinition</span><span class="p">):</span>
+                        <span class="n">handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">solid_dict</span><span class="p">[</span><span class="n">inner_dep</span><span class="o">.</span><span class="n">solid</span><span class="p">]</span><span class="o">.</span><span class="n">output_handle</span><span class="p">(</span><span class="n">inner_dep</span><span class="o">.</span><span class="n">output</span><span class="p">))</span>
+                    <span class="k">elif</span> <span class="n">inner_dep</span> <span class="ow">is</span> <span class="n">MappedInputPlaceholder</span><span class="p">:</span>
+                        <span class="n">handles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">inner_dep</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span>
+                            <span class="s2">&quot;Unexpected MultiDependencyDefinition dependencies type </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">inner_dep</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+
+                <span class="n">handle_dict</span><span class="p">[</span><span class="n">from_solid</span><span class="o">.</span><span class="n">input_handle</span><span class="p">(</span><span class="n">input_name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">handles</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">handle_dict</span><span class="p">[</span><span class="n">from_solid</span><span class="o">.</span><span class="n">input_handle</span><span class="p">(</span><span class="n">input_name</span><span class="p">)]</span> <span class="o">=</span> <span class="n">solid_dict</span><span class="p">[</span>
+                    <span class="n">dep_def</span><span class="o">.</span><span class="n">solid</span>
+                <span class="p">]</span><span class="o">.</span><span class="n">output_handle</span><span class="p">(</span><span class="n">dep_def</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">handle_dict</span>
+
+
+<span class="k">class</span> <span class="nc">DependencyStructure</span><span class="p">:</span>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_definitions</span><span class="p">(</span><span class="n">solids</span><span class="p">,</span> <span class="n">dep_dict</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">DependencyStructure</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">dep_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span> <span class="n">_create_handle_dict</span><span class="p">(</span><span class="n">solids</span><span class="p">,</span> <span class="n">dep_dict</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_names</span><span class="p">,</span> <span class="n">handle_dict</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solid_names</span> <span class="o">=</span> <span class="n">solid_names</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">handle_dict</span><span class="p">,</span> <span class="s2">&quot;handle_dict&quot;</span><span class="p">,</span> <span class="n">InputToOutputHandleDict</span><span class="p">)</span>
+
+        <span class="c1"># Building up a couple indexes here so that one can look up all the upstream output handles</span>
+        <span class="c1"># or downstream input handles in O(1). Without this, this can become O(N^2) where N is solid</span>
+        <span class="c1"># count during the GraphQL query in particular</span>
+
+        <span class="c1"># solid_name =&gt; input_handle =&gt; list[output_handle]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solid_input_index</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+
+        <span class="c1"># solid_name =&gt; output_handle =&gt; list[input_handle]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solid_output_index</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">))</span>
+
+        <span class="c1"># solid_name =&gt; dynamic output_handle</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">input_handle</span><span class="p">,</span> <span class="n">output_handle_or_list</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">output_handle_or_list</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>  <span class="c1"># fan-in dep</span>
+                <span class="n">output_handle_list</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">handle</span> <span class="ow">in</span> <span class="n">output_handle_or_list</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">SolidOutputHandle</span><span class="p">):</span>
+                        <span class="k">continue</span>
+
+                    <span class="k">if</span> <span class="n">handle</span><span class="o">.</span><span class="n">is_dynamic</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                            <span class="s2">&quot;Currently, items in a fan-in dependency cannot be downstream of dynamic outputs. &quot;</span>
+                            <span class="sa">f</span><span class="s1">&#39;Problematic dependency on dynamic output &quot;</span><span class="si">{</span><span class="n">handle</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+                        <span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                            <span class="s2">&quot;Currently, items in a fan-in dependency cannot be downstream of dynamic outputs. &quot;</span>
+                            <span class="sa">f</span><span class="s1">&#39;Problematic dependency on output &quot;</span><span class="si">{</span><span class="n">handle</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;, downstream of &#39;</span>
+                            <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="p">[</span><span class="n">handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">]</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;.&#39;</span>
+                        <span class="p">)</span>
+
+                    <span class="n">output_handle_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>  <span class="c1"># singular dep</span>
+                <span class="n">output_handle</span> <span class="o">=</span> <span class="n">output_handle_or_list</span>
+                <span class="k">if</span> <span class="n">output_handle</span><span class="o">.</span><span class="n">is_dynamic</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_validate_and_set_dynamic_output</span><span class="p">(</span><span class="n">input_handle</span><span class="p">,</span> <span class="n">output_handle</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">output_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_validate_and_set_dynamic_output</span><span class="p">(</span>
+                        <span class="n">input_handle</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="p">[</span><span class="n">output_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">]</span>
+                    <span class="p">)</span>
+
+                <span class="n">output_handle_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">output_handle</span><span class="p">]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_solid_input_index</span><span class="p">[</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="n">input_handle</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_handle_list</span>
+            <span class="k">for</span> <span class="n">output_handle</span> <span class="ow">in</span> <span class="n">output_handle_list</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_solid_output_index</span><span class="p">[</span><span class="n">output_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">][</span><span class="n">output_handle</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                    <span class="n">input_handle</span>
+                <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_validate_and_set_dynamic_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_handle</span><span class="p">,</span> <span class="n">output_handle</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Helper function for populating _solid_dynamic_index&quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">input_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">input_supports_dynamic_output_dep</span><span class="p">(</span>
+            <span class="n">input_handle</span><span class="o">.</span><span class="n">input_name</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Solid &quot;</span><span class="si">{</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="si">}</span><span class="s1">&quot; cannot be downstream of dynamic output &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">output_handle</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot; since input &quot;</span><span class="si">{</span><span class="n">input_handle</span><span class="o">.</span><span class="n">input_name</span><span class="si">}</span><span class="s1">&quot; maps to a solid &#39;</span>
+                <span class="s2">&quot;that is already downstream of another dynamic output. Solids cannot be downstream of more &quot;</span>
+                <span class="s2">&quot;than one dynamic output&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="p">[</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">output_handle</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="p">[</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">]</span> <span class="o">!=</span> <span class="n">output_handle</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Solid &quot;</span><span class="si">{</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="si">}</span><span class="s1">&quot; cannot be downstream of more than one dynamic output. &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;It is downstream of both &quot;</span><span class="si">{</span><span class="n">output_handle</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot; and &#39;</span>
+                <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="p">[</span><span class="n">input_handle</span><span class="o">.</span><span class="n">solid_name</span><span class="p">]</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">all_upstream_outputs_from_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">)</span>
+
+        <span class="c1"># flatten out all outputs that feed into the inputs of this solid</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">output_handle</span>
+            <span class="k">for</span> <span class="n">output_handle_list</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_input_index</span><span class="p">[</span><span class="n">solid_name</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">output_handle</span> <span class="ow">in</span> <span class="n">output_handle_list</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">input_to_upstream_outputs_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a Dict[SolidInputHandle, List[SolidOutputHandle]] that encodes</span>
+<span class="sd">        where all the the inputs are sourced from upstream. Usually the</span>
+<span class="sd">        List[SolidOutputHandle] will be a list of one, except for the</span>
+<span class="sd">        multi-dependency case.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_input_index</span><span class="p">[</span><span class="n">solid_name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">output_to_downstream_inputs_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a Dict[SolidOutputHandle, List[SolidInputHandle]] that</span>
+<span class="sd">        represents all the downstream inputs for each output in the</span>
+<span class="sd">        dictionary</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid_name</span><span class="p">,</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_output_index</span><span class="p">[</span><span class="n">solid_name</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">has_singular_dep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_input_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">,</span> <span class="s2">&quot;solid_input_handle&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">),</span> <span class="n">SolidOutputHandle</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_singular_dep</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_input_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">,</span> <span class="s2">&quot;solid_input_handle&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="n">dep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="p">[</span><span class="n">solid_input_handle</span><span class="p">]</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">SolidOutputHandle</span><span class="p">),</span>
+            <span class="s2">&quot;Cannot call get_singular_dep when dep is not singular, got </span><span class="si">{dep}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">dep</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">dep</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dep</span>
+
+    <span class="k">def</span> <span class="nf">has_multi_deps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_input_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">,</span> <span class="s2">&quot;solid_input_handle&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">),</span> <span class="nb">list</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_multi_deps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_input_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">,</span> <span class="s2">&quot;solid_input_handle&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="n">dep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="p">[</span><span class="n">solid_input_handle</span><span class="p">]</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="nb">list</span><span class="p">),</span>
+            <span class="s2">&quot;Cannot call get_multi_dep when dep is singular, got </span><span class="si">{dep}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dep</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">dep</span><span class="p">)),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dep</span>
+
+    <span class="k">def</span> <span class="nf">has_deps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_input_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">,</span> <span class="s2">&quot;solid_input_handle&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">solid_input_handle</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span>
+
+    <span class="k">def</span> <span class="nf">get_deps_list</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_input_handle</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">,</span> <span class="s2">&quot;solid_input_handle&quot;</span><span class="p">,</span> <span class="n">SolidInputHandle</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">has_deps</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_singular_dep</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">get_singular_dep</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_multi_deps</span><span class="p">(</span><span class="n">solid_input_handle</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">input_handles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_handle_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_upstream_dynamic_handle_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_dynamic_index</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">solid_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">debug_str</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">return</span> <span class="s2">&quot;DependencyStructure: EMPTY&quot;</span>
+
+        <span class="n">debug</span> <span class="o">=</span> <span class="s2">&quot;DependencyStructure: </span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">in_handle</span><span class="p">,</span> <span class="n">out_handle</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">debug</span> <span class="o">+=</span> <span class="s2">&quot;  </span><span class="si">{out_solid}</span><span class="s2">.</span><span class="si">{out_name}</span><span class="s2"> ---&gt; </span><span class="si">{in_solid}</span><span class="s2">.</span><span class="si">{in_name}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">out_solid</span><span class="o">=</span><span class="n">out_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">out_name</span><span class="o">=</span><span class="n">out_handle</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">in_name</span><span class="o">=</span><span class="n">in_handle</span><span class="o">.</span><span class="n">input_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">in_solid</span><span class="o">=</span><span class="n">in_handle</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">debug</span>
+
+
+<span class="k">class</span> <span class="nc">IDependencyDefinition</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># pylint: disable=no-init</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_solid_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">is_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+
+<div class="viewcode-block" id="DependencyDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/pipeline.html#dagster.DependencyDefinition">[docs]</a><span class="k">class</span> <span class="nc">DependencyDefinition</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_DependencyDefinition&quot;</span><span class="p">,</span> <span class="s2">&quot;solid output description&quot;</span><span class="p">),</span> <span class="n">IDependencyDefinition</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents an edge in the DAG of solid instances forming a pipeline.</span>
+
+<span class="sd">    This object is used at the leaves of a dictionary structure that represents the complete</span>
+<span class="sd">    dependency structure of a pipeline whose keys represent the dependent solid and dependent</span>
+<span class="sd">    input, so this object only contains information about the dependee.</span>
+
+<span class="sd">    Concretely, if the input named &#39;input&#39; of solid_b depends on the output named &#39;result&#39; of</span>
+<span class="sd">    solid_a, this structure will look as follows:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        dependency_structure = {</span>
+<span class="sd">            &#39;solid_b&#39;: {</span>
+<span class="sd">                &#39;input&#39;: DependencyDefinition(&#39;solid_a&#39;, &#39;result&#39;)</span>
+<span class="sd">            }</span>
+<span class="sd">        }</span>
+
+<span class="sd">    In general, users should prefer not to construct this class directly or use the</span>
+<span class="sd">    :py:class:`PipelineDefinition` API that requires instances of this class. Instead, use the</span>
+<span class="sd">    :py:func:`@pipeline &lt;pipeline&gt;` API:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @pipeline</span>
+<span class="sd">        def pipeline():</span>
+<span class="sd">            solid_b(solid_a())</span>
+
+
+<span class="sd">    Args:</span>
+<span class="sd">        solid (str): The name of the solid that is depended on, that is, from which the value</span>
+<span class="sd">            passed between the two solids originates.</span>
+<span class="sd">        output (Optional[str]): The name of the output that is depended on. (default: &quot;result&quot;)</span>
+<span class="sd">        description (Optional[str]): Human-readable description of this dependency.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">solid</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">DependencyDefinition</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">solid</span><span class="p">,</span> <span class="s2">&quot;solid&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="s2">&quot;output&quot;</span><span class="p">),</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_solid_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">is_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="MultiDependencyDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/pipeline.html#dagster.MultiDependencyDefinition">[docs]</a><span class="k">class</span> <span class="nc">MultiDependencyDefinition</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_MultiDependencyDefinition&quot;</span><span class="p">,</span> <span class="s2">&quot;dependencies&quot;</span><span class="p">),</span> <span class="n">IDependencyDefinition</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Represents a fan-in edge in the DAG of solid instances forming a pipeline.</span>
+
+<span class="sd">    This object is used only when an input of type ``List[T]`` is assembled by fanning-in multiple</span>
+<span class="sd">    upstream outputs of type ``T``.</span>
+
+<span class="sd">    This object is used at the leaves of a dictionary structure that represents the complete</span>
+<span class="sd">    dependency structure of a pipeline whose keys represent the dependent solid and dependent</span>
+<span class="sd">    input, so this object only contains information about the dependee.</span>
+
+<span class="sd">    Concretely, if the input named &#39;input&#39; of solid_c depends on the outputs named &#39;result&#39; of</span>
+<span class="sd">    solid_a and solid_b, this structure will look as follows:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        dependency_structure = {</span>
+<span class="sd">            &#39;solid_c&#39;: {</span>
+<span class="sd">                &#39;input&#39;: MultiDependencyDefinition(</span>
+<span class="sd">                    [</span>
+<span class="sd">                        DependencyDefinition(&#39;solid_a&#39;, &#39;result&#39;),</span>
+<span class="sd">                        DependencyDefinition(&#39;solid_b&#39;, &#39;result&#39;)</span>
+<span class="sd">                    ]</span>
+<span class="sd">                )</span>
+<span class="sd">            }</span>
+<span class="sd">        }</span>
+
+<span class="sd">    In general, users should prefer not to construct this class directly or use the</span>
+<span class="sd">    :py:class:`PipelineDefinition` API that requires instances of this class. Instead, use the</span>
+<span class="sd">    :py:func:`@pipeline &lt;pipeline&gt;` API:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @pipeline</span>
+<span class="sd">        def pipeline():</span>
+<span class="sd">            solid_c(solid_a(), solid_b())</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        solid (str): The name of the solid that is depended on, that is, from which the value</span>
+<span class="sd">            passed between the two solids originates.</span>
+<span class="sd">        output (Optional[str]): The name of the output that is depended on. (default: &quot;result&quot;)</span>
+<span class="sd">        description (Optional[str]): Human-readable description of this dependency.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">dependencies</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">.composition</span> <span class="kn">import</span> <span class="n">MappedInputPlaceholder</span>
+
+        <span class="n">deps</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">dependencies</span><span class="p">,</span> <span class="s2">&quot;dependencies&quot;</span><span class="p">)</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">dep</span> <span class="ow">in</span> <span class="n">deps</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">DependencyDefinition</span><span class="p">):</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">dep</span><span class="o">.</span><span class="n">solid</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span> <span class="o">+</span> <span class="n">dep</span><span class="o">.</span><span class="n">output</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="s1">&#39;Duplicate dependencies on solid &quot;</span><span class="si">{dep.solid}</span><span class="s1">&quot; output &quot;</span><span class="si">{dep.output}</span><span class="s1">&quot; &#39;</span>
+                        <span class="s2">&quot;used in the same MultiDependencyDefinition.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dep</span><span class="o">=</span><span class="n">dep</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">seen</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="n">dep</span> <span class="ow">is</span> <span class="n">MappedInputPlaceholder</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span><span class="s2">&quot;Unexpected dependencies entry </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dep</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">MultiDependencyDefinition</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">deps</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_solid_dependencies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">dep</span> <span class="k">for</span> <span class="n">dep</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependencies</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dep</span><span class="p">,</span> <span class="n">DependencyDefinition</span><span class="p">)]</span>
+
+    <span class="k">def</span> <span class="nf">is_multi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">get_dependencies_and_mappings</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependencies</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>PagerDuty (dagster_pagerduty) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Pandas (dagster_pandas)" href="dagster_pandas.html" />
+    <link rel="prev" title="Kubernetes (dagster_k8s)" href="dagster_k8s.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_k8s.html" title="Previous document">Kubernetes (dagster_k8s)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_pandas.html" title="Next document">Pandas (dagster_pandas)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="pagerduty-dagster-pagerduty">
+<h1>PagerDuty (dagster_pagerduty)<a class="headerlink" href="#pagerduty-dagster-pagerduty" title="Permalink to this headline">¶</a></h1>
+<p>This library provides an integration with PagerDuty, to support creating alerts from your Dagster
+code.</p>
+<p>Presently, it provides a thin wrapper on the <a class="reference external" href="https://v2.developer.pagerduty.com/docs/events-api-v2">Events V2 API</a>.</p>
+</div>
+<div class="section" id="getting-started">
+<h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
+<p>You can install this library with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">dagster_pagerduty</span>
+</pre></div>
+</div>
+<p>To use this integration, you’ll first need to create a PagerDuty integration. There are instructions
+<a class="reference external" href="https://support.pagerduty.com/docs/services-and-integrations#section-events-api-v2">here</a> for
+creating a new PagerDuty service &amp; integration.</p>
+<p>As noted in the PagerDuty documentation, you’ll find an integration key (also referred to as a
+“routing key”) on the Integrations tab for your new service. This key is used to authorize events
+created from the PagerDuty events API.</p>
+<p>Once your service/integration is created, you can provision a PagerDuty resource and issue PagerDuty
+alerts from within your solids.</p>
+<dl class="data">
+<dt id="dagster_pagerduty.pagerduty_resource">
+<code class="sig-prename descclassname">dagster_pagerduty.</code><code class="sig-name descname">pagerduty_resource</code><em class="property"> ResourceDefinition</em><a class="reference internal" href="../../../../_modules/dagster_pagerduty/resources.html#pagerduty_resource"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_pagerduty.pagerduty_resource" title="Permalink to this definition">¶</a></dt>
+<dd><p>A resource for posting events (alerts) to PagerDuty.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span><span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;pagerduty&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">pagerduty_solid</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">pagerduty</span><span class="o">.</span><span class="n">EventV2_create</span><span class="p">(</span>
+        <span class="n">summary</span><span class="o">=</span><span class="s1">&#39;alert from dagster&#39;</span>
+        <span class="n">source</span><span class="o">=</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span>
+        <span class="n">severity</span><span class="o">=</span><span class="s1">&#39;error&#39;</span><span class="p">,</span>
+        <span class="n">event_action</span><span class="o">=</span><span class="s1">&#39;trigger&#39;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;pagerduty&#39;</span><span class="p">:</span> <span class="n">pagerduty_resource</span><span class="p">})],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">pd_pipeline</span><span class="p">():</span>
+    <span class="n">pagerduty_solid</span><span class="p">()</span>
+
+<span class="n">execute_pipeline</span><span class="p">(</span>
+    <span class="n">pd_pipeline</span><span class="p">,</span>
+    <span class="p">{</span>
+        <span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;pagerduty&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;routing_key&#39;</span><span class="p">:</span> <span class="s1">&#39;0123456789abcdef0123456789abcdef&#39;</span><span class="p">}}</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_k8s.html" title="Previous document">Kubernetes (dagster_k8s)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_pandas.html" title="Next document">Pandas (dagster_pandas)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

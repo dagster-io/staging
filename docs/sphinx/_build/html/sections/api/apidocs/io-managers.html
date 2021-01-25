@@ -1,0 +1,672 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>IO Managers &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="io-managers">
+<h1>IO Managers<a class="headerlink" href="#io-managers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>IO Managers<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p>IO managers are user-provided objects that store solid outputs and load them as inputs to downstream
+solids.</p>
+<dl class="function">
+<dt id="dagster.io_manager">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">io_manager</code><span class="sig-paren">(</span><em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">output_config_schema=None</em>, <em class="sig-param">input_config_schema=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">version=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/io_manager.html#io_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.io_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define an IO manager.</p>
+<p>IOManagers are used to store solid outputs and load them as inputs to downstream solids.</p>
+<p>The decorated function should accept an <a class="reference internal" href="modes-resources.html#dagster.InitResourceContext" title="dagster.InitResourceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">InitResourceContext</span></code></a> and return an
+<a class="reference internal" href="#dagster.IOManager" title="dagster.IOManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">IOManager</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the resource config. Configuration
+data available in <cite>init_context.resource_config</cite>.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the resource.</p></li>
+<li><p><strong>output_config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for per-output config.</p></li>
+<li><p><strong>input_config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for per-input config.</p></li>
+<li><p><strong>required_resource_keys</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Keys for the resources required by the object
+manager.</p></li>
+<li><p><strong>version</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – (Experimental) The version of a resource function. Two wrapped
+resource functions should only have the same version if they produce the same resource
+definition when provided with the same inputs.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">MyIOManager</span><span class="p">(</span><span class="n">IOManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">handle_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="n">write_csv</span><span class="p">(</span><span class="s2">&quot;some/path&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;some/path&quot;</span><span class="p">)</span>
+
+<span class="nd">@io_manager</span>
+<span class="k">def</span> <span class="nf">my_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">MyIOManager</span><span class="p">()</span>
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">io_manager_key</span><span class="o">=</span><span class="s2">&quot;my_io_manager_key&quot;</span><span class="p">)])</span>
+<span class="k">def</span> <span class="nf">my_solid</span><span class="p">(</span><span class="n">_</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">do_stuff</span><span class="p">()</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;my_io_manager_key&quot;</span><span class="p">:</span> <span class="n">my_io_manager</span><span class="p">})]</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">my_pipeline</span><span class="p">():</span>
+    <span class="n">my_solid</span><span class="p">()</span>
+
+<span class="n">execute_pipeline</span><span class="p">(</span><span class="n">my_pipeline</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.IOManager">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">IOManager</code><a class="reference internal" href="../../../_modules/dagster/core/storage/io_manager.html#IOManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.IOManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base class for user-provided IO managers.</p>
+<p>IOManagers are used to store solid outputs and load them as inputs to downstream solids.</p>
+<p>Extend this class to handle how objects are loaded and stored. Users should implement
+<code class="docutils literal notranslate"><span class="pre">handle_output</span></code> to store an object and <code class="docutils literal notranslate"><span class="pre">load_input</span></code> to retrieve an object.</p>
+<dl class="method">
+<dt id="dagster.IOManager.handle_output">
+<em class="property">abstract </em><code class="sig-name descname">handle_output</code><span class="sig-paren">(</span><em class="sig-param">context</em>, <em class="sig-param">obj</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/io_manager.html#IOManager.handle_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.IOManager.handle_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>User-defined method that stores an output of a solid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>context</strong> (<a class="reference internal" href="#dagster.OutputContext" title="dagster.OutputContext"><em>OutputContext</em></a>) – The context of the step output that produces this object.</p></li>
+<li><p><strong>obj</strong> (<em>Any</em>) – The object, returned by the solid, to be stored.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.IOManager.load_input">
+<em class="property">abstract </em><code class="sig-name descname">load_input</code><span class="sig-paren">(</span><em class="sig-param">context</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/io_manager.html#IOManager.load_input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.IOManager.load_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>User-defined method that loads an input to a solid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>context</strong> (<a class="reference internal" href="#dagster.InputContext" title="dagster.InputContext"><em>InputContext</em></a>) – The input context, which describes the input that’s being loaded
+and the upstream output that’s being loaded from.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The data object.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.IOManagerDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">IOManagerDefinition</code><span class="sig-paren">(</span><em class="sig-param">resource_fn=None</em>, <em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">version=None</em>, <em class="sig-param">input_config_schema=None</em>, <em class="sig-param">output_config_schema=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/io_manager.html#IOManagerDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.IOManagerDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Definition of an IO manager resource.</p>
+<p>IOManagers are used to store solid outputs and load them as inputs to downstream solids.</p>
+<p>An IOManagerDefinition is a <a class="reference internal" href="modes-resources.html#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDefinition</span></code></a> whose <cite>resource_fn</cite> returns an
+<a class="reference internal" href="#dagster.IOManager" title="dagster.IOManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">IOManager</span></code></a>.</p>
+<p>The easiest way to create an IOManagerDefnition is with the <a class="reference internal" href="#dagster.io_manager" title="dagster.io_manager"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;io_manager</span></code></a>
+decorator.</p>
+<dl class="method">
+<dt id="dagster.IOManagerDefinition.input_config_schema">
+<em class="property">property </em><code class="sig-name descname">input_config_schema</code><a class="headerlink" href="#dagster.IOManagerDefinition.input_config_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>The schema for per-input configuration for inputs that are managed by this
+input manager</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.IOManagerDefinition.output_config_schema">
+<em class="property">property </em><code class="sig-name descname">output_config_schema</code><a class="headerlink" href="#dagster.IOManagerDefinition.output_config_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>The schema for per-output configuration for outputs that are managed by this
+manager</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="input-and-output-contexts">
+<h2>Input and Output Contexts<a class="headerlink" href="#input-and-output-contexts" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster.InputContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">InputContext</code><a class="reference internal" href="../../../_modules/dagster/core/execution/context/system.html#InputContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.InputContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>The <code class="docutils literal notranslate"><span class="pre">context</span></code> object available to the load_input method of <a class="reference internal" href="#dagster.RootInputManager" title="dagster.RootInputManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">RootInputManager</span></code></a>.</p>
+<dl class="attribute">
+<dt id="dagster.InputContext.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#dagster.InputContext.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the input that we’re loading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.pipeline_name">
+<code class="sig-name descname">pipeline_name</code><a class="headerlink" href="#dagster.InputContext.pipeline_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the pipeline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.solid_def">
+<code class="sig-name descname">solid_def</code><a class="headerlink" href="#dagster.InputContext.solid_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The definition of the solid that’s loading the input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.config">
+<code class="sig-name descname">config</code><a class="headerlink" href="#dagster.InputContext.config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The config attached to the input that we’re loading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.metadata">
+<code class="sig-name descname">metadata</code><a class="headerlink" href="#dagster.InputContext.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dict of metadata that is assigned to the
+InputDefinition that we’re loading for.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.upstream_output">
+<code class="sig-name descname">upstream_output</code><a class="headerlink" href="#dagster.InputContext.upstream_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Info about the output that produced the object
+we’re loading.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="#dagster.OutputContext" title="dagster.OutputContext">OutputContext</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.dagster_type">
+<code class="sig-name descname">dagster_type</code><a class="headerlink" href="#dagster.InputContext.dagster_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of this input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="types.html#dagster.DagsterType" title="dagster.DagsterType">DagsterType</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.log">
+<code class="sig-name descname">log</code><a class="headerlink" href="#dagster.InputContext.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>The log manager to use for this input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="internals.html#dagster.DagsterLogManager" title="dagster.DagsterLogManager">DagsterLogManager</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.resource_config">
+<code class="sig-name descname">resource_config</code><a class="headerlink" href="#dagster.InputContext.resource_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The config associated with the resource that
+initializes the RootInputManager.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.InputContext.resources">
+<code class="sig-name descname">resources</code><a class="headerlink" href="#dagster.InputContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>The resources required by the resource that initializes the
+input manager. If using the <code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;root_input_manager()</span></code> decorator, these resources
+correspond to those requested with the <cite>required_resource_keys</cite> parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>ScopedResources</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.OutputContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">OutputContext</code><a class="reference internal" href="../../../_modules/dagster/core/execution/context/system.html#OutputContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.OutputContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>The context object that is available to the <cite>handle_output</cite> method of an <a class="reference internal" href="#dagster.IOManager" title="dagster.IOManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">IOManager</span></code></a>.</p>
+<dl class="attribute">
+<dt id="dagster.OutputContext.step_key">
+<code class="sig-name descname">step_key</code><a class="headerlink" href="#dagster.OutputContext.step_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The step_key for the compute step that produced the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.name">
+<code class="sig-name descname">name</code><a class="headerlink" href="#dagster.OutputContext.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the output that produced the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.pipeline_name">
+<code class="sig-name descname">pipeline_name</code><a class="headerlink" href="#dagster.OutputContext.pipeline_name" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the pipeline definition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.run_id">
+<code class="sig-name descname">run_id</code><a class="headerlink" href="#dagster.OutputContext.run_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The id of the run that produced the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.metadata">
+<code class="sig-name descname">metadata</code><a class="headerlink" href="#dagster.OutputContext.metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dict of the metadata that is assigned to the
+OutputDefinition that produced the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, Any]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.mapping_key">
+<code class="sig-name descname">mapping_key</code><a class="headerlink" href="#dagster.OutputContext.mapping_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The key that identifies a unique mapped output. None for regular outputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.config">
+<code class="sig-name descname">config</code><a class="headerlink" href="#dagster.OutputContext.config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The configuration for the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.solid_def">
+<code class="sig-name descname">solid_def</code><a class="headerlink" href="#dagster.OutputContext.solid_def" title="Permalink to this definition">¶</a></dt>
+<dd><p>The definition of the solid that produced the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.dagster_type">
+<code class="sig-name descname">dagster_type</code><a class="headerlink" href="#dagster.OutputContext.dagster_type" title="Permalink to this definition">¶</a></dt>
+<dd><p>The type of this output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="types.html#dagster.DagsterType" title="dagster.DagsterType">DagsterType</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.log">
+<code class="sig-name descname">log</code><a class="headerlink" href="#dagster.OutputContext.log" title="Permalink to this definition">¶</a></dt>
+<dd><p>The log manager to use for this output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference internal" href="internals.html#dagster.DagsterLogManager" title="dagster.DagsterLogManager">DagsterLogManager</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.version">
+<code class="sig-name descname">version</code><a class="headerlink" href="#dagster.OutputContext.version" title="Permalink to this definition">¶</a></dt>
+<dd><p>(Experimental) The version of the output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.OutputContext.resources">
+<code class="sig-name descname">resources</code><a class="headerlink" href="#dagster.OutputContext.resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>The resources required by the output manager, specified by the
+<cite>required_resource_keys</cite> parameter.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[ScopedResources]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.OutputContext.get_run_scoped_output_identifier">
+<code class="sig-name descname">get_run_scoped_output_identifier</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; List[str]<a class="reference internal" href="../../../_modules/dagster/core/execution/context/system.html#OutputContext.get_run_scoped_output_identifier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.OutputContext.get_run_scoped_output_identifier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility method to get a collection of identifiers that as a whole represent a unique
+step output.</p>
+<p>The unique identifier collection consists of</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">run_id</span></code>: the id of the run which generates the output.</dt><dd><p>Note: This method also handles the re-execution memoization logic. If the step that
+generates the output is skipped in the re-execution, the <code class="docutils literal notranslate"><span class="pre">run_id</span></code> will be the id
+of its parent run.</p>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">step_key</span></code>: the key for a compute step.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">name</span></code>: the name of the output. (default: ‘result’).</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A list of identifiers, i.e. run id, step key, and output name</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, ..]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="built-in-io-managers">
+<h2>Built-in IO Managers<a class="headerlink" href="#built-in-io-managers" title="Permalink to this headline">¶</a></h2>
+<dl class="data">
+<dt id="dagster.mem_io_manager">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">mem_io_manager</code><em class="property"> = &lt;dagster.core.storage.io_manager.IOManagerDefinition object&gt;</em><a class="reference internal" href="../../../_modules/dagster/core/storage/mem_io_manager.html#mem_io_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.mem_io_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Built-in IO manager that stores and retrieves values in memory.</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.fs_io_manager">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">fs_io_manager</code><em class="property"> = &lt;dagster.core.storage.io_manager.IOManagerDefinition object&gt;</em><a class="reference internal" href="../../../_modules/dagster/core/storage/fs_io_manager.html#fs_io_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.fs_io_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Built-in filesystem IO manager that stores and retrieves values using pickling.</p>
+<p>It allows users to specify a base directory where all the step outputs will be stored. It
+serializes and deserializes output values using pickling and automatically constructs
+the filepaths for the assets.</p>
+<p>Example usage:</p>
+<p>1. Specify a pipeline-level IO manager using the reserved resource key <code class="docutils literal notranslate"><span class="pre">&quot;io_manager&quot;</span></code>,
+which will set the given IO manager on all solids across a pipeline.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span>
+<span class="k">def</span> <span class="nf">solid_a</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">df</span>
+
+<span class="nd">@solid</span>
+<span class="k">def</span> <span class="nf">solid_b</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">df</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span><span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;io_manager&quot;</span><span class="p">:</span> <span class="n">fs_io_manager</span><span class="p">})])</span>
+<span class="k">def</span> <span class="nf">pipe</span><span class="p">():</span>
+    <span class="n">solid_b</span><span class="p">(</span><span class="n">solid_a</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>2. Specify IO manager on <a class="reference internal" href="solids.html#dagster.OutputDefinition" title="dagster.OutputDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">OutputDefinition</span></code></a>, which allows the user to set
+different IO managers on different step outputs.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span><span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="n">io_manager_key</span><span class="o">=</span><span class="s2">&quot;my_io_manager&quot;</span><span class="p">)])</span>
+<span class="k">def</span> <span class="nf">solid_a</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">df</span>
+
+<span class="nd">@solid</span>
+<span class="k">def</span> <span class="nf">solid_b</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">df</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;my_io_manager&quot;</span><span class="p">:</span> <span class="n">fs_io_manager</span><span class="p">})]</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">pipe</span><span class="p">():</span>
+    <span class="n">solid_b</span><span class="p">(</span><span class="n">solid_a</span><span class="p">())</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="data">
+<dt id="dagster.custom_path_fs_io_manager">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">custom_path_fs_io_manager</code><em class="property"> = &lt;dagster.core.storage.io_manager.IOManagerDefinition object&gt;</em><a class="reference internal" href="../../../_modules/dagster/core/storage/fs_io_manager.html#custom_path_fs_io_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.custom_path_fs_io_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Built-in IO manager that allows users to custom output file path per output definition.</p>
+<p>It also allows users to specify a base directory where all the step output will be stored in. It
+serializes and deserializes output values (assets) using pickling and stores the pickled object
+in the user-provided file paths.</p>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">OutputDefinition</span><span class="p">(</span>
+            <span class="n">io_manager_key</span><span class="o">=</span><span class="s2">&quot;io_manager&quot;</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;path/to/sample_output&quot;</span><span class="p">}</span>
+        <span class="p">)</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">sample_data</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">df</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;io_manager&quot;</span><span class="p">:</span> <span class="n">custom_path_fs_io_manager</span><span class="p">}),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">pipe</span><span class="p">():</span>
+    <span class="n">sample_data</span><span class="p">()</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="root-input-managers-experimental">
+<h2>Root Input Managers (Experimental)<a class="headerlink" href="#root-input-managers-experimental" title="Permalink to this headline">¶</a></h2>
+<p>Root input managers are user-provided objects that specify how to load inputs that aren’t connected
+to upstream outputs.</p>
+<dl class="function">
+<dt id="dagster.root_input_manager">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">root_input_manager</code><span class="sig-paren">(</span><em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">input_config_schema=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">version=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/root_input_manager.html#root_input_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.root_input_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a root input manager.</p>
+<p>Root input managers load solid inputs that aren’t connected to upstream outputs.</p>
+<p>The decorated function should accept a <a class="reference internal" href="#dagster.InputContext" title="dagster.InputContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">InputContext</span></code></a> and resource config, and return
+a loaded object that will be passed into one of the inputs of a solid.</p>
+<p>The decorator produces an <a class="reference internal" href="#dagster.RootInputManagerDefinition" title="dagster.RootInputManagerDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">RootInputManagerDefinition</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – The schema for the resource-level config.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the resource.</p></li>
+<li><p><strong>input_config_schema</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="config.html#dagster.ConfigSchema" title="dagster.ConfigSchema"><em>ConfigSchema</em></a><em>]</em>) – A schema for the input-level config. Each
+input that uses this input manager can be configured separately using this config.</p></li>
+<li><p><strong>required_resource_keys</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Keys for the resources required by the input
+manager.</p></li>
+<li><p><strong>version</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – (Experimental) the version of the input manager definition.</p></li>
+</ul>
+</dd>
+</dl>
+<p><strong>Examples:</strong></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@root_input_manager</span>
+<span class="k">def</span> <span class="nf">csv_loader</span><span class="p">(</span><span class="n">_</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">read_csv</span><span class="p">(</span><span class="s2">&quot;some/path&quot;</span><span class="p">)</span>
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s2">&quot;input1&quot;</span><span class="p">,</span> <span class="n">root_manager_key</span><span class="o">=</span><span class="s2">&quot;csv_loader_key&quot;</span><span class="p">)])</span>
+<span class="k">def</span> <span class="nf">my_solid</span><span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">input1</span><span class="p">):</span>
+    <span class="n">do_stuff</span><span class="p">(</span><span class="n">input1</span><span class="p">)</span>
+
+<span class="nd">@pipeline</span><span class="p">(</span><span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">ModeDefinition</span><span class="p">(</span><span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;csv_loader_key&quot;</span><span class="p">:</span> <span class="n">csv_loader</span><span class="p">})])</span>
+<span class="k">def</span> <span class="nf">my_pipeline</span><span class="p">():</span>
+    <span class="n">my_solid</span><span class="p">()</span>
+
+<span class="nd">@root_input_manager</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">csv_loader</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">read_csv</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;/some/path&quot;</span><span class="p">)</span>
+
+<span class="nd">@root_input_manager</span><span class="p">(</span><span class="n">input_config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">csv_loader</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">read_csv</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.RootInputManager">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">RootInputManager</code><a class="reference internal" href="../../../_modules/dagster/core/storage/root_input_manager.html#RootInputManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RootInputManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>RootInputManagers are used to load inputs to solids at the root of a pipeline.</p>
+<p>The easiest way to define an RootInputManager is with the
+<a class="reference internal" href="#dagster.root_input_manager" title="dagster.root_input_manager"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;root_input_manager</span></code></a> decorator.</p>
+<dl class="method">
+<dt id="dagster.RootInputManager.load_input">
+<em class="property">abstract </em><code class="sig-name descname">load_input</code><span class="sig-paren">(</span><em class="sig-param">context</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/root_input_manager.html#RootInputManager.load_input"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RootInputManager.load_input" title="Permalink to this definition">¶</a></dt>
+<dd><p>The user-defined read method that loads data given its metadata.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>context</strong> (<a class="reference internal" href="#dagster.InputContext" title="dagster.InputContext"><em>InputContext</em></a>) – The context of the step output that produces this asset.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The data object.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Any</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.RootInputManagerDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">RootInputManagerDefinition</code><span class="sig-paren">(</span><em class="sig-param">resource_fn=None</em>, <em class="sig-param">config_schema=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">input_config_schema=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">version=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/storage/root_input_manager.html#RootInputManagerDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RootInputManagerDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Definition of a root input manager resource.</p>
+<p>Root input managers load solid inputs that aren’t connected to upstream outputs.</p>
+<p>An RootInputManagerDefinition is a <a class="reference internal" href="modes-resources.html#dagster.ResourceDefinition" title="dagster.ResourceDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ResourceDefinition</span></code></a> whose resource_fn returns an
+<a class="reference internal" href="#dagster.RootInputManager" title="dagster.RootInputManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">RootInputManager</span></code></a>.</p>
+<p>The easiest way to create an RootInputManagerDefinition is with the
+<a class="reference internal" href="#dagster.root_input_manager" title="dagster.root_input_manager"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;root_input_manager</span></code></a> decorator.</p>
+<dl class="method">
+<dt id="dagster.RootInputManagerDefinition.input_config_schema">
+<em class="property">property </em><code class="sig-name descname">input_config_schema</code><a class="headerlink" href="#dagster.RootInputManagerDefinition.input_config_schema" title="Permalink to this definition">¶</a></dt>
+<dd><p>The schema for per-input configuration for inputs that are managed by this
+input manager</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

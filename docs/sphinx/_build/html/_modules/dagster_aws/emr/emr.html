@@ -1,0 +1,508 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.emr.emr &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.emr.emr</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Portions of this file are copied from the Yelp MRJob project:</span>
+<span class="c1">#</span>
+<span class="c1">#   https://github.com/Yelp/mrjob</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1"># Copyright 2009-2013 Yelp, David Marin</span>
+<span class="c1"># Copyright 2015 Yelp</span>
+<span class="c1"># Copyright 2017 Yelp</span>
+<span class="c1"># Copyright 2018 Contributors</span>
+<span class="c1"># Copyright 2019 Yelp and Contributors</span>
+<span class="c1">#</span>
+<span class="c1"># Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span class="c1"># you may not use this file except in compliance with the License.</span>
+<span class="c1"># You may obtain a copy of the License at</span>
+<span class="c1">#</span>
+<span class="c1"># http://www.apache.org/licenses/LICENSE-2.0</span>
+<span class="c1">#</span>
+<span class="c1"># Unless required by applicable law or agreed to in writing, software</span>
+<span class="c1"># distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span class="c1"># WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span class="c1"># See the License for the specific language governing permissions and</span>
+<span class="c1"># limitations under the License.</span>
+<span class="kn">import</span> <span class="nn">gzip</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">io</span> <span class="kn">import</span> <span class="n">BytesIO</span>
+<span class="kn">from</span> <span class="nn">urllib.parse</span> <span class="kn">import</span> <span class="n">urlparse</span>
+
+<span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">import</span> <span class="nn">dagster</span>
+<span class="kn">from</span> <span class="nn">botocore.exceptions</span> <span class="kn">import</span> <span class="n">WaiterError</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster_aws.utils.mrjob.utils</span> <span class="kn">import</span> <span class="n">_boto3_now</span><span class="p">,</span> <span class="n">_wrap_aws_client</span><span class="p">,</span> <span class="n">strip_microseconds</span>
+
+<span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">EMR_CLUSTER_TERMINATED_STATES</span><span class="p">,</span> <span class="n">EmrClusterState</span><span class="p">,</span> <span class="n">EmrStepState</span>
+
+<span class="c1"># if we can&#39;t create or find our own service role, use the one</span>
+<span class="c1"># created by the AWS console and CLI</span>
+<span class="n">_FALLBACK_SERVICE_ROLE</span> <span class="o">=</span> <span class="s2">&quot;EMR_DefaultRole&quot;</span>
+
+<span class="c1"># if we can&#39;t create or find our own instance profile, use the one</span>
+<span class="c1"># created by the AWS console and CLI</span>
+<span class="n">_FALLBACK_INSTANCE_PROFILE</span> <span class="o">=</span> <span class="s2">&quot;EMR_EC2_DefaultRole&quot;</span>
+
+
+<div class="viewcode-block" id="EmrError"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.emr.EmrError">[docs]</a><span class="k">class</span> <span class="nc">EmrError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="EmrJobRunner"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.emr.EmrJobRunner">[docs]</a><span class="k">class</span> <span class="nc">EmrJobRunner</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">region</span><span class="p">,</span> <span class="n">check_cluster_every</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">aws_access_key_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">aws_secret_access_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This object encapsulates various utilities for interacting with EMR clusters and invoking</span>
+<span class="sd">        steps (jobs) on them.</span>
+
+<span class="sd">        See also :py:class:`~dagster_aws.emr.EmrPySparkResource`, which wraps this job runner in a</span>
+<span class="sd">        resource for pyspark workloads.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            region (str): AWS region to use</span>
+<span class="sd">            check_cluster_every (int, optional): How frequently to poll boto3 APIs for updates.</span>
+<span class="sd">                Defaults to 30 seconds.</span>
+<span class="sd">            aws_access_key_id ([type], optional): AWS access key ID. Defaults to None, which will</span>
+<span class="sd">                use the default boto3 credentials chain.</span>
+<span class="sd">            aws_secret_access_key ([type], optional): AWS secret access key. Defaults to None, which</span>
+<span class="sd">                will use the default boto3 credentials chain.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">region</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">)</span>
+
+        <span class="c1"># This is in seconds</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">check_cluster_every</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">check_cluster_every</span><span class="p">,</span> <span class="s2">&quot;check_cluster_every&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aws_access_key_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">aws_access_key_id</span><span class="p">,</span> <span class="s2">&quot;aws_access_key_id&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">aws_secret_access_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span>
+            <span class="n">aws_secret_access_key</span><span class="p">,</span> <span class="s2">&quot;aws_secret_access_key&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">make_emr_client</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates a boto3 EMR client. Construction is wrapped in retries in case client connection</span>
+<span class="sd">        fails transiently.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            botocore.client.EMR: An EMR client</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">raw_emr_client</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span>
+            <span class="s2">&quot;emr&quot;</span><span class="p">,</span>
+            <span class="n">aws_access_key_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">aws_access_key_id</span><span class="p">,</span>
+            <span class="n">aws_secret_access_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">aws_secret_access_key</span><span class="p">,</span>
+            <span class="n">region_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">_wrap_aws_client</span><span class="p">(</span><span class="n">raw_emr_client</span><span class="p">,</span> <span class="n">min_backoff</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">check_cluster_every</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">cluster_id_from_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cluster_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a cluster ID in the format &quot;j-123ABC123ABC1&quot; given a cluster name &quot;my cool cluster&quot;.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            cluster_name (str): The name of the cluster for which to find an ID</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The ID of the cluster</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EmrError: No cluster with the specified name exists</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_name</span><span class="p">,</span> <span class="s2">&quot;cluster_name&quot;</span><span class="p">)</span>
+
+        <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_emr_client</span><span class="p">()</span><span class="o">.</span><span class="n">list_clusters</span><span class="p">()</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Clusters&quot;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">for</span> <span class="n">cluster</span> <span class="ow">in</span> <span class="n">response</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">cluster_name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Id&quot;</span><span class="p">]</span>
+
+        <span class="k">raise</span> <span class="n">EmrError</span><span class="p">(</span>
+            <span class="s2">&quot;cluster </span><span class="si">{cluster_name}</span><span class="s2"> not found in region </span><span class="si">{region}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">cluster_name</span><span class="o">=</span><span class="n">cluster_name</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">construct_step_dict_for_command</span><span class="p">(</span><span class="n">step_name</span><span class="p">,</span> <span class="n">command</span><span class="p">,</span> <span class="n">action_on_failure</span><span class="o">=</span><span class="s2">&quot;CONTINUE&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct an EMR step definition which uses command-runner.jar to execute a shell command</span>
+<span class="sd">        on the EMR master.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            step_name (str): The name of the EMR step (will show up in the EMR UI)</span>
+<span class="sd">            command (str): The shell command to execute with command-runner.jar</span>
+<span class="sd">            action_on_failure (str, optional): Configure action on failure (e.g., continue, or</span>
+<span class="sd">                terminate the cluster). Defaults to &#39;CONTINUE&#39;.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Step definition dict</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">step_name</span><span class="p">,</span> <span class="s2">&quot;step_name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="s2">&quot;command&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">action_on_failure</span><span class="p">,</span> <span class="s2">&quot;action_on_failure&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;Name&quot;</span><span class="p">:</span> <span class="n">step_name</span><span class="p">,</span>
+            <span class="s2">&quot;ActionOnFailure&quot;</span><span class="p">:</span> <span class="n">action_on_failure</span><span class="p">,</span>
+            <span class="s2">&quot;HadoopJarStep&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;Jar&quot;</span><span class="p">:</span> <span class="s2">&quot;command-runner.jar&quot;</span><span class="p">,</span> <span class="s2">&quot;Args&quot;</span><span class="p">:</span> <span class="n">command</span><span class="p">},</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">add_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add tags in the dict tags to cluster cluster_id.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            log (DagsterLogManager): Log manager, for logging</span>
+<span class="sd">            tags (dict): Dictionary of {&#39;key&#39;: &#39;value&#39;} tags</span>
+<span class="sd">            cluster_id (str): The ID of the cluster to tag</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;cluster_id&quot;</span><span class="p">)</span>
+
+        <span class="n">tags_items</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">tags</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">make_emr_client</span><span class="p">()</span><span class="o">.</span><span class="n">add_tags</span><span class="p">(</span>
+            <span class="n">ResourceId</span><span class="o">=</span><span class="n">cluster_id</span><span class="p">,</span> <span class="n">Tags</span><span class="o">=</span><span class="p">[</span><span class="nb">dict</span><span class="p">(</span><span class="n">Key</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">Value</span><span class="o">=</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">tags_items</span><span class="p">]</span>
+        <span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Added EMR tags to cluster </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">=</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">tag</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">tag</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">tags_items</span><span class="p">))</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">run_job_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">cluster_config</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create an empty cluster on EMR, and return the ID of that job flow.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            log (DagsterLogManager): Log manager, for logging</span>
+<span class="sd">            cluster_config (dict): Configuration for this EMR job flow. See:</span>
+<span class="sd">                https://docs.aws.amazon.com/emr/latest/APIReference/API_RunJobFlow.html</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: The cluster ID, e.g. &quot;j-ZKIY4CKQRX72&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">cluster_config</span><span class="p">,</span> <span class="s2">&quot;cluster_config&quot;</span><span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Creating Elastic MapReduce cluster&quot;</span><span class="p">)</span>
+        <span class="n">emr_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_emr_client</span><span class="p">()</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Calling run_job_flow(</span><span class="si">%s</span><span class="s2">)&quot;</span>
+            <span class="o">%</span> <span class="p">(</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">=</span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">cluster_config</span><span class="o">.</span><span class="n">items</span><span class="p">())))</span>
+        <span class="p">)</span>
+        <span class="n">cluster_id</span> <span class="o">=</span> <span class="n">emr_client</span><span class="o">.</span><span class="n">run_job_flow</span><span class="p">(</span><span class="o">**</span><span class="n">cluster_config</span><span class="p">)[</span><span class="s2">&quot;JobFlowId&quot;</span><span class="p">]</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Created new cluster </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">cluster_id</span><span class="p">)</span>
+
+        <span class="c1"># set EMR tags for the cluster</span>
+        <span class="n">tags</span> <span class="o">=</span> <span class="n">cluster_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Tags&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">tags</span><span class="p">[</span><span class="s2">&quot;__dagster_version&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dagster</span><span class="o">.</span><span class="n">__version__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_tags</span><span class="p">(</span><span class="n">log</span><span class="p">,</span> <span class="n">tags</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">cluster_id</span>
+
+    <span class="k">def</span> <span class="nf">describe_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Thin wrapper over boto3 describe_cluster.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            cluster_id (str): Cluster to inspect</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: The cluster info. See:</span>
+<span class="sd">                https://docs.aws.amazon.com/emr/latest/APIReference/API_DescribeCluster.html</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;cluster_id&quot;</span><span class="p">)</span>
+
+        <span class="n">emr_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_emr_client</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">emr_client</span><span class="o">.</span><span class="n">describe_cluster</span><span class="p">(</span><span class="n">ClusterId</span><span class="o">=</span><span class="n">cluster_id</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">describe_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">,</span> <span class="n">step_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Thin wrapper over boto3 describe_step.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            cluster_id (str): Cluster to inspect</span>
+<span class="sd">            step_id (str): Step ID to describe</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: The step info. See:</span>
+<span class="sd">                https://docs.aws.amazon.com/emr/latest/APIReference/API_DescribeStep.html</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;cluster_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">step_id</span><span class="p">,</span> <span class="s2">&quot;step_id&quot;</span><span class="p">)</span>
+
+        <span class="n">emr_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_emr_client</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">emr_client</span><span class="o">.</span><span class="n">describe_step</span><span class="p">(</span><span class="n">ClusterId</span><span class="o">=</span><span class="n">cluster_id</span><span class="p">,</span> <span class="n">StepId</span><span class="o">=</span><span class="n">step_id</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">add_job_flow_steps</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">,</span> <span class="n">step_defs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Submit the constructed job flow steps to EMR for execution.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            log (DagsterLogManager): Log manager, for logging</span>
+<span class="sd">            cluster_id (str): The ID of the cluster</span>
+<span class="sd">            step_defs (List[dict]): List of steps; see also `construct_step_dict_for_command`</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str]: list of step IDs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;cluster_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">step_defs</span><span class="p">,</span> <span class="s2">&quot;step_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+
+        <span class="n">emr_client</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_emr_client</span><span class="p">()</span>
+
+        <span class="n">steps_kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">JobFlowId</span><span class="o">=</span><span class="n">cluster_id</span><span class="p">,</span> <span class="n">Steps</span><span class="o">=</span><span class="n">step_defs</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span>
+            <span class="s2">&quot;Calling add_job_flow_steps(</span><span class="si">%s</span><span class="s2">)&quot;</span>
+            <span class="o">%</span> <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">((</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">=</span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">))</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">steps_kwargs</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">emr_client</span><span class="o">.</span><span class="n">add_job_flow_steps</span><span class="p">(</span><span class="o">**</span><span class="n">steps_kwargs</span><span class="p">)[</span><span class="s2">&quot;StepIds&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">is_emr_step_complete</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">,</span> <span class="n">emr_step_id</span><span class="p">):</span>
+        <span class="n">step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">describe_step</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="n">emr_step_id</span><span class="p">)[</span><span class="s2">&quot;Step&quot;</span><span class="p">]</span>
+        <span class="n">step_state</span> <span class="o">=</span> <span class="n">EmrStepState</span><span class="p">(</span><span class="n">step</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;State&quot;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">step_state</span> <span class="o">==</span> <span class="n">EmrStepState</span><span class="o">.</span><span class="n">Pending</span><span class="p">:</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">describe_cluster</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">)[</span><span class="s2">&quot;Cluster&quot;</span><span class="p">]</span>
+
+            <span class="n">reason</span> <span class="o">=</span> <span class="n">_get_reason</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span>
+            <span class="n">reason_desc</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">reason</span><span class="p">)</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;PENDING (cluster is </span><span class="si">%s%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;State&quot;</span><span class="p">],</span> <span class="n">reason_desc</span><span class="p">))</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">elif</span> <span class="n">step_state</span> <span class="o">==</span> <span class="n">EmrStepState</span><span class="o">.</span><span class="n">Running</span><span class="p">:</span>
+            <span class="n">time_running_desc</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+            <span class="n">start</span> <span class="o">=</span> <span class="n">step</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;Timeline&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;StartDateTime&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">start</span><span class="p">:</span>
+                <span class="n">time_running_desc</span> <span class="o">=</span> <span class="s2">&quot; for </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">strip_microseconds</span><span class="p">(</span><span class="n">_boto3_now</span><span class="p">()</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span>
+
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;RUNNING</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">time_running_desc</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># we&#39;re done, will return at the end of this</span>
+        <span class="k">elif</span> <span class="n">step_state</span> <span class="o">==</span> <span class="n">EmrStepState</span><span class="o">.</span><span class="n">Completed</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;COMPLETED&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># step has failed somehow. *reason* seems to only be set</span>
+            <span class="c1"># when job is cancelled (e.g. &#39;Job terminated&#39;)</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="n">_get_reason</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
+            <span class="n">reason_desc</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot; (</span><span class="si">%s</span><span class="s2">)&quot;</span> <span class="o">%</span> <span class="n">reason</span><span class="p">)</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">step_state</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="n">reason_desc</span><span class="p">))</span>
+
+            <span class="c1"># print cluster status; this might give more context</span>
+            <span class="c1"># why step didn&#39;t succeed</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">describe_cluster</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">)[</span><span class="s2">&quot;Cluster&quot;</span><span class="p">]</span>
+            <span class="n">reason</span> <span class="o">=</span> <span class="n">_get_reason</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span>
+            <span class="n">reason_desc</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">reason</span><span class="p">)</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Cluster </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s%s</span><span class="s2">&quot;</span>
+                <span class="o">%</span> <span class="p">(</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Id&quot;</span><span class="p">],</span>
+                    <span class="s2">&quot;was&quot;</span> <span class="k">if</span> <span class="s2">&quot;ED&quot;</span> <span class="ow">in</span> <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;State&quot;</span><span class="p">]</span> <span class="k">else</span> <span class="s2">&quot;is&quot;</span><span class="p">,</span>
+                    <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;State&quot;</span><span class="p">],</span>
+                    <span class="n">reason_desc</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">EmrClusterState</span><span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;State&quot;</span><span class="p">])</span> <span class="ow">in</span> <span class="n">EMR_CLUSTER_TERMINATED_STATES</span><span class="p">:</span>
+                <span class="c1"># was it caused by IAM roles?</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_check_for_missing_default_iam_roles</span><span class="p">(</span><span class="n">log</span><span class="p">,</span> <span class="n">cluster</span><span class="p">)</span>
+
+                <span class="c1"># TODO: extract logs here to surface failure reason</span>
+                <span class="c1"># See: https://github.com/dagster-io/dagster/issues/1954</span>
+
+        <span class="k">if</span> <span class="n">step_state</span> <span class="o">==</span> <span class="n">EmrStepState</span><span class="o">.</span><span class="n">Failed</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;EMR step </span><span class="si">%s</span><span class="s2"> failed&quot;</span> <span class="o">%</span> <span class="n">emr_step_id</span><span class="p">)</span>
+
+        <span class="k">raise</span> <span class="n">EmrError</span><span class="p">(</span><span class="s2">&quot;EMR step </span><span class="si">%s</span><span class="s2"> failed&quot;</span> <span class="o">%</span> <span class="n">emr_step_id</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_check_for_missing_default_iam_roles</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">cluster</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;If cluster couldn&#39;t start due to missing IAM roles, tell user what to do.&quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">cluster</span><span class="p">,</span> <span class="s2">&quot;cluster&quot;</span><span class="p">)</span>
+
+        <span class="n">reason</span> <span class="o">=</span> <span class="n">_get_reason</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
+            <span class="n">reason</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;/</span><span class="si">%s</span><span class="s2"> is invalid&quot;</span> <span class="o">%</span> <span class="n">role</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">role</span> <span class="ow">in</span> <span class="p">(</span><span class="n">_FALLBACK_INSTANCE_PROFILE</span><span class="p">,</span> <span class="n">_FALLBACK_SERVICE_ROLE</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;IAM roles are missing. See documentation for IAM roles on EMR here: &quot;</span>
+                <span class="s2">&quot;https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-iam-roles.html&quot;</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">log_location_for_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;EMR clusters are typically launched with S3 logging configured. This method inspects a</span>
+<span class="sd">        cluster using boto3 describe_cluster to retrieve the log URI.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            cluster_id (str): The cluster to inspect.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EmrError: the log URI was missing (S3 log mirroring not enabled for this cluster)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            (str, str): log bucket and key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;cluster_id&quot;</span><span class="p">)</span>
+
+        <span class="c1"># The S3 log URI is specified per job flow (cluster)</span>
+        <span class="n">log_uri</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">describe_cluster</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">)[</span><span class="s2">&quot;Cluster&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;LogUri&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># ugh, seriously boto3?! This will come back as string &quot;None&quot;</span>
+        <span class="k">if</span> <span class="n">log_uri</span> <span class="o">==</span> <span class="s2">&quot;None&quot;</span> <span class="ow">or</span> <span class="n">log_uri</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EmrError</span><span class="p">(</span><span class="s2">&quot;Log URI not specified, cannot retrieve step execution logs&quot;</span><span class="p">)</span>
+
+        <span class="c1"># For some reason the API returns an s3n:// protocol log URI instead of s3://</span>
+        <span class="n">log_uri</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="s2">&quot;^s3n&quot;</span><span class="p">,</span> <span class="s2">&quot;s3&quot;</span><span class="p">,</span> <span class="n">log_uri</span><span class="p">)</span>
+        <span class="n">log_uri_parsed</span> <span class="o">=</span> <span class="n">urlparse</span><span class="p">(</span><span class="n">log_uri</span><span class="p">)</span>
+        <span class="n">log_bucket</span> <span class="o">=</span> <span class="n">log_uri_parsed</span><span class="o">.</span><span class="n">netloc</span>
+        <span class="n">log_key_prefix</span> <span class="o">=</span> <span class="n">log_uri_parsed</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">log_bucket</span><span class="p">,</span> <span class="n">log_key_prefix</span>
+
+    <span class="k">def</span> <span class="nf">retrieve_logs_for_step_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">cluster_id</span><span class="p">,</span> <span class="n">step_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Retrieves stdout and stderr logs for the given step ID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            log (DagsterLogManager): Log manager, for logging</span>
+<span class="sd">            cluster_id (str): EMR cluster ID</span>
+<span class="sd">            step_id (str): EMR step ID for the job that was submitted.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">            (str, str): Tuple of stdout log string contents, and stderr log string contents</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">,</span> <span class="s2">&quot;cluster_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">step_id</span><span class="p">,</span> <span class="s2">&quot;step_id&quot;</span><span class="p">)</span>
+
+        <span class="n">log_bucket</span><span class="p">,</span> <span class="n">log_key_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_location_for_cluster</span><span class="p">(</span><span class="n">cluster_id</span><span class="p">)</span>
+
+        <span class="n">prefix</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{log_key_prefix}{cluster_id}</span><span class="s2">/steps/</span><span class="si">{step_id}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">log_key_prefix</span><span class="o">=</span><span class="n">log_key_prefix</span><span class="p">,</span> <span class="n">cluster_id</span><span class="o">=</span><span class="n">cluster_id</span><span class="p">,</span> <span class="n">step_id</span><span class="o">=</span><span class="n">step_id</span>
+        <span class="p">)</span>
+        <span class="n">stdout_log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wait_for_log</span><span class="p">(</span><span class="n">log</span><span class="p">,</span> <span class="n">log_bucket</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{prefix}</span><span class="s2">/stdout.gz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">))</span>
+        <span class="n">stderr_log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">wait_for_log</span><span class="p">(</span><span class="n">log</span><span class="p">,</span> <span class="n">log_bucket</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">{prefix}</span><span class="s2">/stderr.gz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">stdout_log</span><span class="p">,</span> <span class="n">stderr_log</span>
+
+    <span class="k">def</span> <span class="nf">wait_for_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">log</span><span class="p">,</span> <span class="n">log_bucket</span><span class="p">,</span> <span class="n">log_key</span><span class="p">,</span> <span class="n">waiter_delay</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">waiter_max_attempts</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Wait for gzipped EMR logs to appear on S3. Note that EMR syncs logs to S3 every 5</span>
+<span class="sd">        minutes, so this may take a long time.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            log_bucket (str): S3 bucket where log is expected to appear</span>
+<span class="sd">            log_key (str): S3 key for the log file</span>
+<span class="sd">            waiter_delay (int): How long to wait between attempts to check S3 for the log file</span>
+<span class="sd">            waiter_max_attempts (int): Number of attempts before giving up on waiting</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            EmrError: Raised if we waited the full duration and the logs did not appear</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            str: contents of the log file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">log_bucket</span><span class="p">,</span> <span class="s2">&quot;log_bucket&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">log_key</span><span class="p">,</span> <span class="s2">&quot;log_key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">waiter_delay</span><span class="p">,</span> <span class="s2">&quot;waiter_delay&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">waiter_max_attempts</span><span class="p">,</span> <span class="s2">&quot;waiter_max_attempts&quot;</span><span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+            <span class="s2">&quot;Attempting to get log: s3://</span><span class="si">{log_bucket}</span><span class="s2">/</span><span class="si">{log_key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">log_bucket</span><span class="o">=</span><span class="n">log_bucket</span><span class="p">,</span> <span class="n">log_key</span><span class="o">=</span><span class="n">log_key</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">s3</span> <span class="o">=</span> <span class="n">_wrap_aws_client</span><span class="p">(</span><span class="n">boto3</span><span class="o">.</span><span class="n">client</span><span class="p">(</span><span class="s2">&quot;s3&quot;</span><span class="p">),</span> <span class="n">min_backoff</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">check_cluster_every</span><span class="p">)</span>
+        <span class="n">waiter</span> <span class="o">=</span> <span class="n">s3</span><span class="o">.</span><span class="n">get_waiter</span><span class="p">(</span><span class="s2">&quot;object_exists&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">waiter</span><span class="o">.</span><span class="n">wait</span><span class="p">(</span>
+                <span class="n">Bucket</span><span class="o">=</span><span class="n">log_bucket</span><span class="p">,</span>
+                <span class="n">Key</span><span class="o">=</span><span class="n">log_key</span><span class="p">,</span>
+                <span class="n">WaiterConfig</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Delay&quot;</span><span class="p">:</span> <span class="n">waiter_delay</span><span class="p">,</span> <span class="s2">&quot;MaxAttempts&quot;</span><span class="p">:</span> <span class="n">waiter_max_attempts</span><span class="p">},</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">WaiterError</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EmrError</span><span class="p">(</span><span class="s2">&quot;EMR log file did not appear on S3 after waiting&quot;</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">err</span>
+
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">BytesIO</span><span class="p">(</span><span class="n">s3</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="n">log_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="n">log_key</span><span class="p">)[</span><span class="s2">&quot;Body&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+        <span class="n">gzip_file</span> <span class="o">=</span> <span class="n">gzip</span><span class="o">.</span><span class="n">GzipFile</span><span class="p">(</span><span class="n">fileobj</span><span class="o">=</span><span class="n">obj</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">gzip_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_get_reason</span><span class="p">(</span><span class="n">cluster_or_step</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get state change reason message.&quot;&quot;&quot;</span>
+    <span class="c1"># StateChangeReason is {} before the first state change</span>
+    <span class="k">return</span> <span class="n">cluster_or_step</span><span class="p">[</span><span class="s2">&quot;Status&quot;</span><span class="p">][</span><span class="s2">&quot;StateChangeReason&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;Message&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

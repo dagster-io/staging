@@ -1,0 +1,274 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.s3.compute_log_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.s3.compute_log_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.compute_log_manager</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MAX_BYTES_FILE_READ</span><span class="p">,</span>
+    <span class="n">ComputeIOType</span><span class="p">,</span>
+    <span class="n">ComputeLogFileData</span><span class="p">,</span>
+    <span class="n">ComputeLogManager</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.local_compute_log_manager</span> <span class="kn">import</span> <span class="n">IO_TYPE_EXTENSION</span><span class="p">,</span> <span class="n">LocalComputeLogManager</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClass</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">ensure_dir</span><span class="p">,</span> <span class="n">ensure_file</span>
+
+
+<div class="viewcode-block" id="S3ComputeLogManager"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.s3.S3ComputeLogManager">[docs]</a><span class="k">class</span> <span class="nc">S3ComputeLogManager</span><span class="p">(</span><span class="n">ComputeLogManager</span><span class="p">,</span> <span class="n">ConfigurableClass</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Logs solid compute function stdout and stderr to S3.</span>
+
+<span class="sd">    Users should not instantiate this class directly. Instead, use a YAML block in ``dagster.yaml``</span>
+<span class="sd">    such as the following:</span>
+
+<span class="sd">    .. code-block:: YAML</span>
+
+<span class="sd">        compute_logs:</span>
+<span class="sd">          module: dagster_aws.s3.compute_log_manager</span>
+<span class="sd">          class: S3ComputeLogManager</span>
+<span class="sd">          config:</span>
+<span class="sd">            bucket: &quot;mycorp-dagster-compute-logs&quot;</span>
+<span class="sd">            local_dir: &quot;/tmp/cool&quot;</span>
+<span class="sd">            prefix: &quot;dagster-test-&quot;</span>
+<span class="sd">            use_ssl: true</span>
+<span class="sd">            verify: true</span>
+<span class="sd">            verify_cert_path: &quot;/path/to/cert/bundle.pem&quot;</span>
+<span class="sd">            endpoint_url: &quot;http://alternate-s3-host.io&quot;</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        bucket (str): The name of the s3 bucket to which to log.</span>
+<span class="sd">        local_dir (Optional[str]): Path to the local directory in which to stage logs. Default:</span>
+<span class="sd">            ``dagster.seven.get_system_temp_directory()``.</span>
+<span class="sd">        prefix (Optional[str]): Prefix for the log file keys.</span>
+<span class="sd">        use_ssl (Optional[bool]): Whether or not to use SSL. Default True.</span>
+<span class="sd">        verify (Optional[bool]): Whether or not to verify SSL certificates. Default True.</span>
+<span class="sd">        verify_cert_path (Optional[str]): A filename of the CA cert bundle to use. Only used if</span>
+<span class="sd">            `verify` set to False.</span>
+<span class="sd">        endpoint_url (Optional[str]): Override for the S3 endpoint url.</span>
+<span class="sd">        inst_data (Optional[ConfigurableClassData]): Serializable representation of the compute</span>
+<span class="sd">            log manager when newed up from config.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">bucket</span><span class="p">,</span>
+        <span class="n">local_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">inst_data</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;dagster&quot;</span><span class="p">,</span>
+        <span class="n">use_ssl</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">verify</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">verify_cert_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">endpoint_url</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">_verify</span> <span class="o">=</span> <span class="kc">False</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">verify</span> <span class="k">else</span> <span class="n">verify_cert_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span> <span class="o">=</span> <span class="n">boto3</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span>
+            <span class="s2">&quot;s3&quot;</span><span class="p">,</span> <span class="n">use_ssl</span><span class="o">=</span><span class="n">use_ssl</span><span class="p">,</span> <span class="n">verify</span><span class="o">=</span><span class="n">_verify</span><span class="p">,</span> <span class="n">endpoint_url</span><span class="o">=</span><span class="n">endpoint_url</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">client</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="s2">&quot;bucket&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_s3_prefix</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="s2">&quot;prefix&quot;</span><span class="p">)</span>
+
+        <span class="c1"># proxy calls to local compute log manager (for subscriptions, etc)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">local_dir</span><span class="p">:</span>
+            <span class="n">local_dir</span> <span class="o">=</span> <span class="n">seven</span><span class="o">.</span><span class="n">get_system_temp_directory</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span> <span class="o">=</span> <span class="n">LocalComputeLogManager</span><span class="p">(</span><span class="n">local_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="s2">&quot;inst_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span><span class="p">)</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">_watch_logs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="c1"># proxy watching to the local compute log manager, interacting with the filesystem</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">_watch_logs</span><span class="p">(</span>  <span class="c1"># pylint: disable=protected-access</span>
+            <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span>
+        <span class="p">):</span>
+            <span class="k">yield</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inst_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inst_data</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">config_type</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">StringSource</span><span class="p">,</span>
+            <span class="s2">&quot;local_dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="s2">&quot;prefix&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;dagster&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;use_ssl&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="s2">&quot;verify&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="s2">&quot;verify_cert_path&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="s2">&quot;endpoint_url&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_config_value</span><span class="p">(</span><span class="n">inst_data</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">S3ComputeLogManager</span><span class="p">(</span><span class="n">inst_data</span><span class="o">=</span><span class="n">inst_data</span><span class="p">,</span> <span class="o">**</span><span class="n">config_value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_local_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_watch_start</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">on_watch_start</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_watch_finish</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">on_watch_finish</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">get_key</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="n">step_key</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_from_local</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDOUT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_upload_from_local</span><span class="p">(</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="o">.</span><span class="n">STDERR</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">is_watch_completed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">is_watch_completed</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">download_url</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_watch_completed</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">download_url</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bucket_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+
+        <span class="n">url</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span><span class="o">.</span><span class="n">generate_presigned_url</span><span class="p">(</span>
+            <span class="n">ClientMethod</span><span class="o">=</span><span class="s2">&quot;get_object&quot;</span><span class="p">,</span> <span class="n">Params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Bucket&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="s2">&quot;Key&quot;</span><span class="p">:</span> <span class="n">key</span><span class="p">}</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">url</span>
+
+    <span class="k">def</span> <span class="nf">read_logs_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">max_bytes</span><span class="o">=</span><span class="n">MAX_BYTES_FILE_READ</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_download</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_download_to_local</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">read_logs_file</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">cursor</span><span class="p">,</span> <span class="n">max_bytes</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_from_local_file_data</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">on_subscribe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">subscription</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_manager</span><span class="o">.</span><span class="n">on_subscribe</span><span class="p">(</span><span class="n">subscription</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_should_download</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="n">local_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">local_path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="n">s3_objects</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span><span class="o">.</span><span class="n">list_objects</span><span class="p">(</span>
+            <span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="n">Prefix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_bucket_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">s3_objects</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">_from_local_file_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">,</span> <span class="n">local_file_data</span><span class="p">):</span>
+        <span class="n">is_complete</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_watch_completed</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;s3://</span><span class="si">{}</span><span class="s2">/</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bucket_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">is_complete</span>
+            <span class="k">else</span> <span class="n">local_file_data</span><span class="o">.</span><span class="n">path</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ComputeLogFileData</span><span class="p">(</span>
+            <span class="n">path</span><span class="p">,</span>
+            <span class="n">local_file_data</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">local_file_data</span><span class="o">.</span><span class="n">cursor</span><span class="p">,</span>
+            <span class="n">local_file_data</span><span class="o">.</span><span class="n">size</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">download_url</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_upload_from_local</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="n">ensure_file</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bucket_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span><span class="o">.</span><span class="n">upload_fileobj</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_download_to_local</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_local_path</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">)</span>
+        <span class="n">ensure_dir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fileobj</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_s3_session</span><span class="o">.</span><span class="n">download_fileobj</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_s3_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bucket_key</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">),</span> <span class="n">fileobj</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_bucket_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">io_type</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">io_type</span><span class="p">,</span> <span class="s2">&quot;io_type&quot;</span><span class="p">,</span> <span class="n">ComputeIOType</span><span class="p">)</span>
+        <span class="n">extension</span> <span class="o">=</span> <span class="n">IO_TYPE_EXTENSION</span><span class="p">[</span><span class="n">io_type</span><span class="p">]</span>
+        <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_s3_prefix</span><span class="p">,</span>
+            <span class="s2">&quot;storage&quot;</span><span class="p">,</span>
+            <span class="n">run_id</span><span class="p">,</span>
+            <span class="s2">&quot;compute_logs&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">extension</span><span class="p">),</span>
+        <span class="p">]</span>
+        <span class="k">return</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>  <span class="c1"># s3 path delimiter</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

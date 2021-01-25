@@ -1,0 +1,585 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.reconstructable &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.reconstructable</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">lru_cache</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.code_pointer</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">CodePointer</span><span class="p">,</span>
+    <span class="n">CustomPointer</span><span class="p">,</span>
+    <span class="n">FileCodePointer</span><span class="p">,</span>
+    <span class="n">ModuleCodePointer</span><span class="p">,</span>
+    <span class="n">get_python_file_from_target</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidSubsetError</span><span class="p">,</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.origin</span> <span class="kn">import</span> <span class="n">PipelinePythonOrigin</span><span class="p">,</span> <span class="n">RepositoryPythonOrigin</span><span class="p">,</span> <span class="n">SchedulePythonOrigin</span>
+<span class="kn">from</span> <span class="nn">dagster.core.selector</span> <span class="kn">import</span> <span class="n">parse_solid_selection</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">pack_value</span><span class="p">,</span> <span class="n">unpack_value</span><span class="p">,</span> <span class="n">whitelist_for_serdes</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental</span>
+
+<span class="kn">from</span> <span class="nn">.pipeline_base</span> <span class="kn">import</span> <span class="n">IPipeline</span>
+
+
+<span class="k">def</span> <span class="nf">get_ephemeral_repository_name</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s2">&quot;__repository__</span><span class="si">{pipeline_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_name</span><span class="p">)</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">ReconstructableRepository</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_ReconstructableRepository&quot;</span><span class="p">,</span> <span class="s2">&quot;pointer container_image&quot;</span><span class="p">)</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">pointer</span><span class="p">,</span> <span class="n">container_image</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ReconstructableRepository</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">pointer</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pointer</span><span class="p">,</span> <span class="s2">&quot;pointer&quot;</span><span class="p">,</span> <span class="n">CodePointer</span><span class="p">),</span>
+            <span class="n">container_image</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">container_image</span><span class="p">,</span> <span class="s2">&quot;container_image&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">repository_def_from_pointer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pointer</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_reconstructable_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ReconstructablePipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_reconstructable_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ReconstructableSchedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">for_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">file</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">,</span> <span class="n">working_directory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">container_image</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">working_directory</span><span class="p">:</span>
+            <span class="n">working_directory</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">FileCodePointer</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">,</span> <span class="n">working_directory</span><span class="p">),</span> <span class="n">container_image</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">for_module</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">module</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">,</span> <span class="n">container_image</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">ModuleCodePointer</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">),</span> <span class="n">container_image</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_cli_args</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pointer</span><span class="o">.</span><span class="n">get_cli_args</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_python_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">RepositoryPythonOrigin</span><span class="p">(</span>
+            <span class="n">executable_path</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">executable</span><span class="p">,</span>
+            <span class="n">code_pointer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pointer</span><span class="p">,</span>
+            <span class="n">container_image</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">container_image</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_python_origin_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">()</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">ReconstructablePipeline</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_ReconstructablePipeline&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;repository pipeline_name solid_selection_str solids_to_execute&quot;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="n">IPipeline</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">repository</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">,</span> <span class="n">solid_selection_str</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">,</span> <span class="s2">&quot;solids_to_execute&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ReconstructablePipeline</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">repository</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">repository</span><span class="p">,</span> <span class="s2">&quot;repository&quot;</span><span class="p">,</span> <span class="n">ReconstructableRepository</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">solid_selection_str</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">solid_selection_str</span><span class="p">,</span> <span class="s2">&quot;solid_selection_str&quot;</span><span class="p">),</span>
+            <span class="n">solids_to_execute</span><span class="o">=</span><span class="n">solids_to_execute</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solid_selection_str</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid_selection_str</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">get_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">get_pipeline_subset_def</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solids_to_execute</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_resolve_solid_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_selection</span><span class="p">):</span>
+        <span class="c1"># resolve a list of solid selection queries to a frozenset of qualified solid names</span>
+        <span class="c1"># e.g. [&#39;foo_solid+&#39;] to {&#39;foo_solid&#39;, &#39;bar_solid&#39;}</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">solids_to_execute</span> <span class="o">=</span> <span class="n">parse_solid_selection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(),</span> <span class="n">solid_selection</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidSubsetError</span><span class="p">(</span>
+                <span class="s2">&quot;No qualified solids to execute found for solid_selection=</span><span class="si">{requested}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">requested</span><span class="o">=</span><span class="n">solid_selection</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">solids_to_execute</span>
+
+    <span class="k">def</span> <span class="nf">get_reconstructable_repository</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">repository</span>
+
+    <span class="k">def</span> <span class="nf">_subset_for_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">solids_to_execute</span><span class="p">:</span>
+            <span class="n">pipe</span> <span class="o">=</span> <span class="n">ReconstructablePipeline</span><span class="p">(</span>
+                <span class="n">repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="p">,</span>
+                <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+                <span class="n">solid_selection_str</span><span class="o">=</span><span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">)</span> <span class="k">if</span> <span class="n">solid_selection</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">solids_to_execute</span><span class="o">=</span><span class="nb">frozenset</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">pipe</span> <span class="o">=</span> <span class="n">ReconstructablePipeline</span><span class="p">(</span>
+                <span class="n">repository</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="n">pipe</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span>  <span class="c1"># verify the subset is correct</span>
+        <span class="k">return</span> <span class="n">pipe</span>
+
+    <span class="k">def</span> <span class="nf">subset_for_execution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_selection</span><span class="p">):</span>
+        <span class="c1"># take a list of solid queries and resolve the queries to names of solids to execute</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">solids_to_execute</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_solid_selection</span><span class="p">(</span><span class="n">solid_selection</span><span class="p">)</span> <span class="k">if</span> <span class="n">solid_selection</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subset_for_execution</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">,</span> <span class="n">solid_selection</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">subset_for_execution_from_existing_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solids_to_execute</span><span class="p">):</span>
+        <span class="c1"># take a frozenset of resolved solid names from an existing pipeline</span>
+        <span class="c1"># so there&#39;s no need to parse the selection</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_set_param</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">,</span> <span class="s2">&quot;solids_to_execute&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_subset_for_execution</span><span class="p">(</span><span class="n">solids_to_execute</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">describe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s1">&#39;&quot;</span><span class="si">{name}</span><span class="s1">&quot; in repository (</span><span class="si">{repo}</span><span class="s1">)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">repo</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="o">.</span><span class="n">pointer</span><span class="o">.</span><span class="n">describe</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_name</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">for_file</span><span class="p">(</span><span class="n">python_file</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">bootstrap_standalone_recon_pipeline</span><span class="p">(</span>
+            <span class="n">FileCodePointer</span><span class="p">(</span><span class="n">python_file</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">for_module</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">bootstrap_standalone_recon_pipeline</span><span class="p">(</span><span class="n">ModuleCodePointer</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pack_value</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">val</span><span class="p">,</span> <span class="s2">&quot;val&quot;</span><span class="p">)</span>
+
+        <span class="n">inst</span> <span class="o">=</span> <span class="n">unpack_value</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="n">ReconstructablePipeline</span><span class="p">),</span>
+            <span class="s2">&quot;Deserialized object is not instance of ReconstructablePipeline, got </span><span class="si">{type}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">inst</span><span class="p">)</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">inst</span>
+
+    <span class="k">def</span> <span class="nf">get_python_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">PipelinePythonOrigin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">get_python_origin_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">()</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">ReconstructableSchedule</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_ReconstructableSchedule&quot;</span><span class="p">,</span> <span class="s2">&quot;repository schedule_name&quot;</span><span class="p">,)):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">repository</span><span class="p">,</span> <span class="n">schedule_name</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ReconstructableSchedule</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">repository</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">repository</span><span class="p">,</span> <span class="s2">&quot;repository&quot;</span><span class="p">,</span> <span class="n">ReconstructableRepository</span><span class="p">),</span>
+            <span class="n">schedule_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">,</span> <span class="s2">&quot;schedule_name&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_python_origin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">SchedulePythonOrigin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schedule_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">get_python_origin_id</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_python_origin</span><span class="p">()</span><span class="o">.</span><span class="n">get_id</span><span class="p">()</span>
+
+    <span class="nd">@lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">repository</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span><span class="o">.</span><span class="n">get_schedule_def</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">schedule_name</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="reconstructable"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.reconstructable">[docs]</a><span class="k">def</span> <span class="nf">reconstructable</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a ReconstructablePipeline from a function that returns a PipelineDefinition, or a</span>
+<span class="sd">    function decorated with :py:func:`@pipeline &lt;dagster.pipeline&gt;`</span>
+
+<span class="sd">    When your pipeline must cross process boundaries, e.g., for execution on multiple nodes or</span>
+<span class="sd">    in different systems (like dagstermill), Dagster must know how to reconstruct the pipeline</span>
+<span class="sd">    on the other side of the process boundary.</span>
+
+<span class="sd">    This function implements a very conservative strategy for reconstructing pipelines, so that</span>
+<span class="sd">    its behavior is easy to predict, but as a consequence it is not able to reconstruct certain</span>
+<span class="sd">    kinds of pipelines, such as those defined by lambdas, in nested scopes (e.g., dynamically</span>
+<span class="sd">    within a method call), or in interactive environments such as the Python REPL or Jupyter</span>
+<span class="sd">    notebooks.</span>
+
+<span class="sd">    If you need to reconstruct pipelines constructed in these ways, you should use</span>
+<span class="sd">    :py:func:`build_reconstructable_pipeline` instead, which allows you to specify your own</span>
+<span class="sd">    strategy for reconstructing a pipeline.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from dagster import PipelineDefinition, pipeline, reconstructable</span>
+
+<span class="sd">        @pipeline</span>
+<span class="sd">        def foo_pipeline():</span>
+<span class="sd">            ...</span>
+
+<span class="sd">        reconstructable_foo_pipeline = reconstructable(foo_pipeline)</span>
+
+
+<span class="sd">        def make_bar_pipeline():</span>
+<span class="sd">            return PipelineDefinition(...)</span>
+
+<span class="sd">        reconstructable_bar_pipeline = reconstructable(bar_pipeline)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.definitions</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">seven</span><span class="o">.</span><span class="n">is_function_or_decorator_instance_of</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="s2">&quot;Reconstructable target should be a function or definition produced &quot;</span>
+            <span class="s2">&quot;by a decorated function, got </span><span class="si">{type}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">target</span><span class="p">)),</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">seven</span><span class="o">.</span><span class="n">is_lambda</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="s2">&quot;Reconstructable target can not be a lambda. Use a function or &quot;</span>
+            <span class="s2">&quot;decorated function defined at module scope instead, or use &quot;</span>
+            <span class="s2">&quot;build_reconstructable_pipeline.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">seven</span><span class="o">.</span><span class="n">qualname_differs</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="s1">&#39;Reconstructable target &quot;</span><span class="si">{target.__name__}</span><span class="s1">&quot; has a different &#39;</span>
+            <span class="s1">&#39;__qualname__ &quot;</span><span class="si">{target.__qualname__}</span><span class="s1">&quot; indicating it is not &#39;</span>
+            <span class="s2">&quot;defined at module scope. Use a function or decorated function &quot;</span>
+            <span class="s2">&quot;defined at module scope instead, or use build_reconstructable_pipeline.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">target</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="nb">hasattr</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;__module__&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">&quot;__name__&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">inspect</span><span class="o">.</span><span class="n">getmodule</span><span class="p">(</span><span class="n">target</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">!=</span> <span class="s2">&quot;__main__&quot;</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">ReconstructablePipeline</span><span class="o">.</span><span class="n">for_module</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="vm">__module__</span><span class="p">,</span> <span class="n">target</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>  <span class="c1"># pylint: disable=bare-except</span>
+        <span class="k">pass</span>
+
+    <span class="n">python_file</span> <span class="o">=</span> <span class="n">get_python_file_from_target</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">python_file</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="s2">&quot;reconstructable() can not reconstruct pipelines defined in interactive environments &quot;</span>
+            <span class="s2">&quot;like &lt;stdin&gt;, IPython, or Jupyter notebooks. &quot;</span>
+            <span class="s2">&quot;Use a pipeline defined in a module or file instead, or &quot;</span>
+            <span class="s2">&quot;use build_reconstructable_pipeline.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">pointer</span> <span class="o">=</span> <span class="n">FileCodePointer</span><span class="p">(</span>
+        <span class="n">python_file</span><span class="o">=</span><span class="n">python_file</span><span class="p">,</span> <span class="n">fn_name</span><span class="o">=</span><span class="n">target</span><span class="o">.</span><span class="vm">__name__</span><span class="p">,</span> <span class="n">working_directory</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">bootstrap_standalone_recon_pipeline</span><span class="p">(</span><span class="n">pointer</span><span class="p">)</span></div>
+
+
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">build_reconstructable_pipeline</span><span class="p">(</span>
+    <span class="n">reconstructor_module_name</span><span class="p">,</span>
+    <span class="n">reconstructor_function_name</span><span class="p">,</span>
+    <span class="n">reconstructable_args</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">reconstructable_kwargs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create a ReconstructablePipeline.</span>
+
+<span class="sd">    When your pipeline must cross process boundaries, e.g., for execution on multiple nodes or</span>
+<span class="sd">    in different systems (like dagstermill), Dagster must know how to reconstruct the pipeline</span>
+<span class="sd">    on the other side of the process boundary.</span>
+
+<span class="sd">    This function allows you to use the strategy of your choice for reconstructing pipelines, so</span>
+<span class="sd">    that you can reconstruct certain kinds of pipelines that are not supported by</span>
+<span class="sd">    :py:func:`reconstructable`, such as those defined by lambdas, in nested scopes (e.g.,</span>
+<span class="sd">    dynamically within a method call), or in interactive environments such as the Python REPL or</span>
+<span class="sd">    Jupyter notebooks.</span>
+
+<span class="sd">    If you need to reconstruct pipelines constructed in these ways, use this function instead of</span>
+<span class="sd">    :py:func:`reconstructable`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        reconstructor_module_name (str): The name of the module containing the function to use to</span>
+<span class="sd">            reconstruct the pipeline.</span>
+<span class="sd">        reconstructor_function_name (str): The name of the function to use to reconstruct the</span>
+<span class="sd">            pipeline.</span>
+<span class="sd">        reconstructable_args (Tuple): Args to the function to use to reconstruct the pipeline.</span>
+<span class="sd">            Values of the tuple must be JSON serializable.</span>
+<span class="sd">        reconstructable_kwargs (Dict[str, Any]): Kwargs to the function to use to reconstruct the</span>
+<span class="sd">            pipeline. Values of the dict must be JSON serializable.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        # module: mymodule</span>
+
+<span class="sd">        from dagster import PipelineDefinition, pipeline, build_reconstructable_pipeline</span>
+
+<span class="sd">        class PipelineFactory:</span>
+<span class="sd">            def make_pipeline(*args, **kwargs):</span>
+
+<span class="sd">                @pipeline</span>
+<span class="sd">                def _pipeline(...):</span>
+<span class="sd">                    ...</span>
+
+<span class="sd">                return _pipeline</span>
+
+<span class="sd">        def reconstruct_pipeline(*args):</span>
+<span class="sd">            factory = PipelineFactory()</span>
+<span class="sd">            return factory.make_pipeline(*args)</span>
+
+<span class="sd">        factory = PipelineFactory()</span>
+
+<span class="sd">        foo_pipeline_args = (...,...)</span>
+
+<span class="sd">        foo_pipeline_kwargs = {...:...}</span>
+
+<span class="sd">        foo_pipeline = factory.make_pipeline(*foo_pipeline_args, **foo_pipeline_kwargs)</span>
+
+<span class="sd">        reconstructable_foo_pipeline = build_reconstructable_pipeline(</span>
+<span class="sd">            &#39;mymodule&#39;,</span>
+<span class="sd">            &#39;reconstruct_pipeline&#39;,</span>
+<span class="sd">            foo_pipeline_args,</span>
+<span class="sd">            foo_pipeline_kwargs,</span>
+<span class="sd">        )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">reconstructor_module_name</span><span class="p">,</span> <span class="s2">&quot;reconstructor_module_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">reconstructor_function_name</span><span class="p">,</span> <span class="s2">&quot;reconstructor_function_name&quot;</span><span class="p">)</span>
+
+    <span class="n">reconstructable_args</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">opt_tuple_param</span><span class="p">(</span><span class="n">reconstructable_args</span><span class="p">,</span> <span class="s2">&quot;reconstructable_args&quot;</span><span class="p">))</span>
+    <span class="n">reconstructable_kwargs</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+        <span class="p">(</span>
+            <span class="p">[</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+                <span class="n">reconstructable_kwargs</span><span class="p">,</span> <span class="s2">&quot;reconstructable_kwargs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">reconstructor_pointer</span> <span class="o">=</span> <span class="n">ModuleCodePointer</span><span class="p">(</span>
+        <span class="n">reconstructor_module_name</span><span class="p">,</span> <span class="n">reconstructor_function_name</span>
+    <span class="p">)</span>
+
+    <span class="n">pointer</span> <span class="o">=</span> <span class="n">CustomPointer</span><span class="p">(</span><span class="n">reconstructor_pointer</span><span class="p">,</span> <span class="n">reconstructable_args</span><span class="p">,</span> <span class="n">reconstructable_kwargs</span><span class="p">)</span>
+
+    <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">pipeline_def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">ReconstructablePipeline</span><span class="p">(</span>
+        <span class="n">repository</span><span class="o">=</span><span class="n">ReconstructableRepository</span><span class="p">(</span><span class="n">pointer</span><span class="p">),</span>  <span class="c1"># creates ephemeral repo</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">bootstrap_standalone_recon_pipeline</span><span class="p">(</span><span class="n">pointer</span><span class="p">):</span>
+    <span class="c1"># So this actually straps the the pipeline for the sole</span>
+    <span class="c1"># purpose of getting the pipeline name. If we changed ReconstructablePipeline</span>
+    <span class="c1"># to get the pipeline on demand in order to get name, we could avoid this.</span>
+    <span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">pipeline_def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ReconstructablePipeline</span><span class="p">(</span>
+        <span class="n">repository</span><span class="o">=</span><span class="n">ReconstructableRepository</span><span class="p">(</span><span class="n">pointer</span><span class="p">),</span>  <span class="c1"># creates ephemeral repo</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_check_is_loadable</span><span class="p">(</span><span class="n">definition</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+    <span class="kn">from</span> <span class="nn">.repository</span> <span class="kn">import</span> <span class="n">RepositoryDefinition</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="p">(</span><span class="n">PipelineDefinition</span><span class="p">,</span> <span class="n">RepositoryDefinition</span><span class="p">)):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;Loadable attributes must be either a PipelineDefinition or a &quot;</span>
+                <span class="s2">&quot;RepositoryDefinition. Got </span><span class="si">{definition}</span><span class="s2">.&quot;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">definition</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="n">definition</span><span class="p">))</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">definition</span>
+
+
+<span class="k">def</span> <span class="nf">load_def_in_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">attribute</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">def_from_pointer</span><span class="p">(</span><span class="n">CodePointer</span><span class="o">.</span><span class="n">from_module</span><span class="p">(</span><span class="n">module_name</span><span class="p">,</span> <span class="n">attribute</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">load_def_in_package</span><span class="p">(</span><span class="n">package_name</span><span class="p">,</span> <span class="n">attribute</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">def_from_pointer</span><span class="p">(</span><span class="n">CodePointer</span><span class="o">.</span><span class="n">from_python_package</span><span class="p">(</span><span class="n">package_name</span><span class="p">,</span> <span class="n">attribute</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">load_def_in_python_file</span><span class="p">(</span><span class="n">python_file</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">working_directory</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">def_from_pointer</span><span class="p">(</span><span class="n">CodePointer</span><span class="o">.</span><span class="n">from_python_file</span><span class="p">(</span><span class="n">python_file</span><span class="p">,</span> <span class="n">attribute</span><span class="p">,</span> <span class="n">working_directory</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">):</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">pointer</span><span class="o">.</span><span class="n">load_target</span><span class="p">()</span>
+
+    <span class="kn">from</span> <span class="nn">.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+    <span class="kn">from</span> <span class="nn">.repository</span> <span class="kn">import</span> <span class="n">RepositoryDefinition</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="p">(</span><span class="n">PipelineDefinition</span><span class="p">,</span> <span class="n">RepositoryDefinition</span><span class="p">))</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">callable</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_check_is_loadable</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+
+    <span class="c1"># if its a function invoke it - otherwise we are pointing to a</span>
+    <span class="c1"># artifact in module scope, likely decorator output</span>
+
+    <span class="k">if</span> <span class="n">seven</span><span class="o">.</span><span class="n">get_args</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="s2">&quot;Error invoking function at </span><span class="si">{target}</span><span class="s2"> with no arguments. &quot;</span>
+            <span class="s2">&quot;Reconstructable target must be callable with no arguments&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">pointer</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_check_is_loadable</span><span class="p">(</span><span class="n">target</span><span class="p">())</span>
+
+
+<span class="k">def</span> <span class="nf">pipeline_def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+
+    <span class="n">target</span> <span class="o">=</span> <span class="n">def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">target</span>
+
+    <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+        <span class="s2">&quot;CodePointer (</span><span class="si">{str}</span><span class="s2">) must resolve to a PipelineDefinition. &quot;</span>
+        <span class="s2">&quot;Received a </span><span class="si">{type}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="o">=</span><span class="n">pointer</span><span class="o">.</span><span class="n">describe</span><span class="p">(),</span> <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">repository_def_from_target_def</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+    <span class="kn">from</span> <span class="nn">.repository</span> <span class="kn">import</span> <span class="n">RepositoryData</span><span class="p">,</span> <span class="n">RepositoryDefinition</span>
+
+    <span class="c1"># special case - we can wrap a single pipeline in a repository</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">):</span>
+        <span class="c1"># consider including pipeline name in generated repo name</span>
+        <span class="k">return</span> <span class="n">RepositoryDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">get_ephemeral_repository_name</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">name</span><span class="p">),</span>
+            <span class="n">repository_data</span><span class="o">=</span><span class="n">RepositoryData</span><span class="o">.</span><span class="n">from_list</span><span class="p">([</span><span class="n">target</span><span class="p">]),</span>
+        <span class="p">)</span>
+    <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">RepositoryDefinition</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">target</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">repository_def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">):</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">def_from_pointer</span><span class="p">(</span><span class="n">pointer</span><span class="p">)</span>
+    <span class="n">repo_def</span> <span class="o">=</span> <span class="n">repository_def_from_target_def</span><span class="p">(</span><span class="n">target</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">repo_def</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+            <span class="s2">&quot;CodePointer (</span><span class="si">{str}</span><span class="s2">) must resolve to a &quot;</span>
+            <span class="s2">&quot;RepositoryDefinition or a PipelineDefinition. &quot;</span>
+            <span class="s2">&quot;Received a </span><span class="si">{type}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">str</span><span class="o">=</span><span class="n">pointer</span><span class="o">.</span><span class="n">describe</span><span class="p">(),</span> <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">target</span><span class="p">))</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">repo_def</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

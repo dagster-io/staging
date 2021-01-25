@@ -1,0 +1,339 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.executor &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.executor</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.builtins</span> <span class="kn">import</span> <span class="n">Int</span>
+<span class="kn">from</span> <span class="nn">dagster.config.field</span> <span class="kn">import</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.configurable</span> <span class="kn">import</span> <span class="n">ConfigurableDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.reconstructable</span> <span class="kn">import</span> <span class="n">ReconstructablePipeline</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterUnmetExecutorRequirementsError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.retries</span> <span class="kn">import</span> <span class="n">Retries</span><span class="p">,</span> <span class="n">get_retries_config</span>
+
+<span class="kn">from</span> <span class="nn">.definition_config_schema</span> <span class="kn">import</span> <span class="n">convert_user_facing_definition_config_schema</span>
+
+
+<div class="viewcode-block" id="ExecutorDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.ExecutorDefinition">[docs]</a><span class="k">class</span> <span class="nc">ExecutorDefinition</span><span class="p">(</span><span class="n">ConfigurableDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of the executor.</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data</span>
+<span class="sd">            available in `init_context.executor_config`.</span>
+<span class="sd">        executor_creation_fn(Optional[Callable]): Should accept an :py:class:`InitExecutorContext`</span>
+<span class="sd">            and return an instance of :py:class:`Executor`</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the</span>
+<span class="sd">            executor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">executor_creation_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_schema</span> <span class="o">=</span> <span class="n">convert_user_facing_definition_config_schema</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_executor_creation_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span>
+            <span class="n">executor_creation_fn</span><span class="p">,</span> <span class="s2">&quot;executor_creation_fn&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_schema</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">executor_creation_fn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executor_creation_fn</span>
+
+    <span class="k">def</span> <span class="nf">copy_for_configured</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">config_schema</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ExecutorDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">executor_creation_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">executor_creation_fn</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="executor"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.executor">[docs]</a><span class="k">def</span> <span class="nf">executor</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define an executor.</span>
+
+<span class="sd">    The decorated function should accept an :py:class:`InitExecutorContext` and return an instance</span>
+<span class="sd">    of :py:class:`Executor`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of the executor.</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data available in</span>
+<span class="sd">            `init_context.executor_config`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">config_schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">_ExecutorDecoratorCallable</span><span class="p">()(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_ExecutorDecoratorCallable</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">_ExecutorDecoratorCallable</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="o">=</span> <span class="n">config_schema</span>  <span class="c1"># type check in definition</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">executor_def</span> <span class="o">=</span> <span class="n">ExecutorDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span> <span class="n">executor_creation_fn</span><span class="o">=</span><span class="n">fn</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">executor_def</span><span class="p">,</span> <span class="n">wrapped</span><span class="o">=</span><span class="n">fn</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">executor_def</span>
+
+
+<div class="viewcode-block" id="in_process_executor"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.in_process_executor">[docs]</a><span class="nd">@executor</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;in_process&quot;</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;retries&quot;</span><span class="p">:</span> <span class="n">get_retries_config</span><span class="p">(),</span>
+        <span class="s2">&quot;marker_to_close&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">in_process_executor</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The default in-process executor.</span>
+
+<span class="sd">    In most Dagster environments, this will be the default executor. It is available by default on</span>
+<span class="sd">    any :py:class:`ModeDefinition` that does not provide custom executors. To select it explicitly,</span>
+<span class="sd">    include the following top-level fragment in config:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        execution:</span>
+<span class="sd">          in_process:</span>
+
+<span class="sd">    Execution priority can be configured using the ``dagster/priority`` tag via solid metadata,</span>
+<span class="sd">    where the higher the number the higher the priority. 0 is the default and both positive</span>
+<span class="sd">    and negative numbers can be used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.executor.init</span> <span class="kn">import</span> <span class="n">InitExecutorContext</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.executor.in_process</span> <span class="kn">import</span> <span class="n">InProcessExecutor</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">init_context</span><span class="p">,</span> <span class="s2">&quot;init_context&quot;</span><span class="p">,</span> <span class="n">InitExecutorContext</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">InProcessExecutor</span><span class="p">(</span>
+        <span class="c1"># shouldn&#39;t need to .get() here - issue with defaults in config setup</span>
+        <span class="n">retries</span><span class="o">=</span><span class="n">Retries</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;retries&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="p">{}})),</span>
+        <span class="n">marker_to_close</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;marker_to_close&quot;</span><span class="p">),</span>
+    <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="multiprocess_executor"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.multiprocess_executor">[docs]</a><span class="nd">@executor</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;multiprocess&quot;</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;max_concurrent&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">Int</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span>
+        <span class="s2">&quot;retries&quot;</span><span class="p">:</span> <span class="n">get_retries_config</span><span class="p">(),</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">multiprocess_executor</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The default multiprocess executor.</span>
+
+<span class="sd">    This simple multiprocess executor is available by default on any :py:class:`ModeDefinition`</span>
+<span class="sd">    that does not provide custom executors. To select the multiprocess executor, include a fragment</span>
+<span class="sd">    such as the following in your config:</span>
+
+<span class="sd">    .. code-block:: yaml</span>
+
+<span class="sd">        execution:</span>
+<span class="sd">          multiprocess:</span>
+<span class="sd">            config:</span>
+<span class="sd">              max_concurrent: 4</span>
+
+<span class="sd">    The ``max_concurrent`` arg is optional and tells the execution engine how many processes may run</span>
+<span class="sd">    concurrently. By default, or if you set ``max_concurrent`` to be 0, this is the return value of</span>
+<span class="sd">    :py:func:`python:multiprocessing.cpu_count`.</span>
+
+<span class="sd">    Execution priority can be configured using the ``dagster/priority`` tag via solid metadata,</span>
+<span class="sd">    where the higher the number the higher the priority. 0 is the default and both positive</span>
+<span class="sd">    and negative numbers can be used.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.executor.init</span> <span class="kn">import</span> <span class="n">InitExecutorContext</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.executor.multiprocess</span> <span class="kn">import</span> <span class="n">MultiprocessExecutor</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">init_context</span><span class="p">,</span> <span class="s2">&quot;init_context&quot;</span><span class="p">,</span> <span class="n">InitExecutorContext</span><span class="p">)</span>
+
+    <span class="n">check_cross_process_constraints</span><span class="p">(</span><span class="n">init_context</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">MultiprocessExecutor</span><span class="p">(</span>
+        <span class="n">pipeline</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">pipeline</span><span class="p">,</span>
+        <span class="n">max_concurrent</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span><span class="p">[</span><span class="s2">&quot;max_concurrent&quot;</span><span class="p">],</span>
+        <span class="n">retries</span><span class="o">=</span><span class="n">Retries</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span><span class="p">[</span><span class="s2">&quot;retries&quot;</span><span class="p">]),</span>
+    <span class="p">)</span></div>
+
+
+<span class="n">default_executors</span> <span class="o">=</span> <span class="p">[</span><span class="n">in_process_executor</span><span class="p">,</span> <span class="n">multiprocess_executor</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">check_cross_process_constraints</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.executor.init</span> <span class="kn">import</span> <span class="n">InitExecutorContext</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">init_context</span><span class="p">,</span> <span class="s2">&quot;init_context&quot;</span><span class="p">,</span> <span class="n">InitExecutorContext</span><span class="p">)</span>
+
+    <span class="n">_check_intra_process_pipeline</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span>
+    <span class="n">_check_non_ephemeral_instance</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">instance</span><span class="p">)</span>
+    <span class="n">_check_persistent_storage_requirement</span><span class="p">(</span>
+        <span class="n">init_context</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(),</span>
+        <span class="n">init_context</span><span class="o">.</span><span class="n">mode_def</span><span class="p">,</span>
+        <span class="n">init_context</span><span class="o">.</span><span class="n">intermediate_storage_def</span><span class="p">,</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_check_intra_process_pipeline</span><span class="p">(</span><span class="n">pipeline</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="n">ReconstructablePipeline</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterUnmetExecutorRequirementsError</span><span class="p">(</span>
+            <span class="s1">&#39;You have attempted to use an executor that uses multiple processes with the pipeline &quot;</span><span class="si">{name}</span><span class="s1">&quot; &#39;</span>
+            <span class="s2">&quot;that is not reconstructable. Pipelines must be loaded in a way that allows dagster to reconstruct &quot;</span>
+            <span class="s2">&quot;them in a new process. This means: </span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  * using the file, module, or repository.yaml arguments of dagit/dagster-graphql/dagster</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="s2">&quot;  * loading the pipeline through the reconstructable() function</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span><span class="o">.</span><span class="n">name</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_all_outputs_non_mem_io_managers</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">mode_def</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns true if every output definition in the pipeline uses an IO manager that&#39;s not</span>
+<span class="sd">    the mem_io_manager.</span>
+
+<span class="sd">    If true, this indicates that it&#39;s OK to execute steps in their own processes, because their</span>
+<span class="sd">    outputs will be available to other processes.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># pylint: disable=comparison-with-callable</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.storage.mem_io_manager</span> <span class="kn">import</span> <span class="n">mem_io_manager</span>
+
+    <span class="n">output_defs</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">output_def</span>
+        <span class="k">for</span> <span class="n">solid_def</span> <span class="ow">in</span> <span class="n">pipeline_def</span><span class="o">.</span><span class="n">all_solid_defs</span>
+        <span class="k">for</span> <span class="n">output_def</span> <span class="ow">in</span> <span class="n">solid_def</span><span class="o">.</span><span class="n">output_defs</span>
+    <span class="p">]</span>
+    <span class="k">for</span> <span class="n">output_def</span> <span class="ow">in</span> <span class="n">output_defs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">mode_def</span><span class="o">.</span><span class="n">resource_defs</span><span class="p">[</span><span class="n">output_def</span><span class="o">.</span><span class="n">io_manager_key</span><span class="p">]</span> <span class="o">==</span> <span class="n">mem_io_manager</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">return</span> <span class="kc">True</span>
+
+
+<span class="k">def</span> <span class="nf">_check_persistent_storage_requirement</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">mode_def</span><span class="p">,</span> <span class="n">intermediate_storage_def</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;We prefer to store outputs with IO managers, but will fall back to intermediate storage</span>
+<span class="sd">    if an IO manager isn&#39;t set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+        <span class="n">_all_outputs_non_mem_io_managers</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">mode_def</span><span class="p">)</span>
+        <span class="ow">or</span> <span class="p">(</span><span class="n">intermediate_storage_def</span> <span class="ow">and</span> <span class="n">intermediate_storage_def</span><span class="o">.</span><span class="n">is_persistent</span><span class="p">)</span>
+    <span class="p">):</span>
+        <span class="k">raise</span> <span class="n">DagsterUnmetExecutorRequirementsError</span><span class="p">(</span>
+            <span class="s2">&quot;You have attempted to use an executor that uses multiple processes, but your pipeline &quot;</span>
+            <span class="s2">&quot;includes solid outputs that will not be stored somewhere where other processes can&quot;</span>
+            <span class="s2">&quot;retrieve them. &quot;</span>
+            <span class="s2">&quot;Please make sure that your pipeline definition includes a ModeDefinition whose &quot;</span>
+            <span class="s1">&#39;resource_keys assign the &quot;io_manager&quot; key to an IOManager resource &#39;</span>
+            <span class="s2">&quot;that stores outputs outside of the process, such as the fs_io_manager.&quot;</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_check_non_ephemeral_instance</span><span class="p">(</span><span class="n">instance</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">instance</span><span class="o">.</span><span class="n">is_ephemeral</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterUnmetExecutorRequirementsError</span><span class="p">(</span>
+            <span class="s2">&quot;You have attempted to use an executor that uses multiple processes with an &quot;</span>
+            <span class="s2">&quot;ephemeral DagsterInstance. A non-ephemeral instance is needed to coordinate &quot;</span>
+            <span class="s2">&quot;execution between multiple processes. You can configure your default instance &quot;</span>
+            <span class="s2">&quot;via $DAGSTER_HOME or ensure a valid one is passed when invoking the python APIs.&quot;</span>
+        <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

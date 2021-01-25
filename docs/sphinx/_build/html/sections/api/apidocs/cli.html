@@ -1,0 +1,2389 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dagster CLI &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Config" href="config.html" />
+    <link rel="prev" title="&lt;no title&gt;" href="../../../index.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="config.html" title="Next document">Config</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="dagster-cli">
+<h1>Dagster CLI<a class="headerlink" href="#dagster-cli" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="dagster-asset">
+<h2>dagster asset<a class="headerlink" href="#dagster-asset" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster asset <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-asset-wipe">
+<h3>wipe<a class="headerlink" href="#dagster-asset-wipe" title="Permalink to this headline">¶</a></h3>
+<p>Eliminate asset key indexes from event logs. Warning: Cannot be undone</p>
+<p>Usage:</p>
+<blockquote>
+<div><p>dagster asset wipe –all</p>
+<p>dagster asset wipe &lt;unstructured_asset_key_name&gt;</p>
+<p>dagster asset wipe &lt;json_string_of_structured_asset_key&gt;</p>
+</div></blockquote>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster asset wipe <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>KEY<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-asset-wipe-all">
+<code class="sig-name descname">--all</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-asset-wipe-all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Eliminate all asset key indexes</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-asset-wipe-arg-key">
+<code class="sig-name descname">KEY</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-asset-wipe-arg-key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="dagster-debug">
+<h2>dagster debug<a class="headerlink" href="#dagster-debug" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster debug <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-debug-export">
+<h3>export<a class="headerlink" href="#dagster-debug-export" title="Permalink to this headline">¶</a></h3>
+<p>Export the relevant artifacts for a pipeline run to a file.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster debug <span class="nb">export</span> <span class="o">[</span>OPTIONS<span class="o">]</span> RUN_ID OUTPUT_FILE
+</pre></div>
+</div>
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-debug-export-arg-run-id">
+<code class="sig-name descname">RUN_ID</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-debug-export-arg-run-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-debug-export-arg-output-file">
+<code class="sig-name descname">OUTPUT_FILE</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-debug-export-arg-output-file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Required argument</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="dagster-instance">
+<h2>dagster instance<a class="headerlink" href="#dagster-instance" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster instance <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-instance-info">
+<h3>info<a class="headerlink" href="#dagster-instance-info" title="Permalink to this headline">¶</a></h3>
+<p>List the information about the current instance.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster instance info <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dagster-instance-migrate">
+<h3>migrate<a class="headerlink" href="#dagster-instance-migrate" title="Permalink to this headline">¶</a></h3>
+<p>Automatically migrate an out of date instance.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster instance migrate <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dagster-instance-reindex">
+<h3>reindex<a class="headerlink" href="#dagster-instance-reindex" title="Permalink to this headline">¶</a></h3>
+<p>Rebuild index over historical runs for performance.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster instance reindex <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="dagster-pipeline">
+<h2>dagster pipeline<a class="headerlink" href="#dagster-pipeline" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-pipeline-backfill">
+<h3>backfill<a class="headerlink" href="#dagster-pipeline-backfill" title="Permalink to this headline">¶</a></h3>
+<p>Backfill a partitioned pipeline.</p>
+<p>This commands targets a partitioned pipeline. The pipeline and partition set must be defined in a repository, which can be specified in a number of ways:</p>
+<ol class="arabic simple">
+<li><p>dagster pipeline backfill -p &lt;&lt;pipeline_name&gt;&gt; (works if .workspace.yaml exists)</p></li>
+<li><p>dagster pipeline backfill -p &lt;&lt;pipeline_name&gt;&gt; -w path/to/workspace.yaml</p></li>
+<li><p>dagster pipeline backfill -f /path/to/file.py -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+<li><p>dagster pipeline backfill -m a_module.submodule -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline backfill <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--pipeline</code><code class="sig-prename descclassname"> &lt;pipeline&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline within the repository, necessary if more than one pipeline is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-partitions">
+<code class="sig-name descname">--partitions</code><code class="sig-prename descclassname"> &lt;partitions&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-partitions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Comma-separated list of partition names that we want to backfill</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-partition-set">
+<code class="sig-name descname">--partition-set</code><code class="sig-prename descclassname"> &lt;partition_set&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-partition-set" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the partition set over which we want to backfill.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-all">
+<code class="sig-name descname">--all</code><code class="sig-prename descclassname"> &lt;all&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-all" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify to select all partitions to backfill.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-from">
+<code class="sig-name descname">--from</code><code class="sig-prename descclassname"> &lt;from&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-from" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify a start partition for this backfill job</p>
+<p>Example: dagster pipeline backfill log_daily_stats –from 20191101</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-to">
+<code class="sig-name descname">--to</code><code class="sig-prename descclassname"> &lt;to&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-to" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify an end partition for this backfill job</p>
+<p>Example: dagster pipeline backfill log_daily_stats –to 20191201</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-tags">
+<code class="sig-name descname">--tags</code><code class="sig-prename descclassname"> &lt;tags&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON string of tags to use for this pipeline run</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-backfill-noprompt">
+<code class="sig-name descname">--noprompt</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-backfill-noprompt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="dagster-pipeline-execute">
+<h3>execute<a class="headerlink" href="#dagster-pipeline-execute" title="Permalink to this headline">¶</a></h3>
+<p>Execute a pipeline.</p>
+<p>This commands targets a pipeline. The pipeline can be specified in a number of ways:</p>
+<ol class="arabic simple">
+<li><p>dagster pipeline execute -f /path/to/file.py -a define_some_pipeline</p></li>
+<li><p>dagster pipeline execute -m a_module.submodule -a define_some_pipeline</p></li>
+<li><p>dagster pipeline execute -f /path/to/file.py -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+<li><p>dagster pipeline execute -m a_module.submodule -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline execute <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--pipeline</code><code class="sig-prename descclassname"> &lt;pipeline&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline within the repository, necessary if more than one pipeline is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository name, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-c">
+<code class="sig-name descname">-c</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--config</code><code class="sig-prename descclassname"> &lt;config&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-c" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify one or more run config files. These can also be file patterns. If more than one run config file is captured then those files are merged. Files listed first take precedence. They will smash the values of subsequent files at the key-level granularity. If the file is a pattern then you must enclose it in double quotes</p>
+<p>Example: dagster pipeline execute -f hello_world.py -p pandas_hello_world -c “pandas_hello_world/<a href="#id1"><span class="problematic" id="id2">*</span></a>.yaml”</p>
+<p>You can also specify multiple files:</p>
+<p>Example: dagster pipeline execute -f hello_world.py -p pandas_hello_world -c pandas_hello_world/solids.yaml -e pandas_hello_world/env.yaml</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-preset">
+<code class="sig-name descname">--preset</code><code class="sig-prename descclassname"> &lt;preset&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-preset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify a preset to use for this pipeline. Presets are defined on pipelines under preset_defs.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-mode">
+<code class="sig-name descname">--mode</code><code class="sig-prename descclassname"> &lt;mode&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the mode in which to execute the pipeline.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-tags">
+<code class="sig-name descname">--tags</code><code class="sig-prename descclassname"> &lt;tags&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON string of tags to use for this pipeline run</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-execute-s">
+<code class="sig-name descname">-s</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--solid-selection</code><code class="sig-prename descclassname"> &lt;solid_selection&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-execute-s" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify the solid subselection to execute. It can be multiple clauses separated by commas.Examples:
+- “some_solid” will execute “some_solid” itself
+- “<a href="#id3"><span class="problematic" id="id4">*</span></a>some_solid” will execute “some_solid” and all its ancestors (upstream dependencies)
+- “<a href="#id5"><span class="problematic" id="id6">*</span></a>some_solid+++” will execute “some_solid”, all its ancestors, and its descendants   (downstream dependencies) within 3 levels down
+- “<a href="#id7"><span class="problematic" id="id8">*</span></a>some_solid,other_solid_a,other_solid_b+” will execute “some_solid” and all its   ancestors, “other_solid_a” itself, and “other_solid_b” and its direct child solids</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-pipeline-launch">
+<h3>launch<a class="headerlink" href="#dagster-pipeline-launch" title="Permalink to this headline">¶</a></h3>
+<p>Launch a pipeline using the run launcher configured on the Dagster instance.</p>
+<p>This commands targets a pipeline. The pipeline can be specified in a number of ways:</p>
+<ol class="arabic simple">
+<li><p>dagster pipeline launch -p &lt;&lt;pipeline_name&gt;&gt; (works if .workspace.yaml exists)</p></li>
+<li><p>dagster pipeline launch -p &lt;&lt;pipeline_name&gt;&gt; -w path/to/workspace.yaml</p></li>
+<li><p>dagster pipeline launch -f /path/to/file.py -a define_some_pipeline</p></li>
+<li><p>dagster pipeline launch -m a_module.submodule -a define_some_pipeline</p></li>
+<li><p>dagster pipeline launch -f /path/to/file.py -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+<li><p>dagster pipeline launch -m a_module.submodule -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline launch <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--pipeline</code><code class="sig-prename descclassname"> &lt;pipeline&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline within the repository, necessary if more than one pipeline is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-c">
+<code class="sig-name descname">-c</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--config</code><code class="sig-prename descclassname"> &lt;config&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-c" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify one or more run config files. These can also be file patterns. If more than one run config file is captured then those files are merged. Files listed first take precedence. They will smash the values of subsequent files at the key-level granularity. If the file is a pattern then you must enclose it in double quotes</p>
+<p>Example: dagster pipeline launch -f hello_world.py -p pandas_hello_world -c “pandas_hello_world/<a href="#id9"><span class="problematic" id="id10">*</span></a>.yaml”</p>
+<p>You can also specify multiple files:</p>
+<p>Example: dagster pipeline launch -f hello_world.py -p pandas_hello_world -c pandas_hello_world/solids.yaml -e pandas_hello_world/env.yaml</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-config-json">
+<code class="sig-name descname">--config-json</code><code class="sig-prename descclassname"> &lt;config_json&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-config-json" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON string of run config to use for this pipeline run. Cannot be used with -c / –config.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-preset">
+<code class="sig-name descname">--preset</code><code class="sig-prename descclassname"> &lt;preset&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-preset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify a preset to use for this pipeline. Presets are defined on pipelines under preset_defs.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-mode">
+<code class="sig-name descname">--mode</code><code class="sig-prename descclassname"> &lt;mode&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the mode in which to execute the pipeline.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-tags">
+<code class="sig-name descname">--tags</code><code class="sig-prename descclassname"> &lt;tags&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>JSON string of tags to use for this pipeline run</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-s">
+<code class="sig-name descname">-s</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--solid-selection</code><code class="sig-prename descclassname"> &lt;solid_selection&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-s" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify the solid subselection to launch. It can be multiple clauses separated by commas.Examples:
+- “some_solid” will launch “some_solid” itself
+- “<a href="#id11"><span class="problematic" id="id12">*</span></a>some_solid” will launch “some_solid” and all its ancestors (upstream dependencies)
+- “<a href="#id13"><span class="problematic" id="id14">*</span></a>some_solid+++” will launch “some_solid”, all its ancestors, and its descendants   (downstream dependencies) within 3 levels down
+- “<a href="#id15"><span class="problematic" id="id16">*</span></a>some_solid,other_solid_a,other_solid_b+” will launch “some_solid” and all its   ancestors, “other_solid_a” itself, and “other_solid_b” and its direct child solids</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-launch-run-id">
+<code class="sig-name descname">--run-id</code><code class="sig-prename descclassname"> &lt;run_id&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-launch-run-id" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ID to give to the launched pipeline run</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-pipeline-list">
+<h3>list<a class="headerlink" href="#dagster-pipeline-list" title="Permalink to this headline">¶</a></h3>
+<p>List the pipelines in a repository. Can only use ONE of –workspace/-w, –python-file/-f, –module-name/-m, –grpc-port, –grpc-socket.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline list <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-pipeline-list-versions">
+<h3>list_versions<a class="headerlink" href="#dagster-pipeline-list-versions" title="Permalink to this headline">¶</a></h3>
+<p>Display the freshness of memoized results for the given pipeline.</p>
+<p>This commands targets a pipeline. The pipeline can be specified in a number of ways:</p>
+<ol class="arabic simple">
+<li><p>dagster pipeline list_versions -f /path/to/file.py -a define_some_pipeline</p></li>
+<li><p>dagster pipeline list_versions -m a_module.submodule -a define_some_pipeline</p></li>
+<li><p>dagster pipeline list_versions -f /path/to/file.py -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+<li><p>dagster pipeline list_versions -m a_module.submodule -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline list_versions 
+    <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--pipeline</code><code class="sig-prename descclassname"> &lt;pipeline&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline within the repository, necessary if more than one pipeline is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository name, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-c">
+<code class="sig-name descname">-c</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--config</code><code class="sig-prename descclassname"> &lt;config&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-c" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify one or more run config files. These can also be file patterns. If more than one run config file is captured then those files are merged. Files listed first take precedence. They will smash the values of subsequent files at the key-level granularity. If the file is a pattern then you must enclose it in double quotes</p>
+<p>Example: dagster pipeline list_versions -f hello_world.py -p pandas_hello_world -c “pandas_hello_world/<a href="#id17"><span class="problematic" id="id18">*</span></a>.yaml”</p>
+<p>You can also specify multiple files:</p>
+<p>Example: dagster pipeline list_versions -f hello_world.py -p pandas_hello_world -c pandas_hello_world/solids.yaml -e pandas_hello_world/env.yaml</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-preset">
+<code class="sig-name descname">--preset</code><code class="sig-prename descclassname"> &lt;preset&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-preset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify a preset to use for this pipeline. Presets are defined on pipelines under preset_defs.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-list-versions-mode">
+<code class="sig-name descname">--mode</code><code class="sig-prename descclassname"> &lt;mode&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-list-versions-mode" title="Permalink to this definition">¶</a></dt>
+<dd><p>The name of the mode in which to execute the pipeline.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-pipeline-print">
+<h3>print<a class="headerlink" href="#dagster-pipeline-print" title="Permalink to this headline">¶</a></h3>
+<p>Print a pipeline.</p>
+<p>This commands targets a pipeline. The pipeline can be specified in a number of ways:</p>
+<ol class="arabic simple">
+<li><p>dagster pipeline print -p &lt;&lt;pipeline_name&gt;&gt; (works if .workspace.yaml exists)</p></li>
+<li><p>dagster pipeline print -p &lt;&lt;pipeline_name&gt;&gt; -w path/to/workspace.yaml</p></li>
+<li><p>dagster pipeline print -f /path/to/file.py -a define_some_pipeline</p></li>
+<li><p>dagster pipeline print -m a_module.submodule -a define_some_pipeline</p></li>
+<li><p>dagster pipeline print -f /path/to/file.py -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+<li><p>dagster pipeline print -m a_module.submodule -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline print <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-verbose">
+<code class="sig-name descname">--verbose</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-verbose" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--pipeline</code><code class="sig-prename descclassname"> &lt;pipeline&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline within the repository, necessary if more than one pipeline is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-print-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-print-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-pipeline-scaffold-config">
+<h3>scaffold_config<a class="headerlink" href="#dagster-pipeline-scaffold-config" title="Permalink to this headline">¶</a></h3>
+<p>Scaffold the config for a pipeline.</p>
+<p>This commands targets a pipeline. The pipeline can be specified in a number of ways:</p>
+<ol class="arabic simple">
+<li><p>dagster pipeline scaffold_config -f /path/to/file.py -a define_some_pipeline</p></li>
+<li><p>dagster pipeline scaffold_config -m a_module.submodule -a define_some_pipeline</p></li>
+<li><p>dagster pipeline scaffold_config -f /path/to/file.py -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+<li><p>dagster pipeline scaffold_config -m a_module.submodule -a define_some_repo -p &lt;&lt;pipeline_name&gt;&gt;</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster pipeline scaffold_config 
+    <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--pipeline</code><code class="sig-prename descclassname"> &lt;pipeline&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pipeline within the repository, necessary if more than one pipeline is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository name, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-pipeline-scaffold-config-print-only-required">
+<code class="sig-name descname">--print-only-required</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-pipeline-scaffold-config-print-only-required" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+</div>
+<div class="section" id="dagster-run">
+<h2>dagster run<a class="headerlink" href="#dagster-run" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster run <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-run-list">
+<h3>list<a class="headerlink" href="#dagster-run-list" title="Permalink to this headline">¶</a></h3>
+<p>List the runs in this dagster installation.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster run list <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-run-list-limit">
+<code class="sig-name descname">--limit</code><code class="sig-prename descclassname"> &lt;limit&gt;</code><a class="headerlink" href="#cmdoption-dagster-run-list-limit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Only list a specified number of runs</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-run-wipe">
+<h3>wipe<a class="headerlink" href="#dagster-run-wipe" title="Permalink to this headline">¶</a></h3>
+<p>Eliminate all run history and event logs. Warning: Cannot be undone</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster run wipe <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="dagster-schedule">
+<h2>dagster schedule<a class="headerlink" href="#dagster-schedule" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-schedule-debug">
+<h3>debug<a class="headerlink" href="#dagster-schedule-debug" title="Permalink to this headline">¶</a></h3>
+<p>Debug information about the scheduler</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule debug <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dagster-schedule-list">
+<h3>list<a class="headerlink" href="#dagster-schedule-list" title="Permalink to this headline">¶</a></h3>
+<p>List all schedules that correspond to a repository.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule list <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-list-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-list-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-list-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-running">
+<code class="sig-name descname">--running</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-list-running" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter for running schedules</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-stopped">
+<code class="sig-name descname">--stopped</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-list-stopped" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter for stopped schedules</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-list-name">
+<code class="sig-name descname">--name</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-list-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Only display schedule schedule names</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-logs">
+<h3>logs<a class="headerlink" href="#dagster-schedule-logs" title="Permalink to this headline">¶</a></h3>
+<p>Get logs for a schedule</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule logs <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>SCHEDULE_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-logs-arg-schedule-name">
+<code class="sig-name descname">SCHEDULE_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-logs-arg-schedule-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-preview">
+<h3>preview<a class="headerlink" href="#dagster-schedule-preview" title="Permalink to this headline">¶</a></h3>
+<p>Preview changes that will be performed by <a href="#id19"><span class="problematic" id="id20">`</span></a>dagster schedule up</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule preview <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-preview-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-preview-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-restart">
+<h3>restart<a class="headerlink" href="#dagster-schedule-restart" title="Permalink to this headline">¶</a></h3>
+<p>Restart a running schedule</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule restart <span class="o">[</span>OPTIONS<span class="o">]</span>
+                         <span class="o">[</span>SCHEDULE_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-restart-all-running">
+<code class="sig-name descname">--restart-all-running</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-restart-all-running" title="Permalink to this definition">¶</a></dt>
+<dd><p>restart previously running schedules</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-restart-arg-schedule-name">
+<code class="sig-name descname">SCHEDULE_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-restart-arg-schedule-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-start">
+<h3>start<a class="headerlink" href="#dagster-schedule-start" title="Permalink to this headline">¶</a></h3>
+<p>Start an existing schedule</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule start <span class="o">[</span>OPTIONS<span class="o">]</span>
+                       <span class="o">[</span>SCHEDULE_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-start-all">
+<code class="sig-name descname">--start-all</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-start-start-all" title="Permalink to this definition">¶</a></dt>
+<dd><p>start all schedules</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-start-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-start-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-start-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-start-arg-schedule-name">
+<code class="sig-name descname">SCHEDULE_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-start-arg-schedule-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-stop">
+<h3>stop<a class="headerlink" href="#dagster-schedule-stop" title="Permalink to this headline">¶</a></h3>
+<p>Stop an existing schedule</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule stop <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>SCHEDULE_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-stop-arg-schedule-name">
+<code class="sig-name descname">SCHEDULE_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-stop-arg-schedule-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-up">
+<h3>up<a class="headerlink" href="#dagster-schedule-up" title="Permalink to this headline">¶</a></h3>
+<p>Updates the internal dagster representation of schedules to match the list of ScheduleDefinitions defined in the repository. Use <cite>dagster schedule up –preview</cite> or <cite>dagster schedule preview</cite> to preview what changes will be applied. New ScheduleDefinitions will not start running by default when <cite>up</cite> is called. Use <cite>dagster schedule start</cite> and <cite>dagster schedule stop</cite> to start and stop a schedule. If a ScheduleDefinition is deleted, the corresponding running schedule will be stopped and deleted.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule up <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-preview">
+<code class="sig-name descname">--preview</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-up-preview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Preview changes</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-up-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-up-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-up-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-up-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-schedule-wipe">
+<h3>wipe<a class="headerlink" href="#dagster-schedule-wipe" title="Permalink to this headline">¶</a></h3>
+<p>Deletes schedule history and turns off all schedules.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster schedule wipe <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-schedule-wipe-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-schedule-wipe-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="dagster-sensor">
+<h2>dagster sensor<a class="headerlink" href="#dagster-sensor" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster sensor <span class="o">[</span>OPTIONS<span class="o">]</span> COMMAND <span class="o">[</span>ARGS<span class="o">]</span>...
+</pre></div>
+</div>
+<div class="section" id="dagster-sensor-list">
+<h3>list<a class="headerlink" href="#dagster-sensor-list" title="Permalink to this headline">¶</a></h3>
+<p>List all sensors that correspond to a repository.</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster sensor list <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-list-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-list-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-list-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-running">
+<code class="sig-name descname">--running</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-list-running" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter for running sensors</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-stopped">
+<code class="sig-name descname">--stopped</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-list-stopped" title="Permalink to this definition">¶</a></dt>
+<dd><p>Filter for stopped sensors</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-list-name">
+<code class="sig-name descname">--name</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-list-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Only display sensor sensor names</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-sensor-preview">
+<h3>preview<a class="headerlink" href="#dagster-sensor-preview" title="Permalink to this headline">¶</a></h3>
+<p>Preview an existing sensor execution</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster sensor preview <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>SENSOR_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-since">
+<code class="sig-name descname">--since</code><code class="sig-prename descclassname"> &lt;since&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-since" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the last_completion_time value as a timestamp float for the sensor context</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-last-run-key">
+<code class="sig-name descname">--last_run_key</code><code class="sig-prename descclassname"> &lt;last_run_key&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-last-run-key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the last_run_key value for the sensor context</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-preview-arg-sensor-name">
+<code class="sig-name descname">SENSOR_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-preview-arg-sensor-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-sensor-start">
+<h3>start<a class="headerlink" href="#dagster-sensor-start" title="Permalink to this headline">¶</a></h3>
+<p>Start an existing sensor</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster sensor start <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>SENSOR_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-start-all">
+<code class="sig-name descname">--start-all</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-start-start-all" title="Permalink to this definition">¶</a></dt>
+<dd><p>start all sensors</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-start-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-start-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-start-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-start-arg-sensor-name">
+<code class="sig-name descname">SENSOR_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-start-arg-sensor-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagster-sensor-stop">
+<h3>stop<a class="headerlink" href="#dagster-sensor-stop" title="Permalink to this headline">¶</a></h3>
+<p>Stop an existing sensor</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster sensor stop <span class="o">[</span>OPTIONS<span class="o">]</span> <span class="o">[</span>SENSOR_NAME<span class="o">]</span>...
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--location</code><code class="sig-prename descclassname"> &lt;location&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>RepositoryLocation within the workspace, necessary if more than one location is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--repository</code><code class="sig-prename descclassname"> &lt;repository&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>Repository within the workspace, necessary if more than one repository is present.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<p class="rubric">Arguments</p>
+<dl class="option">
+<dt id="cmdoption-dagster-sensor-stop-arg-sensor-name">
+<code class="sig-name descname">SENSOR_NAME</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-sensor-stop-arg-sensor-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Optional argument(s)</p>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="dagster-graphql">
+<h2>dagster-graphql<a class="headerlink" href="#dagster-graphql" title="Permalink to this headline">¶</a></h2>
+<p>Run a GraphQL query against the dagster interface to a specified repository or pipeline.</p>
+<p>Can only use ONE of –workspace/-w, –python-file/-f, –module-name/-m, –grpc-port, –grpc-socket.</p>
+<p>Examples:</p>
+<ol class="arabic simple">
+<li><p>dagster-graphql</p></li>
+<li><p>dagster-graphql -y path/to/workspace.yaml</p></li>
+<li><p>dagster-graphql -f path/to/file.py -a define_repo</p></li>
+<li><p>dagster-graphql -m some_module -a define_repo</p></li>
+<li><p>dagster-graphql -f path/to/file.py -a define_pipeline</p></li>
+<li><p>dagster-graphql -m some_module -a define_pipeline</p></li>
+</ol>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagster-graphql <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-version">
+<code class="sig-name descname">--version</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-graphql-version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the version and exit.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-t">
+<code class="sig-name descname">-t</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--text</code><code class="sig-prename descclassname"> &lt;text&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-t" title="Permalink to this definition">¶</a></dt>
+<dd><p>GraphQL document to execute passed as a string</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--file</code><code class="sig-prename descclassname"> &lt;file&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>GraphQL document to execute passed as a file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--predefined</code><code class="sig-prename descclassname"> &lt;predefined&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>GraphQL document to execute, from a predefined set provided by dagster-graphql.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Options</dt>
+<dd class="field-odd"><p>launchPipelineExecution</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-v">
+<code class="sig-name descname">-v</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--variables</code><code class="sig-prename descclassname"> &lt;variables&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-v" title="Permalink to this definition">¶</a></dt>
+<dd><p>A JSON encoded string containing the variables for GraphQL execution.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-r">
+<code class="sig-name descname">-r</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--remote</code><code class="sig-prename descclassname"> &lt;remote&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-r" title="Permalink to this definition">¶</a></dt>
+<dd><p>A URL for a remote instance running dagit server to send the GraphQL request to.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-o">
+<code class="sig-name descname">-o</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--output</code><code class="sig-prename descclassname"> &lt;output&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-o" title="Permalink to this definition">¶</a></dt>
+<dd><p>A file path to store the GraphQL response to. This flag is useful when making pipeline execution queries, since pipeline execution causes logs to print to stdout and stderr.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-remap-sigterm">
+<code class="sig-name descname">--remap-sigterm</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-graphql-remap-sigterm" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remap SIGTERM signal to SIGINT handler</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-graphql-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagster-graphql-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-python-file">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-python-file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagster-graphql-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagster-graphql-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+</div>
+<div class="section" id="dagit">
+<h2>dagit<a class="headerlink" href="#dagit" title="Permalink to this headline">¶</a></h2>
+<p>Run dagit. Loads a repository or pipeline.</p>
+<p>Can only use ONE of –workspace/-w, –python-file/-f, –module-name/-m, –grpc-port, –grpc-socket.</p>
+<p>Examples:</p>
+<ol class="arabic simple">
+<li><p>dagit (works if .workspace.yaml exists)</p></li>
+<li><p>dagit -w path/to/workspace.yaml</p></li>
+<li><p>dagit -f path/to/file.py</p></li>
+<li><p>dagit -f path/to/file.py -d path/to/working_directory</p></li>
+<li><p>dagit -m some_module</p></li>
+<li><p>dagit -f path/to/file.py -a define_repo</p></li>
+<li><p>dagit -m some_module -a define_repo</p></li>
+<li><p>dagit -p 3333</p></li>
+</ol>
+<p>Options can also provide arguments via environment variables prefixed with DAGIT</p>
+<p>For example, DAGIT_PORT=3333 dagit</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>dagit <span class="o">[</span>OPTIONS<span class="o">]</span>
+</pre></div>
+</div>
+<p class="rubric">Options</p>
+<dl class="option">
+<dt id="cmdoption-dagit-grpc-host">
+<code class="sig-name descname">--grpc-host</code><code class="sig-prename descclassname"> &lt;grpc_host&gt;</code><a class="headerlink" href="#cmdoption-dagit-grpc-host" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to use to connect to gRPC server, defaults to localhost</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-grpc-socket">
+<code class="sig-name descname">--grpc-socket</code><code class="sig-prename descclassname"> &lt;grpc_socket&gt;</code><a class="headerlink" href="#cmdoption-dagit-grpc-socket" title="Permalink to this definition">¶</a></dt>
+<dd><p>Named socket to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-grpc-port">
+<code class="sig-name descname">--grpc-port</code><code class="sig-prename descclassname"> &lt;grpc_port&gt;</code><a class="headerlink" href="#cmdoption-dagit-grpc-port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to use to connect to gRPC server</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-a">
+<code class="sig-name descname">-a</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--attribute</code><code class="sig-prename descclassname"> &lt;attribute&gt;</code><a class="headerlink" href="#cmdoption-dagit-a" title="Permalink to this definition">¶</a></dt>
+<dd><p>Attribute that is either a 1) repository or pipeline or 2) a function that returns a repository or pipeline</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-m">
+<code class="sig-name descname">-m</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--module-name</code><code class="sig-prename descclassname"> &lt;module_name&gt;</code><a class="headerlink" href="#cmdoption-dagit-m" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify module where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-package-name">
+<code class="sig-name descname">--package-name</code><code class="sig-prename descclassname"> &lt;package_name&gt;</code><a class="headerlink" href="#cmdoption-dagit-package-name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify installed Python package where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-f">
+<code class="sig-name descname">-f</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--python-file</code><code class="sig-prename descclassname"> &lt;python_file&gt;</code><a class="headerlink" href="#cmdoption-dagit-f" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify python file where repository or pipeline function lives</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-d">
+<code class="sig-name descname">-d</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--working-directory</code><code class="sig-prename descclassname"> &lt;working_directory&gt;</code><a class="headerlink" href="#cmdoption-dagit-d" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specify working directory to use when loading the repository or pipeline. Can only be used along with -f/–python-file</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-empty-working-directory">
+<code class="sig-name descname">--empty-working-directory</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagit-empty-working-directory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates that the working directory should be empty and should not set to the current directory as a default</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-w">
+<code class="sig-name descname">-w</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--workspace</code><code class="sig-prename descclassname"> &lt;workspace&gt;</code><a class="headerlink" href="#cmdoption-dagit-w" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to workspace file. Argument can be provided multiple times.</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-empty-workspace">
+<code class="sig-name descname">--empty-workspace</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagit-empty-workspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow an empty workspace</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-h">
+<code class="sig-name descname">-h</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--host</code><code class="sig-prename descclassname"> &lt;host&gt;</code><a class="headerlink" href="#cmdoption-dagit-h" title="Permalink to this definition">¶</a></dt>
+<dd><p>Host to run server on  [default: 127.0.0.1]</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-p">
+<code class="sig-name descname">-p</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--port</code><code class="sig-prename descclassname"> &lt;port&gt;</code><a class="headerlink" href="#cmdoption-dagit-p" title="Permalink to this definition">¶</a></dt>
+<dd><p>Port to run server on, default is 3000</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-l">
+<code class="sig-name descname">-l</code><code class="sig-prename descclassname"></code><code class="sig-prename descclassname">, </code><code class="sig-name descname">--path-prefix</code><code class="sig-prename descclassname"> &lt;path_prefix&gt;</code><a class="headerlink" href="#cmdoption-dagit-l" title="Permalink to this definition">¶</a></dt>
+<dd><p>The path prefix where Dagit will be hosted (eg: /dagit)  [default: ]</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-storage-fallback">
+<code class="sig-name descname">--storage-fallback</code><code class="sig-prename descclassname"> &lt;storage_fallback&gt;</code><a class="headerlink" href="#cmdoption-dagit-storage-fallback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Base directory for dagster storage if $DAGSTER_HOME is not set</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-db-statement-timeout">
+<code class="sig-name descname">--db-statement-timeout</code><code class="sig-prename descclassname"> &lt;db_statement_timeout&gt;</code><a class="headerlink" href="#cmdoption-dagit-db-statement-timeout" title="Permalink to this definition">¶</a></dt>
+<dd><p>The timeout in milliseconds to set on database statements sent to the DagsterInstance. Not respected in all configurations.  [default: 5000]</p>
+</dd></dl>
+
+<dl class="option">
+<dt id="cmdoption-dagit-version">
+<code class="sig-name descname">--version</code><code class="sig-prename descclassname"></code><a class="headerlink" href="#cmdoption-dagit-version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Show the version and exit.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="config.html" title="Next document">Config</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

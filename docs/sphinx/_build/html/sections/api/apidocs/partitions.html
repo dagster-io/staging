@@ -1,0 +1,244 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Partitions &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Pipelines" href="pipeline.html" />
+    <link rel="prev" title="Modes &amp; Resources" href="modes-resources.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="modes-resources.html" title="Previous document">Modes &amp; Resources</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="pipeline.html" title="Next document">Pipelines</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="partitions">
+<h1>Partitions<a class="headerlink" href="#partitions" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="dagster.Partition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">Partition</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/partition.html#Partition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.Partition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Partition is the representation of a logical slice across an axis of a pipeline’s work</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>value</strong> (<em>Any</em>) – The object for this partition</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name for this partition</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.PartitionSetDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">PartitionSetDefinition</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/partition.html#PartitionSetDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PartitionSetDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a partition set, representing the set of slices making up an axis of a pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name for this partition set</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline definition</p></li>
+<li><p><strong>partition_fn</strong> (<em>Callable</em><em>[</em><em>void</em><em>, </em><em>List</em><em>[</em><a class="reference internal" href="#dagster.Partition" title="dagster.Partition"><em>Partition</em></a><em>]</em><em>]</em>) – User-provided function to define the set of
+valid partition objects.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute with this partition. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this partition. (default: ‘default’)</p></li>
+<li><p><strong>run_config_fn_for_partition</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.Partition" title="dagster.Partition"><em>Partition</em></a><em>]</em><em>, </em><em>[</em><em>Dict</em><em>]</em><em>]</em>) – A
+function that takes a <a class="reference internal" href="#dagster.Partition" title="dagster.Partition"><code class="xref py py-class docutils literal notranslate"><span class="pre">Partition</span></code></a> and returns the run
+configuration that parameterizes the execution for this partition, as a dict</p></li>
+<li><p><strong>tags_fn_for_partition</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.Partition" title="dagster.Partition"><em>Partition</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em>) – A function that
+takes a <a class="reference internal" href="#dagster.Partition" title="dagster.Partition"><code class="xref py py-class docutils literal notranslate"><span class="pre">Partition</span></code></a> and returns a list of key value pairs that will
+be added to the generated run for this partition.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.date_partition_range">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">date_partition_range</code><span class="sig-paren">(</span><em class="sig-param">start</em>, <em class="sig-param">end=None</em>, <em class="sig-param">delta_range='days'</em>, <em class="sig-param">fmt=None</em>, <em class="sig-param">inclusive=False</em>, <em class="sig-param">timezone=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/utils/partitions.html#date_partition_range"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.date_partition_range" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function that returns a partition generating function to be used in creating a
+<cite>PartitionSet</cite> definition.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>datetime</em>) – Datetime capturing the start of the time range.</p></li>
+<li><p><strong>end</strong> (<em>Optional</em><em>(</em><em>datetime</em><em>)</em>) – Datetime capturing the end of the partition.  By default, the
+current time is used.  The range is not inclusive of the end
+value.</p></li>
+<li><p><strong>delta_range</strong> (<em>Optional</em><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>)</em>) – string representing the time duration of each partition.
+Must be a valid argument to pendulum.period.range (“days”, “hours”, “months”, etc.).</p></li>
+<li><p><strong>fmt</strong> (<em>Optional</em><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>)</em>) – Format string to represent each partition by its start time</p></li>
+<li><p><strong>inclusive</strong> (<em>Optional</em><em>(</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>)</em>) – By default, the partition set only contains date interval
+partitions for which the end time of the interval is less than current time. In other
+words, the partition set contains date interval partitions that are completely in the
+past. If inclusive is set to True, then the partition set will include all date
+interval partitions for which the start time of the interval is less than the
+current time.</p></li>
+<li><p><strong>timezone</strong> (<em>Optional</em><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>)</em>) – Timezone in which the partition values should be expressed.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Callable[[], List[Partition]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.identity_partition_selector">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">identity_partition_selector</code><span class="sig-paren">(</span><em class="sig-param">context</em>, <em class="sig-param">partition_set_def</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/utils/partitions.html#identity_partition_selector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.identity_partition_selector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function for supplying a partition selector when creating a schedule from a
+partition set made of <a href="#id1"><span class="problematic" id="id2">`</span></a>datetime`s that assumes the schedule always executes at the
+partition time.</p>
+<p>It’s important that the cron string passed into <cite>create_schedule_definition</cite> match
+the partition set times. For example, a schedule created from a partition set with partitions for each day at
+midnight would create its partition selector as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;hello_world_partition_set&#39;</span><span class="p">,</span>
+    <span class="n">pipeline_name</span><span class="o">=</span><span class="s1">&#39;hello_world_pipeline&#39;</span><span class="p">,</span>
+    <span class="n">partition_fn</span><span class="o">=</span> <span class="n">date_partition_range</span><span class="p">(</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">delta_range</span><span class="o">=</span><span class="s2">&quot;days&quot;</span><span class="p">,</span>
+        <span class="n">timezone</span><span class="o">=</span><span class="s2">&quot;US/Central&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="n">my_run_config_fn</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">schedule_definition</span> <span class="o">=</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+    <span class="s2">&quot;hello_world_daily_schedule&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;0 0 * * *&quot;</span><span class="p">,</span>
+    <span class="n">partition_selector</span><span class="o">=</span><span class="n">identity_partition_selector</span><span class="p">,</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="s2">&quot;US/Central&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.create_offset_partition_selector">
+<code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">create_offset_partition_selector</code><span class="sig-paren">(</span><em class="sig-param">execution_time_to_partition_fn</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/utils/partitions.html#create_offset_partition_selector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.create_offset_partition_selector" title="Permalink to this definition">¶</a></dt>
+<dd><p>Utility function for supplying a partition selector when creating a schedule from a
+partition set made of <a href="#id3"><span class="problematic" id="id4">`</span></a>datetime`s that assumes a fixed time offset between the partition
+time and the time at which the schedule executes.</p>
+<p>It’s important to keep the cron string that’s supplied to
+<cite>PartitionSetDefinition.create_schedule_definition</cite> in sync with the offset that’s
+supplied to this function. For example, a schedule created from a partition set with
+partitions for each day at midnight that fills in the partition for day N at day N+1 at
+10:00AM would create the partition selector as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">partition_set</span> <span class="o">=</span> <span class="n">PartitionSetDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;hello_world_partition_set&#39;</span><span class="p">,</span>
+    <span class="n">pipeline_name</span><span class="o">=</span><span class="s1">&#39;hello_world_pipeline&#39;</span><span class="p">,</span>
+    <span class="n">partition_fn</span><span class="o">=</span> <span class="n">date_partition_range</span><span class="p">(</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="p">(</span><span class="mi">2021</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">delta_range</span><span class="o">=</span><span class="s2">&quot;days&quot;</span><span class="p">,</span>
+        <span class="n">timezone</span><span class="o">=</span><span class="s2">&quot;US/Central&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">run_config_fn_for_partition</span><span class="o">=</span><span class="n">my_run_config_fn</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">schedule_definition</span> <span class="o">=</span> <span class="n">partition_set</span><span class="o">.</span><span class="n">create_schedule_definition</span><span class="p">(</span>
+    <span class="s2">&quot;daily_10am_schedule&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;0 10 * * *&quot;</span><span class="p">,</span>
+    <span class="n">partition_selector</span><span class="o">=</span><span class="n">create_offset_partition_selector</span><span class="p">(</span><span class="k">lambda</span> <span class="n">d</span><span class="p">:</span> <span class="n">d</span><span class="o">.</span><span class="n">subtract</span><span class="p">(</span><span class="n">hours</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+    <span class="n">execution_timezone</span><span class="o">=</span><span class="s2">&quot;US/Central&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>execution_time_to_partition_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em>) – A</p></li>
+<li><p><strong>that maps the execution time of the schedule to the partition time.</strong> (<em>function</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="modes-resources.html" title="Previous document">Modes &amp; Resources</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="pipeline.html" title="Next document">Pipelines</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

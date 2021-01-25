@@ -1,0 +1,649 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.execution.results &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.execution.results</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions</span> <span class="kn">import</span> <span class="n">GraphDefinition</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">,</span> <span class="n">Solid</span><span class="p">,</span> <span class="n">SolidHandle</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.utils</span> <span class="kn">import</span> <span class="n">DEFAULT_OUTPUT</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events</span> <span class="kn">import</span> <span class="n">DagsterEvent</span><span class="p">,</span> <span class="n">DagsterEventType</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.step</span> <span class="kn">import</span> <span class="n">StepKind</span>
+
+
+<span class="k">def</span> <span class="nf">_construct_events_by_step_key</span><span class="p">(</span><span class="n">event_list</span><span class="p">):</span>
+    <span class="n">events_by_step_key</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">event_list</span><span class="p">:</span>
+        <span class="n">events_by_step_key</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">step_key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">events_by_step_key</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">GraphExecutionResult</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">container</span><span class="p">,</span>
+        <span class="n">event_list</span><span class="p">,</span>
+        <span class="n">reconstruct_context</span><span class="p">,</span>
+        <span class="n">handle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">container</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">container</span><span class="p">,</span> <span class="s2">&quot;container&quot;</span><span class="p">,</span> <span class="n">GraphDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">event_list</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">event_list</span><span class="p">,</span> <span class="s2">&quot;step_event_list&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">DagsterEvent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_context</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">reconstruct_context</span><span class="p">,</span> <span class="s2">&quot;reconstruct_context&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">handle</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;handle&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+            <span class="n">resource_instances_to_override</span><span class="p">,</span> <span class="s2">&quot;resource_instances_to_override&quot;</span><span class="p">,</span> <span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_events_by_step_key</span> <span class="o">=</span> <span class="n">_construct_events_by_step_key</span><span class="p">(</span><span class="n">event_list</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">success</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;bool: Whether all steps in the execution were successful.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">([</span><span class="ow">not</span> <span class="n">event</span><span class="o">.</span><span class="n">is_failure</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_list</span><span class="p">])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_event_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[DagsterEvent] The full list of events generated by steps in the execution.</span>
+
+<span class="sd">        Excludes events generated by the pipeline lifecycle, e.g., ``PIPELINE_START``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">event</span> <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_list</span> <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_step_event</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">events_by_step_key</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_events_by_step_key</span>
+
+    <span class="k">def</span> <span class="nf">result_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the result of a top level solid.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of the top-level solid or aliased solid for which to retrieve the</span>
+<span class="sd">                result.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Union[CompositeSolidExecutionResult, SolidExecutionResult]: The result of the solid</span>
+<span class="sd">            execution within the pipeline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">has_solid_named</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Tried to get result for solid &#39;</span><span class="si">{name}</span><span class="s2">&#39; in &#39;</span><span class="si">{container}</span><span class="s2">&#39;. No such top level &quot;</span>
+                <span class="s2">&quot;solid.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">container</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_for_handle</span><span class="p">(</span><span class="n">SolidHandle</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">None</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">output_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle_str</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the output of a solid by its solid handle string and output name.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            handle_str (str): The string handle for the solid.</span>
+<span class="sd">            output_name (str): Optional. The name of the output, default to DEFAULT_OUTPUT.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            The output value for the handle and output_name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">handle_str</span><span class="p">,</span> <span class="s2">&quot;handle_str&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_for_handle</span><span class="p">(</span><span class="n">SolidHandle</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">handle_str</span><span class="p">))</span><span class="o">.</span><span class="n">output_value</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_result_list</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[Union[CompositeSolidExecutionResult, SolidExecutionResult]]: The results for each</span>
+<span class="sd">        top level solid.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">result_for_solid</span><span class="p">(</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">solid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">solids</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_result_for_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid</span><span class="p">,</span> <span class="n">handle</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">solid</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Can not find solid handle </span><span class="si">{handle_str}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">handle_str</span><span class="o">=</span><span class="n">handle</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+            <span class="p">)</span>
+
+        <span class="n">events_by_kind</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">solid</span><span class="o">.</span><span class="n">is_composite</span><span class="p">:</span>
+            <span class="n">events</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_step_event</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">solid_handle</span><span class="o">.</span><span class="n">is_or_descends_from</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">with_ancestor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle</span><span class="p">)):</span>
+                        <span class="n">events_by_kind</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">step_kind</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+                        <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">CompositeSolidExecutionResult</span><span class="p">(</span>
+                <span class="n">solid</span><span class="p">,</span>
+                <span class="n">events</span><span class="p">,</span>
+                <span class="n">events_by_kind</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_context</span><span class="p">,</span>
+                <span class="n">handle</span><span class="o">=</span><span class="n">handle</span><span class="o">.</span><span class="n">with_ancestor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle</span><span class="p">),</span>
+                <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_step_event</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">solid_handle</span><span class="o">.</span><span class="n">is_or_descends_from</span><span class="p">(</span><span class="n">handle</span><span class="o">.</span><span class="n">with_ancestor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">handle</span><span class="p">)):</span>
+                        <span class="n">events_by_kind</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">step_kind</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">SolidExecutionResult</span><span class="p">(</span>
+                <span class="n">solid</span><span class="p">,</span>
+                <span class="n">events_by_kind</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_context</span><span class="p">,</span>
+                <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">result_for_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the result of a solid by its solid handle.</span>
+
+<span class="sd">        This allows indexing into top-level solids to retrieve the results of children of</span>
+<span class="sd">        composite solids.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            handle (Union[str,SolidHandle]): The handle for the solid.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Union[CompositeSolidExecutionResult, SolidExecutionResult]: The result of the given</span>
+<span class="sd">            solid.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="n">handle</span> <span class="o">=</span> <span class="n">SolidHandle</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="s2">&quot;handle&quot;</span><span class="p">,</span> <span class="n">SolidHandle</span><span class="p">)</span>
+
+        <span class="n">solid</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">container</span><span class="o">.</span><span class="n">get_solid</span><span class="p">(</span><span class="n">handle</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result_for_handle</span><span class="p">(</span><span class="n">solid</span><span class="p">,</span> <span class="n">handle</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="PipelineExecutionResult"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.PipelineExecutionResult">[docs]</a><span class="k">class</span> <span class="nc">PipelineExecutionResult</span><span class="p">(</span><span class="n">GraphExecutionResult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The result of executing a pipeline.</span>
+
+<span class="sd">    Returned by :py:func:`execute_pipeline`. Users should not instantiate this class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">pipeline_def</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="p">,</span>
+        <span class="n">event_list</span><span class="p">,</span>
+        <span class="n">reconstruct_context</span><span class="p">,</span>
+        <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="s2">&quot;pipeline_def&quot;</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">PipelineExecutionResult</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">container</span><span class="o">=</span><span class="n">pipeline_def</span><span class="p">,</span>
+            <span class="n">event_list</span><span class="o">=</span><span class="n">event_list</span><span class="p">,</span>
+            <span class="n">reconstruct_context</span><span class="o">=</span><span class="n">reconstruct_context</span><span class="p">,</span>
+            <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="n">resource_instances_to_override</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">container</span></div>
+
+
+<div class="viewcode-block" id="CompositeSolidExecutionResult"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.CompositeSolidExecutionResult">[docs]</a><span class="k">class</span> <span class="nc">CompositeSolidExecutionResult</span><span class="p">(</span><span class="n">GraphExecutionResult</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Execution result for a composite solid in a pipeline.</span>
+
+<span class="sd">    Users should not instantiate this class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">solid</span><span class="p">,</span>
+        <span class="n">event_list</span><span class="p">,</span>
+        <span class="n">step_events_by_kind</span><span class="p">,</span>
+        <span class="n">reconstruct_context</span><span class="p">,</span>
+        <span class="n">handle</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid</span><span class="p">,</span> <span class="s2">&quot;solid&quot;</span><span class="p">,</span> <span class="n">Solid</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="n">solid</span><span class="o">.</span><span class="n">is_composite</span><span class="p">,</span>
+            <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Tried to instantiate a CompositeSolidExecutionResult with a noncomposite solid&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solid</span> <span class="o">=</span> <span class="n">solid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_events_by_kind</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span>
+            <span class="n">step_events_by_kind</span><span class="p">,</span> <span class="s2">&quot;step_events_by_kind&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="n">StepKind</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">list</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+            <span class="n">resource_instances_to_override</span><span class="p">,</span> <span class="s2">&quot;resource_instances_to_override&quot;</span><span class="p">,</span> <span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CompositeSolidExecutionResult</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">container</span><span class="o">=</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="p">,</span>
+            <span class="n">event_list</span><span class="o">=</span><span class="n">event_list</span><span class="p">,</span>
+            <span class="n">reconstruct_context</span><span class="o">=</span><span class="n">reconstruct_context</span><span class="p">,</span>
+            <span class="n">handle</span><span class="o">=</span><span class="n">handle</span><span class="p">,</span>
+            <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="n">resource_instances_to_override</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">output_values_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_for_solid</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">output_values</span>
+
+    <span class="k">def</span> <span class="nf">output_values_for_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle_str</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">handle_str</span><span class="p">,</span> <span class="s2">&quot;handle_str&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_for_handle</span><span class="p">(</span><span class="n">handle_str</span><span class="p">)</span><span class="o">.</span><span class="n">output_values</span>
+
+    <span class="k">def</span> <span class="nf">output_value_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_for_solid</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">output_value</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">output_value_for_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">handle_str</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">handle_str</span><span class="p">,</span> <span class="s2">&quot;handle_str&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">result_for_handle</span><span class="p">(</span><span class="n">handle_str</span><span class="p">)</span><span class="o">.</span><span class="n">output_value</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">output_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_dict</span><span class="p">:</span>
+            <span class="n">output_mapping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">get_output_mapping</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+
+            <span class="n">inner_solid_values</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result_for_handle</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">solid_named</span><span class="p">(</span><span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">solid_name</span><span class="p">),</span>
+                <span class="n">SolidHandle</span><span class="p">(</span><span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">solid_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">output_values</span>
+
+            <span class="k">if</span> <span class="n">inner_solid_values</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>  <span class="c1"># may be None if inner solid was skipped</span>
+                <span class="k">if</span> <span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">output_name</span> <span class="ow">in</span> <span class="n">inner_solid_values</span><span class="p">:</span>
+                    <span class="n">values</span><span class="p">[</span><span class="n">output_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">inner_solid_values</span><span class="p">[</span><span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">output_name</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">values</span>
+
+    <span class="k">def</span> <span class="nf">output_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">has_output</span><span class="p">(</span><span class="n">output_name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Output &#39;</span><span class="si">{output_name}</span><span class="s2">&#39; not defined in composite solid &#39;</span><span class="si">{solid}</span><span class="s2">&#39;: &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{outputs_clause}</span><span class="s2">. If you were expecting this output to be present, you may &quot;</span>
+                <span class="s2">&quot;be missing an output_mapping from an inner solid to its enclosing composite &quot;</span>
+                <span class="s2">&quot;solid.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">output_name</span><span class="o">=</span><span class="n">output_name</span><span class="p">,</span>
+                    <span class="n">solid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">outputs_clause</span><span class="o">=</span><span class="s2">&quot;found outputs </span><span class="si">{output_names}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">output_names</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()))</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_dict</span>
+                    <span class="k">else</span> <span class="s2">&quot;no output mappings were defined&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">output_mapping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">get_output_mapping</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_result_for_handle</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">solid_named</span><span class="p">(</span><span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">solid_name</span><span class="p">),</span>
+            <span class="n">SolidHandle</span><span class="p">(</span><span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">solid_name</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">output_value</span><span class="p">(</span><span class="n">output_mapping</span><span class="o">.</span><span class="n">maps_from</span><span class="o">.</span><span class="n">output_name</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="SolidExecutionResult"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.SolidExecutionResult">[docs]</a><span class="k">class</span> <span class="nc">SolidExecutionResult</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Execution result for a leaf solid in a pipeline.</span>
+
+<span class="sd">    Users should not instantiate this class.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">solid</span><span class="p">,</span> <span class="n">step_events_by_kind</span><span class="p">,</span> <span class="n">reconstruct_context</span><span class="p">,</span> <span class="n">resource_instances_to_override</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">solid</span><span class="p">,</span> <span class="s2">&quot;solid&quot;</span><span class="p">,</span> <span class="n">Solid</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="ow">not</span> <span class="n">solid</span><span class="o">.</span><span class="n">is_composite</span><span class="p">,</span>
+            <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Tried to instantiate a SolidExecutionResult with a composite solid&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solid</span> <span class="o">=</span> <span class="n">solid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_events_by_kind</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span>
+            <span class="n">step_events_by_kind</span><span class="p">,</span> <span class="s2">&quot;step_events_by_kind&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="n">StepKind</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="nb">list</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_context</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">reconstruct_context</span><span class="p">,</span> <span class="s2">&quot;reconstruct_context&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+            <span class="n">resource_instances_to_override</span><span class="p">,</span> <span class="s2">&quot;resource_instances_to_override&quot;</span><span class="p">,</span> <span class="nb">str</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">compute_input_event_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Dict[str, DagsterEvent]: All events of type ``STEP_INPUT``, keyed by input name.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span><span class="n">se</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">input_name</span><span class="p">:</span> <span class="n">se</span> <span class="k">for</span> <span class="n">se</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_events_during_compute</span><span class="p">}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_events_during_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[DagsterEvent]: All events of type ``STEP_INPUT``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_steps_of_type</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_INPUT</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SolidExecutionResult.get_output_event_for_compute"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.SolidExecutionResult.get_output_event_for_compute">[docs]</a>    <span class="k">def</span> <span class="nf">get_output_event_for_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The ``STEP_OUTPUT`` event for the given output name.</span>
+
+<span class="sd">        Throws if not present.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            output_name (Optional[str]): The name of the output. (default: &#39;result&#39;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DagsterEvent: The corresponding event.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_output_events_for_compute</span><span class="p">(</span><span class="n">output_name</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;Multiple output events returned, use get_output_events_for_compute&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">events</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">compute_output_events_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Dict[str, List[DagsterEvent]]: All events of type ``STEP_OUTPUT``, keyed by output name&quot;&quot;&quot;</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">se</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_events_during_compute</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">se</span><span class="o">.</span><span class="n">step_output_data</span><span class="o">.</span><span class="n">output_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">se</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SolidExecutionResult.get_output_events_for_compute"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.SolidExecutionResult.get_output_events_for_compute">[docs]</a>    <span class="k">def</span> <span class="nf">get_output_events_for_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="s2">&quot;result&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The ``STEP_OUTPUT`` event for the given output name.</span>
+
+<span class="sd">        Throws if not present.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            output_name (Optional[str]): The name of the output. (default: &#39;result&#39;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[DagsterEvent]: The corresponding events.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_output_events_dict</span><span class="p">[</span><span class="n">output_name</span><span class="p">]</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_events_during_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[DagsterEvent]: All events of type ``STEP_OUTPUT``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_steps_of_type</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_OUTPUT</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">compute_step_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[DagsterEvent]: All events generated by execution of the solid compute function.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_events_by_kind</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">StepKind</span><span class="o">.</span><span class="n">COMPUTE</span><span class="p">,</span> <span class="p">[])</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_events</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">materializations_during_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[Materialization]: All materializations yielded by the solid.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">mat_event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">materialization</span>
+            <span class="k">for</span> <span class="n">mat_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">materialization_events_during_compute</span>
+        <span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">materialization_events_during_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[DagsterEvent]: All events of type ``STEP_MATERIALIZATION``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_steps_of_type</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">expectation_events_during_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[DagsterEvent]: All events of type ``STEP_EXPECTATION_RESULT``.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_steps_of_type</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_compute_steps_of_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dagster_event_type</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">se</span><span class="p">:</span> <span class="n">se</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">dagster_event_type</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">expectation_results_during_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[ExpectationResult]: All expectation results yielded by the solid&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">expt_event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">expectation_result</span>
+            <span class="k">for</span> <span class="n">expt_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">expectation_events_during_compute</span>
+        <span class="p">]</span>
+
+<div class="viewcode-block" id="SolidExecutionResult.get_step_success_event"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.SolidExecutionResult.get_step_success_event">[docs]</a>    <span class="k">def</span> <span class="nf">get_step_success_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;DagsterEvent: The ``STEP_SUCCESS`` event, throws if not present.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">step_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">step_event</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span><span class="s2">&quot;Step success not found for solid </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">))</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">compute_step_failure_event</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;DagsterEvent: The ``STEP_FAILURE`` event, throws if it did not fail.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Cannot call compute_step_failure_event if successful&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">step_failure_events</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_steps_of_type</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">step_failure_events</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">step_failure_events</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">success</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;bool: Whether solid execution was successful.&quot;&quot;&quot;</span>
+        <span class="n">any_success</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">step_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">step_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="p">:</span>
+                <span class="n">any_success</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="k">return</span> <span class="n">any_success</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">skipped</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;bool: Whether solid execution was skipped.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">step_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SKIPPED</span>
+                <span class="k">for</span> <span class="n">step_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">output_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Union[None, Dict[str, Union[Any, Dict[str, Any]]]: The computed output values.</span>
+
+<span class="sd">        Returns ``None`` if execution did not succeed.</span>
+
+<span class="sd">        Returns a dictionary where keys are output names and the values are:</span>
+<span class="sd">            * the output values in the normal case</span>
+<span class="sd">            * a dictionary from mapping key to corresponding value in the mapped case</span>
+
+<span class="sd">        Note that accessing this property will reconstruct the pipeline context (including, e.g.,</span>
+<span class="sd">        resources) to retrieve materialized output values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">success</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span><span class="p">)</span> <span class="k">as</span> <span class="n">context</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">compute_step_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">compute_step_event</span><span class="o">.</span><span class="n">is_successful_output</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">compute_step_event</span><span class="o">.</span><span class="n">step_output_data</span>
+                    <span class="n">step</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_by_key</span><span class="p">(</span><span class="n">compute_step_event</span><span class="o">.</span><span class="n">step_key</span><span class="p">)</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_value</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">for_step</span><span class="p">(</span><span class="n">step</span><span class="p">),</span> <span class="n">output</span><span class="p">)</span>
+                    <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                        <span class="ow">not</span> <span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">mapping_key</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">get_mapping_key</span><span class="p">()),</span>
+                        <span class="s2">&quot;Not set up to handle mapped outputs downstream of mapped steps&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">mapping_key</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">mapping_key</span> <span class="ow">or</span> <span class="n">step</span><span class="o">.</span><span class="n">get_mapping_key</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">mapping_key</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">output_name</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">results</span><span class="p">[</span><span class="n">output</span><span class="o">.</span><span class="n">output_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">mapping_key</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">results</span><span class="p">[</span><span class="n">output</span><span class="o">.</span><span class="n">output_name</span><span class="p">][</span><span class="n">mapping_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">results</span><span class="p">[</span><span class="n">output</span><span class="o">.</span><span class="n">output_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+
+        <span class="k">return</span> <span class="n">results</span>
+
+<div class="viewcode-block" id="SolidExecutionResult.output_value"><a class="viewcode-back" href="../../../../sections/api/apidocs/execution.html#dagster.SolidExecutionResult.output_value">[docs]</a>    <span class="k">def</span> <span class="nf">output_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">DEFAULT_OUTPUT</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a computed output value.</span>
+
+<span class="sd">        Note that calling this method will reconstruct the pipeline context (including, e.g.,</span>
+<span class="sd">        resources) to retrieve materialized output values.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            output_name(str): The output name for which to retrieve the value. (default: &#39;result&#39;)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Union[None, Any, Dict[str, Any]]: ``None`` if execution did not succeed, the output value</span>
+<span class="sd">                in the normal case, and a dict of mapping keys to values in the mapped case.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">output_name</span><span class="p">,</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">has_output</span><span class="p">(</span><span class="n">output_name</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Output &#39;</span><span class="si">{output_name}</span><span class="s2">&#39; not defined in solid &#39;</span><span class="si">{solid}</span><span class="s2">&#39;: found outputs &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{output_names}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">output_name</span><span class="o">=</span><span class="n">output_name</span><span class="p">,</span>
+                    <span class="n">solid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">output_names</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="o">.</span><span class="n">output_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">reconstruct_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_instances_to_override</span><span class="p">)</span> <span class="k">as</span> <span class="n">context</span><span class="p">:</span>
+            <span class="n">found</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">compute_step_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">:</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="n">compute_step_event</span><span class="o">.</span><span class="n">is_successful_output</span>
+                    <span class="ow">and</span> <span class="n">compute_step_event</span><span class="o">.</span><span class="n">step_output_data</span><span class="o">.</span><span class="n">output_name</span> <span class="o">==</span> <span class="n">output_name</span>
+                <span class="p">):</span>
+                    <span class="n">found</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">compute_step_event</span><span class="o">.</span><span class="n">step_output_data</span>
+                    <span class="n">step</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_by_key</span><span class="p">(</span><span class="n">compute_step_event</span><span class="o">.</span><span class="n">step_key</span><span class="p">)</span>
+                    <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_value</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">for_step</span><span class="p">(</span><span class="n">step</span><span class="p">),</span> <span class="n">output</span><span class="p">)</span>
+                    <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                        <span class="ow">not</span> <span class="p">(</span><span class="n">output</span><span class="o">.</span><span class="n">mapping_key</span> <span class="ow">and</span> <span class="n">step</span><span class="o">.</span><span class="n">get_mapping_key</span><span class="p">()),</span>
+                        <span class="s2">&quot;Not set up to handle mapped outputs downstream of mapped steps&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                    <span class="n">mapping_key</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">mapping_key</span> <span class="ow">or</span> <span class="n">step</span><span class="o">.</span><span class="n">get_mapping_key</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="n">mapping_key</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">result</span> <span class="o">=</span> <span class="p">{</span><span class="n">mapping_key</span><span class="p">:</span> <span class="n">value</span><span class="p">}</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">result</span><span class="p">[</span><span class="n">mapping_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">result</span> <span class="o">=</span> <span class="n">value</span>
+
+            <span class="k">if</span> <span class="n">found</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">result</span>
+
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="p">(</span>
+                    <span class="s2">&quot;Did not find result </span><span class="si">{output_name}</span><span class="s2"> in solid </span><span class="si">{self.solid.name}</span><span class="s2"> &quot;</span>
+                    <span class="s2">&quot;execution result&quot;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">output_name</span><span class="o">=</span><span class="n">output_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">=</span><span class="bp">self</span><span class="p">)</span>
+            <span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_get_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">step_output_data</span><span class="p">):</span>
+        <span class="n">step_output_handle</span> <span class="o">=</span> <span class="n">step_output_data</span><span class="o">.</span><span class="n">step_output_handle</span>
+        <span class="n">manager</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get_io_manager</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">)</span>
+
+        <span class="n">res</span> <span class="o">=</span> <span class="n">manager</span><span class="o">.</span><span class="n">load_input</span><span class="p">(</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">for_input_manager</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">dagster_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">output_def_named</span><span class="p">(</span><span class="n">step_output_data</span><span class="o">.</span><span class="n">output_name</span><span class="p">)</span><span class="o">.</span><span class="n">dagster_type</span><span class="p">,</span>
+                <span class="n">source_handle</span><span class="o">=</span><span class="n">step_output_handle</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">res</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">failure_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Union[None, StepFailureData]: Any data corresponding to this step&#39;s failure, if it</span>
+<span class="sd">        failed.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">step_event</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_step_events</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">step_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">step_event</span><span class="o">.</span><span class="n">step_failure_data</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

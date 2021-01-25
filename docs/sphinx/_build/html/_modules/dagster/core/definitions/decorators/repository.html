@@ -1,0 +1,312 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.decorators.repository &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.decorators.repository</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span>
+
+<span class="kn">from</span> <span class="nn">..job</span> <span class="kn">import</span> <span class="n">JobDefinition</span>
+<span class="kn">from</span> <span class="nn">..partition</span> <span class="kn">import</span> <span class="n">PartitionSetDefinition</span>
+<span class="kn">from</span> <span class="nn">..pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+<span class="kn">from</span> <span class="nn">..repository</span> <span class="kn">import</span> <span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span><span class="p">,</span> <span class="n">RepositoryData</span><span class="p">,</span> <span class="n">RepositoryDefinition</span>
+<span class="kn">from</span> <span class="nn">..schedule</span> <span class="kn">import</span> <span class="n">ScheduleDefinition</span>
+
+
+<span class="k">class</span> <span class="nc">_Repository</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">repository_definitions</span> <span class="o">=</span> <span class="n">fn</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="n">RepositoryData</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;Bad return value of type </span><span class="si">{type_}</span><span class="s2"> from repository construction function: must &quot;</span>
+                <span class="s2">&quot;return list, dict, or RepositoryData. See the @repository decorator docstring for &quot;</span>
+                <span class="s2">&quot;details and examples&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">)),</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+            <span class="n">bad_definitions</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">definition</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+                    <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">PartitionSetDefinition</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">ScheduleDefinition</span><span class="p">)</span>
+                    <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">JobDefinition</span><span class="p">)</span>
+                <span class="p">):</span>
+                    <span class="n">bad_definitions</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">i</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">definition</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">bad_definitions</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;Bad return value from repository construction function: all elements of list &quot;</span>
+                    <span class="s2">&quot;must be of type PipelineDefinition, PartitionSetDefinition, &quot;</span>
+                    <span class="s2">&quot;ScheduleDefinition, or JobDefinition. Got </span><span class="si">{bad_definitions_formatted}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">bad_definitions_formatted</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                            <span class="p">[</span>
+                                <span class="s2">&quot;value of type </span><span class="si">{type_}</span><span class="s2"> at index </span><span class="si">{i}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">type_</span><span class="o">=</span><span class="n">type_</span><span class="p">,</span> <span class="n">i</span><span class="o">=</span><span class="n">i</span><span class="p">)</span>
+                                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">type_</span> <span class="ow">in</span> <span class="n">bad_definitions</span>
+                            <span class="p">]</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">repository_data</span> <span class="o">=</span> <span class="n">RepositoryData</span><span class="o">.</span><span class="n">from_list</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">set</span><span class="p">(</span><span class="n">repository_definitions</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;Bad return value from repository construction function: dict must not contain &quot;</span>
+                    <span class="s2">&quot;keys other than {{&#39;pipelines&#39;, &#39;partition_sets&#39;, &#39;schedules&#39;, &#39;jobs&#39;}}: found &quot;</span>
+                    <span class="s2">&quot;</span><span class="si">{bad_keys}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">bad_keys</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                            <span class="p">[</span>
+                                <span class="s2">&quot;&#39;</span><span class="si">{key}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+                                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">repository_definitions</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                                <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span>
+                            <span class="p">]</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="n">repository_data</span> <span class="o">=</span> <span class="n">RepositoryData</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="n">RepositoryData</span><span class="p">):</span>
+            <span class="n">repository_data</span> <span class="o">=</span> <span class="n">repository_definitions</span>
+
+        <span class="n">repository_def</span> <span class="o">=</span> <span class="n">RepositoryDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span> <span class="n">repository_data</span><span class="o">=</span><span class="n">repository_data</span>
+        <span class="p">)</span>
+
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">repository_def</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">repository_def</span>
+
+
+<div class="viewcode-block" id="repository"><a class="viewcode-back" href="../../../../../sections/api/apidocs/repositories.html#dagster.repository">[docs]</a><span class="k">def</span> <span class="nf">repository</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a repository from the decorated function.</span>
+
+<span class="sd">    The decorated function should take no arguments and its return value should one of:</span>
+
+<span class="sd">    1. ``List[Union[PipelineDefinition, PartitionSetDefinition, ScheduleDefinition]]``. Use this</span>
+<span class="sd">        form when you have no need to lazy load pipelines or other definitions. This is the</span>
+<span class="sd">        typical use case.</span>
+
+<span class="sd">    2. A dict of the form:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        {</span>
+<span class="sd">            &#39;pipelines&#39;: Dict[str, Callable[[], PipelineDefinition]],</span>
+<span class="sd">            &#39;partition_sets&#39;: Dict[str, Callable[[], PartitionSetDefinition]],</span>
+<span class="sd">            &#39;schedules&#39;: Dict[str, Callable[[], ScheduleDefinition]]</span>
+<span class="sd">        }</span>
+
+<span class="sd">    This form is intended to allow definitions to be created lazily when accessed by name,</span>
+<span class="sd">    which can be helpful for performance when there are many definitions in a repository, or</span>
+<span class="sd">    when constructing the definitions is costly.</span>
+
+<span class="sd">    3. An object of type :py:class:`RepositoryData`. Return this object if you need fine-grained</span>
+<span class="sd">        control over the construction and indexing of definitions within the repository, e.g., to</span>
+<span class="sd">        create definitions dynamically from .yaml files in a directory.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of the repository. Defaults to the name of the decorated</span>
+<span class="sd">            function.</span>
+<span class="sd">        description (Optional[str]): A string description of the repository.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        ######################################################################</span>
+<span class="sd">        # A simple repository using the first form of the decorated function</span>
+<span class="sd">        ######################################################################</span>
+
+<span class="sd">        @solid(config_schema={n: Field(Int)})</span>
+<span class="sd">        def return_n(context):</span>
+<span class="sd">            return context.solid_config[&#39;n&#39;]</span>
+
+<span class="sd">        @pipeline(name=&#39;simple_pipeline&#39;)</span>
+<span class="sd">        def simple_pipeline():</span>
+<span class="sd">            return_n()</span>
+
+<span class="sd">        simple_partition_set = PartitionSetDefinition(</span>
+<span class="sd">            name=&#39;simple_partition_set&#39;,</span>
+<span class="sd">            pipeline_name=&#39;simple_pipeline&#39;,</span>
+<span class="sd">            partition_fn=lambda: range(10),</span>
+<span class="sd">            run_config_fn_for_partition=(</span>
+<span class="sd">                lambda partition: {</span>
+<span class="sd">                    &#39;solids&#39;: {&#39;return_n&#39;: {&#39;config&#39;: {&#39;n&#39;: partition}}}</span>
+<span class="sd">                }</span>
+<span class="sd">            ),</span>
+<span class="sd">        )</span>
+
+<span class="sd">        simple_schedule = simple_partition_set.create_schedule_definition(</span>
+<span class="sd">            schedule_name=&#39;simple_daily_10_pm_schedule&#39;,</span>
+<span class="sd">            cron_schedule=&#39;0 22 * * *&#39;,</span>
+<span class="sd">        )</span>
+
+<span class="sd">        @repository</span>
+<span class="sd">        def simple_repository():</span>
+<span class="sd">            return [simple_pipeline, simple_partition_set, simple_schedule]</span>
+
+
+<span class="sd">        ######################################################################</span>
+<span class="sd">        # A lazy-loaded repository</span>
+<span class="sd">        ######################################################################</span>
+
+<span class="sd">        def make_expensive_pipeline():</span>
+<span class="sd">            @pipeline(name=&#39;expensive_pipeline&#39;)</span>
+<span class="sd">            def expensive_pipeline():</span>
+<span class="sd">                for i in range(10000):</span>
+<span class="sd">                    return_n.alias(&#39;return_n_{i}&#39;.format(i=i))()</span>
+
+<span class="sd">            return expensive_pipeline</span>
+
+<span class="sd">        expensive_partition_set = PartitionSetDefinition(</span>
+<span class="sd">            name=&#39;expensive_partition_set&#39;,</span>
+<span class="sd">            pipeline_name=&#39;expensive_pipeline&#39;,</span>
+<span class="sd">            partition_fn=lambda: range(10),</span>
+<span class="sd">            run_config_fn_for_partition=(</span>
+<span class="sd">                lambda partition: {</span>
+<span class="sd">                    &#39;solids&#39;: {</span>
+<span class="sd">                        &#39;return_n_{i}&#39;.format(i=i): {&#39;config&#39;: {&#39;n&#39;: partition}}</span>
+<span class="sd">                        for i in range(10000)</span>
+<span class="sd">                    }</span>
+<span class="sd">                }</span>
+<span class="sd">            ),</span>
+<span class="sd">        )</span>
+
+<span class="sd">        def make_expensive_schedule():</span>
+<span class="sd">            expensive_partition_set.create_schedule_definition(</span>
+<span class="sd">                schedule_name=&#39;expensive_schedule&#39;,</span>
+<span class="sd">                cron_schedule=&#39;0 22 * * *&#39;,</span>
+<span class="sd">        )</span>
+
+<span class="sd">        @repository</span>
+<span class="sd">        def lazy_loaded_repository():</span>
+<span class="sd">            return {</span>
+<span class="sd">                &#39;pipelines&#39;: {&#39;expensive_pipeline&#39;: make_expensive_pipeline},</span>
+<span class="sd">                &#39;partition_sets&#39;: {</span>
+<span class="sd">                    &#39;expensive_partition_set&#39;: expensive_partition_set</span>
+<span class="sd">                },</span>
+<span class="sd">                &#39;schedules&#39;: {&#39;expensive_schedule: make_expensive_schedule}</span>
+<span class="sd">            }</span>
+
+
+<span class="sd">        ######################################################################</span>
+<span class="sd">        # A complex repository that lazily construct pipelines from a directory</span>
+<span class="sd">        # of files in a bespoke YAML format</span>
+<span class="sd">        ######################################################################</span>
+
+<span class="sd">        class ComplexRepositoryData(RepositoryData):</span>
+<span class="sd">            def __init__(self, yaml_directory):</span>
+<span class="sd">                self._yaml_directory = yaml_directory</span>
+
+<span class="sd">            def get_pipeline(self, pipeline_name):</span>
+<span class="sd">                return self._construct_pipeline_def_from_yaml_file(</span>
+<span class="sd">                    self._yaml_file_for_pipeline_name(pipeline_name)</span>
+<span class="sd">                )</span>
+
+<span class="sd">            ...</span>
+
+<span class="sd">        @repository</span>
+<span class="sd">        def complex_repository():</span>
+<span class="sd">            return ComplexRepositoryData(&#39;some_directory&#39;)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">description</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_Repository</span><span class="p">()(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_Repository</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

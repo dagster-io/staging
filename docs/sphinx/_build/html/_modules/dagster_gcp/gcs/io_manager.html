@@ -1,0 +1,194 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_gcp.gcs.io_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_gcp.gcs.io_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">IOManager</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">io_manager</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">PICKLE_PROTOCOL</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backoff</span> <span class="kn">import</span> <span class="n">backoff</span>
+<span class="kn">from</span> <span class="nn">google.api_core.exceptions</span> <span class="kn">import</span> <span class="n">TooManyRequests</span>
+<span class="kn">from</span> <span class="nn">google.cloud</span> <span class="kn">import</span> <span class="n">storage</span>
+
+<span class="n">DEFAULT_LEASE_DURATION</span> <span class="o">=</span> <span class="mi">60</span>  <span class="c1"># One minute</span>
+
+
+<span class="k">class</span> <span class="nc">PickledObjectGCSIOManager</span><span class="p">(</span><span class="n">IOManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bucket</span><span class="p">,</span> <span class="n">client</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;dagster&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">bucket</span><span class="p">,</span> <span class="s2">&quot;bucket&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">client</span> <span class="ow">or</span> <span class="n">storage</span><span class="o">.</span><span class="n">Client</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bucket_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">get_bucket</span><span class="p">(</span><span class="n">bucket</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket_obj</span><span class="o">.</span><span class="n">exists</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prefix</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="s2">&quot;prefix&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">run_id</span><span class="p">,</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">name</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get_run_scoped_output_identifier</span><span class="p">()</span>
+        <span class="k">return</span> <span class="s2">&quot;/&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">prefix</span><span class="p">,</span> <span class="s2">&quot;storage&quot;</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;files&quot;</span><span class="p">,</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">name</span><span class="p">,])</span>
+
+    <span class="k">def</span> <span class="nf">_rm_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bucket_obj</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bucket_obj</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_has_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="n">blobs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">list_blobs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bucket</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">blobs</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">_uri_for_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;gs://&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">bucket</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="si">{key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">upstream_output</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading GCS object from: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_uri_for_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">bytes_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bucket_obj</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">download_as_bytes</span><span class="p">()</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">bytes_obj</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">obj</span>
+
+    <span class="k">def</span> <span class="nf">handle_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing GCS object at: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_uri_for_key</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_object</span><span class="p">(</span><span class="n">key</span><span class="p">):</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Removing existing GCS key: </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_rm_object</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+        <span class="n">pickled_obj</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">)</span>
+
+        <span class="n">backoff</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bucket_obj</span><span class="o">.</span><span class="n">blob</span><span class="p">(</span><span class="n">key</span><span class="p">)</span><span class="o">.</span><span class="n">upload_from_string</span><span class="p">,</span>
+            <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">pickled_obj</span><span class="p">],</span>
+            <span class="n">retry_on</span><span class="o">=</span><span class="p">(</span><span class="n">TooManyRequests</span><span class="p">,),</span>
+        <span class="p">)</span>
+
+
+<div class="viewcode-block" id="gcs_pickle_io_manager"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_gcp.html#dagster_gcp.gcs.gcs_pickle_io_manager">[docs]</a><span class="nd">@io_manager</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;gcs_bucket&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">),</span>
+        <span class="s2">&quot;gcs_prefix&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;dagster&quot;</span><span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;gcs&quot;</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">gcs_pickle_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Persistent IO manager using GCS for storage.</span>
+
+<span class="sd">    Serializes objects via pickling. Suitable for objects storage for distributed executors, so long</span>
+<span class="sd">    as each execution node has network connectivity and credentials for GCS and the backing bucket.</span>
+
+<span class="sd">    Attach this resource definition to a :py:class:`~dagster.ModeDefinition`</span>
+<span class="sd">    in order to make it available to your pipeline:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        pipeline_def = PipelineDefinition(</span>
+<span class="sd">            mode_defs=[</span>
+<span class="sd">                ModeDefinition(</span>
+<span class="sd">                    resource_defs={&#39;io_manager&#39;: gcs_pickle_io_manager, &#39;gcs&#39;: gcs_resource, ...},</span>
+<span class="sd">                ), ...</span>
+<span class="sd">            ], ...</span>
+<span class="sd">        )</span>
+
+<span class="sd">    You may configure this storage as follows:</span>
+
+<span class="sd">    .. code-block:: YAML</span>
+
+<span class="sd">        resources:</span>
+<span class="sd">            io_manager:</span>
+<span class="sd">                config:</span>
+<span class="sd">                    gcs_bucket: my-cool-bucket</span>
+<span class="sd">                    gcs_prefix: good/prefix-for-files-</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">client</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">gcs</span>
+    <span class="n">pickled_io_manager</span> <span class="o">=</span> <span class="n">PickledObjectGCSIOManager</span><span class="p">(</span>
+        <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;gcs_bucket&quot;</span><span class="p">],</span>
+        <span class="n">client</span><span class="p">,</span>
+        <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;gcs_prefix&quot;</span><span class="p">],</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">pickled_io_manager</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

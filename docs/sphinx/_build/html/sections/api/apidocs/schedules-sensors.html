@@ -1,0 +1,526 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Run Requests &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="run-requests">
+<h1>Run Requests<a class="headerlink" href="#run-requests" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="dagster.RunRequest">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">RunRequest</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/job.html#RunRequest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.RunRequest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents all the information required to launch a single run.  Must be returned by a
+SensorDefinition or ScheduleDefinition’s evaluation function for a run to be launched.</p>
+<dl class="attribute">
+<dt id="dagster.RunRequest.run_key">
+<code class="sig-name descname">run_key</code><a class="headerlink" href="#dagster.RunRequest.run_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>A string key to identify this launched run. For sensors, ensures that
+only one run is created per run key across all sensor evaluations.  For schedules,
+ensures that one run is created per tick, across failure recoveries. Passing in a <cite>None</cite>
+value means that a run will always be launched per evaluation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.RunRequest.run_config">
+<code class="sig-name descname">run_config</code><a class="headerlink" href="#dagster.RunRequest.run_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>The environment config that parameterizes the run execution to
+be launched, as a dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Dict]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.RunRequest.tags">
+<code class="sig-name descname">tags</code><a class="headerlink" href="#dagster.RunRequest.tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>A dictionary of tags (string key-value pairs) to attach
+to the launched run.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[Dict[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.SkipReason">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">SkipReason</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/job.html#SkipReason"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SkipReason" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a skipped evaluation, where no runs are requested. May contain a message to indicate
+why no runs were requested.</p>
+<dl class="attribute">
+<dt id="dagster.SkipReason.skip_message">
+<code class="sig-name descname">skip_message</code><a class="headerlink" href="#dagster.SkipReason.skip_message" title="Permalink to this definition">¶</a></dt>
+<dd><p>A message displayed in dagit for why this evaluation resulted
+in no requested runs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="schedules">
+<h1>Schedules<a class="headerlink" href="#schedules" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="dagster.schedule">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">schedule</code><span class="sig-paren">(</span><em class="sig-param">cron_schedule</em>, <em class="sig-param">pipeline_name</em>, <em class="sig-param">name=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">tags_fn=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode='default'</em>, <em class="sig-param">should_execute=None</em>, <em class="sig-param">environment_vars=None</em>, <em class="sig-param">execution_timezone=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/schedule.html#schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule.</p>
+<p>The decorated function will be called as the <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code> of the underlying
+<a class="reference internal" href="#dagster.ScheduleDefinition" title="dagster.ScheduleDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleDefinition</span></code></a> and should take a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> as its only argument, returning the environment
+dict for the scheduled execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cron_schedule</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – A valid cron string specifying when the schedule will run, e.g.,
+<code class="docutils literal notranslate"><span class="pre">'45</span> <span class="pre">23</span> <span class="pre">*</span> <span class="pre">*</span> <span class="pre">6'</span></code> for a schedule that runs at 11:45 PM every Saturday.</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the schedule runs.</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the schedule to create.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A dictionary of tags (string key-value pairs) to attach
+to the scheduled runs.</p></li>
+<li><p><strong>tags_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em><em>]</em>) – A function
+that generates tags to attach to the schedules runs. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a dictionary of tags (string
+key-value pairs). You may set only one of <code class="docutils literal notranslate"><span class="pre">tags</span></code> and <code class="docutils literal notranslate"><span class="pre">tags_fn</span></code>.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the schedule runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The pipeline mode in which to execute this schedule.
+(Default: ‘default’)</p></li>
+<li><p><strong>should_execute</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em><em>]</em>) – A function that runs at
+schedule execution tie to determine whether a schedule should execute or skip. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a boolean (<code class="docutils literal notranslate"><span class="pre">True</span></code> if the
+schedule should execute). Defaults to a function that always returns <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>environment_vars</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Any environment variables to set when executing
+the schedule.</p></li>
+<li><p><strong>execution_timezone</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Timezone in which the schedule should run. Only works
+with DagsterDaemonScheduler, and must be set when using that scheduler.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.monthly_schedule">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">monthly_schedule</code><span class="sig-paren">(</span><em class="sig-param">pipeline_name</em>, <em class="sig-param">start_date</em>, <em class="sig-param">name=None</em>, <em class="sig-param">execution_day_of_month=1</em>, <em class="sig-param">execution_time=datetime.time(0</em>, <em class="sig-param">0)</em>, <em class="sig-param">tags_fn_for_date=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode='default'</em>, <em class="sig-param">should_execute=None</em>, <em class="sig-param">environment_vars=None</em>, <em class="sig-param">end_date=None</em>, <em class="sig-param">execution_timezone=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/schedule.html#monthly_schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.monthly_schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule that runs monthly.</p>
+<p>The decorated function will be called as the <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code> of the underlying
+<a class="reference internal" href="#dagster.ScheduleDefinition" title="dagster.ScheduleDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleDefinition</span></code></a> and should take a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> as its only argument, returning the environment
+dict for the scheduled execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the schedule runs.</p></li>
+<li><p><strong>start_date</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a>) – The date from which to run the schedule.</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the schedule to create.</p></li>
+<li><p><strong>execution_day_of_month</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – The day of the month on which to run the schedule (must be
+between 0 and 31).</p></li>
+<li><p><strong>execution_time</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.time" title="(in Python v3.8)"><em>datetime.time</em></a>) – The time at which to execute the schedule.</p></li>
+<li><p><strong>tags_fn_for_date</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em><em>]</em>) – A
+function that generates tags to attach to the schedules runs. Takes the date of the
+schedule run and returns a dictionary of tags (string key-value pairs).</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the schedule runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The pipeline mode in which to execute this schedule.
+(Default: ‘default’)</p></li>
+<li><p><strong>should_execute</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em><em>]</em>) – A function that runs at
+schedule execution tie to determine whether a schedule should execute or skip. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a boolean (<code class="docutils literal notranslate"><span class="pre">True</span></code> if the
+schedule should execute). Defaults to a function that always returns <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>environment_vars</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Any environment variables to set when executing
+the schedule.</p></li>
+<li><p><strong>end_date</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em>) – The last time to run the schedule to, defaults to
+current time.</p></li>
+<li><p><strong>execution_timezone</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Timezone in which the schedule should run. Only works
+with DagsterDaemonScheduler, and must be set when using that scheduler.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.weekly_schedule">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">weekly_schedule</code><span class="sig-paren">(</span><em class="sig-param">pipeline_name</em>, <em class="sig-param">start_date</em>, <em class="sig-param">name=None</em>, <em class="sig-param">execution_day_of_week=0</em>, <em class="sig-param">execution_time=datetime.time(0</em>, <em class="sig-param">0)</em>, <em class="sig-param">tags_fn_for_date=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode='default'</em>, <em class="sig-param">should_execute=None</em>, <em class="sig-param">environment_vars=None</em>, <em class="sig-param">end_date=None</em>, <em class="sig-param">execution_timezone=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/schedule.html#weekly_schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.weekly_schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule that runs weekly.</p>
+<p>The decorated function will be called as the <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code> of the underlying
+<a class="reference internal" href="#dagster.ScheduleDefinition" title="dagster.ScheduleDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleDefinition</span></code></a> and should take a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> as its only argument, returning the environment
+dict for the scheduled execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the schedule runs.</p></li>
+<li><p><strong>start_date</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a>) – The date from which to run the schedule.</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the schedule to create.</p></li>
+<li><p><strong>execution_day_of_week</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – The day of the week on which to run the schedule. Must be
+between 0 (Sunday) and 6 (Saturday).</p></li>
+<li><p><strong>execution_time</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.time" title="(in Python v3.8)"><em>datetime.time</em></a>) – The time at which to execute the schedule.</p></li>
+<li><p><strong>tags_fn_for_date</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em><em>]</em>) – A
+function that generates tags to attach to the schedules runs. Takes the date of the
+schedule run and returns a dictionary of tags (string key-value pairs).</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the schedule runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The pipeline mode in which to execute this schedule.
+(Default: ‘default’)</p></li>
+<li><p><strong>should_execute</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em><em>]</em>) – A function that runs at
+schedule execution tie to determine whether a schedule should execute or skip. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a boolean (<code class="docutils literal notranslate"><span class="pre">True</span></code> if the
+schedule should execute). Defaults to a function that always returns <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>environment_vars</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Any environment variables to set when executing
+the schedule.</p></li>
+<li><p><strong>end_date</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em>) – The last time to run the schedule to, defaults to
+current time.</p></li>
+<li><p><strong>execution_timezone</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Timezone in which the schedule should run. Only works
+with DagsterDaemonScheduler, and must be set when using that scheduler.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.hourly_schedule">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">hourly_schedule</code><span class="sig-paren">(</span><em class="sig-param">pipeline_name</em>, <em class="sig-param">start_date</em>, <em class="sig-param">name=None</em>, <em class="sig-param">execution_time=datetime.time(0</em>, <em class="sig-param">0)</em>, <em class="sig-param">tags_fn_for_date=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode='default'</em>, <em class="sig-param">should_execute=None</em>, <em class="sig-param">environment_vars=None</em>, <em class="sig-param">end_date=None</em>, <em class="sig-param">execution_timezone=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/schedule.html#hourly_schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.hourly_schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule that runs hourly.</p>
+<p>The decorated function will be called as the <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code> of the underlying
+<a class="reference internal" href="#dagster.ScheduleDefinition" title="dagster.ScheduleDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleDefinition</span></code></a> and should take a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> as its only argument, returning the environment
+dict for the scheduled execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the schedule runs.</p></li>
+<li><p><strong>start_date</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a>) – The date from which to run the schedule.</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the schedule to create. By default, this will be the name
+of the decorated function.</p></li>
+<li><p><strong>execution_time</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.time" title="(in Python v3.8)"><em>datetime.time</em></a>) – The time at which to execute the schedule. Only the minutes
+component will be respected – the hour should be 0, and will be ignored if it is not 0.</p></li>
+<li><p><strong>tags_fn_for_date</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em><em>]</em>) – A
+function that generates tags to attach to the schedules runs. Takes the date of the
+schedule run and returns a dictionary of tags (string key-value pairs).</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the schedule runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The pipeline mode in which to execute this schedule.
+(Default: ‘default’)</p></li>
+<li><p><strong>should_execute</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em><em>]</em>) – A function that runs at
+schedule execution tie to determine whether a schedule should execute or skip. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a boolean (<code class="docutils literal notranslate"><span class="pre">True</span></code> if the
+schedule should execute). Defaults to a function that always returns <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>environment_vars</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Any environment variables to set when executing
+the schedule.</p></li>
+<li><p><strong>end_date</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em>) – The last time to run the schedule to, defaults to
+current time.</p></li>
+<li><p><strong>execution_timezone</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Timezone in which the schedule should run. Only works
+with DagsterDaemonScheduler, and must be set when using that scheduler.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster.daily_schedule">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">daily_schedule</code><span class="sig-paren">(</span><em class="sig-param">pipeline_name</em>, <em class="sig-param">start_date</em>, <em class="sig-param">name=None</em>, <em class="sig-param">execution_time=datetime.time(0</em>, <em class="sig-param">0)</em>, <em class="sig-param">tags_fn_for_date=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode='default'</em>, <em class="sig-param">should_execute=None</em>, <em class="sig-param">environment_vars=None</em>, <em class="sig-param">end_date=None</em>, <em class="sig-param">execution_timezone=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/schedule.html#daily_schedule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.daily_schedule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a schedule that runs daily.</p>
+<p>The decorated function will be called as the <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code> of the underlying
+<a class="reference internal" href="#dagster.ScheduleDefinition" title="dagster.ScheduleDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleDefinition</span></code></a> and should take a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> as its only argument, returning the environment
+dict for the scheduled execution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the schedule runs.</p></li>
+<li><p><strong>start_date</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a>) – The date from which to run the schedule.</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the schedule to create.</p></li>
+<li><p><strong>execution_time</strong> (<a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.time" title="(in Python v3.8)"><em>datetime.time</em></a>) – The time at which to execute the schedule.</p></li>
+<li><p><strong>tags_fn_for_date</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em><em>]</em>) – A
+function that generates tags to attach to the schedules runs. Takes the date of the
+schedule run and returns a dictionary of tags (string key-value pairs).</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the schedule runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The pipeline mode in which to execute this schedule.
+(Default: ‘default’)</p></li>
+<li><p><strong>should_execute</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em><em>]</em>) – A function that runs at
+schedule execution tie to determine whether a schedule should execute or skip. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a boolean (<code class="docutils literal notranslate"><span class="pre">True</span></code> if the
+schedule should execute). Defaults to a function that always returns <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>environment_vars</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Any environment variables to set when executing
+the schedule.</p></li>
+<li><p><strong>end_date</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/datetime.html#datetime.datetime" title="(in Python v3.8)"><em>datetime.datetime</em></a><em>]</em>) – The last time to run the schedule to, defaults to
+current time.</p></li>
+<li><p><strong>execution_timezone</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Timezone in which the schedule should run. Only works
+with DagsterDaemonScheduler, and must be set when using that scheduler.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.ScheduleDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">ScheduleDefinition</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">cron_schedule</em>, <em class="sig-param">pipeline_name</em>, <em class="sig-param">run_config=None</em>, <em class="sig-param">run_config_fn=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">tags_fn=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode='default'</em>, <em class="sig-param">should_execute=None</em>, <em class="sig-param">environment_vars=None</em>, <em class="sig-param">execution_timezone=None</em>, <em class="sig-param">execution_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/schedule.html#ScheduleDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ScheduleDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a schedule that targets a pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the schedule to create.</p></li>
+<li><p><strong>cron_schedule</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – A valid cron string specifying when the schedule will run, e.g.,
+‘45 23 * * 6’ for a schedule that runs at 11:45 PM every Saturday.</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the schedule runs.</p></li>
+<li><p><strong>execution_fn</strong> (<em>Callable</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>]</em>) – <p>The core evaluation function for the
+schedule, which is run at an interval to determine whether a run should be launched or
+not. Takes a <a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a>.</p>
+<p>This function must return a generator, which must yield either a single SkipReason
+or one or more RunRequest objects.</p>
+</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>]</em>) – The environment config that parameterizes this execution,
+as a dict.</p></li>
+<li><p><strong>run_config_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>]</em><em>, </em><em>[</em><em>Dict</em><em>]</em><em>]</em>) – A function that takes a
+ScheduleExecutionContext object and returns the environment configuration that
+parameterizes this execution, as a dict. You may set only one of <code class="docutils literal notranslate"><span class="pre">run_config</span></code>
+and <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code>.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A dictionary of tags (string key-value pairs) to attach
+to the scheduled runs.</p></li>
+<li><p><strong>tags_fn</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>]</em><em>, </em><em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em><em>]</em><em>]</em>) – A
+function that generates tags to attach to the schedules runs. Takes a
+<a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a dictionary of tags (string
+key-value pairs). You may set only one of <code class="docutils literal notranslate"><span class="pre">tags</span></code> and <code class="docutils literal notranslate"><span class="pre">tags_fn</span></code>.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the schedule runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this schedule. (default: ‘default’)</p></li>
+<li><p><strong>should_execute</strong> (<em>Optional</em><em>[</em><em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><em>ScheduleExecutionContext</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a><em>]</em><em>]</em>) – A function that runs
+at schedule execution time to determine whether a schedule should execute or skip. Takes
+a <a class="reference internal" href="#dagster.ScheduleExecutionContext" title="dagster.ScheduleExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ScheduleExecutionContext</span></code></a> and returns a boolean (<code class="docutils literal notranslate"><span class="pre">True</span></code> if the
+schedule should execute). Defaults to a function that always returns <code class="docutils literal notranslate"><span class="pre">True</span></code>.</p></li>
+<li><p><strong>environment_vars</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – The environment variables to set for the
+schedule</p></li>
+<li><p><strong>execution_timezone</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Timezone in which the schedule should run. Only works
+with DagsterDaemonScheduler, and must be set when using that scheduler.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.ScheduleExecutionContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">ScheduleExecutionContext</code><span class="sig-paren">(</span><em class="sig-param">instance</em>, <em class="sig-param">scheduled_execution_time</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/schedule.html#ScheduleExecutionContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.ScheduleExecutionContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Schedule-specific execution context.</p>
+<p>An instance of this class is made available as the first argument to various ScheduleDefinition
+functions. It is passed as the first argument to <code class="docutils literal notranslate"><span class="pre">run_config_fn</span></code>, <code class="docutils literal notranslate"><span class="pre">tags_fn</span></code>,
+and <code class="docutils literal notranslate"><span class="pre">should_execute</span></code>.</p>
+<dl class="attribute">
+<dt id="dagster.ScheduleExecutionContext.instance">
+<code class="sig-name descname">instance</code><a class="headerlink" href="#dagster.ScheduleExecutionContext.instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>The instance configured to run the schedule</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance">DagsterInstance</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.ScheduleExecutionContext.scheduled_execution_time">
+<code class="sig-name descname">scheduled_execution_time</code><a class="headerlink" href="#dagster.ScheduleExecutionContext.scheduled_execution_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>The time in which the execution was scheduled to happen. May differ slightly
+from both the actual execution time and the time at which the run config is computed.
+Not available in all schedulers - currently only set in deployments using
+DagsterDaemonScheduler.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>datetime</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.core.scheduler.DagsterDaemonScheduler">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.core.scheduler.</code><code class="sig-name descname">DagsterDaemonScheduler</code><span class="sig-paren">(</span><em class="sig-param">max_catchup_runs=None</em>, <em class="sig-param">inst_data=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/scheduler/scheduler.html#DagsterDaemonScheduler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.core.scheduler.DagsterDaemonScheduler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default scheduler implementation that submits runs from the <cite>dagster-daemon</cite>
+long-lived process.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="sensors">
+<h1>Sensors<a class="headerlink" href="#sensors" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="dagster.sensor">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">sensor</code><span class="sig-paren">(</span><em class="sig-param">pipeline_name</em>, <em class="sig-param">name=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/sensor.html#sensor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.sensor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a sensor where the decorated function is used as the sensor’s evaluation function.  The
+decorated function may:</p>
+<ol class="arabic simple">
+<li><p>Return a <cite>RunRequest</cite> object.</p></li>
+<li><p>Yield multiple of <cite>RunRequest</cite> objects.</p></li>
+<li><p>Return or yield a <cite>SkipReason</cite> object, providing a descriptive message of why no runs were
+requested.</p></li>
+<li><p>Return or yield nothing (skipping without providing a reason)</p></li>
+</ol>
+<p>Takes a <a class="reference internal" href="#dagster.SensorExecutionContext" title="dagster.SensorExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">SensorExecutionContext</span></code></a>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of this sensor</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute for runs for this sensor e.g.
+<code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing runs for this sensor.
+(default: ‘default’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.SensorDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">SensorDefinition</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">pipeline_name</em>, <em class="sig-param">evaluation_fn</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/sensor.html#SensorDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SensorDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Define a sensor that initiates a set of job runs</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the sensor to create.</p></li>
+<li><p><strong>pipeline_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the pipeline to execute when the sensor fires.</p></li>
+<li><p><strong>evaluation_fn</strong> (<em>Callable</em><em>[</em><em>[</em><a class="reference internal" href="#dagster.SensorExecutionContext" title="dagster.SensorExecutionContext"><em>SensorExecutionContext</em></a><em>]</em><em>]</em>) – <p>The core evaluation function for the
+sensor, which is run at an interval to determine whether a run should be launched or
+not. Takes a <a class="reference internal" href="#dagster.SensorExecutionContext" title="dagster.SensorExecutionContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">SensorExecutionContext</span></code></a>.</p>
+<p>This function must return a generator, which must yield either a single SkipReason
+or one or more RunRequest objects.</p>
+</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute when the sensor runs. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this sensor. (default: ‘default’)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.SensorExecutionContext">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">SensorExecutionContext</code><span class="sig-paren">(</span><em class="sig-param">instance</em>, <em class="sig-param">last_completion_time</em>, <em class="sig-param">last_run_key</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/sensor.html#SensorExecutionContext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SensorExecutionContext" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sensor execution context.</p>
+<p>An instance of this class is made available as the first argument to the evaluation function
+on SensorDefinition.</p>
+<dl class="attribute">
+<dt id="dagster.SensorExecutionContext.instance">
+<code class="sig-name descname">instance</code><a class="headerlink" href="#dagster.SensorExecutionContext.instance" title="Permalink to this definition">¶</a></dt>
+<dd><p>The instance configured to run the schedule</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="internals.html#dagster.DagsterInstance" title="dagster.DagsterInstance">DagsterInstance</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.SensorExecutionContext.last_completion_time">
+<code class="sig-name descname">last_completion_time</code><a class="headerlink" href="#dagster.SensorExecutionContext.last_completion_time" title="Permalink to this definition">¶</a></dt>
+<dd><p>The last time that the sensor was evaluated (UTC).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="dagster.SensorExecutionContext.last_run_key">
+<code class="sig-name descname">last_run_key</code><a class="headerlink" href="#dagster.SensorExecutionContext.last_run_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>The run key of the RunRequest most recently created by this sensor.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

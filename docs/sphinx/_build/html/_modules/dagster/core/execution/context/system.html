@@ -1,0 +1,780 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.execution.context.system &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.execution.context.system</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This module contains the execution context objects that are internal to the system.</span>
+<span class="sd">Not every property on these should be exposed to random Jane or Joe dagster user</span>
+<span class="sd">so we have a different layer of objects that encode the explicit public API</span>
+<span class="sd">in the user_context module</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">NamedTuple</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Set</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.hook</span> <span class="kn">import</span> <span class="n">HookDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.mode</span> <span class="kn">import</span> <span class="n">ModeDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.pipeline_base</span> <span class="kn">import</span> <span class="n">IPipeline</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.resource</span> <span class="kn">import</span> <span class="n">ScopedResourcesBuilder</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.solid</span> <span class="kn">import</span> <span class="n">SolidDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.step_launcher</span> <span class="kn">import</span> <span class="n">StepLauncher</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidPropertyError</span><span class="p">,</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.outputs</span> <span class="kn">import</span> <span class="n">StepOutputHandle</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.step</span> <span class="kn">import</span> <span class="n">ExecutionStep</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.utils</span> <span class="kn">import</span> <span class="n">build_resources_for_manager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.retries</span> <span class="kn">import</span> <span class="n">Retries</span>
+<span class="kn">from</span> <span class="nn">dagster.core.executor.base</span> <span class="kn">import</span> <span class="n">Executor</span>
+<span class="kn">from</span> <span class="nn">dagster.core.log_manager</span> <span class="kn">import</span> <span class="n">DagsterLogManager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.io_manager</span> <span class="kn">import</span> <span class="n">IOManager</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.tags</span> <span class="kn">import</span> <span class="n">MEMOIZED_RUN_TAG</span>
+<span class="kn">from</span> <span class="nn">dagster.core.system_config.objects</span> <span class="kn">import</span> <span class="n">EnvironmentConfig</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">DagsterType</span><span class="p">,</span> <span class="n">resolve_dagster_type</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.definitions.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorageDefinition</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.definitions.dependency</span> <span class="kn">import</span> <span class="n">Solid</span><span class="p">,</span> <span class="n">SolidHandle</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.storage.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorage</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+
+<span class="k">class</span> <span class="nc">SystemExecutionContextData</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_SystemExecutionContextData&quot;</span><span class="p">,</span>
+        <span class="p">(</span>
+            <span class="s2">&quot;pipeline_run scoped_resources_builder environment_config pipeline &quot;</span>
+            <span class="s2">&quot;mode_def intermediate_storage_def instance intermediate_storage &quot;</span>
+            <span class="s2">&quot;raise_on_error retries execution_plan&quot;</span>
+        <span class="p">),</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    SystemExecutionContextData is the data that remains constant throughout the entire</span>
+<span class="sd">    execution of a pipeline or plan.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">pipeline_run</span><span class="p">:</span> <span class="n">PipelineRun</span><span class="p">,</span>
+        <span class="n">scoped_resources_builder</span><span class="p">:</span> <span class="n">ScopedResourcesBuilder</span><span class="p">,</span>
+        <span class="n">environment_config</span><span class="p">:</span> <span class="n">EnvironmentConfig</span><span class="p">,</span>
+        <span class="n">pipeline</span><span class="p">:</span> <span class="n">IPipeline</span><span class="p">,</span>
+        <span class="n">mode_def</span><span class="p">:</span> <span class="n">ModeDefinition</span><span class="p">,</span>
+        <span class="n">intermediate_storage_def</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="s2">&quot;IntermediateStorageDefinition&quot;</span><span class="p">],</span>
+        <span class="n">instance</span><span class="p">:</span> <span class="s2">&quot;DagsterInstance&quot;</span><span class="p">,</span>
+        <span class="n">intermediate_storage</span><span class="p">:</span> <span class="s2">&quot;IntermediateStorage&quot;</span><span class="p">,</span>
+        <span class="n">raise_on_error</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+        <span class="n">retries</span><span class="p">:</span> <span class="n">Retries</span><span class="p">,</span>
+        <span class="n">execution_plan</span><span class="p">:</span> <span class="s2">&quot;ExecutionPlan&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.definitions.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorageDefinition</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.storage.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorage</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SystemExecutionContextData</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">pipeline_run</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_run</span><span class="p">,</span> <span class="s2">&quot;pipeline_run&quot;</span><span class="p">,</span> <span class="n">PipelineRun</span><span class="p">),</span>
+            <span class="n">scoped_resources_builder</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">scoped_resources_builder</span><span class="p">,</span> <span class="s2">&quot;scoped_resources_builder&quot;</span><span class="p">,</span> <span class="n">ScopedResourcesBuilder</span>
+            <span class="p">),</span>
+            <span class="n">environment_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">environment_config</span><span class="p">,</span> <span class="s2">&quot;environment_config&quot;</span><span class="p">,</span> <span class="n">EnvironmentConfig</span>
+            <span class="p">),</span>
+            <span class="n">pipeline</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="n">IPipeline</span><span class="p">),</span>
+            <span class="n">mode_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">mode_def</span><span class="p">,</span> <span class="s2">&quot;mode_def&quot;</span><span class="p">,</span> <span class="n">ModeDefinition</span><span class="p">),</span>
+            <span class="n">intermediate_storage_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">intermediate_storage_def</span><span class="p">,</span> <span class="s2">&quot;intermediate_storage_def&quot;</span><span class="p">,</span> <span class="n">IntermediateStorageDefinition</span>
+            <span class="p">),</span>
+            <span class="n">instance</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">),</span>
+            <span class="n">intermediate_storage</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">intermediate_storage</span><span class="p">,</span> <span class="s2">&quot;intermediate_storage&quot;</span><span class="p">,</span> <span class="n">IntermediateStorage</span>
+            <span class="p">),</span>
+            <span class="n">raise_on_error</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">raise_on_error</span><span class="p">,</span> <span class="s2">&quot;raise_on_error&quot;</span><span class="p">),</span>
+            <span class="n">retries</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">retries</span><span class="p">,</span> <span class="s2">&quot;retries&quot;</span><span class="p">,</span> <span class="n">Retries</span><span class="p">),</span>
+            <span class="n">execution_plan</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">environment_config</span><span class="o">.</span><span class="n">original_config_dict</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">pipeline_name</span>
+
+
+<span class="k">class</span> <span class="nc">SystemExecutionContext</span><span class="p">:</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_execution_context_data&quot;</span><span class="p">,</span> <span class="s2">&quot;_log_manager&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">execution_context_data</span><span class="p">:</span> <span class="n">SystemExecutionContextData</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">:</span> <span class="n">DagsterLogManager</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+            <span class="n">execution_context_data</span><span class="p">,</span> <span class="s2">&quot;execution_context_data&quot;</span><span class="p">,</span> <span class="n">SystemExecutionContextData</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_run</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineRun</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">pipeline_run</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">scoped_resources_builder</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ScopedResourcesBuilder</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">scoped_resources_builder</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">run_id</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">run_config</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">environment_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EnvironmentConfig</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">environment_config</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IPipeline</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">pipeline</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">pipeline_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mode_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ModeDefinition</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">mode_def</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">intermediate_storage_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;IntermediateStorageDefinition&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">intermediate_storage_def</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instance</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DagsterInstance&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">instance</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">intermediate_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">intermediate_storage</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">file_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidPropertyError</span><span class="p">(</span>
+            <span class="s2">&quot;You have attempted to access the file manager which has been moved to resources in 0.10.0. &quot;</span>
+            <span class="s2">&quot;Please access it via `context.resources.file_manager` instead.&quot;</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">raise_on_error</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">raise_on_error</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">retries</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Retries</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">retries</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DagsterLogManager</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">logging_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span><span class="o">.</span><span class="n">logging_tags</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">execution_plan</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">execution_plan</span>
+
+    <span class="k">def</span> <span class="nf">has_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging_tags</span>
+
+    <span class="k">def</span> <span class="nf">get_tag</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="s2">&quot;key&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">logging_tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">for_step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step</span><span class="p">:</span> <span class="n">ExecutionStep</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;SystemStepExecutionContext&quot;</span><span class="p">:</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s2">&quot;step&quot;</span><span class="p">,</span> <span class="n">ExecutionStep</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">SystemStepExecutionContext</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span><span class="o">.</span><span class="n">with_tags</span><span class="p">(</span><span class="o">**</span><span class="n">step</span><span class="o">.</span><span class="n">logging_tags</span><span class="p">),</span> <span class="n">step</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">for_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dagster_type</span><span class="p">:</span> <span class="n">DagsterType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;TypeCheckContext&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">TypeCheckContext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="n">dagster_type</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">using_io_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_output_handle</span><span class="p">:</span> <span class="n">StepOutputHandle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="c1"># pylint: disable=comparison-with-callable</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.storage.mem_io_manager</span> <span class="kn">import</span> <span class="n">mem_io_manager</span>
+
+        <span class="n">output_manager_key</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_output</span><span class="p">(</span>
+            <span class="n">step_output_handle</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">io_manager_key</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_def</span><span class="o">.</span><span class="n">resource_defs</span><span class="p">[</span><span class="n">output_manager_key</span><span class="p">]</span> <span class="o">!=</span> <span class="n">mem_io_manager</span>
+
+
+<span class="k">class</span> <span class="nc">SystemPipelineExecutionContext</span><span class="p">(</span><span class="n">SystemExecutionContext</span><span class="p">):</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_executor&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">execution_context_data</span><span class="p">:</span> <span class="n">SystemExecutionContextData</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">DagsterLogManager</span><span class="p">,</span>
+        <span class="n">executor</span><span class="p">:</span> <span class="n">Executor</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SystemPipelineExecutionContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">execution_context_data</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">executor</span><span class="p">,</span> <span class="s2">&quot;executor&quot;</span><span class="p">,</span> <span class="n">Executor</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">executor</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Executor</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_executor</span>
+
+
+<span class="k">class</span> <span class="nc">SystemStepExecutionContext</span><span class="p">(</span><span class="n">SystemExecutionContext</span><span class="p">):</span>
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_step&quot;</span><span class="p">,</span> <span class="s2">&quot;_resources&quot;</span><span class="p">,</span> <span class="s2">&quot;_required_resource_keys&quot;</span><span class="p">,</span> <span class="s2">&quot;_step_launcher&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">execution_context_data</span><span class="p">:</span> <span class="n">SystemExecutionContextData</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">DagsterLogManager</span><span class="p">,</span>
+        <span class="n">step</span><span class="p">:</span> <span class="n">ExecutionStep</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.execution.resources_init</span> <span class="kn">import</span> <span class="n">get_required_resource_keys_for_step</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s2">&quot;step&quot;</span><span class="p">,</span> <span class="n">ExecutionStep</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SystemStepExecutionContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">execution_context_data</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span> <span class="o">=</span> <span class="n">get_required_resource_keys_for_step</span><span class="p">(</span>
+            <span class="n">step</span><span class="p">,</span>
+            <span class="n">execution_context_data</span><span class="o">.</span><span class="n">execution_plan</span><span class="p">,</span>
+            <span class="n">execution_context_data</span><span class="o">.</span><span class="n">intermediate_storage_def</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">scoped_resources_builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span>
+        <span class="p">)</span>
+        <span class="n">step_launcher_resources</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">resource</span> <span class="k">for</span> <span class="n">resource</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">resource</span><span class="p">,</span> <span class="n">StepLauncher</span><span class="p">)</span>
+        <span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step_launcher</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StepLauncher</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">step_launcher_resources</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Multiple required resources for solid </span><span class="si">{solid_name}</span><span class="s2"> have inherit StepLauncher&quot;</span>
+                <span class="s2">&quot;There should be at most one step launcher resource per solid.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">solid_name</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">solid_handle</span><span class="o">.</span><span class="n">name</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">step_launcher_resources</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_step_launcher</span> <span class="o">=</span> <span class="n">step_launcher_resources</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span> <span class="o">=</span> <span class="n">log_manager</span>
+
+    <span class="k">def</span> <span class="nf">for_compute</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;SystemComputeExecutionContext&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">SystemComputeExecutionContext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExecutionStep</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step_launcher</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StepLauncher</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_launcher</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;SolidHandle&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="o">.</span><span class="n">solid_handle</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SolidDefinition</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineDefinition</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Solid&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_solid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">resources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NamedTuple</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DagsterLogManager</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span>
+
+    <span class="k">def</span> <span class="nf">for_hook</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hook_def</span><span class="p">:</span> <span class="n">HookDefinition</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;HookContext&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">HookContext</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">,</span> <span class="n">hook_def</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_get_source_run_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_output_handle</span><span class="p">:</span> <span class="n">StepOutputHandle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="c1"># determine if the step is skipped</span>
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="c1"># this is re-execution</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">parent_run_id</span>
+            <span class="c1"># only part of the pipeline is being re-executed</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">step_handles_to_execute</span><span class="p">)</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">steps</span><span class="p">)</span>
+            <span class="c1"># this step is not being executed</span>
+            <span class="ow">and</span> <span class="n">step_output_handle</span><span class="o">.</span><span class="n">step_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">step_handles_to_execute</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">parent_run_id</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_run</span><span class="o">.</span><span class="n">run_id</span>
+
+    <span class="k">def</span> <span class="nf">get_output_context</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_output_handle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;OutputContext&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">get_output_context</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">execution_plan</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">environment_config</span><span class="p">,</span>
+            <span class="n">step_output_handle</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_get_source_run_id</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">),</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">for_input_manager</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="p">:</span> <span class="n">DagsterType</span><span class="p">,</span>
+        <span class="n">source_handle</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">StepOutputHandle</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_config</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resources</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NamedTuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;InputContext&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">InputContext</span><span class="p">(</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">solid_def</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">solid_def</span><span class="p">,</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">upstream_output</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_output_context</span><span class="p">(</span><span class="n">source_handle</span><span class="p">)</span> <span class="k">if</span> <span class="n">source_handle</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">dagster_type</span><span class="p">,</span>
+            <span class="n">log_manager</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span><span class="p">,</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">resource_config</span><span class="o">=</span><span class="n">resource_config</span><span class="p">,</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">resources</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">using_default_intermediate_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.storage.system_storage</span> <span class="kn">import</span> <span class="n">mem_intermediate_storage</span>
+
+        <span class="c1"># pylint: disable=comparison-with-callable</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">intermediate_storage_def</span> <span class="ow">is</span> <span class="kc">None</span>
+            <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">intermediate_storage_def</span> <span class="o">==</span> <span class="n">mem_intermediate_storage</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_io_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">step_output_handle</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IOManager</span><span class="p">:</span>
+        <span class="n">step_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_output</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">)</span>
+        <span class="c1"># backcompat: if intermediate storage is specified, adapt it to object manager</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">using_default_intermediate_storage</span><span class="p">():</span>
+            <span class="n">output_manager</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resources</span><span class="p">,</span> <span class="n">step_output</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">io_manager_key</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dagster.core.storage.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorageAdapter</span>
+
+            <span class="n">output_manager</span> <span class="o">=</span> <span class="n">IntermediateStorageAdapter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">intermediate_storage</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span><span class="n">output_manager</span><span class="p">,</span> <span class="n">IOManager</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="SystemComputeExecutionContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.SystemComputeExecutionContext">[docs]</a><span class="k">class</span> <span class="nc">SystemComputeExecutionContext</span><span class="p">(</span><span class="n">SystemStepExecutionContext</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="n">solid_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">environment_config</span><span class="o">.</span><span class="n">solids</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">solid_config</span><span class="o">.</span><span class="n">config</span> <span class="k">if</span> <span class="n">solid_config</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="TypeCheckContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.TypeCheckContext">[docs]</a><span class="k">class</span> <span class="nc">TypeCheckContext</span><span class="p">(</span><span class="n">SystemExecutionContext</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The ``context`` object available to a type check function on a DagsterType.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        log (DagsterLogManager): Centralized log dispatch from user code.</span>
+<span class="sd">        resources (Any): An object whose attributes contain the resources available to this solid.</span>
+<span class="sd">        run_id (str): The id of this pipeline run.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">execution_context_data</span><span class="p">:</span> <span class="n">SystemExecutionContextData</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">DagsterLogManager</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="p">:</span> <span class="n">DagsterType</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">TypeCheckContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">execution_context_data</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">scoped_resources_builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+            <span class="n">dagster_type</span><span class="o">.</span><span class="n">required_resource_keys</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span> <span class="o">=</span> <span class="n">log_manager</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">resources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NamedTuple</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span></div>
+
+
+<div class="viewcode-block" id="HookContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/execution.html#dagster.HookContext">[docs]</a><span class="k">class</span> <span class="nc">HookContext</span><span class="p">(</span><span class="n">SystemExecutionContext</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The ``context`` object available to a hook function on an DagsterEvent.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        log (DagsterLogManager): Centralized log dispatch from user code.</span>
+<span class="sd">        hook_def (HookDefinition): The hook that the context object belongs to.</span>
+<span class="sd">        step (ExecutionStep): The compute step associated with the hook.</span>
+<span class="sd">        solid (Solid): The solid instance associated with the hook.</span>
+<span class="sd">        resources (NamedTuple): Resources available in the hook context.</span>
+<span class="sd">        solid_config (Any): The parsed config specific to this solid.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">execution_context_data</span><span class="p">:</span> <span class="n">SystemExecutionContextData</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">DagsterLogManager</span><span class="p">,</span>
+        <span class="n">hook_def</span><span class="p">:</span> <span class="n">HookDefinition</span><span class="p">,</span>
+        <span class="n">step</span><span class="p">:</span> <span class="n">ExecutionStep</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">HookContext</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">execution_context_data</span><span class="p">,</span> <span class="n">log_manager</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_log_manager</span> <span class="o">=</span> <span class="n">log_manager</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_hook_def</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">hook_def</span><span class="p">,</span> <span class="s2">&quot;hook_def&quot;</span><span class="p">,</span> <span class="n">HookDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_step</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step</span><span class="p">,</span> <span class="s2">&quot;step&quot;</span><span class="p">,</span> <span class="n">ExecutionStep</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span> <span class="o">=</span> <span class="n">hook_def</span><span class="o">.</span><span class="n">required_resource_keys</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">scoped_resources_builder</span><span class="o">.</span><span class="n">build</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">hook_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HookDefinition</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_hook_def</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ExecutionStep</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_def</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">PipelineDefinition</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_execution_context_data</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;Solid&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">pipeline_def</span><span class="o">.</span><span class="n">get_solid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">resources</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NamedTuple</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resources</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">required_resource_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_resource_keys</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+        <span class="n">solid_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">environment_config</span><span class="o">.</span><span class="n">solids</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_step</span><span class="o">.</span><span class="n">solid_handle</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">solid_config</span><span class="o">.</span><span class="n">config</span> <span class="k">if</span> <span class="n">solid_config</span> <span class="k">else</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="OutputContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/io-managers.html#dagster.OutputContext">[docs]</a><span class="k">class</span> <span class="nc">OutputContext</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_OutputContext&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;step_key name pipeline_name run_id metadata mapping_key config solid_def dagster_type log version step_context resource_config resources&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The context object that is available to the `handle_output` method of an :py:class:`IOManager`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        step_key (str): The step_key for the compute step that produced the output.</span>
+<span class="sd">        name (str): The name of the output that produced the output.</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline definition.</span>
+<span class="sd">        run_id (Optional[str]): The id of the run that produced the output.</span>
+<span class="sd">        metadata (Optional[Dict[str, Any]]): A dict of the metadata that is assigned to the</span>
+<span class="sd">            OutputDefinition that produced the output.</span>
+<span class="sd">        mapping_key (Optional[str]): The key that identifies a unique mapped output. None for regular outputs.</span>
+<span class="sd">        config (Optional[Any]): The configuration for the output.</span>
+<span class="sd">        solid_def (Optional[SolidDefinition]): The definition of the solid that produced the output.</span>
+<span class="sd">        dagster_type (Optional[DagsterType]): The type of this output.</span>
+<span class="sd">        log (Optional[DagsterLogManager]): The log manager to use for this output.</span>
+<span class="sd">        version (Optional[str]): (Experimental) The version of the output.</span>
+<span class="sd">        resources (Optional[ScopedResources]): The resources required by the output manager, specified by the</span>
+<span class="sd">            `required_resource_keys` parameter.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">step_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">mapping_key</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_def</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SolidDefinition</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterLogManager</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="c1"># This is used internally by the intermediate storage adapter, we don&#39;t usually expect users to mock this.</span>
+        <span class="n">step_context</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SystemStepExecutionContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_config</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resources</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NamedTuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">OutputContext</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">step_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;step_key&quot;</span><span class="p">),</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">run_id</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">),</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">metadata</span><span class="p">,</span> <span class="s2">&quot;metadata&quot;</span><span class="p">),</span>
+            <span class="n">mapping_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mapping_key</span><span class="p">,</span> <span class="s2">&quot;mapping_key&quot;</span><span class="p">),</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">solid_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">solid_def</span><span class="p">,</span> <span class="s2">&quot;solid_def&quot;</span><span class="p">,</span> <span class="n">SolidDefinition</span><span class="p">),</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">resolve_dagster_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">),</span> <span class="s2">&quot;dagster_type&quot;</span><span class="p">,</span> <span class="n">DagsterType</span>
+            <span class="p">),</span>  <span class="c1"># this allows the user to mock the context with unresolved dagster type</span>
+            <span class="n">log</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">),</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">step_context</span><span class="p">,</span> <span class="s2">&quot;step_context&quot;</span><span class="p">,</span> <span class="n">SystemStepExecutionContext</span>
+            <span class="p">),</span>
+            <span class="n">resource_config</span><span class="o">=</span><span class="n">resource_config</span><span class="p">,</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">resources</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="OutputContext.get_run_scoped_output_identifier"><a class="viewcode-back" href="../../../../../sections/api/apidocs/io-managers.html#dagster.OutputContext.get_run_scoped_output_identifier">[docs]</a>    <span class="k">def</span> <span class="nf">get_run_scoped_output_identifier</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;Utility method to get a collection of identifiers that as a whole represent a unique</span>
+<span class="sd">        step output.</span>
+
+<span class="sd">        The unique identifier collection consists of</span>
+
+<span class="sd">        - ``run_id``: the id of the run which generates the output.</span>
+<span class="sd">            Note: This method also handles the re-execution memoization logic. If the step that</span>
+<span class="sd">            generates the output is skipped in the re-execution, the ``run_id`` will be the id</span>
+<span class="sd">            of its parent run.</span>
+<span class="sd">        - ``step_key``: the key for a compute step.</span>
+<span class="sd">        - ``name``: the name of the output. (default: &#39;result&#39;).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str, ...]: A list of identifiers, i.e. run id, step key, and output name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_key</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mapping_key</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span></div></div>
+
+
+<div class="viewcode-block" id="InputContext"><a class="viewcode-back" href="../../../../../sections/api/apidocs/io-managers.html#dagster.InputContext">[docs]</a><span class="k">class</span> <span class="nc">InputContext</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_InputContext&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;name pipeline_name solid_def config metadata upstream_output dagster_type log step_context resource_config resources&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The ``context`` object available to the load_input method of :py:class:`RootInputManager`.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (Optional[str]): The name of the input that we&#39;re loading.</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline.</span>
+<span class="sd">        solid_def (Optional[SolidDefinition]): The definition of the solid that&#39;s loading the input.</span>
+<span class="sd">        config (Optional[Any]): The config attached to the input that we&#39;re loading.</span>
+<span class="sd">        metadata (Optional[Dict[str, Any]]): A dict of metadata that is assigned to the</span>
+<span class="sd">            InputDefinition that we&#39;re loading for.</span>
+<span class="sd">        upstream_output (Optional[OutputContext]): Info about the output that produced the object</span>
+<span class="sd">            we&#39;re loading.</span>
+<span class="sd">        dagster_type (Optional[DagsterType]): The type of this input.</span>
+<span class="sd">        log (Optional[DagsterLogManager]): The log manager to use for this input.</span>
+<span class="sd">        resource_config (Optional[Dict[str, Any]]): The config associated with the resource that</span>
+<span class="sd">            initializes the RootInputManager.</span>
+<span class="sd">        resources (ScopedResources): The resources required by the resource that initializes the</span>
+<span class="sd">            input manager. If using the :py:func:`@root_input_manager` decorator, these resources</span>
+<span class="sd">            correspond to those requested with the `required_resource_keys` parameter.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="c1"># This will be None when called from calling SolidExecutionResult.output_value</span>
+        <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">solid_def</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SolidDefinition</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">config</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">upstream_output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">OutputContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterType</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterLogManager</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="c1"># This is used internally by the intermediate storage adapter, we don&#39;t expect users to mock this.</span>
+        <span class="n">step_context</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SystemStepExecutionContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_config</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">resources</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">NamedTuple</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">InputContext</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">),</span>
+            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">),</span>
+            <span class="n">solid_def</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">solid_def</span><span class="p">,</span> <span class="s2">&quot;solid_def&quot;</span><span class="p">,</span> <span class="n">SolidDefinition</span><span class="p">),</span>
+            <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">,</span>
+            <span class="n">metadata</span><span class="o">=</span><span class="n">metadata</span><span class="p">,</span>
+            <span class="n">upstream_output</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">upstream_output</span><span class="p">,</span> <span class="s2">&quot;upstream_output&quot;</span><span class="p">,</span> <span class="n">OutputContext</span><span class="p">),</span>
+            <span class="n">dagster_type</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">resolve_dagster_type</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">),</span> <span class="s2">&quot;dagster_type&quot;</span><span class="p">,</span> <span class="n">DagsterType</span>
+            <span class="p">),</span>  <span class="c1"># this allows the user to mock the context with unresolved dagster type</span>
+            <span class="n">log</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">log_manager</span><span class="p">,</span> <span class="s2">&quot;log_manager&quot;</span><span class="p">,</span> <span class="n">DagsterLogManager</span><span class="p">),</span>
+            <span class="n">step_context</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">step_context</span><span class="p">,</span> <span class="s2">&quot;step_context&quot;</span><span class="p">,</span> <span class="n">SystemStepExecutionContext</span>
+            <span class="p">),</span>
+            <span class="n">resource_config</span><span class="o">=</span><span class="n">resource_config</span><span class="p">,</span>
+            <span class="n">resources</span><span class="o">=</span><span class="n">resources</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_step_output_version</span><span class="p">(</span>
+    <span class="n">execution_plan</span><span class="p">:</span> <span class="s2">&quot;ExecutionPlan&quot;</span><span class="p">,</span> <span class="n">step_output_handle</span><span class="p">:</span> <span class="n">StepOutputHandle</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="n">step_output_versions</span> <span class="o">=</span> <span class="n">execution_plan</span><span class="o">.</span><span class="n">resolve_step_output_versions</span><span class="p">()</span>
+    <span class="k">return</span> <span class="p">(</span>
+        <span class="n">step_output_versions</span><span class="p">[</span><span class="n">step_output_handle</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">step_output_handle</span> <span class="ow">in</span> <span class="n">step_output_versions</span>
+        <span class="k">else</span> <span class="kc">None</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">get_output_context</span><span class="p">(</span>
+    <span class="n">execution_plan</span><span class="p">:</span> <span class="s2">&quot;ExecutionPlan&quot;</span><span class="p">,</span>
+    <span class="n">environment_config</span><span class="p">:</span> <span class="n">EnvironmentConfig</span><span class="p">,</span>
+    <span class="n">step_output_handle</span><span class="p">:</span> <span class="n">StepOutputHandle</span><span class="p">,</span>
+    <span class="n">run_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">log_manager</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">DagsterLogManager</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">step_context</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SystemStepExecutionContext</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OutputContext</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        run_id (str): The run ID of the run that produced the output, not necessarily the run that</span>
+<span class="sd">            the context will be used in.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">environment_config</span><span class="p">,</span> <span class="s2">&quot;environment_config&quot;</span><span class="p">,</span> <span class="n">EnvironmentConfig</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">,</span> <span class="s2">&quot;step_output_handle&quot;</span><span class="p">,</span> <span class="n">StepOutputHandle</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+
+    <span class="n">step</span> <span class="o">=</span> <span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_by_key</span><span class="p">(</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">step_key</span><span class="p">)</span>
+    <span class="c1"># get config</span>
+    <span class="n">solid_config</span> <span class="o">=</span> <span class="n">environment_config</span><span class="o">.</span><span class="n">solids</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">solid_handle</span><span class="o">.</span><span class="n">to_string</span><span class="p">())</span>
+    <span class="n">outputs_config</span> <span class="o">=</span> <span class="n">solid_config</span><span class="o">.</span><span class="n">outputs</span>
+
+    <span class="k">if</span> <span class="n">outputs_config</span><span class="p">:</span>
+        <span class="n">output_config</span> <span class="o">=</span> <span class="n">outputs_config</span><span class="o">.</span><span class="n">get_output_manager_config</span><span class="p">(</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">output_name</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">output_config</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">io_manager_key</span> <span class="o">=</span> <span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_output</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">)</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">io_manager_key</span>
+    <span class="n">resource_config</span> <span class="o">=</span> <span class="n">environment_config</span><span class="o">.</span><span class="n">resources</span><span class="p">[</span><span class="n">io_manager_key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;config&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+    <span class="n">resources</span> <span class="o">=</span> <span class="n">build_resources_for_manager</span><span class="p">(</span><span class="n">io_manager_key</span><span class="p">,</span> <span class="n">step_context</span><span class="p">)</span> <span class="k">if</span> <span class="n">step_context</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">return</span> <span class="n">OutputContext</span><span class="p">(</span>
+        <span class="n">step_key</span><span class="o">=</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">output_name</span><span class="p">,</span>
+        <span class="n">pipeline_name</span><span class="o">=</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+        <span class="n">metadata</span><span class="o">=</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_output</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">)</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">metadata</span><span class="p">,</span>
+        <span class="n">mapping_key</span><span class="o">=</span><span class="n">step_output_handle</span><span class="o">.</span><span class="n">mapping_key</span><span class="p">,</span>
+        <span class="n">config</span><span class="o">=</span><span class="n">output_config</span><span class="p">,</span>
+        <span class="n">solid_def</span><span class="o">=</span><span class="n">step</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">definition</span><span class="p">,</span>
+        <span class="n">dagster_type</span><span class="o">=</span><span class="n">execution_plan</span><span class="o">.</span><span class="n">get_step_output</span><span class="p">(</span><span class="n">step_output_handle</span><span class="p">)</span><span class="o">.</span><span class="n">output_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="p">,</span>
+        <span class="n">log_manager</span><span class="o">=</span><span class="n">log_manager</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">_step_output_version</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">step_output_handle</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">MEMOIZED_RUN_TAG</span> <span class="ow">in</span> <span class="n">execution_plan</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_definition</span><span class="p">()</span><span class="o">.</span><span class="n">tags</span>
+        <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">step_context</span><span class="o">=</span><span class="n">step_context</span><span class="p">,</span>
+        <span class="n">resource_config</span><span class="o">=</span><span class="n">resource_config</span><span class="p">,</span>
+        <span class="n">resources</span><span class="o">=</span><span class="n">resources</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

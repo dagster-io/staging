@@ -1,0 +1,314 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.instance.ref &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.instance.ref</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">ConfigurableClassData</span><span class="p">,</span> <span class="n">whitelist_for_serdes</span>
+
+<span class="kn">from</span> <span class="nn">.config</span> <span class="kn">import</span> <span class="n">DAGSTER_CONFIG_YAML_FILENAME</span><span class="p">,</span> <span class="n">dagster_instance_config</span>
+
+
+<span class="k">def</span> <span class="nf">_runs_directory</span><span class="p">(</span><span class="n">base</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="s2">&quot;history&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">compute_logs_directory</span><span class="p">(</span><span class="n">base</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="s2">&quot;storage&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_event_logs_directory</span><span class="p">(</span><span class="n">base</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="s2">&quot;history&quot;</span><span class="p">,</span> <span class="s2">&quot;runs&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">_schedule_directory</span><span class="p">(</span><span class="n">base</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="s2">&quot;schedules&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">configurable_class_data_or_default</span><span class="p">(</span><span class="n">config_value</span><span class="p">,</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">default</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">config_value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ConfigurableClassData</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">[</span><span class="n">field_name</span><span class="p">][</span><span class="s2">&quot;module&quot;</span><span class="p">],</span>
+            <span class="n">config_value</span><span class="p">[</span><span class="n">field_name</span><span class="p">][</span><span class="s2">&quot;class&quot;</span><span class="p">],</span>
+            <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config_value</span><span class="p">[</span><span class="n">field_name</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;config&quot;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">{},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">default</span>
+
+
+<div class="viewcode-block" id="InstanceRef"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.instance.InstanceRef">[docs]</a><span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">InstanceRef</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_InstanceRef&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;local_artifact_storage_data run_storage_data event_storage_data compute_logs_data &quot;</span>
+        <span class="s2">&quot;schedule_storage_data scheduler_data run_coordinator_data run_launcher_data settings&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Serializable representation of a :py:class:`DagsterInstance`.</span>
+
+<span class="sd">    Users should not instantiate this class directly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">local_artifact_storage_data</span><span class="p">,</span>
+        <span class="n">run_storage_data</span><span class="p">,</span>
+        <span class="n">event_storage_data</span><span class="p">,</span>
+        <span class="n">compute_logs_data</span><span class="p">,</span>
+        <span class="n">schedule_storage_data</span><span class="p">,</span>
+        <span class="n">scheduler_data</span><span class="p">,</span>
+        <span class="n">run_coordinator_data</span><span class="p">,</span>
+        <span class="n">run_launcher_data</span><span class="p">,</span>
+        <span class="n">settings</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">InstanceRef</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">local_artifact_storage_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">local_artifact_storage_data</span><span class="p">,</span> <span class="s2">&quot;local_artifact_storage_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">run_storage_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">run_storage_data</span><span class="p">,</span> <span class="s2">&quot;run_storage_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">event_storage_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">event_storage_data</span><span class="p">,</span> <span class="s2">&quot;event_storage_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">compute_logs_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                <span class="n">compute_logs_data</span><span class="p">,</span> <span class="s2">&quot;compute_logs_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">schedule_storage_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">schedule_storage_data</span><span class="p">,</span> <span class="s2">&quot;schedule_storage_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">scheduler_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">scheduler_data</span><span class="p">,</span> <span class="s2">&quot;scheduler_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">run_coordinator_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">run_coordinator_data</span><span class="p">,</span> <span class="s2">&quot;run_coordinator_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">run_launcher_data</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+                <span class="n">run_launcher_data</span><span class="p">,</span> <span class="s2">&quot;run_launcher_data&quot;</span><span class="p">,</span> <span class="n">ConfigurableClassData</span>
+            <span class="p">),</span>
+            <span class="n">settings</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">settings</span><span class="p">,</span> <span class="s2">&quot;settings&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_dir</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">config_filename</span><span class="o">=</span><span class="n">DAGSTER_CONFIG_YAML_FILENAME</span><span class="p">,</span> <span class="n">overrides</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">overrides</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">overrides</span><span class="p">,</span> <span class="s2">&quot;overrides&quot;</span><span class="p">)</span>
+        <span class="n">config_value</span> <span class="o">=</span> <span class="n">dagster_instance_config</span><span class="p">(</span>
+            <span class="n">base_dir</span><span class="p">,</span> <span class="n">config_filename</span><span class="o">=</span><span class="n">config_filename</span><span class="p">,</span> <span class="n">overrides</span><span class="o">=</span><span class="n">overrides</span>
+        <span class="p">)</span>
+
+        <span class="n">local_artifact_storage_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;local_artifact_storage&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.storage.root&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;LocalArtifactStorage&quot;</span><span class="p">,</span>
+                <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">base_dir</span><span class="p">},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">run_storage_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;run_storage&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.storage.runs&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;SqliteRunStorage&quot;</span><span class="p">,</span>
+                <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">_runs_directory</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">event_storage_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;event_log_storage&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.storage.event_log&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;SqliteEventLogStorage&quot;</span><span class="p">,</span>
+                <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">_event_logs_directory</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">compute_logs_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;compute_logs&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.storage.local_compute_log_manager&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;LocalComputeLogManager&quot;</span><span class="p">,</span>
+                <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">compute_logs_directory</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">schedule_storage_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;schedule_storage&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.storage.schedules&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;SqliteScheduleStorage&quot;</span><span class="p">,</span>
+                <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">_schedule_directory</span><span class="p">(</span><span class="n">base_dir</span><span class="p">)},</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">scheduler_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;scheduler&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.scheduler&quot;</span><span class="p">,</span> <span class="s2">&quot;DagsterDaemonScheduler&quot;</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({}),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">run_coordinator_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;run_coordinator&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span>
+                <span class="s2">&quot;dagster.core.run_coordinator&quot;</span><span class="p">,</span> <span class="s2">&quot;DefaultRunCoordinator&quot;</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({})</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">run_launcher_data</span> <span class="o">=</span> <span class="n">configurable_class_data_or_default</span><span class="p">(</span>
+            <span class="n">config_value</span><span class="p">,</span>
+            <span class="s2">&quot;run_launcher&quot;</span><span class="p">,</span>
+            <span class="n">ConfigurableClassData</span><span class="p">(</span><span class="s2">&quot;dagster&quot;</span><span class="p">,</span> <span class="s2">&quot;DefaultRunLauncher&quot;</span><span class="p">,</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">({}),),</span>
+        <span class="p">)</span>
+
+        <span class="n">settings_keys</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;telemetry&quot;</span><span class="p">}</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="n">key</span><span class="p">:</span> <span class="n">config_value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">settings_keys</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">InstanceRef</span><span class="p">(</span>
+            <span class="n">local_artifact_storage_data</span><span class="o">=</span><span class="n">local_artifact_storage_data</span><span class="p">,</span>
+            <span class="n">run_storage_data</span><span class="o">=</span><span class="n">run_storage_data</span><span class="p">,</span>
+            <span class="n">event_storage_data</span><span class="o">=</span><span class="n">event_storage_data</span><span class="p">,</span>
+            <span class="n">compute_logs_data</span><span class="o">=</span><span class="n">compute_logs_data</span><span class="p">,</span>
+            <span class="n">schedule_storage_data</span><span class="o">=</span><span class="n">schedule_storage_data</span><span class="p">,</span>
+            <span class="n">scheduler_data</span><span class="o">=</span><span class="n">scheduler_data</span><span class="p">,</span>
+            <span class="n">run_coordinator_data</span><span class="o">=</span><span class="n">run_coordinator_data</span><span class="p">,</span>
+            <span class="n">run_launcher_data</span><span class="o">=</span><span class="n">run_launcher_data</span><span class="p">,</span>
+            <span class="n">settings</span><span class="o">=</span><span class="n">settings</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="n">instance_ref_dict</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">value_for_ref_item</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">None</span>
+            <span class="k">if</span> <span class="n">k</span> <span class="o">==</span> <span class="s2">&quot;settings&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">v</span>
+            <span class="k">return</span> <span class="n">ConfigurableClassData</span><span class="p">(</span><span class="o">*</span><span class="n">v</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">InstanceRef</span><span class="p">(</span><span class="o">**</span><span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">value_for_ref_item</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">instance_ref_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">local_artifact_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_artifact_storage_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_storage_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">event_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">event_storage_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">compute_log_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_logs_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schedule_storage</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">schedule_storage_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">schedule_storage_data</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">scheduler</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">scheduler_data</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_coordinator</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_coordinator_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_coordinator_data</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">run_launcher</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_launcher_data</span><span class="o">.</span><span class="n">rehydrate</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_launcher_data</span> <span class="k">else</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_asdict</span><span class="p">()</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

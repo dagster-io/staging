@@ -1,0 +1,259 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Presets &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Repositories" href="repositories.html" />
+    <link rel="prev" title="Pipelines" href="pipeline.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="pipeline.html" title="Previous document">Pipelines</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="repositories.html" title="Next document">Repositories</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="presets">
+<h1>Presets<a class="headerlink" href="#presets" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="dagster.PresetDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">PresetDefinition</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/preset.html#PresetDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PresetDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a preset configuration in which a pipeline can execute.</p>
+<p>Presets can be used in Dagit to load predefined configurations into the tool.</p>
+<p>Presets may also be used from the Python API (in a script, or in test) as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">execute_pipeline</span><span class="p">(</span><span class="n">pipeline_def</span><span class="p">,</span> <span class="n">preset</span><span class="o">=</span><span class="s1">&#39;example_preset&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Presets may also be used with the command line tools:</p>
+<div class="highlight-shell notranslate"><div class="highlight"><pre><span></span>$ dagster pipeline execute example_pipeline --preset example_preset
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of this preset. Must be unique in the presets defined on a given
+pipeline.</p></li>
+<li><p><strong>run_config</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a><em>]</em>) – A dict representing the config to set with the preset.
+This is equivalent to the <code class="docutils literal notranslate"><span class="pre">run_config</span></code> argument to <a class="reference internal" href="execution.html#dagster.execute_pipeline" title="dagster.execute_pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">execute_pipeline()</span></code></a>.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute with the preset. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this preset. (default: ‘default’)</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – The tags to apply when executing this preset.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="method">
+<dt id="dagster.PresetDefinition.from_files">
+<em class="property">static </em><code class="sig-name descname">from_files</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">config_files=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">tags=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/preset.html#PresetDefinition.from_files"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PresetDefinition.from_files" title="Permalink to this definition">¶</a></dt>
+<dd><p>Static constructor for presets from YAML files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of this preset. Must be unique in the presets defined on a given
+pipeline.</p></li>
+<li><p><strong>config_files</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – List of paths or glob patterns for yaml files
+to load and parse as the environment config for this preset.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute with the preset. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this preset. (default:
+‘default’)</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – The tags to apply when executing this preset.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A PresetDefinition constructed from the provided YAML files.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.PresetDefinition" title="dagster.PresetDefinition">PresetDefinition</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="errors.html#dagster.DagsterInvariantViolationError" title="dagster.DagsterInvariantViolationError"><strong>DagsterInvariantViolationError</strong></a> – When one of the YAML files is invalid and has a parse
+    error.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.PresetDefinition.from_pkg_resources">
+<em class="property">static </em><code class="sig-name descname">from_pkg_resources</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">pkg_resource_defs=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">tags=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/preset.html#PresetDefinition.from_pkg_resources"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PresetDefinition.from_pkg_resources" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a preset from a package resource, using <code class="xref py py-func docutils literal notranslate"><span class="pre">pkg_resources.resource_string()</span></code>.</p>
+<p>Example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">PresetDefinition</span><span class="o">.</span><span class="n">from_pkg_resources</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">,</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;local&#39;</span><span class="p">,</span>
+    <span class="n">pkg_resource_defs</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;dagster_examples.airline_demo.environments&#39;</span><span class="p">,</span> <span class="s1">&#39;local_base.yaml&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;dagster_examples.airline_demo.environments&#39;</span><span class="p">,</span> <span class="s1">&#39;local_warehouse.yaml&#39;</span><span class="p">),</span>
+    <span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of this preset. Must be unique in the presets defined on a given
+pipeline.</p></li>
+<li><p><strong>pkg_resource_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>(</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>)</em><em>]</em><em>]</em>) – List of pkg_resource modules/files to
+load as environment config for this preset.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute with this partition. e.g.
+<code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this preset. (default:
+‘default’)</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – The tags to apply when executing this preset.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A PresetDefinition constructed from the provided YAML strings</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.PresetDefinition" title="dagster.PresetDefinition">PresetDefinition</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="errors.html#dagster.DagsterInvariantViolationError" title="dagster.DagsterInvariantViolationError"><strong>DagsterInvariantViolationError</strong></a> – When one of the YAML documents is invalid and has a
+    parse error.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.PresetDefinition.from_yaml_strings">
+<em class="property">static </em><code class="sig-name descname">from_yaml_strings</code><span class="sig-paren">(</span><em class="sig-param">name</em>, <em class="sig-param">yaml_strings=None</em>, <em class="sig-param">solid_selection=None</em>, <em class="sig-param">mode=None</em>, <em class="sig-param">tags=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/preset.html#PresetDefinition.from_yaml_strings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PresetDefinition.from_yaml_strings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Static constructor for presets from YAML strings.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of this preset. Must be unique in the presets defined on a given
+pipeline.</p></li>
+<li><p><strong>yaml_strings</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – List of yaml strings to parse as the environment
+config for this preset.</p></li>
+<li><p><strong>solid_selection</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – A list of solid subselection (including single
+solid names) to execute with the preset. e.g. <code class="docutils literal notranslate"><span class="pre">['*some_solid+',</span> <span class="pre">'other_solid']</span></code></p></li>
+<li><p><strong>mode</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The mode to apply when executing this preset. (default:
+‘default’)</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – The tags to apply when executing this preset.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A PresetDefinition constructed from the provided YAML strings</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#dagster.PresetDefinition" title="dagster.PresetDefinition">PresetDefinition</a></p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="errors.html#dagster.DagsterInvariantViolationError" title="dagster.DagsterInvariantViolationError"><strong>DagsterInvariantViolationError</strong></a> – When one of the YAML documents is invalid and has a
+    parse error.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.PresetDefinition.get_environment_yaml">
+<code class="sig-name descname">get_environment_yaml</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/preset.html#PresetDefinition.get_environment_yaml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PresetDefinition.get_environment_yaml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the environment dict set on a preset as YAML.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The environment dict as YAML.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
+<dt id="dagster.PresetDefinition.with_additional_config">
+<code class="sig-name descname">with_additional_config</code><span class="sig-paren">(</span><em class="sig-param">run_config</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/preset.html#PresetDefinition.with_additional_config"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PresetDefinition.with_additional_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a new PresetDefinition with additional config merged in to the existing config.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="pipeline.html" title="Previous document">Pipelines</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="repositories.html" title="Next document">Repositories</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,594 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.errors &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.errors</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Core Dagster error classes.</span>
+
+<span class="sd">All errors thrown by the Dagster framework inherit from :py:class:`~dagster.DagsterError`. Users</span>
+<span class="sd">should not subclass this base class for their own exceptions.</span>
+
+<span class="sd">There is another exception base class, :py:class:`~dagster.DagsterUserCodeExecutionError`, which is</span>
+<span class="sd">used by the framework in concert with the :py:func:`~dagster.core.errors.user_code_error_boundary`.</span>
+
+<span class="sd">Dagster uses this construct to wrap user code into which it calls. User code can perform arbitrary</span>
+<span class="sd">computations and may itself throw exceptions. The error boundary catches these user code-generated</span>
+<span class="sd">exceptions, and then reraises them wrapped in a subclass of</span>
+<span class="sd">:py:class:`~dagster.DagsterUserCodeExecutionError`.</span>
+
+<span class="sd">The wrapped exceptions include additional context for the original exceptions, injected by the</span>
+<span class="sd">Dagster runtime.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">traceback</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.interrupts</span> <span class="kn">import</span> <span class="n">raise_interrupts_as</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterExecutionInterruptedError</span><span class="p">(</span><span class="ne">BaseException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Pipeline execution was interrupted during the execution process.</span>
+
+<span class="sd">    Just like KeyboardInterrupt this inherits from BaseException</span>
+<span class="sd">    as to not be accidentally caught by code that catches Exception</span>
+<span class="sd">    and thus prevent the interpreter from exiting.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="DagsterError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterError">[docs]</a><span class="k">class</span> <span class="nc">DagsterError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for all errors thrown by the Dagster framework.</span>
+
+<span class="sd">    Users should not subclass this base class for their own exceptions.&quot;&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_user_code_error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns true if this error is attributable to user code.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+<div class="viewcode-block" id="DagsterInvalidDefinitionError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterInvalidDefinitionError">[docs]</a><span class="k">class</span> <span class="nc">DagsterInvalidDefinitionError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that the rules for a definition have been violated by the user.&quot;&quot;&quot;</span></div>
+
+
+<span class="k">class</span> <span class="nc">DagsterInvalidSubsetError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that a subset of a pipeline is invalid because either:</span>
+<span class="sd">        - One or more solids in the specified subset do not exist on the pipeline.&#39;</span>
+<span class="sd">        - The subset produces an invalid pipeline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+<span class="n">CONFIG_ERROR_VERBIAGE</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">This value can be a:</span>
+<span class="s2">    - Field</span>
+<span class="s2">    - Python primitive types that resolve to dagster config types</span>
+<span class="s2">        - int, float, bool, str, list.</span>
+<span class="s2">    - A dagster config type: Int, Float, Bool, List, Optional, Selector, Shape, Permissive</span>
+<span class="s2">    - A bare python dictionary, which is wrapped in Field(Shape(...)). Any values</span>
+<span class="s2">      in the dictionary get resolved by the same rules, recursively.</span>
+<span class="s2">    - A python list with a single entry that can resolve to a type, e.g. [int]</span>
+<span class="s2">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="DagsterInvalidConfigDefinitionError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterInvalidConfigDefinitionError">[docs]</a><span class="k">class</span> <span class="nc">DagsterInvalidConfigDefinitionError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that you have attempted to construct a config with an invalid value</span>
+
+<span class="sd">    Acceptable values for config types are any of:</span>
+<span class="sd">        1. A Python primitive type that resolves to a Dagster config type</span>
+<span class="sd">            (:py:class:`~python:int`, :py:class:`~python:float`, :py:class:`~python:bool`,</span>
+<span class="sd">            :py:class:`~python:str`, or :py:class:`~python:list`).</span>
+
+<span class="sd">        2. A Dagster config type: :py:data:`~dagster.Int`, :py:data:`~dagster.Float`,</span>
+<span class="sd">            :py:data:`~dagster.Bool`, :py:data:`~dagster.String`,</span>
+<span class="sd">            :py:data:`~dagster.StringSource`, :py:data:`~dagster.Any`,</span>
+<span class="sd">            :py:class:`~dagster.Array`, :py:data:`~dagster.Noneable`, :py:data:`~dagster.Enum`,</span>
+<span class="sd">            :py:class:`~dagster.Selector`, :py:class:`~dagster.Shape`, or</span>
+<span class="sd">            :py:class:`~dagster.Permissive`.</span>
+
+<span class="sd">        3. A bare python dictionary, which will be automatically wrapped in</span>
+<span class="sd">            :py:class:`~dagster.Shape`. Values of the dictionary are resolved recursively</span>
+<span class="sd">            according to the same rules.</span>
+
+<span class="sd">        4. A bare python list of length one which itself is config type.</span>
+<span class="sd">            Becomes :py:class:`Array` with list element as an argument.</span>
+
+<span class="sd">        5. An instance of :py:class:`~dagster.Field`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">original_root</span><span class="p">,</span> <span class="n">current_value</span><span class="p">,</span> <span class="n">stack</span><span class="p">,</span> <span class="n">reason</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_root</span> <span class="o">=</span> <span class="n">original_root</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">current_value</span> <span class="o">=</span> <span class="n">current_value</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">stack</span> <span class="o">=</span> <span class="n">stack</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterInvalidConfigDefinitionError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="s2">&quot;Error defining config. Original value passed: </span><span class="si">{original_root}</span><span class="s2">. &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{stack_str}{current_value}</span><span class="s2"> &quot;</span>
+                <span class="s2">&quot;cannot be resolved.</span><span class="si">{reason_str}</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">CONFIG_ERROR_VERBIAGE</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">original_root</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="n">original_root</span><span class="p">),</span>
+                <span class="n">stack_str</span><span class="o">=</span><span class="s2">&quot;Error at stack path :&quot;</span> <span class="o">+</span> <span class="s2">&quot;:&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">stack</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;. &quot;</span> <span class="k">if</span> <span class="n">stack</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">current_value</span><span class="o">=</span><span class="nb">repr</span><span class="p">(</span><span class="n">current_value</span><span class="p">),</span>
+                <span class="n">reason_str</span><span class="o">=</span><span class="s2">&quot; Reason: </span><span class="si">{reason}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">)</span> <span class="k">if</span> <span class="n">reason</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterInvariantViolationError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterInvariantViolationError">[docs]</a><span class="k">class</span> <span class="nc">DagsterInvariantViolationError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates the user has violated a well-defined invariant that can only be enforced</span>
+<span class="sd">    at runtime.&quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="DagsterExecutionStepNotFoundError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterExecutionStepNotFoundError">[docs]</a><span class="k">class</span> <span class="nc">DagsterExecutionStepNotFoundError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Thrown when the user specifies execution step keys that do not exist.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_keys</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;step_keys&quot;</span><span class="p">),</span> <span class="s2">&quot;step_keys&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterExecutionStepNotFoundError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterRunNotFoundError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterRunNotFoundError">[docs]</a><span class="k">class</span> <span class="nc">DagsterRunNotFoundError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Thrown when a run cannot be found in run storage.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">invalid_run_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;invalid_run_id&quot;</span><span class="p">),</span> <span class="s2">&quot;invalid_run_id&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterRunNotFoundError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterStepOutputNotFoundError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterStepOutputNotFoundError">[docs]</a><span class="k">class</span> <span class="nc">DagsterStepOutputNotFoundError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that previous step outputs required for an execution step to proceed are not</span>
+<span class="sd">    available.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;step_key&quot;</span><span class="p">),</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;output_name&quot;</span><span class="p">),</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterStepOutputNotFoundError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">raise_execution_interrupts</span><span class="p">():</span>
+    <span class="k">with</span> <span class="n">raise_interrupts_as</span><span class="p">(</span><span class="n">DagsterExecutionInterruptedError</span><span class="p">):</span>
+        <span class="k">yield</span>
+
+
+<div class="viewcode-block" id="user_code_error_boundary"><a class="viewcode-back" href="../../../sections/api/apidocs/internals.html#dagster.user_code_error_boundary">[docs]</a><span class="nd">@contextmanager</span>
+<span class="k">def</span> <span class="nf">user_code_error_boundary</span><span class="p">(</span><span class="n">error_cls</span><span class="p">,</span> <span class="n">msg_fn</span><span class="p">,</span> <span class="n">control_flow_exceptions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Wraps the execution of user-space code in an error boundary. This places a uniform</span>
+<span class="sd">    policy around an user code invoked by the framework. This ensures that all user</span>
+<span class="sd">    errors are wrapped in an exception derived from DagsterUserCodeExecutionError,</span>
+<span class="sd">    and that the original stack trace of the user error is preserved, so that it</span>
+<span class="sd">    can be reported without confusing framework code in the stack trace, if a</span>
+<span class="sd">    tool author wishes to do so.</span>
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        with user_code_error_boundary(</span>
+<span class="sd">            # Pass a class that inherits from DagsterUserCodeExecutionError</span>
+<span class="sd">            DagsterExecutionStepExecutionError,</span>
+<span class="sd">            # Pass a function that produces a message</span>
+<span class="sd">            &quot;Error occurred during step execution&quot;</span>
+<span class="sd">        ):</span>
+<span class="sd">            call_user_provided_function()</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">msg_fn</span><span class="p">,</span> <span class="s2">&quot;msg_fn&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">subclass_param</span><span class="p">(</span><span class="n">error_cls</span><span class="p">,</span> <span class="s2">&quot;error_cls&quot;</span><span class="p">,</span> <span class="n">DagsterUserCodeExecutionError</span><span class="p">)</span>
+    <span class="n">control_flow_exceptions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">control_flow_exceptions</span><span class="p">,</span> <span class="s2">&quot;control_flow_exceptions&quot;</span><span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="k">with</span> <span class="n">raise_execution_interrupts</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span>
+        <span class="k">except</span> <span class="n">control_flow_exceptions</span> <span class="k">as</span> <span class="n">cf</span><span class="p">:</span>
+            <span class="c1"># A control flow exception has occurred and should be propagated</span>
+            <span class="k">raise</span> <span class="n">cf</span>
+        <span class="k">except</span> <span class="n">DagsterError</span> <span class="k">as</span> <span class="n">de</span><span class="p">:</span>
+            <span class="c1"># The system has thrown an error that is part of the user-framework contract</span>
+            <span class="k">raise</span> <span class="n">de</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># pylint: disable=W0703</span>
+            <span class="c1"># An exception has been thrown by user code and computation should cease</span>
+            <span class="c1"># with the error reported further up the stack</span>
+            <span class="k">raise</span> <span class="n">error_cls</span><span class="p">(</span>
+                <span class="n">msg_fn</span><span class="p">(),</span> <span class="n">user_exception</span><span class="o">=</span><span class="n">e</span><span class="p">,</span> <span class="n">original_exc_info</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">exc_info</span><span class="p">(),</span> <span class="o">**</span><span class="n">kwargs</span>
+            <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span></div>
+
+
+<div class="viewcode-block" id="DagsterUserCodeExecutionError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterUserCodeExecutionError">[docs]</a><span class="k">class</span> <span class="nc">DagsterUserCodeExecutionError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the base class for any exception that is meant to wrap an</span>
+<span class="sd">    :py:class:`~python:Exception` thrown by user code. It wraps that existing user code.</span>
+<span class="sd">    The ``original_exc_info`` argument to the constructor is meant to be a tuple of the type</span>
+<span class="sd">    returned by :py:func:`sys.exc_info &lt;python:sys.exc_info&gt;` at the call site of the constructor.</span>
+
+<span class="sd">    Users should not subclass this base class for their own exceptions and should instead throw</span>
+<span class="sd">    freely from user code. User exceptions will be automatically wrapped and rethrown.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c1"># original_exc_info should be gotten from a sys.exc_info() call at the</span>
+        <span class="c1"># callsite inside of the exception handler. this will allow consuming</span>
+        <span class="c1"># code to *re-raise* the user error in it&#39;s original format</span>
+        <span class="c1"># for cleaner error reporting that does not have framework code in it</span>
+        <span class="n">user_exception</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;user_exception&quot;</span><span class="p">),</span> <span class="s2">&quot;user_exception&quot;</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">)</span>
+        <span class="n">original_exc_info</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">tuple_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;original_exc_info&quot;</span><span class="p">),</span> <span class="s2">&quot;original_exc_info&quot;</span><span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">original_exc_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="o">*</span><span class="n">args</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_exception</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">user_exception</span><span class="p">,</span> <span class="s2">&quot;user_exception&quot;</span><span class="p">,</span> <span class="ne">Exception</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">original_exc_info</span> <span class="o">=</span> <span class="n">original_exc_info</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_user_code_error</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="DagsterTypeCheckError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterTypeCheckError">[docs]</a><span class="k">class</span> <span class="nc">DagsterTypeCheckError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates an error in the solid type system at runtime. E.g. a solid receives an</span>
+<span class="sd">    unexpected input, or produces an output that does not match the type of the output definition.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<span class="k">class</span> <span class="nc">DagsterExecutionLoadInputError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates an error occurred while loading an input for a step.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;step_key&quot;</span><span class="p">),</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;input_name&quot;</span><span class="p">),</span> <span class="s2">&quot;input_name&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterExecutionLoadInputError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterExecutionHandleOutputError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates an error occurred while loading an input for a step.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;step_key&quot;</span><span class="p">),</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;output_name&quot;</span><span class="p">),</span> <span class="s2">&quot;output_name&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterExecutionHandleOutputError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="DagsterExecutionStepExecutionError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterExecutionStepExecutionError">[docs]</a><span class="k">class</span> <span class="nc">DagsterExecutionStepExecutionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates an error occurred while executing the body of an execution step.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;step_key&quot;</span><span class="p">),</span> <span class="s2">&quot;step_key&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solid_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;solid_name&quot;</span><span class="p">),</span> <span class="s2">&quot;solid_name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">solid_def_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;solid_def_name&quot;</span><span class="p">),</span> <span class="s2">&quot;solid_def_name&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterExecutionStepExecutionError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterResourceFunctionError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterResourceFunctionError">[docs]</a><span class="k">class</span> <span class="nc">DagsterResourceFunctionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Indicates an error occurred while executing the body of the ``resource_fn`` in a</span>
+<span class="sd">    :py:class:`~dagster.ResourceDefinition` during resource initialization.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="DagsterConfigMappingFunctionError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterConfigMappingFunctionError">[docs]</a><span class="k">class</span> <span class="nc">DagsterConfigMappingFunctionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Indicates that an unexpected error occurred while executing the body of a config mapping</span>
+<span class="sd">    function defined in a :py:class:`~dagster.CompositeSolidDefinition` during config parsing.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<span class="k">class</span> <span class="nc">DagsterTypeLoadingError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Indicates that an unexpected error occurred while executing the body of an type load</span>
+<span class="sd">    function defined in a :py:class:`~dagster.DagsterTypeLoader` during loading of a custom type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterTypeMaterializationError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Indicates that an unexpected error occurred while executing the body of an output</span>
+<span class="sd">    materialization function defined in a :py:class:`~dagster.DagsterTypeMaterializer` during</span>
+<span class="sd">    materialization of a custom type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="DagsterUnknownResourceError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterUnknownResourceError">[docs]</a><span class="k">class</span> <span class="nc">DagsterUnknownResourceError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">):</span>
+    <span class="c1"># inherits from AttributeError as it is raised within a __getattr__ call... used to support</span>
+    <span class="c1"># object hasattr method</span>
+    <span class="sd">&quot;&quot;&quot; Indicates that an unknown resource was accessed in the body of an execution step. May often</span>
+<span class="sd">    happen by accessing a resource in the compute function of a solid without first supplying the</span>
+<span class="sd">    solid with the correct `required_resource_keys` argument.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resource_name</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resource_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">resource_name</span><span class="p">,</span> <span class="s2">&quot;resource_name&quot;</span><span class="p">)</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;Unknown resource `</span><span class="si">{resource_name}</span><span class="s2">`. Specify `</span><span class="si">{resource_name}</span><span class="s2">` as a required resource &quot;</span>
+            <span class="s2">&quot;on the compute / config function that accessed it.&quot;</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">resource_name</span><span class="o">=</span><span class="n">resource_name</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterUnknownResourceError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterInvalidConfigError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterInvalidConfigError">[docs]</a><span class="k">class</span> <span class="nc">DagsterInvalidConfigError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Thrown when provided config is invalid (does not type check against the relevant config</span>
+<span class="sd">    schema).&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">preamble</span><span class="p">,</span> <span class="n">errors</span><span class="p">,</span> <span class="n">config_value</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.config.errors</span> <span class="kn">import</span> <span class="n">EvaluationError</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">preamble</span><span class="p">,</span> <span class="s2">&quot;preamble&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">errors</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">errors</span><span class="p">,</span> <span class="s2">&quot;errors&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EvaluationError</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_value</span> <span class="o">=</span> <span class="n">config_value</span>
+
+        <span class="n">error_msg</span> <span class="o">=</span> <span class="n">preamble</span>
+        <span class="n">error_messages</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i_error</span><span class="p">,</span> <span class="n">error</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">errors</span><span class="p">):</span>
+            <span class="n">error_messages</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">error</span><span class="o">.</span><span class="n">message</span><span class="p">)</span>
+            <span class="n">error_msg</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">    Error </span><span class="si">{i_error}</span><span class="s2">: </span><span class="si">{error_message}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">i_error</span><span class="o">=</span><span class="n">i_error</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">error_message</span><span class="o">=</span><span class="n">error</span><span class="o">.</span><span class="n">message</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">message</span> <span class="o">=</span> <span class="n">error_msg</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_messages</span> <span class="o">=</span> <span class="n">error_messages</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterInvalidConfigError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">error_msg</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterUnmetExecutorRequirementsError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterUnmetExecutorRequirementsError">[docs]</a><span class="k">class</span> <span class="nc">DagsterUnmetExecutorRequirementsError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates the resolved executor is incompatible with the state of other systems</span>
+<span class="sd">    such as the :py:class:`~dagster.core.instance.DagsterInstance` or system storage configuration.</span>
+<span class="sd">    &quot;&quot;&quot;</span></div>
+
+
+<div class="viewcode-block" id="DagsterSubprocessError"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterSubprocessError">[docs]</a><span class="k">class</span> <span class="nc">DagsterSubprocessError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An exception has occurred in one or more of the child processes dagster manages.</span>
+<span class="sd">    This error forwards the message and stack trace for all of the collected errors.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">SerializableErrorInfo</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">subprocess_error_infos</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;subprocess_error_infos&quot;</span><span class="p">),</span> <span class="s2">&quot;subprocess_error_infos&quot;</span><span class="p">,</span> <span class="n">SerializableErrorInfo</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterSubprocessError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">DagsterUserCodeProcessError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;An exception has occurred in a user code process that the host process raising this error</span>
+<span class="sd">     was communicating with.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">SerializableErrorInfo</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">user_code_process_error_infos</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;user_code_process_error_infos&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;user_code_process_error_infos&quot;</span><span class="p">,</span>
+            <span class="n">SerializableErrorInfo</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterUserCodeProcessError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterLaunchFailedError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates an error while attempting to launch a pipeline run.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">SerializableErrorInfo</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">serializable_error_info</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;serializable_error_info&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;serializable_error_info&quot;</span><span class="p">,</span>
+            <span class="n">SerializableErrorInfo</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterLaunchFailedError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterBackfillFailedError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates an error while attempting to launch a backfill.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.utils.error</span> <span class="kn">import</span> <span class="n">SerializableErrorInfo</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">serializable_error_info</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span>
+            <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;serializable_error_info&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;serializable_error_info&quot;</span><span class="p">,</span>
+            <span class="n">SerializableErrorInfo</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterBackfillFailedError</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterScheduleWipeRequired</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that the user must wipe their stored schedule state.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterInstanceMigrationRequired</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that the dagster instance must be migrated.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">db_revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">head_revision</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">original_exc_info</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterInstanceMigrationRequired</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="s2">&quot;Instance is out of date and must be migrated</span><span class="si">{additional_msg}</span><span class="s2">.&quot;</span>
+            <span class="s2">&quot;</span><span class="si">{revision_clause}</span><span class="s2"> Please run `dagster instance migrate`.</span><span class="si">{original_exception_clause}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">additional_msg</span><span class="o">=</span><span class="s2">&quot; (</span><span class="si">{msg}</span><span class="s2">)&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">msg</span><span class="o">=</span><span class="n">msg</span><span class="p">)</span> <span class="k">if</span> <span class="n">msg</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+                <span class="n">revision_clause</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">&quot; Database is at revision </span><span class="si">{db_revision}</span><span class="s2">, head is &quot;</span>
+                    <span class="s2">&quot;</span><span class="si">{head_revision}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">db_revision</span><span class="o">=</span><span class="n">db_revision</span><span class="p">,</span> <span class="n">head_revision</span><span class="o">=</span><span class="n">head_revision</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">db_revision</span> <span class="ow">or</span> <span class="n">head_revision</span>
+                    <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                <span class="p">),</span>
+                <span class="n">original_exception_clause</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">Original exception:</span><span class="se">\n\n</span><span class="si">{original_exception}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">original_exception</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">traceback</span><span class="o">.</span><span class="n">format_exception</span><span class="p">(</span><span class="o">*</span><span class="n">original_exc_info</span><span class="p">))</span>
+                    <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">original_exc_info</span>
+                    <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterRunAlreadyExists</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that a pipeline run already exists in a run storage.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterSnapshotDoesNotExist</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates you attempted to create a pipeline run with a nonexistent snapshot id&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterRunConflict</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that a conflicting pipeline run exists in a run storage.&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="DagsterTypeCheckDidNotPass"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterTypeCheckDidNotPass">[docs]</a><span class="k">class</span> <span class="nc">DagsterTypeCheckDidNotPass</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that a type check failed.</span>
+
+<span class="sd">    This is raised when ``raise_on_error`` is ``True`` in calls to the synchronous pipeline and</span>
+<span class="sd">    solid execution APIs (:py:func:`~dagster.execute_pipeline`, :py:func:`~dagster.execute_solid`,</span>
+<span class="sd">    etc.), that is, typically in test, and  a :py:class:`~dagster.DagsterType`&#39;s type check fails</span>
+<span class="sd">    by returning either ``False`` or an instance of :py:class:`~dagster.TypeCheck` whose ``success``</span>
+<span class="sd">    member is ``False``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dagster_type</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">EventMetadataEntry</span><span class="p">,</span> <span class="n">DagsterType</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterTypeCheckDidNotPass</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">description</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">metadata_entries</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+            <span class="n">metadata_entries</span><span class="p">,</span> <span class="s2">&quot;metadata_entries&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">EventMetadataEntry</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dagster_type</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">dagster_type</span><span class="p">,</span> <span class="s2">&quot;dagster_type&quot;</span><span class="p">,</span> <span class="n">DagsterType</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DagsterEventLogInvalidForRun"><a class="viewcode-back" href="../../../sections/api/apidocs/errors.html#dagster.DagsterEventLogInvalidForRun">[docs]</a><span class="k">class</span> <span class="nc">DagsterEventLogInvalidForRun</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Raised when the event logs for a historical run are malformed or invalid.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run_id</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DagsterEventLogInvalidForRun</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="s2">&quot;Event logs invalid for run id </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">ScheduleExecutionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Errors raised in a user process during the execution of schedule.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">SensorExecutionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Errors raised in a user process during the execution of a sensor (or its job).&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">PartitionExecutionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Errors raised during the execution of user-provided functions of a partition set schedule.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterInvalidAssetKey</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Error raised by invalid asset key &quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">HookExecutionError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Error raised during the execution of a user-defined hook. &quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterImportError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Import error raised while importing user-code. &quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">JobError</span><span class="p">(</span><span class="n">DagsterUserCodeExecutionError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Errors raised during the execution of user-provided functions for a defined Job.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterUnknownStepStateError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;When pipeline execution complete with steps in an unknown state&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterObjectStoreError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Errors during an object store operation.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterInvalidPropertyError</span><span class="p">(</span><span class="n">DagsterError</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that an invalid property was accessed. May often happen by accessing a property</span>
+<span class="sd">    that no longer exists after breaking changes.&quot;&quot;&quot;</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

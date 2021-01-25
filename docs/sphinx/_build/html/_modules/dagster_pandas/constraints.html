@@ -1,0 +1,1218 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_pandas.constraints &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_pandas.constraints</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">DagsterType</span><span class="p">,</span> <span class="n">EventMetadataEntry</span><span class="p">,</span> <span class="n">TypeCheck</span><span class="p">,</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental_class_warning</span>
+<span class="kn">from</span> <span class="nn">pandas</span> <span class="kn">import</span> <span class="n">DataFrame</span>
+
+
+<span class="k">class</span> <span class="nc">ConstraintViolationException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that a constraint has been violated.&quot;&quot;&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">ConstraintWithMetadataException</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class defines the response generated when a pandas DF fails validation -- it can be used to generate either a</span>
+<span class="sd">    failed typecheck or an exception.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        constraint_name (str):  the name of the violated constraint</span>
+<span class="sd">        constraint_description (Optional[str]): the description of the violated constraint</span>
+<span class="sd">        expectation (Optional[Union[dict,list, str, set]]): what result was expected -- typically a jsonlike, though it can be a string</span>
+<span class="sd">        offending (Optional[Union[dict,list, str, set]]):  which pieces of the dataframe violated the expectation, typically list or string</span>
+<span class="sd">        actual (Optional[Union[dict,list, str, set]]): what those pieces of the dataframe actually were -- typically a jsonlike</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">constraint_name</span><span class="p">,</span>
+        <span class="n">constraint_description</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span>
+        <span class="n">expectation</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">offending</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">actual</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_name</span> <span class="o">=</span> <span class="n">constraint_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_description</span> <span class="o">=</span> <span class="n">constraint_description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expectation</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">expectation</span><span class="p">,</span> <span class="s2">&quot;expectation&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offending</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">offending</span><span class="p">,</span> <span class="s2">&quot;offending&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">actual</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_inst_param</span><span class="p">(</span><span class="n">actual</span><span class="p">,</span> <span class="s2">&quot;actual&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">dict</span><span class="p">,</span> <span class="nb">list</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">set</span><span class="p">))</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ConstraintWithMetadataException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="s2">&quot;Violated </span><span class="si">{}</span><span class="s2"> - </span><span class="si">{}</span><span class="s2">, </span><span class="si">{}</span><span class="s2"> was/were expected, but we received </span><span class="si">{}</span><span class="s2"> which was/were </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="p">,</span> <span class="n">expectation</span><span class="p">,</span> <span class="n">offending</span><span class="p">,</span> <span class="n">actual</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">convert_to_metadata</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">json</span><span class="p">(</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;constraint_name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_name</span><span class="p">,</span>
+                <span class="s2">&quot;constraint_description&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">constraint_description</span><span class="p">,</span>
+                <span class="s2">&quot;expected&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">expectation</span><span class="p">,</span>
+                <span class="s2">&quot;offending&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">offending</span><span class="p">,</span>
+                <span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">actual</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;constraint-metadata&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">return_as_typecheck</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span>
+            <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">convert_to_metadata</span><span class="p">()]</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DataFrameConstraintViolationException</span><span class="p">(</span><span class="n">ConstraintViolationException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates a dataframe level constraint has been violated.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DataFrameConstraintViolationException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="s2">&quot;Violated </span><span class="si">{constraint_name}</span><span class="s2"> - </span><span class="si">{constraint_description}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="o">=</span><span class="n">constraint_description</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DataFrameWithMetadataException</span><span class="p">(</span><span class="n">ConstraintWithMetadataException</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="p">,</span> <span class="n">expectation</span><span class="p">,</span> <span class="n">actual</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DataFrameWithMetadataException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="p">,</span> <span class="n">expectation</span><span class="p">,</span> <span class="s2">&quot;a malformed dataframe&quot;</span><span class="p">,</span> <span class="n">actual</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnConstraintViolationException</span><span class="p">(</span><span class="n">ConstraintViolationException</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Indicates that a column constraint has been violated.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="p">,</span> <span class="n">column_name</span><span class="p">,</span> <span class="n">offending_rows</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_name</span> <span class="o">=</span> <span class="n">constraint_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">constraint_description</span> <span class="o">=</span> <span class="n">constraint_description</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_name</span> <span class="o">=</span> <span class="n">column_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">offending_rows</span> <span class="o">=</span> <span class="n">offending_rows</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ColumnConstraintViolationException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">construct_message</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">construct_message</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">base_message</span> <span class="o">=</span> <span class="s2">&quot;Violated </span><span class="si">{constraint_name}</span><span class="s2"> (</span><span class="si">{constraint_description}</span><span class="s2">) for Column Name (</span><span class="si">{column_name}</span><span class="s2">) &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">constraint_name</span><span class="p">,</span>
+            <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">constraint_description</span><span class="p">,</span>
+            <span class="n">column_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">column_name</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">offending_rows</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">base_message</span> <span class="o">+=</span> <span class="s2">&quot;The offending (index, row values) are the following: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">offending_rows</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">base_message</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnWithMetadataException</span><span class="p">(</span><span class="n">ConstraintWithMetadataException</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constraint_name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="p">,</span> <span class="n">expectation</span><span class="p">,</span> <span class="n">offending</span><span class="p">,</span> <span class="n">actual</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ColumnWithMetadataException</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="s2">&quot;the column constraint &quot;</span> <span class="o">+</span> <span class="n">constraint_name</span><span class="p">,</span>
+            <span class="n">constraint_description</span><span class="p">,</span>
+            <span class="n">expectation</span><span class="p">,</span>
+            <span class="n">offending</span><span class="p">,</span>
+            <span class="n">actual</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">Constraint</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base constraint object that all constraints inherit from.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        error_description (Optional[str]): The plain string description that is output in the terminal if the constraint fails.</span>
+<span class="sd">        markdown_description (Optional[str]): A markdown supported description that is emitted by dagit if the constraint fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">markdown_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">markdown_description</span><span class="p">,</span> <span class="s2">&quot;markdown_description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">error_description</span><span class="p">,</span> <span class="s2">&quot;error_description&quot;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ConstraintWithMetadata</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class defines a base constraint over pandas DFs with organized metadata</span>
+
+<span class="sd">    args:</span>
+<span class="sd">        description (str): description of the constraint</span>
+<span class="sd">        validation_fn (Callable[[DataFrame], Tuple[bool, dict[str, Union[dict,list, str, set]]]]:</span>
+<span class="sd">                    the validation function to run over inputted data</span>
+<span class="sd">                    This function should return a tuple of a boolean for success or failure, and a dict containing</span>
+<span class="sd">                    metadata about the test -- this metadata will be passed to the resulting exception if validation</span>
+<span class="sd">                    fails.</span>
+<span class="sd">        resulting_exception (ConstraintWithMetadataException):  what response a failed typecheck should induce</span>
+<span class="sd">        raise_or_typecheck (Optional[bool]): whether to raise an exception (if set to True) or emit a failed typecheck event</span>
+<span class="sd">                    (if set to False) when validation fails</span>
+<span class="sd">        name (Optional[str]): what to call the constraint, defaults to the class name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># TODO:  validation_fn returning metadata is sorta broken.  maybe have it yield typecheck events and grab metadata?</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">validation_fn</span><span class="p">,</span> <span class="n">resulting_exception</span><span class="p">,</span> <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="n">experimental_class_warning</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">description</span>
+        <span class="c1"># should return a tuple of (bool, and either an empty dict or a dict of extra params)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">validation_fn</span> <span class="o">=</span> <span class="n">validation_fn</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resulting_exception</span> <span class="o">=</span> <span class="n">resulting_exception</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span> <span class="o">=</span> <span class="n">raise_or_typecheck</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+            <span class="n">exc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resulting_exception</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span> <span class="o">**</span><span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exc</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">exc</span><span class="o">.</span><span class="n">return_as_typecheck</span><span class="p">()</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># TODO:  composition of validations</span>
+    <span class="k">def</span> <span class="nf">as_dagster_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s2">&quot;Dagster types can only be constructed from constraints that return typechecks&quot;</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">DagsterType</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;A Pandas DataFrame with the following validation: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">description</span>
+            <span class="p">),</span>
+            <span class="n">type_check_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">),</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MultiConstraintWithMetadata</span><span class="p">(</span><span class="n">ConstraintWithMetadata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Use this class if you have multiple constraints to check over the entire dataframe</span>
+
+<span class="sd">        args:</span>
+<span class="sd">            description (str): description of the constraint</span>
+<span class="sd">            validation_fn_arr(List[Callable[[DataFrame], Tuple[bool, dict[str, Union[dict,list, str, set]]]]]):</span>
+<span class="sd">                        a list of the validation functions to run over inputted data</span>
+<span class="sd">                        Each function should return a tuple of a boolean for success or failure, and a dict containing</span>
+<span class="sd">                        metadata about the test -- this metadata will be passed to the resulting exception if validation</span>
+<span class="sd">                        fails.</span>
+<span class="sd">            resulting_exception (ConstraintWithMetadataException):  what response a failed typecheck should induce</span>
+<span class="sd">            raise_or_typecheck (Optional[bool]): whether to raise an exception (if set to True) or emit a failed typecheck event</span>
+<span class="sd">                        (if set to False) when validation fails</span>
+<span class="sd">            name (Optional[str]): what to call the constraint, defaults to the class name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">,</span>
+        <span class="n">validation_fn_arr</span><span class="p">,</span>
+        <span class="n">resulting_exception</span><span class="p">,</span>
+        <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">validation_fn_arr</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">validation_fn_arr</span><span class="p">,</span> <span class="s2">&quot;validation_fn_arr&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">validation_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">validation_fn_arr</span><span class="p">]</span>
+            <span class="n">truthparam</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">)</span>
+            <span class="n">metadict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dicta</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">dicta</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dicta</span><span class="p">:</span>
+                        <span class="n">metadict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">validation_fn_arr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">dicta</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">truthparam</span><span class="p">,</span> <span class="n">metadict</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">MultiConstraintWithMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">description</span><span class="p">,</span>
+            <span class="n">validation_fn</span><span class="p">,</span>
+            <span class="n">resulting_exception</span><span class="p">,</span>
+            <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="n">raise_or_typecheck</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">StrictColumnsWithMetadata</span><span class="p">(</span><span class="n">ConstraintWithMetadata</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_list</span><span class="p">,</span> <span class="n">enforce_ordering</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enforce_ordering</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">enforce_ordering</span><span class="p">,</span> <span class="s2">&quot;enforce_ordering&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_list</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">column_list</span><span class="p">,</span> <span class="s2">&quot;strict_column_list&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">validation_fcn</span><span class="p">(</span><span class="n">inframe</span><span class="p">):</span>
+            <span class="k">if</span> <span class="nb">list</span><span class="p">(</span><span class="n">inframe</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="n">column_list</span><span class="p">:</span>
+                <span class="k">return</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enforce_ordering</span><span class="p">:</span>
+                    <span class="n">resdict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;expectation&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_list</span><span class="p">,</span> <span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">inframe</span><span class="o">.</span><span class="n">columns</span><span class="p">)}</span>
+                    <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">resdict</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">inframe</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="nb">set</span><span class="p">(</span><span class="n">column_list</span><span class="p">):</span>
+                        <span class="k">return</span> <span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="p">{})</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">extra</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">inframe</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">column_list</span><span class="p">)]</span>
+                        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">column_list</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">inframe</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+                        <span class="n">resdict</span> <span class="o">=</span> <span class="p">{</span>
+                            <span class="s2">&quot;expectation&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_list</span><span class="p">,</span>
+                            <span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;extra_columns&quot;</span><span class="p">:</span> <span class="n">extra</span><span class="p">,</span> <span class="s2">&quot;missing_columns&quot;</span><span class="p">:</span> <span class="n">missing</span><span class="p">},</span>
+                        <span class="p">}</span>
+                        <span class="k">return</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="n">resdict</span><span class="p">)</span>
+
+        <span class="n">basestr</span> <span class="o">=</span> <span class="s2">&quot;ensuring that the right columns, </span><span class="si">{}</span><span class="s2"> were present&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">column_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">enforce_ordering</span><span class="p">:</span>
+            <span class="n">basestr</span> <span class="o">+=</span> <span class="s2">&quot; in the right order&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">StrictColumnsWithMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">basestr</span><span class="p">,</span>
+            <span class="n">validation_fcn</span><span class="p">,</span>
+            <span class="n">DataFrameWithMetadataException</span><span class="p">,</span>
+            <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="n">raise_or_typecheck</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DataFrameConstraint</span><span class="p">(</span><span class="n">Constraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base constraint object that represent Dataframe shape constraints.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        error_description (Optional[str]): The plain string description that is output in the terminal if the constraint fails.</span>
+<span class="sd">        markdown_description (Optional[str]): A markdown supported description that is emitted by dagit if the constraint fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DataFrameConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">error_description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">markdown_description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="StrictColumnsConstraint"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_pandas.html#dagster_pandas.StrictColumnsConstraint">[docs]</a><span class="k">class</span> <span class="nc">StrictColumnsConstraint</span><span class="p">(</span><span class="n">DataFrameConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A dataframe constraint that validates column existence and ordering.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        strict_column_list (List[str]): The exact list of columns that your dataframe must have.</span>
+<span class="sd">        enforce_ordering (Optional[bool]): If true, will enforce that the ordering of column names must match.</span>
+<span class="sd">            Default is False.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">strict_column_list</span><span class="p">,</span> <span class="n">enforce_ordering</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enforce_ordering</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">enforce_ordering</span><span class="p">,</span> <span class="s2">&quot;enforce_ordering&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">strict_column_list</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span>
+            <span class="n">strict_column_list</span><span class="p">,</span> <span class="s2">&quot;strict_column_list&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;No columns outside of </span><span class="si">{cols}</span><span class="s2"> allowed. &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cols</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">strict_column_list</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">enforce_ordering</span><span class="p">:</span>
+            <span class="n">description</span> <span class="o">+=</span> <span class="s2">&quot;Columns must be in that order.&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">StrictColumnsConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">)</span>
+        <span class="n">columns_received</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">enforce_ordering</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">strict_column_list</span> <span class="o">!=</span> <span class="n">columns_received</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DataFrameConstraintViolationException</span><span class="p">(</span>
+                    <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">constraint_description</span><span class="o">=</span><span class="s2">&quot;Expected the following ordering of columns </span><span class="si">{expected}</span><span class="s2">. Received: </span><span class="si">{received}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">expected</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">strict_column_list</span><span class="p">,</span> <span class="n">received</span><span class="o">=</span><span class="n">columns_received</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns_received</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">strict_column_list</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DataFrameConstraintViolationException</span><span class="p">(</span>
+                    <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">constraint_description</span><span class="o">=</span><span class="s2">&quot;Expected </span><span class="si">{}</span><span class="s2">. Recevied </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">strict_column_list</span><span class="p">,</span> <span class="n">columns_received</span>
+                    <span class="p">),</span>
+                <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RowCountConstraint"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_pandas.html#dagster_pandas.RowCountConstraint">[docs]</a><span class="k">class</span> <span class="nc">RowCountConstraint</span><span class="p">(</span><span class="n">DataFrameConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A dataframe constraint that validates the expected count of rows.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        num_allowed_rows (int): The number of allowed rows in your dataframe.</span>
+<span class="sd">        error_tolerance (Optional[int]): The acceptable threshold if you are not completely certain. Defaults to 0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_allowed_rows</span><span class="p">,</span> <span class="n">error_tolerance</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_allowed_rows</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">num_allowed_rows</span><span class="p">,</span> <span class="s2">&quot;num_allowed_rows&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">error_tolerance</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">error_tolerance</span><span class="p">,</span> <span class="s2">&quot;error_tolerance&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_tolerance</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_allowed_rows</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Tolerance can&#39;t be greater than the number of rows you expect.&quot;</span><span class="p">)</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Dataframe must have </span><span class="si">{}</span><span class="s2"> +- </span><span class="si">{}</span><span class="s2"> rows.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_allowed_rows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_tolerance</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RowCountConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="s2">&quot;dataframe&quot;</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">num_allowed_rows</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_tolerance</span>
+            <span class="o">&lt;=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dataframe</span><span class="p">)</span>
+            <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_allowed_rows</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">error_tolerance</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DataFrameConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="s2">&quot;Expected </span><span class="si">{expected}</span><span class="s2"> +- </span><span class="si">{tolerance}</span><span class="s2"> rows. Got </span><span class="si">{received}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">expected</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_allowed_rows</span><span class="p">,</span>
+                    <span class="n">tolerance</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_tolerance</span><span class="p">,</span>
+                    <span class="n">received</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">dataframe</span><span class="p">),</span>
+                <span class="p">),</span>
+            <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">mask</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">mask</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">column</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnAggregateConstraintWithMetadata</span><span class="p">(</span><span class="n">ConstraintWithMetadata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Similar to the base class, but now your validation functions should take in columns (pd.Series) not Dataframes.</span>
+<span class="sd">    args:</span>
+<span class="sd">        description (str): description of the constraint</span>
+<span class="sd">        validation_fn (Callable[[pd.Series], Tuple[bool, dict[str, Union[dict,list, str, set]]]]:</span>
+<span class="sd">                    the validation function to run over inputted data</span>
+<span class="sd">                    This function should return a tuple of a boolean for success or failure, and a dict containing</span>
+<span class="sd">                    metadata about the test -- this metadata will be passed to the resulting exception if validation</span>
+<span class="sd">                    fails.</span>
+<span class="sd">        resulting_exception (ConstraintWithMetadataException):  what response a failed typecheck should induce</span>
+<span class="sd">        raise_or_typecheck (Optional[bool]): whether to raise an exception (if set to True) or emit a failed typecheck event</span>
+<span class="sd">                    (if set to False) when validation fails</span>
+<span class="sd">        name (Optional[str]): what to call the constraint, defaults to the class name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">columns</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="n">relevant_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">)]</span>
+
+        <span class="n">offending_columns</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">offending_values</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="c1"># TODO: grab extra metadata</span>
+            <span class="n">res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fn</span><span class="p">(</span><span class="n">relevant_data</span><span class="p">[</span><span class="n">column</span><span class="p">])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+                <span class="n">offending_columns</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;actual&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">offending_values</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">res</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;actual&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">offending_values</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">relevant_data</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">offending_columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">offending_columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">metadict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;expectation&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;Confirms&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span>
+                <span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="n">offending_values</span><span class="p">,</span>
+                <span class="s2">&quot;offending&quot;</span><span class="p">:</span> <span class="n">offending_columns</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="n">exc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resulting_exception</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span> <span class="o">**</span><span class="n">metadict</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exc</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">exc</span><span class="o">.</span><span class="n">return_as_typecheck</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnConstraintWithMetadata</span><span class="p">(</span><span class="n">ConstraintWithMetadata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This class is useful for constructing single constraints that</span>
+<span class="sd">    you want to apply to multiple columns of your dataframe</span>
+<span class="sd">    The main difference from the base class in terms of construction is that now, your validation_fns should operate on</span>
+<span class="sd">    individual values.</span>
+<span class="sd">    args:</span>
+<span class="sd">        description (str): description of the constraint</span>
+<span class="sd">        validation_fn (Callable[[Any], Tuple[bool, dict[str, Union[dict,list, str, set]]]]:</span>
+<span class="sd">                    the validation function to run over inputted data</span>
+<span class="sd">                    This function should return a tuple of a boolean for success or failure, and a dict containing</span>
+<span class="sd">                    metadata about the test -- this metadata will be passed to the resulting exception if validation</span>
+<span class="sd">                    fails.</span>
+<span class="sd">        resulting_exception (ConstraintWithMetadataException):  what response a failed typecheck should induce</span>
+<span class="sd">        raise_or_typecheck (Optional[bool]): whether to raise an exception (if set to True) or emit a failed typecheck event</span>
+<span class="sd">                    (if set to False) when validation fails</span>
+<span class="sd">        name (Optional[str]): what to call the constraint, defaults to the class name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">columns</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">columns</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span>
+
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">column</span> <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span> <span class="k">if</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="n">relevant_data</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">columns</span><span class="p">)]</span>
+        <span class="n">offending</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">offending_values</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># TODO:  grab metadata from here</span>
+        <span class="n">inverse_validation</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fn</span><span class="p">(</span><span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">relevant_data</span><span class="p">[</span><span class="n">relevant_data</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">inverse_validation</span><span class="p">)]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">offending</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;row &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">())]</span>
+                <span class="n">offending_values</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">offending</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">metadict</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;expectation&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">validation_fn</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">,</span>
+                <span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="n">offending_values</span><span class="p">,</span>
+                <span class="s2">&quot;offending&quot;</span><span class="p">:</span> <span class="n">offending</span><span class="p">,</span>
+            <span class="p">}</span>
+            <span class="n">exc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resulting_exception</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span> <span class="o">**</span><span class="n">metadict</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">raise_or_typecheck</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">exc</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">exc</span><span class="o">.</span><span class="n">return_as_typecheck</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">MultiColumnConstraintWithMetadata</span><span class="p">(</span><span class="n">ColumnConstraintWithMetadata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This class is useful for constructing more complicated relationships between columns</span>
+<span class="sd">        and expectations -- i.e. you want some validations on column A, others on column B, etc.</span>
+<span class="sd">        This lets you package up the metadata neatly,</span>
+<span class="sd">        and also allows for cases like &#39;fail if any one of these constraints fails but still run all of them&#39;</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            description (str): description of the overall set of validations</span>
+<span class="sd">            fn_and_columns_dict (Dict[str, List[Callable[[Any], Tuple[bool, dict[str, Union[dict,list, str, set]]]]]):</span>
+<span class="sd">                                        while this is a relatively complex type,</span>
+<span class="sd">                                        what it amounts to is &#39;a dict mapping columns to the functions to</span>
+<span class="sd">                                        run on them&#39;</span>
+<span class="sd">            resulting_exception (type): the response to generate if validation fails. Subclass of</span>
+<span class="sd">                                        ConstraintWithMetadataException</span>
+<span class="sd">            raise_or_typecheck (Optional[bool]):  whether to raise an exception (true) or a failed typecheck (false)</span>
+<span class="sd">            type_for_internal (Optional[type]): what type to use for internal validators.  Subclass of</span>
+<span class="sd">                                                ConstraintWithMetadata</span>
+<span class="sd">            name (Optional[str]): what to call the constraint, defaults to the class name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">,</span>
+        <span class="n">fn_and_columns_dict</span><span class="p">,</span>
+        <span class="n">resulting_exception</span><span class="p">,</span>
+        <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">type_for_internal</span><span class="o">=</span><span class="n">ColumnConstraintWithMetadata</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="c1"># TODO:  support multiple descriptions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">column_to_fn_dict</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span>
+            <span class="n">fn_and_columns_dict</span><span class="p">,</span> <span class="s2">&quot;fn_and_columns_dict&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">validation_fn</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+            <span class="n">metadict</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+            <span class="n">truthparam</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">for</span> <span class="n">column</span><span class="p">,</span> <span class="n">fn_arr</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">column_to_fn_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">fn_arr</span><span class="p">:</span>
+                    <span class="c1"># TODO:  do this more effectively</span>
+                    <span class="n">new_validator</span> <span class="o">=</span> <span class="n">type_for_internal</span><span class="p">(</span>
+                        <span class="n">fn</span><span class="o">.</span><span class="vm">__doc__</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">ColumnWithMetadataException</span><span class="p">,</span> <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">False</span>
+                    <span class="p">)</span>
+                    <span class="n">result</span> <span class="o">=</span> <span class="n">new_validator</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span>
+                        <span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">column</span><span class="p">]),</span> <span class="n">column</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+                    <span class="p">)</span>
+                    <span class="n">result_val</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">success</span>
+                    <span class="k">if</span> <span class="n">result_val</span><span class="p">:</span>
+                        <span class="k">continue</span>
+                    <span class="n">result_dict</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">metadata_entries</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">entry_data</span><span class="o">.</span><span class="n">data</span>
+                    <span class="n">truthparam</span> <span class="o">=</span> <span class="n">truthparam</span> <span class="ow">and</span> <span class="n">result_val</span>
+                    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">result_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="s2">&quot;constraint&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">key</span><span class="p">:</span>
+                            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s2">&quot;expected&quot;</span><span class="p">:</span>
+                                <span class="n">new_key</span> <span class="o">=</span> <span class="s2">&quot;expectation&quot;</span>
+                                <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;returns&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                                <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadict</span><span class="p">[</span><span class="n">new_key</span><span class="p">]</span> <span class="ow">or</span> <span class="n">new_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadict</span><span class="p">:</span>
+                                    <span class="n">metadict</span><span class="p">[</span><span class="n">new_key</span><span class="p">][</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                                <span class="n">metadict</span><span class="p">[</span><span class="n">new_key</span><span class="p">][</span><span class="n">column</span><span class="p">][</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+                            <span class="k">else</span><span class="p">:</span>
+                                <span class="k">if</span> <span class="n">column</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="ow">or</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">metadict</span><span class="p">:</span>
+                                    <span class="n">metadict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+                                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+                                    <span class="n">metadict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">column</span><span class="p">][</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="n">result_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">column</span><span class="p">]</span>
+                                <span class="k">else</span><span class="p">:</span>
+                                    <span class="n">metadict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="n">column</span><span class="p">][</span><span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;a violation&quot;</span>
+            <span class="k">return</span> <span class="n">truthparam</span><span class="p">,</span> <span class="n">metadict</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">MultiColumnConstraintWithMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">description</span><span class="p">,</span>
+            <span class="n">validation_fn</span><span class="p">,</span>
+            <span class="n">resulting_exception</span><span class="p">,</span>
+            <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="n">raise_or_typecheck</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">ConstraintWithMetadata</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MultiAggregateConstraintWithMetadata</span><span class="p">(</span><span class="n">MultiColumnConstraintWithMetadata</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This class is similar to multicolumn, but takes in functions that operate on the whole column at once</span>
+<span class="sd">        rather than ones that operate on each value --</span>
+<span class="sd">        consider this similar to the difference between apply-map and apply aggregate.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            description (str): description of the overall set of validations (TODO:  support multiple descriptions)</span>
+<span class="sd">            fn_and_columns_dict (Dict[str, List[Callable[[pd.Series], Tuple[bool, dict[str, Union[dict,list, str, set]]]]]):</span>
+<span class="sd">                                        while this is a relatively complex type,</span>
+<span class="sd">                                        what it amounts to is a dict mapping columns to the functions to</span>
+<span class="sd">                                        run on them&#39;</span>
+<span class="sd">            resulting_exception (type): the response to generate if validation fails. Subclass of</span>
+<span class="sd">                                        ConstraintWithMetadataException</span>
+<span class="sd">            raise_or_typecheck (Optional[bool]):  whether to raise an exception (true) or a failed typecheck (false)</span>
+<span class="sd">            type_for_internal (Optional[type]): what type to use for internal validators.  Subclass of</span>
+<span class="sd">                                                ConstraintWithMetadata</span>
+<span class="sd">            name (Optional[str]): what to call the constraint, defaults to the class name.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">description</span><span class="p">,</span>
+        <span class="n">fn_and_columns_dict</span><span class="p">,</span>
+        <span class="n">resulting_exception</span><span class="p">,</span>
+        <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MultiAggregateConstraintWithMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">description</span><span class="p">,</span>
+            <span class="n">fn_and_columns_dict</span><span class="p">,</span>
+            <span class="n">resulting_exception</span><span class="p">,</span>
+            <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="n">raise_or_typecheck</span><span class="p">,</span>
+            <span class="n">type_for_internal</span><span class="o">=</span><span class="n">ColumnAggregateConstraintWithMetadata</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">non_null_validation</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    validates that a particular value in a column is not null</span>
+<span class="sd">    Usage:</span>
+<span class="sd">        pass this as a column validator to</span>
+<span class="sd">        :py:class:&#39;~dagster_pandas.constraints.ColumnConstraintWithMetadata&#39;</span>
+<span class="sd">        or :py:class:&#39;~dagster_pandas.constraints.MultiColumnConstraintWithMetadata&#39;</span>
+<span class="sd">        Generally, you should prefer to use nonnull as a decorator/wrapper rather than using this</span>
+<span class="sd">        directly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="p">{}</span>
+
+
+<span class="k">def</span> <span class="nf">all_unique_validator</span><span class="p">(</span><span class="n">column</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    validates that all values in an iterable are unique</span>
+<span class="sd">    Returns duplicated values as metadata</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        As a validation function for a</span>
+<span class="sd">        :py:class:&#39;~dagster_pandas.constraints.ColumnAggregateConstraintWithMetadata&#39;</span>
+<span class="sd">        or :py:class:&#39;~dagster_pandas.constraints.MultiAggregateConstraintWithMetadata&#39;</span>
+<span class="sd">    Example:</span>
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            aggregate_validator = MultiAggregateConstraintWithMetadata(</span>
+<span class="sd">            &quot;confirms all values are unique&quot;,</span>
+<span class="sd">            {&#39;bar&#39;: [all_unique_validator]},</span>
+<span class="sd">            ConstraintWithMetadataException,</span>
+<span class="sd">            raise_or_typecheck=False,</span>
+<span class="sd">            )</span>
+<span class="sd">            ntype = create_structured_dataframe_type(</span>
+<span class="sd">            &quot;NumericType&quot;,</span>
+<span class="sd">            columns_aggregate_validator=aggregate_validator</span>
+<span class="sd">            )</span>
+<span class="sd">            @solid(output_defs=[OutputDefinition(name=&#39;basic_dataframe&#39;, dagster_type=ntype)])</span>
+<span class="sd">            def create_dataframe(_):</span>
+<span class="sd">                yield Output(</span>
+<span class="sd">                DataFrame({&#39;foo&#39;: [1, 2, 3], &#39;bar&#39;: [9, 10, 10]}), output_name=&#39;basic_dataframe&#39;,</span>
+<span class="sd">            )</span>
+<span class="sd">            #will fail with</span>
+<span class="sd">            metadata[&#39;offending&#39;] == {&#39;bar&#39;: {&#39;all_unique_validator&#39;: &#39;a violation&#39;}}</span>
+<span class="sd">            metadata[&#39;actual&#39;] == {&#39;bar&#39;: {&#39;all_unique_validator&#39;: [10.0]}}</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">column</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+    <span class="n">duplicated</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">ignore_missing_vals</span><span class="p">:</span>
+        <span class="n">duplicated</span> <span class="o">=</span> <span class="n">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">duplicated</span><span class="p">,</span> <span class="n">column</span><span class="p">)</span>
+    <span class="k">return</span> <span class="ow">not</span> <span class="n">duplicated</span><span class="o">.</span><span class="n">any</span><span class="p">(),</span> <span class="p">{</span><span class="s2">&quot;actual&quot;</span><span class="p">:</span> <span class="n">column</span><span class="p">[</span><span class="n">duplicated</span><span class="p">]}</span>
+
+
+<span class="k">def</span> <span class="nf">nonnull</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    decorator for column validation functions to make them error on nulls</span>
+<span class="sd">    Usage:</span>
+<span class="sd">        pass decorated functions as column validators to</span>
+<span class="sd">        :py:class:&#39;~dagster_pandas.constraints.ColumnConstraintWithMetadata&#39;</span>
+<span class="sd">        or :py:class:&#39;~dagster_pandas.constraints.MultiColumnConstraintWithMetadata&#39;</span>
+<span class="sd">    Args:</span>
+<span class="sd">        func (Callable[[Any], Tuple[bool, dict[str, Union[dict,list, str, set]]]]]):</span>
+<span class="sd">            the column validator you want to error on nulls</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">nvalidator</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+        <span class="n">origval</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="n">nval</span> <span class="o">=</span> <span class="n">non_null_validation</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">origval</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">and</span> <span class="n">nval</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">{}</span>
+
+    <span class="n">nvalidator</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+=</span> <span class="s2">&quot; and ensures no values are null&quot;</span>
+
+    <span class="k">return</span> <span class="n">nvalidator</span>
+
+
+<span class="k">def</span> <span class="nf">column_range_validation_factory</span><span class="p">(</span><span class="n">minim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    factory for validators testing if column values are within a range</span>
+<span class="sd">    Args:</span>
+<span class="sd">        minim(Optional[Comparable]): the low end of the range</span>
+<span class="sd">        maxim(Optional[Comparable]): the high end of the range</span>
+<span class="sd">        ignore_missing_vals(Optional[bool]): whether to ignore nulls</span>
+
+<span class="sd">    Returns: a validation function for this constraint</span>
+<span class="sd">    Usage:</span>
+<span class="sd">        pass returned functions as column validators to</span>
+<span class="sd">         :py:class:&#39;~dagster_pandas.constraints.ColumnConstraintWithMetadata&#39;</span>
+<span class="sd">        or :py:class:&#39;~dagster_pandas.constraints.MultiColumnConstraintWithMetadata&#39;</span>
+<span class="sd">    Examples:</span>
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            in_range_validator = column_range_validation_factory(1, 3, ignore_missing_vals=True)</span>
+<span class="sd">            column_validator = MultiColumnConstraintWithMetadata(</span>
+<span class="sd">                            &quot;confirms values are numbers in a range&quot;,</span>
+<span class="sd">                            {&#39;foo&#39;: [in_range_validator]},</span>
+<span class="sd">                            ColumnWithMetadataException,</span>
+<span class="sd">                            raise_or_typecheck=False,</span>
+<span class="sd">                        )</span>
+<span class="sd">            ntype = create_structured_dataframe_type(</span>
+<span class="sd">            &quot;NumericType&quot;,</span>
+<span class="sd">            columns_validator=column_validator</span>
+<span class="sd">            )</span>
+<span class="sd">            @solid(output_defs=[OutputDefinition(name=&#39;basic_dataframe&#39;, dagster_type=ntype)])</span>
+<span class="sd">            def create_dataframe(_):</span>
+<span class="sd">                yield Output(</span>
+<span class="sd">                DataFrame({&#39;foo&#39;: [1, 2, 7], &#39;bar&#39;: [9, 10, 10]}), output_name=&#39;basic_dataframe&#39;,</span>
+<span class="sd">            )</span>
+<span class="sd">            #will fail with</span>
+<span class="sd">            metadata[&#39;offending&#39;] == {&#39;foo&#39;: {&#39;in_range_validation_fn&#39;: [&#39;row 2&#39;]}}</span>
+<span class="sd">            metadata[&#39;actual&#39;] == {&#39;foo&#39;: {&#39;in_range_validation_fn&#39;: [7]}}</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">minim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">maxim</span><span class="p">,</span> <span class="n">datetime</span><span class="p">):</span>
+            <span class="n">minim</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">min</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">minim</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">maxim</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">minim</span><span class="p">,</span> <span class="n">datetime</span><span class="p">):</span>
+            <span class="n">maxim</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">max</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">maxim</span> <span class="o">=</span> <span class="n">sys</span><span class="o">.</span><span class="n">maxsize</span>
+
+    <span class="k">def</span> <span class="nf">in_range_validation_fn</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ignore_missing_vals</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">minim</span><span class="p">),</span> <span class="nb">type</span><span class="p">(</span><span class="n">maxim</span><span class="p">))))</span> <span class="ow">and</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">maxim</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;=</span> <span class="n">minim</span><span class="p">),</span> <span class="p">{}</span>
+
+    <span class="n">in_range_validation_fn</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;checks whether values are between </span><span class="si">{}</span><span class="s2"> and </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">minim</span><span class="p">,</span> <span class="n">maxim</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">ignore_missing_vals</span><span class="p">:</span>
+        <span class="n">in_range_validation_fn</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+=</span> <span class="s2">&quot;, ignoring nulls&quot;</span>
+
+    <span class="k">return</span> <span class="n">in_range_validation_fn</span>
+
+
+<span class="k">def</span> <span class="nf">categorical_column_validator_factory</span><span class="p">(</span><span class="n">categories</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    factory for validators testing if all values are in some set</span>
+<span class="sd">    Args:</span>
+<span class="sd">        categories(Union[Sequence, set]): the set of allowed values</span>
+<span class="sd">        ignore_missing_vals(Optional[bool]): whether to ignore nulls</span>
+
+<span class="sd">    Returns: a validation function for this constraint</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        pass returned functions as column validators to</span>
+<span class="sd">        :py:class:&#39;~dagster_pandas.constraints.ColumnConstraintWithMetadata&#39;</span>
+<span class="sd">        or :py:class:&#39;~dagster_pandas.constraints.MultiColumnConstraintWithMetadata&#39;</span>
+
+<span class="sd">    Example:</span>
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            categorical_validation_fn = categorical_column_validator_factory([1, 2])</span>
+<span class="sd">            column_validator = MultiColumnConstraintWithMetadata(</span>
+<span class="sd">                            &quot;confirms values are numbers in a range&quot;,</span>
+<span class="sd">                            {&#39;foo&#39;: [categorical_validation_fn]},</span>
+<span class="sd">                            ColumnWithMetadataException,</span>
+<span class="sd">                            raise_or_typecheck=False,</span>
+<span class="sd">                        )</span>
+<span class="sd">            ntype = create_structured_dataframe_type(</span>
+<span class="sd">            &quot;NumericType&quot;,</span>
+<span class="sd">            columns_validator=column_validator</span>
+<span class="sd">            )</span>
+<span class="sd">            @solid(output_defs=[OutputDefinition(name=&#39;basic_dataframe&#39;, dagster_type=ntype)])</span>
+<span class="sd">            def create_dataframe(_):</span>
+<span class="sd">                yield Output(</span>
+<span class="sd">                DataFrame({&#39;foo&#39;: [1, 2, 7], &#39;bar&#39;: [9, 10, 10]}), output_name=&#39;basic_dataframe&#39;,</span>
+<span class="sd">            )</span>
+<span class="sd">            #will fail with</span>
+<span class="sd">            metadata[&#39;offending&#39;] == {&#39;foo&#39;: {&#39;categorical_validation_fn&#39;: [&#39;row 2&#39;]}}</span>
+<span class="sd">            metadata[&#39;actual&#39;] == {&#39;foo&#39;: {&#39;categorical_validation_fn&#39;: [7]}}</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">categories</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">categories</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">categorical_validation_fn</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ignore_missing_vals</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">x</span> <span class="ow">in</span> <span class="n">categories</span><span class="p">),</span> <span class="p">{}</span>
+
+    <span class="n">categorical_validation_fn</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;checks whether values are within this set of values: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">categories</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">ignore_missing_vals</span><span class="p">:</span>
+        <span class="n">categorical_validation_fn</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+=</span> <span class="s2">&quot;, ignoring nulls&quot;</span>
+
+    <span class="k">return</span> <span class="n">categorical_validation_fn</span>
+
+
+<span class="k">def</span> <span class="nf">dtype_in_set_validation_factory</span><span class="p">(</span><span class="n">datatypes</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    factory for testing if the dtype of a val falls within some allowed set</span>
+<span class="sd">    Args:</span>
+<span class="sd">        datatypes(Union[set[type], type]): which datatype/datatypes are allowed</span>
+<span class="sd">        ignore_missing_vals(Optional[bool]): whether to ignore nulls</span>
+
+<span class="sd">    Returns: a validation function for this constraint</span>
+
+<span class="sd">    Usage:</span>
+<span class="sd">        pass returned functions as column validators to</span>
+<span class="sd">        :py:class:&#39;~dagster_pandas.constraints.ColumnConstraintWithMetadata&#39;</span>
+<span class="sd">        or :py:class:&#39;~dagster_pandas.constraints.MultiColumnConstraintWithMetadata&#39;</span>
+
+<span class="sd">    Examples:</span>
+<span class="sd">        .. code-block:: python</span>
+<span class="sd">            dtype_is_num_validator = dtype_in_set_validation_factory((int, float, int64, float64))</span>
+<span class="sd">            column_validator = MultiColumnConstraintWithMetadata(</span>
+<span class="sd">            &quot;confirms values are numbers in a range&quot;,</span>
+<span class="sd">            {&#39;foo&#39;: [dtype_is_num_validator]},</span>
+<span class="sd">            ColumnWithMetadataException,</span>
+<span class="sd">            raise_or_typecheck=False,</span>
+<span class="sd">            )</span>
+<span class="sd">            ntype = create_structured_dataframe_type(</span>
+<span class="sd">            &quot;NumericType&quot;,</span>
+<span class="sd">            columns_validator=column_validator</span>
+<span class="sd">            )</span>
+<span class="sd">            @solid(output_defs=[OutputDefinition(name=&#39;basic_dataframe&#39;, dagster_type=ntype)])</span>
+<span class="sd">            def create_dataframe(_):</span>
+<span class="sd">                yield Output(</span>
+<span class="sd">                DataFrame({&#39;foo&#39;: [1, &#39;a&#39;, 7], &#39;bar&#39;: [9, 10, 10]}), output_name=&#39;basic_dataframe&#39;,</span>
+<span class="sd">            )</span>
+<span class="sd">            #will fail with</span>
+<span class="sd">            metadata[&#39;offending&#39;] == {&#39;foo&#39;: {&#39;categorical_validation_fn&#39;: [&#39;row 1&#39;]}}</span>
+<span class="sd">            metadata[&#39;actual&#39;] == {&#39;foo&#39;: {&#39;categorical_validation_fn&#39;: [&#39;a&#39;]}}</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">dtype_in_set_validation_fn</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">ignore_missing_vals</span> <span class="ow">and</span> <span class="n">pd</span><span class="o">.</span><span class="n">isnull</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span><span class="p">,</span> <span class="p">{}</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">datatypes</span><span class="p">),</span> <span class="p">{}</span>
+
+    <span class="n">dtype_in_set_validation_fn</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">=</span> <span class="s2">&quot;checks whether values are this type/types: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="n">datatypes</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">ignore_missing_vals</span><span class="p">:</span>
+        <span class="n">dtype_in_set_validation_fn</span><span class="o">.</span><span class="vm">__doc__</span> <span class="o">+=</span> <span class="s2">&quot;, ignoring nulls&quot;</span>
+
+    <span class="k">return</span> <span class="n">dtype_in_set_validation_fn</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnRangeConstraintWithMetadata</span><span class="p">(</span><span class="n">ColumnConstraintWithMetadata</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">minim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">maxim</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Confirms values are between </span><span class="si">{}</span><span class="s2"> and </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">minim</span><span class="p">,</span> <span class="n">maxim</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ColumnRangeConstraintWithMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">validation_fn</span><span class="o">=</span><span class="n">column_range_validation_factory</span><span class="p">(</span><span class="n">minim</span><span class="o">=</span><span class="n">minim</span><span class="p">,</span> <span class="n">maxim</span><span class="o">=</span><span class="n">maxim</span><span class="p">),</span>
+            <span class="n">resulting_exception</span><span class="o">=</span><span class="n">ColumnWithMetadataException</span><span class="p">,</span>
+            <span class="n">raise_or_typecheck</span><span class="o">=</span><span class="n">raise_or_typecheck</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ColumnRangeConstraintWithMetadata</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">validate</span><span class="p">(</span>
+            <span class="n">data</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">columns</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnConstraint</span><span class="p">(</span><span class="n">Constraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base constraint object that represent dataframe column shape constraints.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        error_description (Optional[str]): The plain string description that is output in the terminal if the constraint fails.</span>
+<span class="sd">        markdown_description (Optional[str]): A markdown supported description that is emitted by dagit if the constraint fails.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">error_description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">error_description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">markdown_description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get_offending_row_pairs</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnDTypeFnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that applies a pandas dtype validation function to a columns dtypes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        type_fn (Callable[[Set[str]], bool]): This is a function that takes the pandas columns dtypes and</span>
+<span class="sd">            returns if those dtypes match the types it expects. See pandas.core.dtypes.common for examples.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">type_fn</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">type_fn</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">type_fn</span><span class="p">,</span> <span class="s2">&quot;type_fn&quot;</span><span class="p">)</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{fn}</span><span class="s2"> must evaluate to True for column dtypes&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_fn</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ColumnDTypeFnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">received_dtypes</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">type_fn</span><span class="p">(</span><span class="n">received_dtypes</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{base_error_message}</span><span class="s2">. Dtypes received: </span><span class="si">{received_dtypes}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">base_error_message</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span> <span class="n">received_dtypes</span><span class="o">=</span><span class="n">received_dtypes</span>
+                <span class="p">),</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">ColumnDTypeInSetConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that validates the pandas column dtypes based on the expected set of dtypes.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        expected_dtype_set (Set[str]): The set of pandas dtypes that the pandas column dtypes must match.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expected_dtype_set</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expected_dtype_set</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">expected_dtype_set</span><span class="p">,</span> <span class="s2">&quot;expected_dtype_set&quot;</span><span class="p">)</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Column dtype must be in the following set </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">expected_dtype_set</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">ColumnDTypeInSetConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">received_dtypes</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">dtype</span>
+        <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">received_dtypes</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">expected_dtype_set</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{base_error_message}</span><span class="s2">. DTypes received: </span><span class="si">{received_dtypes}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">base_error_message</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span> <span class="n">received_dtypes</span><span class="o">=</span><span class="n">received_dtypes</span>
+                <span class="p">),</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">NonNullableColumnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that ensures all values in a pandas column are not null.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;No Null values allowed.&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">NonNullableColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">rows_with_null_columns</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rows_with_null_columns</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">offending_rows</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_offending_row_pairs</span><span class="p">(</span><span class="n">rows_with_null_columns</span><span class="p">,</span> <span class="n">column_name</span><span class="p">),</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">UniqueColumnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that ensures all values in a pandas column are unique.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        ignore_missing_vals (bool): If true, this constraint will enforce the constraint on non missing values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="p">):</span>
+        <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Column must be unique.&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">ignore_missing_vals</span><span class="p">,</span> <span class="s2">&quot;ignore_missing_vals&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">UniqueColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span> <span class="n">markdown_description</span><span class="o">=</span><span class="n">description</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">invalid</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span><span class="p">:</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="n">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">invalid</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+        <span class="n">rows_with_duplicated_values</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">invalid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rows_with_duplicated_values</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">offending_rows</span><span class="o">=</span><span class="n">rows_with_duplicated_values</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">CategoricalColumnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that ensures all values in a pandas column are a valid category.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        categories (Set[str]): Set of categories that values in your pandas column must match.</span>
+<span class="sd">        ignore_missing_vals (bool): If true, this constraint will enforce the constraint on non missing values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">categories</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">categories</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">check</span><span class="o">.</span><span class="n">set_param</span><span class="p">(</span><span class="n">categories</span><span class="p">,</span> <span class="s2">&quot;categories&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">ignore_missing_vals</span><span class="p">,</span> <span class="s2">&quot;ignore_missing_vals&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CategoricalColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="s2">&quot;Expected Categories are </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">),</span>
+            <span class="n">markdown_description</span><span class="o">=</span><span class="s2">&quot;Category examples are </span><span class="si">{}</span><span class="s2">...&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">[:</span><span class="mi">5</span><span class="p">]),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">invalid</span> <span class="o">=</span> <span class="o">~</span><span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">categories</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span><span class="p">:</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="n">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">invalid</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+        <span class="n">rows_with_unexpected_buckets</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">invalid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">rows_with_unexpected_buckets</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">offending_rows</span><span class="o">=</span><span class="n">rows_with_unexpected_buckets</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MinValueColumnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that ensures all values in a pandas column are greater than the provided</span>
+<span class="sd">    lower bound [inclusive].</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        min_value (Union[int, float, datetime.datetime]): The lower bound.</span>
+<span class="sd">        ignore_missing_vals (bool): If true, this constraint will enforce the constraint on non missing values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">min_value</span><span class="p">,</span> <span class="s2">&quot;min_value&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">datetime</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">ignore_missing_vals</span><span class="p">,</span> <span class="s2">&quot;ignore_missing_vals&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MinValueColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">markdown_description</span><span class="o">=</span><span class="s2">&quot;values &gt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">),</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="s2">&quot;Column must have values &gt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">invalid</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span><span class="p">:</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="n">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">invalid</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+        <span class="n">out_of_bounds_rows</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">invalid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">out_of_bounds_rows</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">offending_rows</span><span class="o">=</span><span class="n">out_of_bounds_rows</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">MaxValueColumnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that ensures all values in a pandas column are less than the provided</span>
+<span class="sd">    upper bound [inclusive].</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        max_value (Union[int, float, datetime.datetime]): The upper bound.</span>
+<span class="sd">        ignore_missing_vals (bool): If true, this constraint will enforce the constraint on non missing values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">max_value</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">max_value</span><span class="p">,</span> <span class="s2">&quot;max_value&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">datetime</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">ignore_missing_vals</span><span class="p">,</span> <span class="s2">&quot;ignore_missing_vals&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">MaxValueColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">markdown_description</span><span class="o">=</span><span class="s2">&quot;values &lt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">),</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="s2">&quot;Column must have values &lt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">invalid</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span><span class="p">:</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="n">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">invalid</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+        <span class="n">out_of_bounds_rows</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">invalid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">out_of_bounds_rows</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">offending_rows</span><span class="o">=</span><span class="n">out_of_bounds_rows</span><span class="p">,</span>
+            <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">InRangeColumnConstraint</span><span class="p">(</span><span class="n">ColumnConstraint</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A column constraint that ensures all values in a pandas column are between the lower and upper</span>
+<span class="sd">    bound [inclusive].</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        min_value (Union[int, float, datetime.datetime]): The lower bound.</span>
+<span class="sd">        max_value (Union[int, float, datetime.datetime]): The upper bound.</span>
+<span class="sd">        ignore_missing_vals (bool): If true, this constraint will enforce the constraint on non</span>
+<span class="sd">            missing values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">min_value</span><span class="p">,</span> <span class="n">max_value</span><span class="p">,</span> <span class="n">ignore_missing_vals</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">min_value</span><span class="p">,</span> <span class="s2">&quot;min_value&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">datetime</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">max_value</span><span class="p">,</span> <span class="s2">&quot;max_value&quot;</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="n">datetime</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">ignore_missing_vals</span><span class="p">,</span> <span class="s2">&quot;ignore_missing_vals&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">InRangeColumnConstraint</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">markdown_description</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> &lt; values &lt; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">),</span>
+            <span class="n">error_description</span><span class="o">=</span><span class="s2">&quot;Column must have values between </span><span class="si">{}</span><span class="s2"> and </span><span class="si">{}</span><span class="s2"> inclusive.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">validate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+        <span class="n">invalid</span> <span class="o">=</span> <span class="o">~</span><span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">max_value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ignore_missing_vals</span><span class="p">:</span>
+            <span class="n">invalid</span> <span class="o">=</span> <span class="n">apply_ignore_missing_data_to_mask</span><span class="p">(</span><span class="n">invalid</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">column_name</span><span class="p">])</span>
+        <span class="n">out_of_bounds_rows</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">invalid</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">out_of_bounds_rows</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ColumnConstraintViolationException</span><span class="p">(</span>
+                <span class="n">constraint_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">constraint_description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">error_description</span><span class="p">,</span>
+                <span class="n">column_name</span><span class="o">=</span><span class="n">column_name</span><span class="p">,</span>
+                <span class="n">offending_rows</span><span class="o">=</span><span class="n">out_of_bounds_rows</span><span class="p">,</span>
+            <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.job &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.job</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">whitelist_for_serdes</span>
+
+<span class="kn">from</span> <span class="nn">.mode</span> <span class="kn">import</span> <span class="n">DEFAULT_MODE_NAME</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+
+<span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">JobType</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+    <span class="n">SCHEDULE</span> <span class="o">=</span> <span class="s2">&quot;SCHEDULE&quot;</span>
+    <span class="n">SENSOR</span> <span class="o">=</span> <span class="s2">&quot;SENSOR&quot;</span>
+
+
+<span class="k">class</span> <span class="nc">JobContext</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Context for generating the execution parameters for an JobDefinition at runtime.</span>
+
+<span class="sd">    An instance of this class is made available as the first argument to the JobDefinition</span>
+<span class="sd">    functions: run_config_fn, tags_fn</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        instance (DagsterInstance): The instance configured to launch the job</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;_instance&quot;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">instance</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">,</span> <span class="n">DagsterInstance</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">instance</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_instance</span>
+
+
+<div class="viewcode-block" id="SkipReason"><a class="viewcode-back" href="../../../../sections/api/apidocs/schedules-sensors.html#dagster.SkipReason">[docs]</a><span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">SkipReason</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_SkipReason&quot;</span><span class="p">,</span> <span class="s2">&quot;skip_message&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a skipped evaluation, where no runs are requested. May contain a message to indicate</span>
+<span class="sd">    why no runs were requested.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        skip_message (Optional[str]): A message displayed in dagit for why this evaluation resulted</span>
+<span class="sd">            in no requested runs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">skip_message</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SkipReason</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span> <span class="n">skip_message</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">skip_message</span><span class="p">,</span> <span class="s2">&quot;skip_message&quot;</span><span class="p">)</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RunRequest"><a class="viewcode-back" href="../../../../sections/api/apidocs/schedules-sensors.html#dagster.RunRequest">[docs]</a><span class="nd">@whitelist_for_serdes</span>
+<span class="k">class</span> <span class="nc">RunRequest</span><span class="p">(</span><span class="n">namedtuple</span><span class="p">(</span><span class="s2">&quot;_RunRequest&quot;</span><span class="p">,</span> <span class="s2">&quot;run_key run_config tags&quot;</span><span class="p">)):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents all the information required to launch a single run.  Must be returned by a</span>
+<span class="sd">    SensorDefinition or ScheduleDefinition&#39;s evaluation function for a run to be launched.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        run_key (str | None): A string key to identify this launched run. For sensors, ensures that</span>
+<span class="sd">            only one run is created per run key across all sensor evaluations.  For schedules,</span>
+<span class="sd">            ensures that one run is created per tick, across failure recoveries. Passing in a `None`</span>
+<span class="sd">            value means that a run will always be launched per evaluation.</span>
+<span class="sd">        run_config (Optional[Dict]): The environment config that parameterizes the run execution to</span>
+<span class="sd">            be launched, as a dict.</span>
+<span class="sd">        tags (Optional[Dict[str, str]]): A dictionary of tags (string key-value pairs) to attach</span>
+<span class="sd">            to the launched run.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">run_key</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">RunRequest</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">run_key</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">run_key</span><span class="p">,</span> <span class="s2">&quot;run_key&quot;</span><span class="p">),</span>
+            <span class="n">run_config</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">run_config</span><span class="p">,</span> <span class="s2">&quot;run_config&quot;</span><span class="p">),</span>
+            <span class="n">tags</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">JobDefinition</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Defines a job, which describes a series of runs for a particular pipeline.  These runs are</span>
+<span class="sd">    grouped by job_name, using tags.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of this job.</span>
+<span class="sd">        pipeline_name (str): The name of the pipeline to execute.</span>
+<span class="sd">        mode (Optional[str]): The mode to apply when executing this pipeline. (default: &#39;default&#39;)</span>
+<span class="sd">        solid_selection (Optional[List[str]]): A list of solid subselection (including single</span>
+<span class="sd">            solid names) to execute. e.g. ``[&#39;*some_solid+&#39;, &#39;other_solid&#39;]``</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__slots__</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;_name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_job_type&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_pipeline_name&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_tags_fn&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_run_config_fn&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_mode&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;_solid_selection&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">job_type</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;default&quot;</span><span class="p">,</span> <span class="n">solid_selection</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_job_type</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">job_type</span><span class="p">,</span> <span class="s2">&quot;job_type&quot;</span><span class="p">,</span> <span class="n">JobType</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">mode</span><span class="p">,</span> <span class="s2">&quot;mode&quot;</span><span class="p">,</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solid_selection</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+            <span class="n">solid_selection</span><span class="p">,</span> <span class="s2">&quot;solid_selection&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipeline_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">job_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_job_type</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">solid_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_solid_selection</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">mode</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mode</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

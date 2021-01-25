@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_prometheus.resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_prometheus.resources</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">prometheus_client</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">prometheus_client.exposition</span> <span class="kn">import</span> <span class="n">default_handler</span>
+
+
+<div class="viewcode-block" id="PrometheusResource"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_prometheus.html#dagster_prometheus.resources.PrometheusResource">[docs]</a><span class="k">class</span> <span class="nc">PrometheusResource</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Integrates with Prometheus via the prometheus_client library.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gateway</span><span class="p">,</span> <span class="n">timeout</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gateway</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">gateway</span><span class="p">,</span> <span class="s2">&quot;gateway&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timeout</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_int_param</span><span class="p">(</span><span class="n">timeout</span><span class="p">,</span> <span class="s2">&quot;timeout&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">registry</span> <span class="o">=</span> <span class="n">prometheus_client</span><span class="o">.</span><span class="n">CollectorRegistry</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">push_to_gateway</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">,</span> <span class="n">grouping_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">default_handler</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Push metrics to the given pushgateway.</span>
+<span class="sd">        `job` is the job label to be attached to all pushed metrics</span>
+<span class="sd">        `grouping_key` please see the pushgateway documentation for details.</span>
+<span class="sd">                    Defaults to None</span>
+<span class="sd">        `handler` is an optional function which can be provided to perform</span>
+<span class="sd">                requests to the &#39;gateway&#39;.</span>
+<span class="sd">                Defaults to None, in which case an http or https request</span>
+<span class="sd">                will be carried out by a default handler.</span>
+<span class="sd">                If not None, the argument must be a function which accepts</span>
+<span class="sd">                the following arguments:</span>
+<span class="sd">                url, method, timeout, headers, and content</span>
+<span class="sd">                May be used to implement additional functionality not</span>
+<span class="sd">                supported by the built-in default handler (such as SSL</span>
+<span class="sd">                client certicates, and HTTP authentication mechanisms).</span>
+<span class="sd">                &#39;url&#39; is the URL for the request, the &#39;gateway&#39; argument</span>
+<span class="sd">                described earlier will form the basis of this URL.</span>
+<span class="sd">                &#39;method&#39; is the HTTP method which should be used when</span>
+<span class="sd">                carrying out the request.</span>
+<span class="sd">                &#39;timeout&#39; requests not successfully completed after this</span>
+<span class="sd">                many seconds should be aborted.  If timeout is None, then</span>
+<span class="sd">                the handler should not set a timeout.</span>
+<span class="sd">                &#39;headers&#39; is a list of (&quot;header-name&quot;,&quot;header-value&quot;) tuples</span>
+<span class="sd">                which must be passed to the pushgateway in the form of HTTP</span>
+<span class="sd">                request headers.</span>
+<span class="sd">                The function should raise an exception (e.g. IOError) on</span>
+<span class="sd">                failure.</span>
+<span class="sd">                &#39;content&#39; is the data which should be used to form the HTTP</span>
+<span class="sd">                Message Body.</span>
+<span class="sd">        This overwrites all metrics with the same job and grouping_key.</span>
+<span class="sd">        This uses the PUT HTTP method.&quot;&quot;&quot;</span>
+        <span class="n">prometheus_client</span><span class="o">.</span><span class="n">push_to_gateway</span><span class="p">(</span>
+            <span class="n">gateway</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gateway</span><span class="p">,</span>
+            <span class="n">job</span><span class="o">=</span><span class="n">job</span><span class="p">,</span>
+            <span class="n">registry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span>
+            <span class="n">grouping_key</span><span class="o">=</span><span class="n">grouping_key</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">handler</span><span class="o">=</span><span class="n">handler</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">pushadd_to_gateway</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">,</span> <span class="n">grouping_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">default_handler</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;PushAdd metrics to the given pushgateway.</span>
+<span class="sd">        `job` is the job label to be attached to all pushed metrics</span>
+<span class="sd">        `registry` is an instance of CollectorRegistry</span>
+<span class="sd">        `grouping_key` please see the pushgateway documentation for details.</span>
+<span class="sd">                    Defaults to None</span>
+<span class="sd">        `handler` is an optional function which can be provided to perform</span>
+<span class="sd">                requests to the &#39;gateway&#39;.</span>
+<span class="sd">                Defaults to None, in which case an http or https request</span>
+<span class="sd">                will be carried out by a default handler.</span>
+<span class="sd">                See the &#39;prometheus_client.push_to_gateway&#39; documentation</span>
+<span class="sd">                for implementation requirements.</span>
+<span class="sd">        This replaces metrics with the same name, job and grouping_key.</span>
+<span class="sd">        This uses the POST HTTP method.&quot;&quot;&quot;</span>
+        <span class="n">prometheus_client</span><span class="o">.</span><span class="n">pushadd_to_gateway</span><span class="p">(</span>
+            <span class="n">gateway</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gateway</span><span class="p">,</span>
+            <span class="n">job</span><span class="o">=</span><span class="n">job</span><span class="p">,</span>
+            <span class="n">registry</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">registry</span><span class="p">,</span>
+            <span class="n">grouping_key</span><span class="o">=</span><span class="n">grouping_key</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">handler</span><span class="o">=</span><span class="n">handler</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">delete_from_gateway</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job</span><span class="p">,</span> <span class="n">grouping_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">handler</span><span class="o">=</span><span class="n">default_handler</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Delete metrics from the given pushgateway.</span>
+<span class="sd">        `job` is the job label to be attached to all pushed metrics</span>
+<span class="sd">        `grouping_key` please see the pushgateway documentation for details.</span>
+<span class="sd">                    Defaults to None</span>
+<span class="sd">        `handler` is an optional function which can be provided to perform</span>
+<span class="sd">                requests to the &#39;gateway&#39;.</span>
+<span class="sd">                Defaults to None, in which case an http or https request</span>
+<span class="sd">                will be carried out by a default handler.</span>
+<span class="sd">                See the &#39;prometheus_client.push_to_gateway&#39; documentation</span>
+<span class="sd">                for implementation requirements.</span>
+<span class="sd">        This deletes metrics with the given job and grouping_key.</span>
+<span class="sd">        This uses the DELETE HTTP method.&quot;&quot;&quot;</span>
+        <span class="n">prometheus_client</span><span class="o">.</span><span class="n">delete_from_gateway</span><span class="p">(</span>
+            <span class="n">gateway</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">gateway</span><span class="p">,</span>
+            <span class="n">job</span><span class="o">=</span><span class="n">job</span><span class="p">,</span>
+            <span class="n">grouping_key</span><span class="o">=</span><span class="n">grouping_key</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timeout</span><span class="p">,</span>
+            <span class="n">handler</span><span class="o">=</span><span class="n">handler</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="prometheus_resource"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_prometheus.html#dagster_prometheus.resources.prometheus_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;gateway&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;the url for your push gateway. Either of the form &quot;</span>
+            <span class="s2">&quot;&#39;http://pushgateway.local&#39;, or &#39;pushgateway.local&#39;. &quot;</span>
+            <span class="s2">&quot;Scheme defaults to &#39;http&#39; if none is provided&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;is how long delete will attempt to connect before giving up. &quot;</span>
+            <span class="s2">&quot;Defaults to 30s.&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">},</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;&quot;&quot;This resource is for sending metrics to a Prometheus Pushgateway.&quot;&quot;&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">prometheus_resource</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">PrometheusResource</span><span class="p">(</span>
+        <span class="n">gateway</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;gateway&quot;</span><span class="p">],</span> <span class="n">timeout</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;timeout&quot;</span><span class="p">]</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

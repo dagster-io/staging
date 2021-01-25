@@ -1,0 +1,243 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_gcp.dataproc.resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_gcp.dataproc.resources</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">googleapiclient.discovery</span> <span class="kn">import</span> <span class="n">build</span>
+<span class="kn">from</span> <span class="nn">oauth2client.client</span> <span class="kn">import</span> <span class="n">GoogleCredentials</span>
+
+<span class="kn">from</span> <span class="nn">.configs</span> <span class="kn">import</span> <span class="n">define_dataproc_create_cluster_config</span>
+<span class="kn">from</span> <span class="nn">.types</span> <span class="kn">import</span> <span class="n">DataprocError</span>
+
+<span class="n">TWENTY_MINUTES</span> <span class="o">=</span> <span class="mi">20</span> <span class="o">*</span> <span class="mi">60</span>
+<span class="n">DEFAULT_ITER_TIME_SEC</span> <span class="o">=</span> <span class="mi">5</span>
+
+
+<span class="k">class</span> <span class="nc">DataprocResource</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Builds a client to the dataproc API.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">):</span>
+        <span class="c1"># Use Application Default Credentials to check the</span>
+        <span class="c1"># GOOGLE_APPLICATION_CREDENTIALS environment variable</span>
+        <span class="c1"># for the location of the service account key file.</span>
+        <span class="n">credentials</span> <span class="o">=</span> <span class="n">GoogleCredentials</span><span class="o">.</span><span class="n">get_application_default</span><span class="p">()</span>
+
+        <span class="c1"># See https://github.com/googleapis/google-api-python-client/issues/299 for the</span>
+        <span class="c1"># cache_discovery=False configuration below</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dataproc</span> <span class="o">=</span> <span class="n">build</span><span class="p">(</span><span class="s2">&quot;dataproc&quot;</span><span class="p">,</span> <span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="n">credentials</span><span class="o">=</span><span class="n">credentials</span><span class="p">,</span> <span class="n">cache_discovery</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config</span>
+
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_config</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;projectId&quot;</span><span class="p">,</span> <span class="s2">&quot;region&quot;</span><span class="p">,</span> <span class="s2">&quot;clusterName&quot;</span><span class="p">,</span> <span class="s2">&quot;cluster_config&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dataproc_clusters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="c1"># Google APIs dynamically genned, so pylint pukes</span>
+            <span class="c1"># pylint: disable=no-member</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataproc</span><span class="o">.</span><span class="n">projects</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">regions</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">clusters</span><span class="p">()</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dataproc_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="c1"># Google APIs dynamically genned, so pylint pukes</span>
+            <span class="c1"># pylint: disable=no-member</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataproc</span><span class="o">.</span><span class="n">projects</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">regions</span><span class="p">()</span>
+            <span class="o">.</span><span class="n">jobs</span><span class="p">()</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">create_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">dataproc_clusters</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">projectId</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span>
+                <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span>
+                <span class="n">body</span><span class="o">=</span><span class="p">{</span>
+                    <span class="s2">&quot;projectId&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span>
+                    <span class="s2">&quot;clusterName&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_name</span><span class="p">,</span>
+                    <span class="s2">&quot;config&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_config</span><span class="p">,</span>
+                <span class="p">},</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">iter_fn</span><span class="p">():</span>
+            <span class="c1"># TODO: Add logging</span>
+            <span class="c1"># See: https://bit.ly/2UW5JaN</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cluster</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;state&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;RUNNING&quot;</span><span class="p">,</span> <span class="s2">&quot;UPDATING&quot;</span><span class="p">}</span>
+
+        <span class="n">done</span> <span class="o">=</span> <span class="n">DataprocResource</span><span class="o">.</span><span class="n">_iter_and_sleep_until_ready</span><span class="p">(</span><span class="n">iter_fn</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_cluster</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="n">DataprocError</span><span class="p">(</span>
+                <span class="s2">&quot;Could not provision cluster -- status: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">cluster</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">])</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataproc_clusters</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">projectId</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="n">clusterName</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster_name</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">delete_cluster</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataproc_clusters</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span>
+            <span class="n">projectId</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="n">clusterName</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster_name</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">submit_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_details</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataproc_jobs</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+            <span class="n">projectId</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="n">job_details</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_id</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dataproc_jobs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="n">projectId</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">project_id</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">region</span><span class="p">,</span> <span class="n">jobId</span><span class="o">=</span><span class="n">job_id</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">wait_for_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method polls job status every 5 seconds</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># TODO: Add logging here print(&#39;Waiting for job ID {} to finish...&#39;.format(job_id))</span>
+        <span class="k">def</span> <span class="nf">iter_fn</span><span class="p">():</span>
+            <span class="c1"># See: https://bit.ly/2Lg2tHr</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_job</span><span class="p">(</span><span class="n">job_id</span><span class="p">)</span>
+
+            <span class="c1"># Handle exceptions</span>
+            <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;state&quot;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;CANCELLED&quot;</span><span class="p">,</span> <span class="s2">&quot;ERROR&quot;</span><span class="p">}:</span>
+                <span class="k">raise</span> <span class="n">DataprocError</span><span class="p">(</span><span class="s2">&quot;Job error: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">]))</span>
+
+            <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">][</span><span class="s2">&quot;state&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;DONE&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="n">done</span> <span class="o">=</span> <span class="n">DataprocResource</span><span class="o">.</span><span class="n">_iter_and_sleep_until_ready</span><span class="p">(</span><span class="n">iter_fn</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">done</span><span class="p">:</span>
+            <span class="n">job</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_job</span><span class="p">(</span><span class="n">job_id</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DataprocError</span><span class="p">(</span><span class="s2">&quot;Job run timed out: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="nb">str</span><span class="p">(</span><span class="n">job</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">]))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_iter_and_sleep_until_ready</span><span class="p">(</span>
+        <span class="n">callable_fn</span><span class="p">,</span> <span class="n">max_wait_time_sec</span><span class="o">=</span><span class="n">TWENTY_MINUTES</span><span class="p">,</span> <span class="n">iter_time</span><span class="o">=</span><span class="n">DEFAULT_ITER_TIME_SEC</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Iterates and sleeps until callable_fn returns true</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Wait for cluster ready state</span>
+        <span class="n">ready</span><span class="p">,</span> <span class="n">curr_iter</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="n">max_iter</span> <span class="o">=</span> <span class="n">max_wait_time_sec</span> <span class="o">/</span> <span class="n">iter_time</span>
+        <span class="k">while</span> <span class="ow">not</span> <span class="n">ready</span> <span class="ow">and</span> <span class="n">curr_iter</span> <span class="o">&lt;</span> <span class="n">max_iter</span><span class="p">:</span>
+            <span class="n">ready</span> <span class="o">=</span> <span class="n">callable_fn</span><span class="p">()</span>
+            <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">iter_time</span><span class="p">)</span>
+            <span class="n">curr_iter</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Will return false if ran up to max_iter without success</span>
+        <span class="k">return</span> <span class="n">ready</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">cluster_context_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This context manager gives syntactic sugar so you can run:</span>
+
+<span class="sd">        with context.resources.dataproc.cluster as cluster:</span>
+<span class="sd">            # do stuff...</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">create_cluster</span><span class="p">()</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="bp">self</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delete_cluster</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="dataproc_resource"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_gcp.html#dagster_gcp.dataproc_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="n">define_dataproc_create_cluster_config</span><span class="p">(),</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Manage a Dataproc cluster resource&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dataproc_resource</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">DataprocResource</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

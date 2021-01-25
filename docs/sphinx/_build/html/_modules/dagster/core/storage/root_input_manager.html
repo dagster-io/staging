@@ -1,0 +1,278 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.root_input_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.root_input_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span><span class="p">,</span> <span class="n">abstractproperty</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.config</span> <span class="kn">import</span> <span class="n">is_callable_valid_config_arg</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.definition_config_schema</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">convert_user_facing_definition_config_schema</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.resource</span> <span class="kn">import</span> <span class="n">ResourceDefinition</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.input_manager</span> <span class="kn">import</span> <span class="n">InputManager</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental</span>
+
+
+<span class="k">class</span> <span class="nc">IInputManagerDefinition</span><span class="p">:</span>
+    <span class="nd">@abstractproperty</span>
+    <span class="k">def</span> <span class="nf">input_config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The schema for per-input configuration for inputs that are managed by this</span>
+<span class="sd">        input manager&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="RootInputManagerDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/io-managers.html#dagster.RootInputManagerDefinition">[docs]</a><span class="k">class</span> <span class="nc">RootInputManagerDefinition</span><span class="p">(</span><span class="n">ResourceDefinition</span><span class="p">,</span> <span class="n">IInputManagerDefinition</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Definition of a root input manager resource.</span>
+
+<span class="sd">    Root input managers load solid inputs that aren&#39;t connected to upstream outputs.</span>
+
+<span class="sd">    An RootInputManagerDefinition is a :py:class:`ResourceDefinition` whose resource_fn returns an</span>
+<span class="sd">    :py:class:`RootInputManager`.</span>
+
+<span class="sd">    The easiest way to create an RootInputManagerDefinition is with the</span>
+<span class="sd">    :py:func:`@root_input_manager &lt;root_input_manager&gt;` decorator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">resource_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">input_config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_input_config_schema</span> <span class="o">=</span> <span class="n">convert_user_facing_definition_config_schema</span><span class="p">(</span>
+            <span class="n">input_config_schema</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">RootInputManagerDefinition</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">resource_fn</span><span class="o">=</span><span class="n">resource_fn</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">input_config_schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_input_config_schema</span>
+
+    <span class="k">def</span> <span class="nf">copy_for_configured</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">description</span><span class="p">,</span> <span class="n">config_schema</span><span class="p">,</span> <span class="n">_</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;ResourceDefintions do not have names&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">RootInputManagerDefinition</span><span class="p">(</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">resource_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_fn</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+            <span class="n">input_config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input_config_schema</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="RootInputManager"><a class="viewcode-back" href="../../../../sections/api/apidocs/io-managers.html#dagster.RootInputManager">[docs]</a><span class="k">class</span> <span class="nc">RootInputManager</span><span class="p">(</span><span class="n">InputManager</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;RootInputManagers are used to load inputs to solids at the root of a pipeline.</span>
+
+<span class="sd">    The easiest way to define an RootInputManager is with the</span>
+<span class="sd">    :py:func:`@root_input_manager &lt;root_input_manager&gt;` decorator.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="RootInputManager.load_input"><a class="viewcode-back" href="../../../../sections/api/apidocs/io-managers.html#dagster.RootInputManager.load_input">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The user-defined read method that loads data given its metadata.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            context (InputContext): The context of the step output that produces this asset.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Any: The data object.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div></div>
+
+
+<div class="viewcode-block" id="root_input_manager"><a class="viewcode-back" href="../../../../sections/api/apidocs/io-managers.html#dagster.root_input_manager">[docs]</a><span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">root_input_manager</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">input_config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define a root input manager.</span>
+
+<span class="sd">    Root input managers load solid inputs that aren&#39;t connected to upstream outputs.</span>
+
+<span class="sd">    The decorated function should accept a :py:class:`InputContext` and resource config, and return</span>
+<span class="sd">    a loaded object that will be passed into one of the inputs of a solid.</span>
+
+<span class="sd">    The decorator produces an :py:class:`RootInputManagerDefinition`.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the resource-level config.</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the resource.</span>
+<span class="sd">        input_config_schema (Optional[ConfigSchema]): A schema for the input-level config. Each</span>
+<span class="sd">            input that uses this input manager can be configured separately using this config.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Keys for the resources required by the input</span>
+<span class="sd">            manager.</span>
+<span class="sd">        version (Optional[str]): (Experimental) the version of the input manager definition.</span>
+
+<span class="sd">    **Examples:**</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @root_input_manager</span>
+<span class="sd">        def csv_loader(_):</span>
+<span class="sd">            return read_csv(&quot;some/path&quot;)</span>
+
+<span class="sd">        @solid(input_defs=[InputDefinition(&quot;input1&quot;, root_manager_key=&quot;csv_loader_key&quot;)])</span>
+<span class="sd">        def my_solid(_, input1):</span>
+<span class="sd">            do_stuff(input1)</span>
+
+<span class="sd">        @pipeline(mode_defs=[ModeDefinition(resource_defs={&quot;csv_loader_key&quot;: csv_loader})])</span>
+<span class="sd">        def my_pipeline():</span>
+<span class="sd">            my_solid()</span>
+
+<span class="sd">        @root_input_manager(config_schema={&quot;base_dir&quot;: str})</span>
+<span class="sd">        def csv_loader(context):</span>
+<span class="sd">            return read_csv(context.resource_config[&quot;base_dir&quot;] + &quot;/some/path&quot;)</span>
+
+<span class="sd">        @root_input_manager(input_config_schema={&quot;path&quot;: str})</span>
+<span class="sd">        def csv_loader(context):</span>
+<span class="sd">            return read_csv(context.config[&quot;path&quot;])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">config_schema</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">is_callable_valid_config_arg</span><span class="p">(</span><span class="n">config_schema</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_InputManagerDecoratorCallable</span><span class="p">()(</span><span class="n">config_schema</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_wrap</span><span class="p">(</span><span class="n">load_fn</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">_InputManagerDecoratorCallable</span><span class="p">(</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+            <span class="n">input_config_schema</span><span class="o">=</span><span class="n">input_config_schema</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="p">)(</span><span class="n">load_fn</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_wrap</span></div>
+
+
+<span class="k">class</span> <span class="nc">RootInputManagerWrapper</span><span class="p">(</span><span class="n">RootInputManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_fn</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_load_fn</span> <span class="o">=</span> <span class="n">load_fn</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_fn</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">_InputManagerDecoratorCallable</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">input_config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="o">=</span> <span class="n">config_schema</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;version&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_config_schema</span> <span class="o">=</span> <span class="n">input_config_schema</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">required_resource_keys</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">load_fn</span><span class="p">,</span> <span class="s2">&quot;load_fn&quot;</span><span class="p">)</span>
+
+        <span class="k">def</span> <span class="nf">_resource_fn</span><span class="p">(</span><span class="n">_</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">RootInputManagerWrapper</span><span class="p">(</span><span class="n">load_fn</span><span class="p">)</span>
+
+        <span class="n">root_input_manager_def</span> <span class="o">=</span> <span class="n">RootInputManagerDefinition</span><span class="p">(</span>
+            <span class="n">resource_fn</span><span class="o">=</span><span class="n">_resource_fn</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+            <span class="n">input_config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">input_config_schema</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">root_input_manager_def</span><span class="p">,</span> <span class="n">wrapped</span><span class="o">=</span><span class="n">load_fn</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">root_input_manager_def</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

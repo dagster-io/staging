@@ -1,0 +1,460 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.decorators.solid &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.decorators.solid</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">inspect</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">update_wrapper</span><span class="p">,</span> <span class="n">wraps</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">DagsterTypeKind</span>
+
+<span class="kn">from</span> <span class="nn">...decorator_utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">InvalidDecoratedFunctionInfo</span><span class="p">,</span>
+    <span class="n">positional_arg_name_list</span><span class="p">,</span>
+    <span class="n">split_function_parameters</span><span class="p">,</span>
+    <span class="n">validate_decorated_fn_input_args</span><span class="p">,</span>
+    <span class="n">validate_decorated_fn_positionals</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">..events</span> <span class="kn">import</span> <span class="n">AssetMaterialization</span><span class="p">,</span> <span class="n">ExpectationResult</span><span class="p">,</span> <span class="n">Materialization</span><span class="p">,</span> <span class="n">Output</span>
+<span class="kn">from</span> <span class="nn">..inference</span> <span class="kn">import</span> <span class="n">infer_input_definitions_for_solid</span><span class="p">,</span> <span class="n">infer_output_definitions</span>
+<span class="kn">from</span> <span class="nn">..input</span> <span class="kn">import</span> <span class="n">InputDefinition</span>
+<span class="kn">from</span> <span class="nn">..output</span> <span class="kn">import</span> <span class="n">OutputDefinition</span>
+<span class="kn">from</span> <span class="nn">..solid</span> <span class="kn">import</span> <span class="n">SolidDefinition</span>
+
+
+<span class="k">class</span> <span class="nc">_Solid</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span><span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">InputDefinition</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">output_defs</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_nullable_list_param</span><span class="p">(</span>
+            <span class="n">output_defs</span><span class="p">,</span> <span class="s2">&quot;output_defs&quot;</span><span class="p">,</span> <span class="n">OutputDefinition</span>
+        <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+
+        <span class="c1"># these will be checked within SolidDefinition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span> <span class="o">=</span> <span class="n">required_resource_keys</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tags</span> <span class="o">=</span> <span class="n">tags</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">version</span> <span class="o">=</span> <span class="n">version</span>
+
+        <span class="c1"># config will be checked within SolidDefinition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span> <span class="o">=</span> <span class="n">config_schema</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="vm">__name__</span>
+
+        <span class="n">input_defs</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_defs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">infer_input_definitions_for_solid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">output_defs</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">output_defs</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">output_defs</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">infer_output_definitions</span><span class="p">(</span><span class="s2">&quot;@solid&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">positional_inputs</span> <span class="o">=</span> <span class="n">validate_solid_fn</span><span class="p">(</span><span class="s2">&quot;@solid&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;context&quot;</span><span class="p">])</span>
+        <span class="n">compute_fn</span> <span class="o">=</span> <span class="n">_create_solid_compute_wrapper</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">,</span> <span class="n">output_defs</span><span class="p">)</span>
+
+        <span class="n">solid_def</span> <span class="o">=</span> <span class="n">SolidDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span><span class="p">,</span>
+            <span class="n">output_defs</span><span class="o">=</span><span class="n">output_defs</span><span class="p">,</span>
+            <span class="n">compute_fn</span><span class="o">=</span><span class="n">compute_fn</span><span class="p">,</span>
+            <span class="n">config_schema</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config_schema</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+            <span class="n">required_resource_keys</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">required_resource_keys</span><span class="p">,</span>
+            <span class="n">tags</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+            <span class="n">positional_inputs</span><span class="o">=</span><span class="n">positional_inputs</span><span class="p">,</span>
+            <span class="n">version</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">version</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">update_wrapper</span><span class="p">(</span><span class="n">solid_def</span><span class="p">,</span> <span class="n">fn</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">solid_def</span>
+
+
+<div class="viewcode-block" id="solid"><a class="viewcode-back" href="../../../../../sections/api/apidocs/solids.html#dagster.solid">[docs]</a><span class="k">def</span> <span class="nf">solid</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">input_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">output_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">required_resource_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">tags</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">version</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a solid with the specified parameters from the decorated function.</span>
+
+<span class="sd">    This shortcut simplifies the core :class:`SolidDefinition` API by exploding arguments into</span>
+<span class="sd">    kwargs of the decorated compute function and omitting additional parameters when they are not</span>
+<span class="sd">    needed.</span>
+
+<span class="sd">    Input and output definitions will be inferred from the type signature of the decorated function</span>
+<span class="sd">    if not explicitly provided.</span>
+
+<span class="sd">    The decorated function will be used as the solid&#39;s compute function. The signature of the</span>
+<span class="sd">    decorated function is more flexible than that of the ``compute_fn`` in the core API; it may:</span>
+
+<span class="sd">    1. Return a value. This value will be wrapped in an :py:class:`Output` and yielded by the compute function.</span>
+<span class="sd">    2. Return an :py:class:`Output`. This output will be yielded by the compute function.</span>
+<span class="sd">    3. Yield :py:class:`Output` or other :ref:`event objects &lt;events&gt;`. Same as default compute behavior.</span>
+
+<span class="sd">    Note that options 1) and 2) are incompatible with yielding other events -- if you would like</span>
+<span class="sd">    to decorate a function that yields events, it must also wrap its eventual output in an</span>
+<span class="sd">    :py:class:`Output` and yield it.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): Name of solid. Must be unique within any :py:class:`PipelineDefinition`</span>
+<span class="sd">            using the solid.</span>
+<span class="sd">        description (Optional[str]): Human-readable description of this solid.</span>
+<span class="sd">        input_defs (Optional[List[InputDefinition]]):</span>
+<span class="sd">            List of input definitions. Inferred from typehints if not provided.</span>
+<span class="sd">        output_defs (Optional[List[OutputDefinition]]):</span>
+<span class="sd">            List of output definitions. Inferred from typehints if not provided.</span>
+<span class="sd">        config_schema (Optional[ConfigSchema]): The schema for the config. Configuration data</span>
+<span class="sd">            available as context.solid_config.</span>
+<span class="sd">        required_resource_keys (Optional[Set[str]]): Set of resource handles required by this solid.</span>
+<span class="sd">        tags (Optional[Dict[str, Any]]): Arbitrary metadata for the solid. Frameworks may</span>
+<span class="sd">            expect and require certain metadata to be attached to a solid. Users should generally</span>
+<span class="sd">            not set metadata directly. Values that are not strings will be json encoded and must meet</span>
+<span class="sd">            the criteria that `json.loads(json.dumps(value)) == value`.</span>
+<span class="sd">        version (Optional[str]): (Experimental) The version of the solid&#39;s compute_fn. Two solids should have</span>
+<span class="sd">            the same version if and only if they deterministically produce the same outputs when</span>
+<span class="sd">            provided the same inputs.</span>
+
+
+<span class="sd">    Examples:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(_context):</span>
+<span class="sd">                print(&#39;hello&#39;)</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(_context):</span>
+<span class="sd">                return {&#39;foo&#39;: &#39;bar&#39;}</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(_context):</span>
+<span class="sd">                return Output(value={&#39;foo&#39;: &#39;bar&#39;})</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(_context):</span>
+<span class="sd">                yield Output(value={&#39;foo&#39;: &#39;bar&#39;})</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(_context, foo):</span>
+<span class="sd">                return foo</span>
+
+<span class="sd">            @solid(</span>
+<span class="sd">                input_defs=[InputDefinition(name=&quot;foo&quot;, str)],</span>
+<span class="sd">                output_defs=[OutputDefinition(str)]</span>
+<span class="sd">            )</span>
+<span class="sd">            def hello_world(_context, foo):</span>
+<span class="sd">                # explicitly type and name inputs and outputs</span>
+<span class="sd">                return foo</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(_context, foo: str) -&gt; str:</span>
+<span class="sd">                # same as above inferred from signature</span>
+<span class="sd">                return foo</span>
+
+<span class="sd">            @solid</span>
+<span class="sd">            def hello_world(context, foo):</span>
+<span class="sd">                context.log.info(&#39;log something&#39;)</span>
+<span class="sd">                return foo</span>
+
+<span class="sd">            @solid(</span>
+<span class="sd">                config_schema={&#39;str_value&#39; : Field(str)}</span>
+<span class="sd">            )</span>
+<span class="sd">            def hello_world(context, foo):</span>
+<span class="sd">                # context.solid_config is a dictionary with &#39;str_value&#39; key</span>
+<span class="sd">                return foo + context.solid_config[&#39;str_value&#39;]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># This case is for when decorator is used bare, without arguments. e.g. @solid versus @solid()</span>
+    <span class="k">if</span> <span class="n">callable</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">input_defs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">output_defs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">description</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">config_schema</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">required_resource_keys</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">tags</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span><span class="n">version</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">_Solid</span><span class="p">()(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_Solid</span><span class="p">(</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">input_defs</span><span class="o">=</span><span class="n">input_defs</span><span class="p">,</span>
+        <span class="n">output_defs</span><span class="o">=</span><span class="n">output_defs</span><span class="p">,</span>
+        <span class="n">config_schema</span><span class="o">=</span><span class="n">config_schema</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="n">description</span><span class="p">,</span>
+        <span class="n">required_resource_keys</span><span class="o">=</span><span class="n">required_resource_keys</span><span class="p">,</span>
+        <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">,</span>
+        <span class="n">version</span><span class="o">=</span><span class="n">version</span><span class="p">,</span>
+    <span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">_create_solid_compute_wrapper</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">,</span> <span class="n">output_defs</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="s2">&quot;fn&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">InputDefinition</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">output_defs</span><span class="p">,</span> <span class="s2">&quot;output_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">OutputDefinition</span><span class="p">)</span>
+
+    <span class="n">input_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">input_def</span><span class="o">.</span><span class="n">name</span>
+        <span class="k">for</span> <span class="n">input_def</span> <span class="ow">in</span> <span class="n">input_defs</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">input_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DagsterTypeKind</span><span class="o">.</span><span class="n">NOTHING</span>
+    <span class="p">]</span>
+
+    <span class="nd">@wraps</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">compute</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">):</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">input_name</span> <span class="ow">in</span> <span class="n">input_names</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="n">input_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">input_defs</span><span class="p">[</span><span class="n">input_name</span><span class="p">]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">inspect</span><span class="o">.</span><span class="n">isgenerator</span><span class="p">(</span><span class="n">result</span><span class="p">):</span>
+            <span class="k">yield from</span> <span class="n">result</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="p">(</span><span class="n">AssetMaterialization</span><span class="p">,</span> <span class="n">Materialization</span><span class="p">,</span> <span class="n">ExpectationResult</span><span class="p">)):</span>
+                <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s2">&quot;Error in solid </span><span class="si">{solid_name}</span><span class="s2">: If you are returning an AssetMaterialization &quot;</span>
+                        <span class="s2">&quot;or an ExpectationResult from solid you must yield them to avoid &quot;</span>
+                        <span class="s2">&quot;ambiguity with an implied result from returning a value.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">solid_name</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">result</span><span class="p">,</span> <span class="n">Output</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="n">result</span>
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_defs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">result</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">output_defs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">is_required</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                        <span class="s1">&#39;Value &quot;None&quot; returned for non-required output &quot;</span><span class="si">{output_name}</span><span class="s1">&quot;. &#39;</span>
+                        <span class="s2">&quot;This value will be passed to downstream solids. For conditional execution use</span><span class="se">\n</span><span class="s2">&quot;</span>
+                        <span class="s1">&#39;  yield Output(value, &quot;</span><span class="si">{output_name}</span><span class="s1">&quot;)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                        <span class="s2">&quot;when you want the downstream solids to execute, &quot;</span>
+                        <span class="s2">&quot;and do not yield it when you want downstream solids to skip.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">output_name</span><span class="o">=</span><span class="n">output_defs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">result</span><span class="p">,</span> <span class="n">output_name</span><span class="o">=</span><span class="n">output_defs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">result</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">output_defs</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s2">&quot;Error in solid </span><span class="si">{solid_name}</span><span class="s2">: Unexpectedly returned output </span><span class="si">{result}</span><span class="s2"> &quot;</span>
+                            <span class="s2">&quot;of type </span><span class="si">{type_}</span><span class="s2">. Solid is explicitly defined to return no &quot;</span>
+                            <span class="s2">&quot;results.&quot;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">solid_name</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">,</span> <span class="n">type_</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">))</span>
+                    <span class="p">)</span>
+
+                <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                    <span class="p">(</span>
+                        <span class="s2">&quot;Error in solid </span><span class="si">{solid_name}</span><span class="s2">: Solid unexpectedly returned &quot;</span>
+                        <span class="s2">&quot;output </span><span class="si">{result}</span><span class="s2"> of type </span><span class="si">{type_}</span><span class="s2">. Should &quot;</span>
+                        <span class="s2">&quot;be a generator, containing or yielding &quot;</span>
+                        <span class="s2">&quot;</span><span class="si">{n_results}</span><span class="s2"> results: {{</span><span class="si">{expected_results}</span><span class="s2">}}.&quot;</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">solid_name</span><span class="o">=</span><span class="n">context</span><span class="o">.</span><span class="n">solid</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="n">result</span><span class="o">=</span><span class="n">result</span><span class="p">,</span>
+                        <span class="n">type_</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">result</span><span class="p">),</span>
+                        <span class="n">n_results</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">output_defs</span><span class="p">),</span>
+                        <span class="n">expected_results</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                            <span class="p">[</span>
+                                <span class="s2">&quot;&#39;</span><span class="si">{result_name}</span><span class="s2">&#39;: </span><span class="si">{dagster_type}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                    <span class="n">result_name</span><span class="o">=</span><span class="n">output_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                                    <span class="n">dagster_type</span><span class="o">=</span><span class="n">output_def</span><span class="o">.</span><span class="n">dagster_type</span><span class="p">,</span>
+                                <span class="p">)</span>
+                                <span class="k">for</span> <span class="n">output_def</span> <span class="ow">in</span> <span class="n">output_defs</span>
+                            <span class="p">]</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">compute</span>
+
+
+<span class="k">def</span> <span class="nf">validate_solid_fn</span><span class="p">(</span>
+    <span class="n">decorator_name</span><span class="p">,</span> <span class="n">fn_name</span><span class="p">,</span> <span class="n">compute_fn</span><span class="p">,</span> <span class="n">input_defs</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">exclude_nothing</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">decorator_name</span><span class="p">,</span> <span class="s2">&quot;decorator_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">fn_name</span><span class="p">,</span> <span class="s2">&quot;fn_name&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">callable_param</span><span class="p">(</span><span class="n">compute_fn</span><span class="p">,</span> <span class="s2">&quot;compute_fn&quot;</span><span class="p">)</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">input_defs</span><span class="p">,</span> <span class="s2">&quot;input_defs&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">InputDefinition</span><span class="p">)</span>
+    <span class="n">expected_positionals</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span>
+        <span class="n">expected_positionals</span><span class="p">,</span> <span class="s2">&quot;expected_positionals&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">exclude_nothing</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">inp</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">input_defs</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">inp</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DagsterTypeKind</span><span class="o">.</span><span class="n">NOTHING</span>
+        <span class="p">)</span>
+        <span class="n">nothing_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span>
+            <span class="n">inp</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">input_defs</span> <span class="k">if</span> <span class="n">inp</span><span class="o">.</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DagsterTypeKind</span><span class="o">.</span><span class="n">NOTHING</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">inp</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">inp</span> <span class="ow">in</span> <span class="n">input_defs</span><span class="p">)</span>
+        <span class="n">nothing_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+    <span class="c1"># Currently being super strict about naming. Might be a good idea to relax. Starting strict.</span>
+    <span class="n">fn_positionals</span><span class="p">,</span> <span class="n">input_args</span> <span class="o">=</span> <span class="n">split_function_parameters</span><span class="p">(</span><span class="n">compute_fn</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+
+    <span class="c1"># Validate Positional Parameters</span>
+    <span class="n">missing_positional</span> <span class="o">=</span> <span class="n">validate_decorated_fn_positionals</span><span class="p">(</span><span class="n">fn_positionals</span><span class="p">,</span> <span class="n">expected_positionals</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">missing_positional</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+            <span class="s2">&quot;</span><span class="si">{decorator_name}</span><span class="s2"> &#39;</span><span class="si">{solid_name}</span><span class="s2">&#39; decorated function does not have required positional &quot;</span>
+            <span class="s2">&quot;parameter &#39;</span><span class="si">{missing_param}</span><span class="s2">&#39;. Solid functions should only have keyword arguments &quot;</span>
+            <span class="s2">&quot;that match input names and a first positional parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">decorator_name</span><span class="o">=</span><span class="n">decorator_name</span><span class="p">,</span> <span class="n">solid_name</span><span class="o">=</span><span class="n">fn_name</span><span class="p">,</span> <span class="n">missing_param</span><span class="o">=</span><span class="n">missing_positional</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+    <span class="c1"># Validate non positional parameters</span>
+    <span class="n">invalid_function_info</span> <span class="o">=</span> <span class="n">validate_decorated_fn_input_args</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">input_args</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">invalid_function_info</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">invalid_function_info</span><span class="o">.</span><span class="n">error_type</span> <span class="o">==</span> <span class="n">InvalidDecoratedFunctionInfo</span><span class="o">.</span><span class="n">TYPES</span><span class="p">[</span><span class="s2">&quot;vararg&quot;</span><span class="p">]:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">{decorator_name}</span><span class="s2"> &#39;</span><span class="si">{solid_name}</span><span class="s2">&#39; decorated function has positional vararg parameter &quot;</span>
+                <span class="s2">&quot;&#39;</span><span class="si">{param}</span><span class="s2">&#39;. Solid functions should only have keyword arguments that match &quot;</span>
+                <span class="s2">&quot;input names and a first positional parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">decorator_name</span><span class="o">=</span><span class="n">decorator_name</span><span class="p">,</span>
+                    <span class="n">solid_name</span><span class="o">=</span><span class="n">fn_name</span><span class="p">,</span>
+                    <span class="n">param</span><span class="o">=</span><span class="n">invalid_function_info</span><span class="o">.</span><span class="n">param</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">invalid_function_info</span><span class="o">.</span><span class="n">error_type</span> <span class="o">==</span> <span class="n">InvalidDecoratedFunctionInfo</span><span class="o">.</span><span class="n">TYPES</span><span class="p">[</span><span class="s2">&quot;missing_name&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">invalid_function_info</span><span class="o">.</span><span class="n">param</span> <span class="ow">in</span> <span class="n">nothing_names</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="si">{decorator_name}</span><span class="s2"> &#39;</span><span class="si">{solid_name}</span><span class="s2">&#39; decorated function has parameter &#39;</span><span class="si">{param}</span><span class="s2">&#39; that is &quot;</span>
+                    <span class="s2">&quot;one of the solid input_defs of type &#39;Nothing&#39; which should not be included since &quot;</span>
+                    <span class="s2">&quot;no data will be passed for it. &quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">decorator_name</span><span class="o">=</span><span class="n">decorator_name</span><span class="p">,</span>
+                        <span class="n">solid_name</span><span class="o">=</span><span class="n">fn_name</span><span class="p">,</span>
+                        <span class="n">param</span><span class="o">=</span><span class="n">invalid_function_info</span><span class="o">.</span><span class="n">param</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                    <span class="s2">&quot;</span><span class="si">{decorator_name}</span><span class="s2"> &#39;</span><span class="si">{solid_name}</span><span class="s2">&#39; decorated function has parameter &#39;</span><span class="si">{param}</span><span class="s2">&#39; that is not &quot;</span>
+                    <span class="s2">&quot;one of the solid input_defs. Solid functions should only have keyword arguments &quot;</span>
+                    <span class="s2">&quot;that match input names and a first positional parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">decorator_name</span><span class="o">=</span><span class="n">decorator_name</span><span class="p">,</span>
+                        <span class="n">solid_name</span><span class="o">=</span><span class="n">fn_name</span><span class="p">,</span>
+                        <span class="n">param</span><span class="o">=</span><span class="n">invalid_function_info</span><span class="o">.</span><span class="n">param</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">invalid_function_info</span><span class="o">.</span><span class="n">error_type</span> <span class="o">==</span> <span class="n">InvalidDecoratedFunctionInfo</span><span class="o">.</span><span class="n">TYPES</span><span class="p">[</span><span class="s2">&quot;extra&quot;</span><span class="p">]:</span>
+            <span class="n">undeclared_inputs_printed</span> <span class="o">=</span> <span class="s2">&quot;, &#39;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">invalid_function_info</span><span class="o">.</span><span class="n">missing_names</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                <span class="s2">&quot;</span><span class="si">{decorator_name}</span><span class="s2"> &#39;</span><span class="si">{solid_name}</span><span class="s2">&#39; decorated function does not have parameter(s) &quot;</span>
+                <span class="s2">&quot;&#39;</span><span class="si">{undeclared_inputs_printed}</span><span class="s2">&#39;, which are in solid&#39;s input_defs. Solid functions &quot;</span>
+                <span class="s2">&quot;should only have keyword arguments that match input names and a first positional &quot;</span>
+                <span class="s2">&quot;parameter named &#39;context&#39;.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">decorator_name</span><span class="o">=</span><span class="n">decorator_name</span><span class="p">,</span>
+                    <span class="n">solid_name</span><span class="o">=</span><span class="n">fn_name</span><span class="p">,</span>
+                    <span class="n">undeclared_inputs_printed</span><span class="o">=</span><span class="n">undeclared_inputs_printed</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">positional_arg_name_list</span><span class="p">(</span><span class="n">input_args</span><span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

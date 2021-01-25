@@ -1,0 +1,802 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.event_log.sql_event_log &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.event_log.sql_event_log</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+<span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">import</span> <span class="nn">sqlalchemy</span> <span class="k">as</span> <span class="nn">db</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.events</span> <span class="kn">import</span> <span class="n">AssetKey</span><span class="p">,</span> <span class="n">Materialization</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterEventLogInvalidForRun</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events</span> <span class="kn">import</span> <span class="n">DagsterEventType</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events.log</span> <span class="kn">import</span> <span class="n">EventRecord</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.stats</span> <span class="kn">import</span> <span class="n">RunStepKeyStatsSnapshot</span><span class="p">,</span> <span class="n">StepEventStatus</span>
+<span class="kn">from</span> <span class="nn">dagster.serdes</span> <span class="kn">import</span> <span class="n">deserialize_json_to_dagster_namedtuple</span><span class="p">,</span> <span class="n">serialize_dagster_namedtuple</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">datetime_as_float</span><span class="p">,</span> <span class="n">utc_datetime_from_timestamp</span>
+
+<span class="kn">from</span> <span class="nn">..pipeline_run</span> <span class="kn">import</span> <span class="n">PipelineRunStatsSnapshot</span>
+<span class="kn">from</span> <span class="nn">.base</span> <span class="kn">import</span> <span class="n">AssetAwareEventLogStorage</span><span class="p">,</span> <span class="n">EventLogStorage</span>
+<span class="kn">from</span> <span class="nn">.migration</span> <span class="kn">import</span> <span class="n">REINDEX_DATA_MIGRATIONS</span><span class="p">,</span> <span class="n">SECONDARY_INDEX_ASSET_KEY</span>
+<span class="kn">from</span> <span class="nn">.schema</span> <span class="kn">import</span> <span class="n">AssetKeyTable</span><span class="p">,</span> <span class="n">SecondaryIndexMigrationTable</span><span class="p">,</span> <span class="n">SqlEventLogStorageTable</span>
+
+
+<div class="viewcode-block" id="SqlEventLogStorage"><a class="viewcode-back" href="../../../../../sections/api/apidocs/internals.html#dagster.core.storage.event_log.SqlEventLogStorage">[docs]</a><span class="k">class</span> <span class="nc">SqlEventLogStorage</span><span class="p">(</span><span class="n">EventLogStorage</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for SQL backed event log storages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Context manager yielding a connection.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (Optional[str]): Enables those storages which shard based on run_id, e.g.,</span>
+<span class="sd">                SqliteEventLogStorage, to connect appropriately.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">upgrade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method should perform any schema migrations necessary to bring an</span>
+<span class="sd">        out-of-date instance of the storage up to date.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">reindex</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">print_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Call this method to run any data migrations, reindexing to build summary tables.&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">migration_name</span><span class="p">,</span> <span class="n">migration_fn</span> <span class="ow">in</span> <span class="n">REINDEX_DATA_MIGRATIONS</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_secondary_index</span><span class="p">(</span><span class="n">migration_name</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
+                    <span class="n">print_fn</span><span class="p">(</span><span class="s2">&quot;Skipping already reindexed summary: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">migration_name</span><span class="p">))</span>
+                    <span class="k">continue</span>
+            <span class="n">print_fn</span><span class="p">(</span><span class="s2">&quot;Starting reindex: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">migration_name</span><span class="p">))</span>
+            <span class="n">migration_fn</span><span class="p">()(</span><span class="bp">self</span><span class="p">,</span> <span class="n">print_fn</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">enable_secondary_index</span><span class="p">(</span><span class="n">migration_name</span><span class="p">)</span>
+            <span class="n">print_fn</span><span class="p">(</span><span class="s2">&quot;Finished reindexing: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">migration_name</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">prepare_insert_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Helper method for preparing the event log SQL insertion statement.  Abstracted away to</span>
+<span class="sd">        have a single place for the logical table representation of the event, while having a way</span>
+<span class="sd">        for SQL backends to implement different execution implementations for `store_event`. See</span>
+<span class="sd">        the `dagster-postgres` implementation which overrides the generic SQL implementation of</span>
+<span class="sd">        `store_event`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">dagster_event_type</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">asset_key_str</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">partition</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">step_key</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">step_key</span>
+
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_dagster_event</span><span class="p">:</span>
+            <span class="n">dagster_event_type</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_type_value</span>
+            <span class="n">step_key</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">step_key</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="p">:</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+                <span class="n">asset_key_str</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">partition</span><span class="p">:</span>
+                <span class="n">partition</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">partition</span>
+
+        <span class="c1"># https://stackoverflow.com/a/54386260/324449</span>
+        <span class="k">return</span> <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">insert</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+            <span class="n">run_id</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span>
+            <span class="n">event</span><span class="o">=</span><span class="n">serialize_dagster_namedtuple</span><span class="p">(</span><span class="n">event</span><span class="p">),</span>
+            <span class="n">dagster_event_type</span><span class="o">=</span><span class="n">dagster_event_type</span><span class="p">,</span>
+            <span class="n">timestamp</span><span class="o">=</span><span class="n">utc_datetime_from_timestamp</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">timestamp</span><span class="p">),</span>
+            <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">asset_key_str</span><span class="p">,</span>
+            <span class="n">partition</span><span class="o">=</span><span class="n">partition</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">store_asset_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">EventRecord</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">event</span><span class="o">.</span><span class="n">is_dagster_event</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">insert</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+                    <span class="n">asset_key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">db</span><span class="o">.</span><span class="n">exc</span><span class="o">.</span><span class="n">IntegrityError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">store_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Store an event corresponding to a pipeline run.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            event (EventRecord): The event to store.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">EventRecord</span><span class="p">)</span>
+        <span class="n">insert_event_statement</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_insert_event</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+        <span class="n">run_id</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">run_id</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">insert_event_statement</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_dagster_event</span> <span class="ow">and</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">store_asset_key</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">event</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_logs_for_run_by_log_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="s2">&quot;cursor&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="n">cursor</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;Don&#39;t know what to do with negative cursor </span><span class="si">{cursor}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cursor</span><span class="o">=</span><span class="n">cursor</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="c1"># cursor starts at 0 &amp; auto-increment column starts at 1 so adjust</span>
+        <span class="n">cursor</span> <span class="o">=</span> <span class="n">cursor</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">event</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span> <span class="o">==</span> <span class="n">run_id</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">&gt;</span> <span class="n">cursor</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">asc</span><span class="p">())</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="n">events</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">record_id</span><span class="p">,</span> <span class="n">json_str</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                <span class="n">events</span><span class="p">[</span><span class="n">record_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                    <span class="n">deserialize_json_to_dagster_namedtuple</span><span class="p">(</span><span class="n">json_str</span><span class="p">),</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">EventRecord</span>
+                <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">seven</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">CheckError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterEventLogInvalidForRun</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">err</span>
+
+        <span class="k">return</span> <span class="n">events</span>
+
+    <span class="k">def</span> <span class="nf">get_logs_for_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all of the logs corresponding to a run.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the run for which to fetch logs.</span>
+<span class="sd">            cursor (Optional[int]): Zero-indexed logs will be returned starting from cursor + 1,</span>
+<span class="sd">                i.e., if cursor is -1, all logs will be returned. (default: -1)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">cursor</span><span class="p">,</span> <span class="s2">&quot;cursor&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="n">cursor</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+            <span class="s2">&quot;Don&#39;t know what to do with negative cursor </span><span class="si">{cursor}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">cursor</span><span class="o">=</span><span class="n">cursor</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">events_by_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_logs_for_run_by_log_id</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">cursor</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">event</span> <span class="k">for</span> <span class="nb">id</span><span class="p">,</span> <span class="n">event</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">events_by_id</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
+
+    <span class="k">def</span> <span class="nf">get_stats_for_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">dagster_event_type</span><span class="p">,</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">count</span><span class="p">()</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;n_events_of_type&quot;</span><span class="p">),</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;last_event_timestamp&quot;</span><span class="p">),</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span> <span class="o">==</span> <span class="n">run_id</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="s2">&quot;dagster_event_type&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">counts</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="n">times</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                <span class="p">(</span><span class="n">dagster_event_type</span><span class="p">,</span> <span class="n">n_events_of_type</span><span class="p">,</span> <span class="n">last_event_timestamp</span><span class="p">)</span> <span class="o">=</span> <span class="n">result</span>
+                <span class="k">if</span> <span class="n">dagster_event_type</span><span class="p">:</span>
+                    <span class="n">counts</span><span class="p">[</span><span class="n">dagster_event_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">n_events_of_type</span>
+                    <span class="n">times</span><span class="p">[</span><span class="n">dagster_event_type</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_event_timestamp</span>
+
+            <span class="n">start_time</span> <span class="o">=</span> <span class="n">times</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_START</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="n">end_time</span> <span class="o">=</span> <span class="n">times</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_SUCCESS</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                <span class="n">times</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                    <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_FAILURE</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                    <span class="n">times</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">PIPELINE_CANCELED</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+            <span class="k">return</span> <span class="n">PipelineRunStatsSnapshot</span><span class="p">(</span>
+                <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+                <span class="n">steps_succeeded</span><span class="o">=</span><span class="n">counts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">steps_failed</span><span class="o">=</span><span class="n">counts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">materializations</span><span class="o">=</span><span class="n">counts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">expectations</span><span class="o">=</span><span class="n">counts</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">start_time</span><span class="o">=</span><span class="n">datetime_as_float</span><span class="p">(</span><span class="n">start_time</span><span class="p">)</span> <span class="k">if</span> <span class="n">start_time</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+                <span class="n">end_time</span><span class="o">=</span><span class="n">datetime_as_float</span><span class="p">(</span><span class="n">end_time</span><span class="p">)</span> <span class="k">if</span> <span class="n">end_time</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">seven</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">CheckError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterEventLogInvalidForRun</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">err</span>
+
+    <span class="k">def</span> <span class="nf">get_step_stats_for_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">step_keys</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">step_keys</span><span class="p">,</span> <span class="s2">&quot;step_keys&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="n">STEP_STATS_EVENT_TYPES</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_START</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SKIPPED</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+            <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_RESTARTED</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="n">by_step_query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                <span class="p">[</span>
+                    <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span>
+                    <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">dagster_event_type</span><span class="p">,</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;timestamp&quot;</span><span class="p">),</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">)</span><span class="o">.</span><span class="n">label</span><span class="p">(</span><span class="s2">&quot;count&quot;</span><span class="p">),</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span> <span class="o">==</span> <span class="n">run_id</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">step_key</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">dagster_event_type</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">STEP_STATS_EVENT_TYPES</span><span class="p">))</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">step_keys</span><span class="p">:</span>
+            <span class="n">by_step_query</span> <span class="o">=</span> <span class="n">by_step_query</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">step_key</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">step_keys</span><span class="p">))</span>
+
+        <span class="n">by_step_query</span> <span class="o">=</span> <span class="n">by_step_query</span><span class="o">.</span><span class="n">group_by</span><span class="p">(</span>
+            <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span> <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">dagster_event_type</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">by_step_query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="n">by_step_key</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">dict</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="n">step_key</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">step_key</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dagster_event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_START</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;start_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">datetime_as_float</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">timestamp</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">)</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;attempts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;attempts&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dagster_event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_RESTARTED</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;attempts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="c1"># In case we see step retarted events but not a step started event, we want to</span>
+                    <span class="c1"># only count the restarted events, since the attempt count represents</span>
+                    <span class="c1"># the number of times we have successfully started runnning the step</span>
+                    <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">]</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;attempts&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                    <span class="o">+</span> <span class="n">result</span><span class="o">.</span><span class="n">count</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dagster_event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_FAILURE</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">datetime_as_float</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">timestamp</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">)</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">StepEventStatus</span><span class="o">.</span><span class="n">FAILURE</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dagster_event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SUCCESS</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">datetime_as_float</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">timestamp</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">)</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">StepEventStatus</span><span class="o">.</span><span class="n">SUCCESS</span>
+            <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">dagster_event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_SKIPPED</span><span class="o">.</span><span class="n">value</span><span class="p">:</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;end_time&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">datetime_as_float</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span> <span class="k">if</span> <span class="n">result</span><span class="o">.</span><span class="n">timestamp</span> <span class="k">else</span> <span class="kc">None</span>
+                <span class="p">)</span>
+                <span class="n">by_step_key</span><span class="p">[</span><span class="n">step_key</span><span class="p">][</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">StepEventStatus</span><span class="o">.</span><span class="n">SKIPPED</span>
+
+        <span class="n">materializations</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="n">expectation_results</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">list</span><span class="p">)</span>
+        <span class="n">raw_event_query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">event</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span> <span class="o">==</span> <span class="n">run_id</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">step_key</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">dagster_event_type</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                        <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+                    <span class="p">]</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">asc</span><span class="p">())</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">step_keys</span><span class="p">:</span>
+            <span class="n">raw_event_query</span> <span class="o">=</span> <span class="n">raw_event_query</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">step_key</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">step_keys</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">raw_event_query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">json_str</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+                <span class="n">event</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span>
+                    <span class="n">deserialize_json_to_dagster_namedtuple</span><span class="p">(</span><span class="n">json_str</span><span class="p">),</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">EventRecord</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_MATERIALIZATION</span><span class="p">:</span>
+                    <span class="n">materializations</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">step_key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">materialization</span>
+                    <span class="p">)</span>
+                <span class="k">elif</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_type</span> <span class="o">==</span> <span class="n">DagsterEventType</span><span class="o">.</span><span class="n">STEP_EXPECTATION_RESULT</span><span class="p">:</span>
+                    <span class="n">expectation_results</span><span class="p">[</span><span class="n">event</span><span class="o">.</span><span class="n">step_key</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">expectation_result</span>
+                    <span class="p">)</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">seven</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">,</span> <span class="n">check</span><span class="o">.</span><span class="n">CheckError</span><span class="p">)</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterEventLogInvalidForRun</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">)</span> <span class="kn">from</span> <span class="nn">err</span>
+
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">RunStepKeyStatsSnapshot</span><span class="p">(</span>
+                <span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">,</span>
+                <span class="n">step_key</span><span class="o">=</span><span class="n">step_key</span><span class="p">,</span>
+                <span class="n">status</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;status&quot;</span><span class="p">),</span>
+                <span class="n">start_time</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;start_time&quot;</span><span class="p">),</span>
+                <span class="n">end_time</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;end_time&quot;</span><span class="p">),</span>
+                <span class="n">materializations</span><span class="o">=</span><span class="n">materializations</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step_key</span><span class="p">),</span>
+                <span class="n">expectation_results</span><span class="o">=</span><span class="n">expectation_results</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">step_key</span><span class="p">),</span>
+                <span class="n">attempts</span><span class="o">=</span><span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;attempts&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="k">for</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">by_step_key</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">wipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clears the event log storage.&quot;&quot;&quot;</span>
+        <span class="c1"># Should be overridden by SqliteEventLogStorage and other storages that shard based on</span>
+        <span class="c1"># run_id</span>
+        <span class="c1"># https://stackoverflow.com/a/54386260/324449</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">delete</span><span class="p">())</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">delete</span><span class="p">())</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+
+    <span class="k">def</span> <span class="nf">delete_events</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="s2">&quot;run_id&quot;</span><span class="p">)</span>
+
+        <span class="n">delete_statement</span> <span class="o">=</span> <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+            <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span> <span class="o">==</span> <span class="n">run_id</span>
+        <span class="p">)</span>
+        <span class="n">removed_asset_key_query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span> <span class="o">==</span> <span class="n">run_id</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">removed_asset_keys</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">AssetKey</span><span class="o">.</span><span class="n">from_db_string</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">removed_asset_key_query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="p">]</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">delete_statement</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">removed_asset_keys</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">keys_to_check</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">keys_to_check</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">key</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">removed_asset_keys</span><span class="p">])</span>
+                <span class="n">keys_to_check</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">removed_asset_keys</span><span class="p">])</span>
+                <span class="n">remaining_asset_keys</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">AssetKey</span><span class="o">.</span><span class="n">from_db_string</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                        <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">])</span>
+                        <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">keys_to_check</span><span class="p">))</span>
+                        <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="p">]</span>
+                <span class="n">to_remove</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">removed_asset_keys</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">remaining_asset_keys</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">to_remove</span><span class="p">:</span>
+                    <span class="n">keys_to_remove</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">keys_to_remove</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">key</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">to_remove</span><span class="p">])</span>
+                    <span class="n">keys_to_remove</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">to_remove</span><span class="p">])</span>
+                    <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                        <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+                            <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">keys_to_remove</span><span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">is_persistent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">update_event_log_record</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">record_id</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Utility method for migration scripts to update SQL representation of event records. &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">int_param</span><span class="p">(</span><span class="n">record_id</span><span class="p">,</span> <span class="s2">&quot;record_id&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="s2">&quot;event&quot;</span><span class="p">,</span> <span class="n">EventRecord</span><span class="p">)</span>
+        <span class="n">dagster_event_type</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">asset_key_str</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">is_dagster_event</span><span class="p">:</span>
+            <span class="n">dagster_event_type</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_type_value</span>
+            <span class="k">if</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="p">:</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+                <span class="n">asset_key_str</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+                <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">record_id</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">values</span><span class="p">(</span>
+                    <span class="n">event</span><span class="o">=</span><span class="n">serialize_dagster_namedtuple</span><span class="p">(</span><span class="n">event</span><span class="p">),</span>
+                    <span class="n">dagster_event_type</span><span class="o">=</span><span class="n">dagster_event_type</span><span class="p">,</span>
+                    <span class="n">timestamp</span><span class="o">=</span><span class="n">utc_datetime_from_timestamp</span><span class="p">(</span><span class="n">event</span><span class="o">.</span><span class="n">timestamp</span><span class="p">),</span>
+                    <span class="n">step_key</span><span class="o">=</span><span class="n">event</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span>
+                    <span class="n">asset_key</span><span class="o">=</span><span class="n">asset_key_str</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_event_log_table_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">record_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Utility method to test representation of the record in the SQL table.  Returns all of</span>
+<span class="sd">        the columns stored in the event log storage (as opposed to the deserialized `EventRecord`).</span>
+<span class="sd">        This allows checking that certain fields are extracted to support performant lookups (e.g.</span>
+<span class="sd">        extracting `step_key` for fast filtering)&quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="o">=</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="p">])</span>
+                <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">record_id</span><span class="p">)</span>
+                <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">asc</span><span class="p">())</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchone</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">has_secondary_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method uses a checkpoint migration table to see if summary data has been constructed</span>
+<span class="sd">        in a secondary index table.  Can be used to checkpoint event_log data migrations.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SecondaryIndexMigrationTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SecondaryIndexMigrationTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">migration_completed</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">enable_secondary_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;This method marks an event_log data migration as complete, to indicate that a summary</span>
+<span class="sd">        data migration is complete.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">SecondaryIndexMigrationTable</span><span class="o">.</span><span class="n">insert</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">migration_completed</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">(),</span>
+        <span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">run_id</span><span class="p">)</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">db</span><span class="o">.</span><span class="n">exc</span><span class="o">.</span><span class="n">IntegrityError</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                    <span class="n">SecondaryIndexMigrationTable</span><span class="o">.</span><span class="n">update</span><span class="p">()</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+                    <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SecondaryIndexMigrationTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">values</span><span class="p">(</span><span class="n">migration_completed</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">())</span>
+                <span class="p">)</span></div>
+
+
+<span class="k">class</span> <span class="nc">AssetAwareSqlEventLogStorage</span><span class="p">(</span><span class="n">AssetAwareEventLogStorage</span><span class="p">,</span> <span class="n">SqlEventLogStorage</span><span class="p">):</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">upgrade</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">_add_cursor_limit_to_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">cursor</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Helper function to deal with cursor/limit pagination args &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cursor</span><span class="p">)</span> <span class="k">if</span> <span class="n">cursor</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="n">cursor</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">cursor</span><span class="p">:</span>
+            <span class="n">cursor_query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">])</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="n">cursor</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">ascending</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">&gt;</span> <span class="n">cursor_query</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="o">&lt;</span> <span class="n">cursor_query</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">limit</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="n">limit</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">ascending</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">timestamp</span><span class="o">.</span><span class="n">asc</span><span class="p">())</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">timestamp</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span>
+
+        <span class="k">return</span> <span class="n">query</span>
+
+    <span class="k">def</span> <span class="nf">has_asset_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asset_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_secondary_index</span><span class="p">(</span><span class="n">SECONDARY_INDEX_ASSET_KEY</span><span class="p">):</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+                <span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                        <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span>
+                        <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="mi">1</span><span class="p">])</span>
+                <span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                        <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span>
+                        <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="o">.</span><span class="n">limit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">get_all_asset_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">lazy_migrate</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">prefix_path</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_secondary_index</span><span class="p">(</span><span class="n">SECONDARY_INDEX_ASSET_KEY</span><span class="p">):</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">])</span>
+                    <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+                <span class="p">)</span>
+
+                <span class="c1"># This is in place to migrate everyone to using the secondary index table for asset</span>
+                <span class="c1"># keys.  Performing this migration should result in a big performance boost for</span>
+                <span class="c1"># any asset-catalog reads.</span>
+
+                <span class="c1"># After a sufficient amount of time (&gt;= 0.11.0?), we can remove the checks</span>
+                <span class="c1"># for has_secondary_index(SECONDARY_INDEX_ASSET_KEY) and always read from the</span>
+                <span class="c1"># AssetKeyTable, since we are already writing to the table. Tracking the conditional</span>
+                <span class="c1"># check removal here: https://github.com/dagster-io/dagster/issues/3507</span>
+                <span class="n">lazy_migrate</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_secondary_index</span><span class="p">(</span><span class="n">SECONDARY_INDEX_ASSET_KEY</span><span class="p">):</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">])</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                        <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">AssetKey</span><span class="o">.</span><span class="n">get_db_prefix</span><span class="p">(</span><span class="n">prefix_path</span><span class="p">)),</span>
+                        <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span>
+                            <span class="n">AssetKey</span><span class="o">.</span><span class="n">get_db_prefix</span><span class="p">(</span><span class="n">prefix_path</span><span class="p">,</span> <span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                        <span class="p">),</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">])</span>
+                    <span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                        <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                            <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span>
+                                <span class="n">AssetKey</span><span class="o">.</span><span class="n">get_db_prefix</span><span class="p">(</span><span class="n">prefix_path</span><span class="p">)</span>
+                            <span class="p">),</span>
+                            <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span>
+                                <span class="n">AssetKey</span><span class="o">.</span><span class="n">get_db_prefix</span><span class="p">(</span><span class="n">prefix_path</span><span class="p">,</span> <span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                            <span class="p">),</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="o">.</span><span class="n">distinct</span><span class="p">()</span>
+                <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">lazy_migrate</span><span class="p">:</span>
+                <span class="c1"># This is in place to migrate everyone to using the secondary index table for asset</span>
+                <span class="c1"># keys.  Performing this migration should result in a big performance boost for</span>
+                <span class="c1"># any subsequent asset-catalog reads.</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_lazy_migrate_secondary_index_asset_key</span><span class="p">(</span>
+                    <span class="n">conn</span><span class="p">,</span> <span class="p">[</span><span class="n">asset_key</span> <span class="k">for</span> <span class="p">(</span><span class="n">asset_key</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">asset_key</span><span class="p">]</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">([</span><span class="n">AssetKey</span><span class="o">.</span><span class="n">from_db_string</span><span class="p">(</span><span class="n">asset_key</span><span class="p">)</span> <span class="k">for</span> <span class="p">(</span><span class="n">asset_key</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">asset_key</span><span class="p">])</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_lazy_migrate_secondary_index_asset_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">asset_keys</span><span class="p">):</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span><span class="p">]))</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="n">existing</span> <span class="o">=</span> <span class="p">[</span><span class="n">asset_key</span> <span class="k">for</span> <span class="p">(</span><span class="n">asset_key</span><span class="p">,)</span> <span class="ow">in</span> <span class="n">results</span> <span class="k">if</span> <span class="n">asset_key</span><span class="p">]</span>
+        <span class="n">to_migrate</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">asset_keys</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">existing</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">asset_key</span> <span class="ow">in</span> <span class="n">to_migrate</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span>
+                    <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">insert</span><span class="p">()</span><span class="o">.</span><span class="n">values</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+                        <span class="n">asset_key</span><span class="o">=</span><span class="n">AssetKey</span><span class="o">.</span><span class="n">from_db_string</span><span class="p">(</span><span class="n">asset_key</span><span class="p">)</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+            <span class="k">except</span> <span class="n">db</span><span class="o">.</span><span class="n">exc</span><span class="o">.</span><span class="n">IntegrityError</span><span class="p">:</span>
+                <span class="c1"># asset key already present</span>
+                <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">enable_secondary_index</span><span class="p">(</span><span class="n">SECONDARY_INDEX_ASSET_KEY</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_asset_events</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">asset_key</span><span class="p">,</span>
+        <span class="n">partitions</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">cursor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_cursor</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_list_param</span><span class="p">(</span><span class="n">partitions</span><span class="p">,</span> <span class="s2">&quot;partitions&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">([</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">event</span><span class="p">])</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">partitions</span><span class="p">:</span>
+            <span class="n">query</span> <span class="o">=</span> <span class="n">query</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">partition</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">partitions</span><span class="p">))</span>
+
+        <span class="n">query</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_add_cursor_limit_to_query</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">cursor</span><span class="p">,</span> <span class="n">limit</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="n">ascending</span><span class="p">)</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="n">events</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">row_id</span><span class="p">,</span> <span class="n">json_str</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">event_record</span> <span class="o">=</span> <span class="n">deserialize_json_to_dagster_namedtuple</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event_record</span><span class="p">,</span> <span class="n">EventRecord</span><span class="p">):</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                        <span class="s2">&quot;Could not resolve asset event record as EventRecord for id `</span><span class="si">{}</span><span class="s2">`.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">row_id</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="k">continue</span>
+                <span class="k">if</span> <span class="n">include_cursor</span><span class="p">:</span>
+                    <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="n">row_id</span><span class="p">,</span> <span class="n">event_record</span><span class="p">]))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">events</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">event_record</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">seven</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not parse asset event record id `</span><span class="si">{}</span><span class="s2">`.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row_id</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">events</span>
+
+    <span class="k">def</span> <span class="nf">get_asset_run_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asset_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span><span class="p">,</span> <span class="n">db</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)]</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                    <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span>
+                    <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+            <span class="o">.</span><span class="n">group_by</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">run_id</span><span class="p">,)</span>
+            <span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">func</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">timestamp</span><span class="p">)</span><span class="o">.</span><span class="n">desc</span><span class="p">())</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="n">run_id</span> <span class="k">for</span> <span class="p">(</span><span class="n">run_id</span><span class="p">,</span> <span class="n">_timestamp</span><span class="p">)</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">wipe_asset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">asset_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">asset_key</span><span class="p">,</span> <span class="s2">&quot;asset_key&quot;</span><span class="p">,</span> <span class="n">AssetKey</span><span class="p">)</span>
+        <span class="n">event_query</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">event</span><span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span>
+                <span class="n">SqlEventLogStorageTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">asset_key_delete</span> <span class="o">=</span> <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>  <span class="c1"># pylint: disable=no-value-for-parameter</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">or_</span><span class="p">(</span>
+                <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(),</span>
+                <span class="n">AssetKeyTable</span><span class="o">.</span><span class="n">c</span><span class="o">.</span><span class="n">asset_key</span> <span class="o">==</span> <span class="n">asset_key</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">legacy</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">asset_key_delete</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">conn</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">event_query</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">row_id</span><span class="p">,</span> <span class="n">json_str</span> <span class="ow">in</span> <span class="n">results</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">event_record</span> <span class="o">=</span> <span class="n">deserialize_json_to_dagster_namedtuple</span><span class="p">(</span><span class="n">json_str</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">event_record</span><span class="p">,</span> <span class="n">EventRecord</span><span class="p">):</span>
+                    <span class="k">continue</span>
+
+                <span class="k">assert</span> <span class="n">event_record</span><span class="o">.</span><span class="n">dagster_event</span><span class="o">.</span><span class="n">event_specific_data</span><span class="o">.</span><span class="n">materialization</span><span class="o">.</span><span class="n">asset_key</span>
+
+                <span class="n">dagster_event</span> <span class="o">=</span> <span class="n">event_record</span><span class="o">.</span><span class="n">dagster_event</span>
+                <span class="n">event_specific_data</span> <span class="o">=</span> <span class="n">dagster_event</span><span class="o">.</span><span class="n">event_specific_data</span>
+                <span class="n">materialization</span> <span class="o">=</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">materialization</span>
+                <span class="n">updated_materialization</span> <span class="o">=</span> <span class="n">Materialization</span><span class="p">(</span>
+                    <span class="n">label</span><span class="o">=</span><span class="n">materialization</span><span class="o">.</span><span class="n">label</span><span class="p">,</span>
+                    <span class="n">description</span><span class="o">=</span><span class="n">materialization</span><span class="o">.</span><span class="n">description</span><span class="p">,</span>
+                    <span class="n">metadata_entries</span><span class="o">=</span><span class="n">materialization</span><span class="o">.</span><span class="n">metadata_entries</span><span class="p">,</span>
+                    <span class="n">asset_key</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                    <span class="n">skip_deprecation_warning</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">updated_event_specific_data</span> <span class="o">=</span> <span class="n">event_specific_data</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span>
+                    <span class="n">materialization</span><span class="o">=</span><span class="n">updated_materialization</span>
+                <span class="p">)</span>
+                <span class="n">updated_dagster_event</span> <span class="o">=</span> <span class="n">dagster_event</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span>
+                    <span class="n">event_specific_data</span><span class="o">=</span><span class="n">updated_event_specific_data</span>
+                <span class="p">)</span>
+                <span class="n">updated_record</span> <span class="o">=</span> <span class="n">event_record</span><span class="o">.</span><span class="n">_replace</span><span class="p">(</span><span class="n">dagster_event</span><span class="o">=</span><span class="n">updated_dagster_event</span><span class="p">)</span>
+
+                <span class="c1"># update the event_record here</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">update_event_log_record</span><span class="p">(</span><span class="n">row_id</span><span class="p">,</span> <span class="n">updated_record</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="n">seven</span><span class="o">.</span><span class="n">JSONDecodeError</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Could not parse asset event record id `</span><span class="si">{}</span><span class="s2">`.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">row_id</span><span class="p">))</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

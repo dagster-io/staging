@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.s3.file_cache &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.s3.file_cache</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">boto3</span>
+<span class="kn">from</span> <span class="nn">botocore.exceptions</span> <span class="kn">import</span> <span class="n">ClientError</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">resource</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.file_cache</span> <span class="kn">import</span> <span class="n">FileCache</span>
+
+<span class="kn">from</span> <span class="nn">.file_manager</span> <span class="kn">import</span> <span class="n">S3FileHandle</span>
+
+
+<div class="viewcode-block" id="S3FileCache"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.s3.S3FileCache">[docs]</a><span class="k">class</span> <span class="nc">S3FileCache</span><span class="p">(</span><span class="n">FileCache</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s3_bucket</span><span class="p">,</span> <span class="n">s3_key</span><span class="p">,</span> <span class="n">s3_session</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">S3FileCache</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3_bucket</span> <span class="o">=</span> <span class="n">s3_bucket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3_key</span> <span class="o">=</span> <span class="n">s3_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3</span> <span class="o">=</span> <span class="n">s3_session</span>
+
+    <span class="k">def</span> <span class="nf">has_file_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">file_key</span><span class="p">,</span> <span class="s2">&quot;file_key&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_full_key</span><span class="p">(</span><span class="n">file_key</span><span class="p">))</span>
+        <span class="k">except</span> <span class="n">ClientError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">get_full_key</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">{base_key}</span><span class="s2">/</span><span class="si">{file_key}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base_key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_key</span><span class="p">,</span> <span class="n">file_key</span><span class="o">=</span><span class="n">file_key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">write_file_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_key</span><span class="p">,</span> <span class="n">source_file_object</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">file_key</span><span class="p">,</span> <span class="s2">&quot;file_key&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">s3</span><span class="o">.</span><span class="n">put_object</span><span class="p">(</span>
+            <span class="n">Body</span><span class="o">=</span><span class="n">source_file_object</span><span class="p">,</span> <span class="n">Bucket</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="n">Key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_full_key</span><span class="p">(</span><span class="n">file_key</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_file_handle</span><span class="p">(</span><span class="n">file_key</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_file_handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_key</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">file_key</span><span class="p">,</span> <span class="s2">&quot;file_key&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">S3FileHandle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s3_bucket</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_full_key</span><span class="p">(</span><span class="n">file_key</span><span class="p">))</span></div>
+
+
+<span class="nd">@resource</span><span class="p">(</span>
+    <span class="p">{</span>
+        <span class="s2">&quot;bucket&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span>
+        <span class="s2">&quot;key&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">str</span><span class="p">),</span>
+        <span class="s2">&quot;overwrite&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="nb">bool</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="kc">False</span><span class="p">),</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">s3_file_cache</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">S3FileCache</span><span class="p">(</span>
+        <span class="n">s3_bucket</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;bucket&quot;</span><span class="p">],</span>
+        <span class="n">s3_key</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;key&quot;</span><span class="p">],</span>
+        <span class="n">overwrite</span><span class="o">=</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;overwrite&quot;</span><span class="p">],</span>
+        <span class="c1"># TODO: resource dependencies</span>
+        <span class="n">s3_session</span><span class="o">=</span><span class="n">boto3</span><span class="o">.</span><span class="n">resource</span><span class="p">(</span><span class="s2">&quot;s3&quot;</span><span class="p">,</span> <span class="n">use_ssl</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">client</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

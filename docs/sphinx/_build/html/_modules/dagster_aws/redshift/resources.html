@@ -1,0 +1,443 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_aws.redshift.resources &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_aws.redshift.resources</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">abc</span>
+<span class="kn">from</span> <span class="nn">contextlib</span> <span class="kn">import</span> <span class="n">contextmanager</span>
+
+<span class="kn">import</span> <span class="nn">psycopg2</span>
+<span class="kn">import</span> <span class="nn">psycopg2.extensions</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Field</span><span class="p">,</span> <span class="n">IntSource</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">resource</span>
+
+
+<span class="k">class</span> <span class="nc">RedshiftError</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">_BaseRedshiftResource</span><span class="p">(</span><span class="n">abc</span><span class="o">.</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>  <span class="c1"># pylint: disable=too-many-locals</span>
+        <span class="c1"># Extract parameters from resource config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">conn_args</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">k</span><span class="p">:</span> <span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span>
+                <span class="s2">&quot;host&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;port&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;user&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;password&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;database&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;schema&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;connect_timeout&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;sslmode&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">k</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">resource_config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;autocommit&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">log_manager</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">execute_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@abc</span><span class="o">.</span><span class="n">abstractmethod</span>
+    <span class="k">def</span> <span class="nf">execute_queries</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error_callback</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="k">pass</span>
+
+
+<span class="k">class</span> <span class="nc">RedshiftResource</span><span class="p">(</span><span class="n">_BaseRedshiftResource</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">execute_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Synchronously execute a single query against Redshift. Will return a list of rows, where</span>
+<span class="sd">        each row is a tuple of values, e.g. SELECT 1 will return [(1,)].</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            query (str): The query to execute.</span>
+<span class="sd">            fetch_results (Optional[bool]): Whether to return the results of executing the query.</span>
+<span class="sd">                Defaults to False, in which case the query will be executed without retrieving the</span>
+<span class="sd">                results.</span>
+<span class="sd">            cursor_factory (Optional[:py:class:`psycopg2.extensions.cursor`]): An alternative</span>
+<span class="sd">                cursor_factory; defaults to None. Will be used when constructing the cursor.</span>
+<span class="sd">            error_callback (Optional[Callable[[Exception, Cursor, DagsterLogManager], None]]): A</span>
+<span class="sd">                callback function, invoked when an exception is encountered during query execution;</span>
+<span class="sd">                this is intended to support executing additional queries to provide diagnostic</span>
+<span class="sd">                information, e.g. by querying ``stl_load_errors`` using ``pg_last_copy_id()``. If no</span>
+<span class="sd">                function is provided, exceptions during query execution will be raised directly.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[List[Tuple[Any, ...]]]: Results of the query, as a list of tuples, when</span>
+<span class="sd">                fetch_results is set. Otherwise return None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="s2">&quot;query&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">fetch_results</span><span class="p">,</span> <span class="s2">&quot;fetch_results&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_subclass_param</span><span class="p">(</span><span class="n">cursor_factory</span><span class="p">,</span> <span class="s2">&quot;cursor_factory&quot;</span><span class="p">,</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">cursor</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">error_callback</span><span class="p">,</span> <span class="s2">&quot;error_callback&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_conn</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_cursor</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="n">cursor_factory</span><span class="p">)</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Executing query &#39;</span><span class="si">{query}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">))</span>
+                    <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+                    <span class="k">if</span> <span class="n">fetch_results</span> <span class="ow">and</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="k">return</span> <span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Empty result from query&quot;</span><span class="p">)</span>
+
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># pylint: disable=broad-except</span>
+                    <span class="c1"># If autocommit is disabled or not set (it is disabled by default), Redshift</span>
+                    <span class="c1"># will be in the middle of a transaction at exception time, and because of</span>
+                    <span class="c1"># the failure the current transaction will not accept any further queries.</span>
+                    <span class="c1">#</span>
+                    <span class="c1"># This conn.commit() call closes the open transaction before handing off</span>
+                    <span class="c1"># control to the error callback, so that the user can issue additional</span>
+                    <span class="c1"># queries. Notably, for e.g. pg_last_copy_id() to work, it requires you to</span>
+                    <span class="c1"># use the same conn/cursor, so you have to do this conn.commit() to ensure</span>
+                    <span class="c1"># things are in a usable state in the error callback.</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span><span class="p">:</span>
+                        <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                    <span class="k">if</span> <span class="n">error_callback</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">error_callback</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span>
+
+    <span class="k">def</span> <span class="nf">execute_queries</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error_callback</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Synchronously execute a list of queries against Redshift. Will return a list of list of</span>
+<span class="sd">        rows, where each row is a tuple of values, e.g. [&#39;SELECT 1&#39;, &#39;SELECT 1&#39;] will return</span>
+<span class="sd">        [[(1,)], [(1,)]].</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queries (List[str]): The queries to execute.</span>
+<span class="sd">            fetch_results (Optional[bool]): Whether to return the results of executing the query.</span>
+<span class="sd">                Defaults to False, in which case the query will be executed without retrieving the</span>
+<span class="sd">                results.</span>
+<span class="sd">            cursor_factory (Optional[:py:class:`psycopg2.extensions.cursor`]): An alternative</span>
+<span class="sd">            cursor_factory; defaults to None. Will be used when constructing the cursor.</span>
+<span class="sd">            error_callback (Optional[Callable[[Exception, Cursor, DagsterLogManager], None]]): A</span>
+<span class="sd">                callback function, invoked when an exception is encountered during query execution;</span>
+<span class="sd">                this is intended to support executing additional queries to provide diagnostic</span>
+<span class="sd">                information, e.g. by querying ``stl_load_errors`` using ``pg_last_copy_id()``. If no</span>
+<span class="sd">                function is provided, exceptions during query execution will be raised directly.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[List[List[Tuple[Any, ...]]]]: Results of the query, as a list of list of</span>
+<span class="sd">                tuples, when fetch_results is set. Otherwise return None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="s2">&quot;queries&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">fetch_results</span><span class="p">,</span> <span class="s2">&quot;fetch_results&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_subclass_param</span><span class="p">(</span><span class="n">cursor_factory</span><span class="p">,</span> <span class="s2">&quot;cursor_factory&quot;</span><span class="p">,</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">cursor</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">error_callback</span><span class="p">,</span> <span class="s2">&quot;error_callback&quot;</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_conn</span><span class="p">()</span> <span class="k">as</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="k">with</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_cursor</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="n">cursor_factory</span><span class="p">)</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Executing query &#39;</span><span class="si">{query}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">))</span>
+                        <span class="n">cursor</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+                        <span class="k">if</span> <span class="n">fetch_results</span> <span class="ow">and</span> <span class="n">cursor</span><span class="o">.</span><span class="n">rowcount</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cursor</span><span class="o">.</span><span class="n">fetchall</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">([])</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Empty result from query&quot;</span><span class="p">)</span>
+
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>  <span class="c1"># pylint: disable=broad-except</span>
+                        <span class="c1"># If autocommit is disabled or not set (it is disabled by default), Redshift</span>
+                        <span class="c1"># will be in the middle of a transaction at exception time, and because of</span>
+                        <span class="c1"># the failure the current transaction will not accept any further queries.</span>
+                        <span class="c1">#</span>
+                        <span class="c1"># This conn.commit() call closes the open transaction before handing off</span>
+                        <span class="c1"># control to the error callback, so that the user can issue additional</span>
+                        <span class="c1"># queries. Notably, for e.g. pg_last_copy_id() to work, it requires you to</span>
+                        <span class="c1"># use the same conn/cursor, so you have to do this conn.commit() to ensure</span>
+                        <span class="c1"># things are in a usable state in the error callback.</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span><span class="p">:</span>
+                            <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+                        <span class="k">if</span> <span class="n">error_callback</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                            <span class="n">error_callback</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">cursor</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">raise</span>
+
+        <span class="k">if</span> <span class="n">fetch_results</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">results</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">_get_conn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">conn</span> <span class="o">=</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">conn_args</span><span class="p">)</span>
+            <span class="k">yield</span> <span class="n">conn</span>
+        <span class="k">finally</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="nd">@contextmanager</span>
+    <span class="k">def</span> <span class="nf">_get_cursor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conn</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_subclass_param</span><span class="p">(</span><span class="n">cursor_factory</span><span class="p">,</span> <span class="s2">&quot;cursor_factory&quot;</span><span class="p">,</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">cursor</span><span class="p">)</span>
+
+        <span class="c1"># Could be none, in which case we should respect the connection default. Otherwise</span>
+        <span class="c1"># explicitly set to true/false.</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">conn</span><span class="o">.</span><span class="n">autocommit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span>
+
+        <span class="k">with</span> <span class="n">conn</span><span class="p">:</span>
+            <span class="k">with</span> <span class="n">conn</span><span class="o">.</span><span class="n">cursor</span><span class="p">(</span><span class="n">cursor_factory</span><span class="o">=</span><span class="n">cursor_factory</span><span class="p">)</span> <span class="k">as</span> <span class="n">cursor</span><span class="p">:</span>
+                <span class="k">yield</span> <span class="n">cursor</span>
+
+            <span class="c1"># If autocommit is set, we&#39;ll commit after each and every query execution. Otherwise, we</span>
+            <span class="c1"># want to do a final commit after we&#39;re wrapped up executing the full set of one or more</span>
+            <span class="c1"># queries.</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">autocommit</span><span class="p">:</span>
+                <span class="n">conn</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+
+
+<span class="k">class</span> <span class="nc">FakeRedshiftResource</span><span class="p">(</span><span class="n">_BaseRedshiftResource</span><span class="p">):</span>
+    <span class="n">QUERY_RESULT</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,)]</span>
+
+    <span class="k">def</span> <span class="nf">execute_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error_callback</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fake for execute_query; returns [self.QUERY_RESULT]</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            query (str): The query to execute.</span>
+<span class="sd">            fetch_results (Optional[bool]): Whether to return the results of executing the query.</span>
+<span class="sd">                Defaults to False, in which case the query will be executed without retrieving the</span>
+<span class="sd">                results.</span>
+<span class="sd">            cursor_factory (Optional[:py:class:`psycopg2.extensions.cursor`]): An alternative</span>
+<span class="sd">                cursor_factory; defaults to None. Will be used when constructing the cursor.</span>
+<span class="sd">            error_callback (Optional[Callable[[Exception, Cursor, DagsterLogManager], None]]): A</span>
+<span class="sd">                callback function, invoked when an exception is encountered during query execution;</span>
+<span class="sd">                this is intended to support executing additional queries to provide diagnostic</span>
+<span class="sd">                information, e.g. by querying ``stl_load_errors`` using ``pg_last_copy_id()``. If no</span>
+<span class="sd">                function is provided, exceptions during query execution will be raised directly.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[List[Tuple[Any, ...]]]: Results of the query, as a list of tuples, when</span>
+<span class="sd">                fetch_results is set. Otherwise return None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="s2">&quot;query&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">fetch_results</span><span class="p">,</span> <span class="s2">&quot;fetch_results&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_subclass_param</span><span class="p">(</span><span class="n">cursor_factory</span><span class="p">,</span> <span class="s2">&quot;cursor_factory&quot;</span><span class="p">,</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">cursor</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">error_callback</span><span class="p">,</span> <span class="s2">&quot;error_callback&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Executing query &#39;</span><span class="si">{query}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">fetch_results</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">QUERY_RESULT</span>
+
+    <span class="k">def</span> <span class="nf">execute_queries</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">queries</span><span class="p">,</span> <span class="n">fetch_results</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">cursor_factory</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">error_callback</span><span class="o">=</span><span class="kc">None</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fake for execute_queries; returns [self.QUERY_RESULT] * 3</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            queries (List[str]): The queries to execute.</span>
+<span class="sd">            fetch_results (Optional[bool]): Whether to return the results of executing the query.</span>
+<span class="sd">                Defaults to False, in which case the query will be executed without retrieving the</span>
+<span class="sd">                results.</span>
+<span class="sd">            cursor_factory (Optional[:py:class:`psycopg2.extensions.cursor`]): An alternative</span>
+<span class="sd">                cursor_factory; defaults to None. Will be used when constructing the cursor.</span>
+<span class="sd">            error_callback (Optional[Callable[[Exception, Cursor, DagsterLogManager], None]]): A</span>
+<span class="sd">                callback function, invoked when an exception is encountered during query execution;</span>
+<span class="sd">                this is intended to support executing additional queries to provide diagnostic</span>
+<span class="sd">                information, e.g. by querying ``stl_load_errors`` using ``pg_last_copy_id()``. If no</span>
+<span class="sd">                function is provided, exceptions during query execution will be raised directly.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[List[List[Tuple[Any, ...]]]]: Results of the query, as a list of list of</span>
+<span class="sd">                tuples, when fetch_results is set. Otherwise return None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">queries</span><span class="p">,</span> <span class="s2">&quot;queries&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">bool_param</span><span class="p">(</span><span class="n">fetch_results</span><span class="p">,</span> <span class="s2">&quot;fetch_results&quot;</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_subclass_param</span><span class="p">(</span><span class="n">cursor_factory</span><span class="p">,</span> <span class="s2">&quot;cursor_factory&quot;</span><span class="p">,</span> <span class="n">psycopg2</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">cursor</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_callable_param</span><span class="p">(</span><span class="n">error_callback</span><span class="p">,</span> <span class="s2">&quot;error_callback&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">query</span> <span class="ow">in</span> <span class="n">queries</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Executing query &#39;</span><span class="si">{query}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">query</span><span class="o">=</span><span class="n">query</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">fetch_results</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">QUERY_RESULT</span><span class="p">]</span> <span class="o">*</span> <span class="mi">3</span>
+
+
+<span class="k">def</span> <span class="nf">define_redshift_config</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Redshift configuration. See the Redshift documentation for reference:</span>
+
+<span class="sd">    https://docs.aws.amazon.com/redshift/latest/mgmt/connecting-to-cluster.html</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Redshift host&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">IntSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Redshift port&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="mi">5439</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;user&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Username for Redshift connection&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;password&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Password for Redshift connection&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;database&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the default database to use. After login, you can use USE DATABASE&quot;</span>
+            <span class="s2">&quot; to change the database.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;schema&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">StringSource</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Name of the default schema to use. After login, you can use USE SCHEMA to &quot;</span>
+            <span class="s2">&quot;change the schema.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;autocommit&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">bool</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;None by default, which honors the Redshift parameter AUTOCOMMIT. Set to &quot;</span>
+            <span class="s2">&quot;True or False to enable or disable autocommit mode in the session, respectively.&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;connect_timeout&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">int</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Connection timeout in seconds. 5 seconds by default&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="p">),</span>
+        <span class="s2">&quot;sslmode&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="nb">str</span><span class="p">,</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;SSL mode to use. See the Redshift documentation for more information on &quot;</span>
+            <span class="s2">&quot;usage: https://docs.aws.amazon.com/redshift/latest/mgmt/connecting-ssl-support.html&quot;</span><span class="p">,</span>
+            <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;require&quot;</span><span class="p">,</span>
+        <span class="p">),</span>
+    <span class="p">}</span>
+
+
+<div class="viewcode-block" id="redshift_resource"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.redshift.redshift_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="n">define_redshift_config</span><span class="p">(),</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Resource for connecting to the Redshift data warehouse&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">redshift_resource</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This resource enables connecting to a Redshift cluster and issuing queries against that</span>
+<span class="sd">    cluster.</span>
+
+<span class="sd">    Example:</span>
+
+<span class="sd">        .. code-block:: python</span>
+
+<span class="sd">            from dagster import ModeDefinition, execute_solid, solid</span>
+<span class="sd">            from dagster_aws.redshift import redshift_resource</span>
+
+<span class="sd">            @solid(required_resource_keys={&#39;redshift&#39;})</span>
+<span class="sd">            def example_redshift_solid(context):</span>
+<span class="sd">                return context.resources.redshift.execute_query(&#39;SELECT 1&#39;, fetch_results=True)</span>
+
+<span class="sd">            result = execute_solid(</span>
+<span class="sd">                example_redshift_solid,</span>
+<span class="sd">                run_config={</span>
+<span class="sd">                    &#39;resources&#39;: {</span>
+<span class="sd">                        &#39;redshift&#39;: {</span>
+<span class="sd">                            &#39;config&#39;: {</span>
+<span class="sd">                                &#39;host&#39;: &#39;my-redshift-cluster.us-east-1.redshift.amazonaws.com&#39;,</span>
+<span class="sd">                                &#39;port&#39;: 5439,</span>
+<span class="sd">                                &#39;user&#39;: &#39;dagster&#39;,</span>
+<span class="sd">                                &#39;password&#39;: &#39;dagster&#39;,</span>
+<span class="sd">                                &#39;database&#39;: &#39;dev&#39;,</span>
+<span class="sd">                            }</span>
+<span class="sd">                        }</span>
+<span class="sd">                    }</span>
+<span class="sd">                },</span>
+<span class="sd">                mode_def=ModeDefinition(resource_defs={&#39;redshift&#39;: redshift_resource}),</span>
+<span class="sd">            )</span>
+<span class="sd">            assert result.output_value() == [(1,)]</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">RedshiftResource</span><span class="p">(</span><span class="n">context</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fake_redshift_resource"><a class="viewcode-back" href="../../../sections/api/apidocs/libraries/dagster_aws.html#dagster_aws.redshift.fake_redshift_resource">[docs]</a><span class="nd">@resource</span><span class="p">(</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="n">define_redshift_config</span><span class="p">(),</span>
+    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Fake resource for connecting to the Redshift data warehouse. Usage is identical &quot;</span>
+    <span class="s2">&quot;to the real redshift_resource. Will always return [(1,)] for the single query case and &quot;</span>
+    <span class="s2">&quot;[[(1,)], [(1,)], [(1,)]] for the multi query case.&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">fake_redshift_resource</span><span class="p">(</span><span class="n">context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">FakeRedshiftResource</span><span class="p">(</span><span class="n">context</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

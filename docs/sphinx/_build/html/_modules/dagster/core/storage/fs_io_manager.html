@@ -1,0 +1,282 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.fs_io_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.fs_io_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.config</span> <span class="kn">import</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">dagster.config.source</span> <span class="kn">import</span> <span class="n">StringSource</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.events</span> <span class="kn">import</span> <span class="n">AssetKey</span><span class="p">,</span> <span class="n">AssetMaterialization</span><span class="p">,</span> <span class="n">EventMetadataEntry</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.context.system</span> <span class="kn">import</span> <span class="n">InputContext</span><span class="p">,</span> <span class="n">OutputContext</span>
+<span class="kn">from</span> <span class="nn">dagster.core.storage.io_manager</span> <span class="kn">import</span> <span class="n">IOManager</span><span class="p">,</span> <span class="n">io_manager</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">,</span> <span class="n">mkdir_p</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental</span>
+
+
+<div class="viewcode-block" id="fs_io_manager"><a class="viewcode-back" href="../../../../sections/api/apidocs/io-managers.html#dagster.fs_io_manager">[docs]</a><span class="nd">@io_manager</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)})</span>
+<span class="k">def</span> <span class="nf">fs_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Built-in filesystem IO manager that stores and retrieves values using pickling.</span>
+
+<span class="sd">    It allows users to specify a base directory where all the step outputs will be stored. It</span>
+<span class="sd">    serializes and deserializes output values using pickling and automatically constructs</span>
+<span class="sd">    the filepaths for the assets.</span>
+
+<span class="sd">    Example usage:</span>
+
+<span class="sd">    1. Specify a pipeline-level IO manager using the reserved resource key ``&quot;io_manager&quot;``,</span>
+<span class="sd">    which will set the given IO manager on all solids across a pipeline.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @solid</span>
+<span class="sd">        def solid_a(context, df):</span>
+<span class="sd">            return df</span>
+
+<span class="sd">        @solid</span>
+<span class="sd">        def solid_b(context, df):</span>
+<span class="sd">            return df[:5]</span>
+
+<span class="sd">        @pipeline(mode_defs=[ModeDefinition(resource_defs={&quot;io_manager&quot;: fs_io_manager})])</span>
+<span class="sd">        def pipe():</span>
+<span class="sd">            solid_b(solid_a())</span>
+
+
+<span class="sd">    2. Specify IO manager on :py:class:`OutputDefinition`, which allows the user to set</span>
+<span class="sd">    different IO managers on different step outputs.</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @solid(output_defs=[OutputDefinition(io_manager_key=&quot;my_io_manager&quot;)])</span>
+<span class="sd">        def solid_a(context, df):</span>
+<span class="sd">            return df</span>
+
+<span class="sd">        @solid</span>
+<span class="sd">        def solid_b(context, df):</span>
+<span class="sd">            return df[:5]</span>
+
+<span class="sd">        @pipeline(</span>
+<span class="sd">            mode_defs=[ModeDefinition(resource_defs={&quot;my_io_manager&quot;: fs_io_manager})]</span>
+<span class="sd">        )</span>
+<span class="sd">        def pipe():</span>
+<span class="sd">            solid_b(solid_a())</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">PickledObjectFilesystemIOManager</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">])</span></div>
+
+
+<span class="k">class</span> <span class="nc">PickledObjectFilesystemIOManager</span><span class="p">(</span><span class="n">IOManager</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Built-in filesystem IO manager that stores and retrieves values using pickling.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        base_dir (Optional[str]): base directory where all the step outputs which use this object</span>
+<span class="sd">            manager will be stored in.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;base_dir&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_mode</span> <span class="o">=</span> <span class="s2">&quot;wb&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_mode</span> <span class="o">=</span> <span class="s2">&quot;rb&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_get_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Automatically construct filepath.&quot;&quot;&quot;</span>
+        <span class="n">keys</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">get_run_scoped_output_identifier</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="o">*</span><span class="n">keys</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">handle_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pickle the data and store the object to a file.</span>
+
+<span class="sd">        This method omits the AssetMaterialization event so assets generated by it won&#39;t be tracked</span>
+<span class="sd">        by the Asset Catalog.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">OutputContext</span><span class="p">)</span>
+
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing file at: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Ensure path exists</span>
+        <span class="n">mkdir_p</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_obj</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">write_obj</span><span class="p">,</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unpickle the file and Load it to a data object.&quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">InputContext</span><span class="p">)</span>
+
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">upstream_output</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading file from: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">read_obj</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">CustomPathPickledObjectFilesystemIOManager</span><span class="p">(</span><span class="n">IOManager</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Built-in filesystem IO managerthat stores and retrieves values using pickling and</span>
+<span class="sd">    allow users to specify file path for outputs.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        base_dir (Optional[str]): base directory where all the step outputs which use this object</span>
+<span class="sd">            manager will be stored in.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;base_dir&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_mode</span> <span class="o">=</span> <span class="s2">&quot;wb&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_mode</span> <span class="o">=</span> <span class="s2">&quot;rb&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_get_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">handle_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pickle the data and store the object to a custom file path.</span>
+
+<span class="sd">        This method emits an AssetMaterialization event so the assets will be tracked by the</span>
+<span class="sd">        Asset Catalog.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">OutputContext</span><span class="p">)</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">metadata</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">),</span> <span class="s2">&quot;metadata.path&quot;</span><span class="p">)</span>
+
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+        <span class="c1"># Ensure path exists</span>
+        <span class="n">mkdir_p</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Writing file at: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_obj</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">write_obj</span><span class="p">,</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">AssetMaterialization</span><span class="p">(</span>
+            <span class="n">asset_key</span><span class="o">=</span><span class="n">AssetKey</span><span class="p">([</span><span class="n">context</span><span class="o">.</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span> <span class="n">context</span><span class="o">.</span><span class="n">name</span><span class="p">]),</span>
+            <span class="n">metadata_entries</span><span class="o">=</span><span class="p">[</span><span class="n">EventMetadataEntry</span><span class="o">.</span><span class="n">fspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">filepath</span><span class="p">))],</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unpickle the file from a given file path and Load it to a data object.&quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="s2">&quot;context&quot;</span><span class="p">,</span> <span class="n">InputContext</span><span class="p">)</span>
+        <span class="n">metadata</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">upstream_output</span><span class="o">.</span><span class="n">metadata</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">metadata</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;path&quot;</span><span class="p">),</span> <span class="s2">&quot;metadata.path&quot;</span><span class="p">)</span>
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">log</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Loading file from: </span><span class="si">{</span><span class="n">filepath</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">read_obj</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="custom_path_fs_io_manager"><a class="viewcode-back" href="../../../../sections/api/apidocs/io-managers.html#dagster.custom_path_fs_io_manager">[docs]</a><span class="nd">@io_manager</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)})</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">custom_path_fs_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Built-in IO manager that allows users to custom output file path per output definition.</span>
+
+<span class="sd">    It also allows users to specify a base directory where all the step output will be stored in. It</span>
+<span class="sd">    serializes and deserializes output values (assets) using pickling and stores the pickled object</span>
+<span class="sd">    in the user-provided file paths.</span>
+
+<span class="sd">    Example usage:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        @solid(</span>
+<span class="sd">            output_defs=[</span>
+<span class="sd">                OutputDefinition(</span>
+<span class="sd">                    io_manager_key=&quot;io_manager&quot;, metadata={&quot;path&quot;: &quot;path/to/sample_output&quot;}</span>
+<span class="sd">                )</span>
+<span class="sd">            ]</span>
+<span class="sd">        )</span>
+<span class="sd">        def sample_data(context, df):</span>
+<span class="sd">            return df[:5]</span>
+
+<span class="sd">        @pipeline(</span>
+<span class="sd">            mode_defs=[</span>
+<span class="sd">                ModeDefinition(resource_defs={&quot;io_manager&quot;: custom_path_fs_io_manager}),</span>
+<span class="sd">            ],</span>
+<span class="sd">        )</span>
+<span class="sd">        def pipe():</span>
+<span class="sd">            sample_data()</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">CustomPathPickledObjectFilesystemIOManager</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">])</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

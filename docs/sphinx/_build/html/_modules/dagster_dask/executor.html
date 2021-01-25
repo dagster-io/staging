@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster_dask.executor &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+ 
+<link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster_dask.executor</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">dask</span>
+<span class="kn">import</span> <span class="nn">dask.distributed</span>
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">Executor</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">Permissive</span><span class="p">,</span> <span class="n">Selector</span><span class="p">,</span> <span class="n">StringSource</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">seven</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.executor</span> <span class="kn">import</span> <span class="n">check_cross_process_constraints</span><span class="p">,</span> <span class="n">executor</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">raise_execution_interrupts</span>
+<span class="kn">from</span> <span class="nn">dagster.core.events</span> <span class="kn">import</span> <span class="n">DagsterEvent</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.api</span> <span class="kn">import</span> <span class="n">create_execution_plan</span><span class="p">,</span> <span class="n">execute_plan</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.context.system</span> <span class="kn">import</span> <span class="n">SystemPipelineExecutionContext</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.plan.plan</span> <span class="kn">import</span> <span class="n">ExecutionPlan</span>
+<span class="kn">from</span> <span class="nn">dagster.core.execution.retries</span> <span class="kn">import</span> <span class="n">Retries</span>
+<span class="kn">from</span> <span class="nn">dagster.core.instance</span> <span class="kn">import</span> <span class="n">DagsterInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">frozentags</span><span class="p">,</span> <span class="n">iterate_with_context</span>
+
+<span class="c1"># Dask resource requirements are specified under this key</span>
+<span class="n">DASK_RESOURCE_REQUIREMENTS_KEY</span> <span class="o">=</span> <span class="s2">&quot;dagster-dask/resource_requirements&quot;</span>
+
+
+<div class="viewcode-block" id="dask_executor"><a class="viewcode-back" href="../../sections/api/apidocs/libraries/dagster_dask.html#dagster_dask.dask_executor">[docs]</a><span class="nd">@executor</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;dask&quot;</span><span class="p">,</span>
+    <span class="n">config_schema</span><span class="o">=</span><span class="p">{</span>
+        <span class="s2">&quot;cluster&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+            <span class="n">Selector</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;existing&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="p">{</span><span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="n">StringSource</span><span class="p">},</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Connect to an existing scheduler.&quot;</span><span class="p">,</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;local&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Local cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;yarn&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;YARN cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;ssh&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;SSH cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;pbs&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;PBS cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;moab&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Moab cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;sge&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;SGE cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;lsf&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;LSF cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;slurm&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;SLURM cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;oar&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;OAR cluster configuration.&quot;</span>
+                    <span class="p">),</span>
+                    <span class="s2">&quot;kube&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span>
+                        <span class="n">Permissive</span><span class="p">(),</span>
+                        <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                        <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Kubernetes cluster configuration.&quot;</span><span class="p">,</span>
+                    <span class="p">),</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">},</span>
+<span class="p">)</span>
+<span class="k">def</span> <span class="nf">dask_executor</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Dask-based executor.</span>
+
+<span class="sd">    The &#39;cluster&#39; can be one of the following:</span>
+<span class="sd">    (&#39;existing&#39;, &#39;local&#39;, &#39;yarn&#39;, &#39;ssh&#39;, &#39;pbs&#39;, &#39;moab&#39;, &#39;sge&#39;, &#39;lsf&#39;, &#39;slurm&#39;, &#39;oar&#39;, &#39;kube&#39;).</span>
+
+<span class="sd">    If the Dask executor is used without providing executor-specific config, a local Dask cluster</span>
+<span class="sd">    will be created (as when calling :py:class:`dask.distributed.Client() &lt;dask:distributed.Client&gt;`</span>
+<span class="sd">    with :py:class:`dask.distributed.LocalCluster() &lt;dask:distributed.LocalCluster&gt;`).</span>
+
+<span class="sd">    The Dask executor optionally takes the following config:</span>
+
+<span class="sd">    .. code-block:: none</span>
+
+<span class="sd">        cluster:</span>
+<span class="sd">            {</span>
+<span class="sd">                local?: # takes distributed.LocalCluster parameters</span>
+<span class="sd">                    {</span>
+<span class="sd">                        timeout?: 5,  # Timeout duration for initial connection to the scheduler</span>
+<span class="sd">                        n_workers?: 4  # Number of workers to start</span>
+<span class="sd">                        threads_per_worker?: 1 # Number of threads per each worker</span>
+<span class="sd">                    }</span>
+<span class="sd">            }</span>
+
+<span class="sd">    If you&#39;d like to configure a dask executor in addition to the</span>
+<span class="sd">    :py:class:`~dagster.default_executors`, you should add it to the ``executor_defs`` defined on a</span>
+<span class="sd">    :py:class:`~dagster.ModeDefinition` as follows:</span>
+
+<span class="sd">    .. code-block:: python</span>
+
+<span class="sd">        from dagster import ModeDefinition, default_executors, pipeline</span>
+<span class="sd">        from dagster_dask import dask_executor</span>
+
+<span class="sd">        @pipeline(mode_defs=[ModeDefinition(executor_defs=default_executors + [dask_executor])])</span>
+<span class="sd">        def dask_enabled_pipeline():</span>
+<span class="sd">            pass</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">check_cross_process_constraints</span><span class="p">(</span><span class="n">init_context</span><span class="p">)</span>
+    <span class="p">((</span><span class="n">cluster_type</span><span class="p">,</span> <span class="n">cluster_configuration</span><span class="p">),)</span> <span class="o">=</span> <span class="n">init_context</span><span class="o">.</span><span class="n">executor_config</span><span class="p">[</span><span class="s2">&quot;cluster&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">DaskExecutor</span><span class="p">(</span><span class="n">cluster_type</span><span class="p">,</span> <span class="n">cluster_configuration</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">query_on_dask_worker</span><span class="p">(</span>
+    <span class="n">dependencies</span><span class="p">,</span> <span class="n">recon_pipeline</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">run_config</span><span class="p">,</span> <span class="n">step_keys</span><span class="p">,</span> <span class="n">mode</span><span class="p">,</span> <span class="n">instance_ref</span><span class="p">,</span>
+<span class="p">):</span>  <span class="c1"># pylint: disable=unused-argument</span>
+    <span class="sd">&quot;&quot;&quot;Note that we need to pass &quot;dependencies&quot; to ensure Dask sequences futures during task</span>
+<span class="sd">    scheduling, even though we do not use this argument within the function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="n">DagsterInstance</span><span class="o">.</span><span class="n">from_ref</span><span class="p">(</span><span class="n">instance_ref</span><span class="p">)</span> <span class="k">as</span> <span class="n">instance</span><span class="p">:</span>
+        <span class="n">execution_plan</span> <span class="o">=</span> <span class="n">create_execution_plan</span><span class="p">(</span>
+            <span class="n">recon_pipeline</span><span class="o">.</span><span class="n">subset_for_execution_from_existing_pipeline</span><span class="p">(</span>
+                <span class="n">pipeline_run</span><span class="o">.</span><span class="n">solids_to_execute</span>
+            <span class="p">),</span>
+            <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">,</span>
+            <span class="n">step_keys_to_execute</span><span class="o">=</span><span class="n">step_keys</span><span class="p">,</span>
+            <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">execute_plan</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="n">instance</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">,</span> <span class="n">run_config</span><span class="o">=</span><span class="n">run_config</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">get_dask_resource_requirements</span><span class="p">(</span><span class="n">tags</span><span class="p">):</span>
+    <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="s2">&quot;tags&quot;</span><span class="p">,</span> <span class="n">frozentags</span><span class="p">)</span>
+    <span class="n">req_str</span> <span class="o">=</span> <span class="n">tags</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">DASK_RESOURCE_REQUIREMENTS_KEY</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">req_str</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">seven</span><span class="o">.</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">req_str</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">{}</span>
+
+
+<span class="k">class</span> <span class="nc">DaskExecutor</span><span class="p">(</span><span class="n">Executor</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cluster_type</span><span class="p">,</span> <span class="n">cluster_configuration</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_type</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">cluster_type</span><span class="p">,</span> <span class="s2">&quot;cluster_type&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;local&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_configuration</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+            <span class="n">cluster_configuration</span><span class="p">,</span> <span class="s2">&quot;cluster_configuration&quot;</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">retries</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Retries</span><span class="o">.</span><span class="n">disabled_mode</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_context</span><span class="p">,</span> <span class="n">execution_plan</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">pipeline_context</span><span class="p">,</span> <span class="s2">&quot;pipeline_context&quot;</span><span class="p">,</span> <span class="n">SystemPipelineExecutionContext</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">execution_plan</span><span class="p">,</span> <span class="s2">&quot;execution_plan&quot;</span><span class="p">,</span> <span class="n">ExecutionPlan</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">param_invariant</span><span class="p">(</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="p">,</span> <span class="n">DaskExecutor</span><span class="p">),</span>
+            <span class="s2">&quot;pipeline_context&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Expected executor to be DaskExecutor got </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">executor</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="n">pipeline_context</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">is_persistent</span><span class="p">,</span>
+            <span class="s2">&quot;Dask execution requires a persistent DagsterInstance&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">step_levels</span> <span class="o">=</span> <span class="n">execution_plan</span><span class="o">.</span><span class="n">get_steps_to_execute_by_level</span><span class="p">()</span>
+
+        <span class="n">pipeline_name</span> <span class="o">=</span> <span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_name</span>
+
+        <span class="n">instance</span> <span class="o">=</span> <span class="n">pipeline_context</span><span class="o">.</span><span class="n">instance</span>
+
+        <span class="n">cluster_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_type</span>
+        <span class="k">if</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;existing&quot;</span><span class="p">:</span>
+            <span class="c1"># address passed directly to Client() below to connect to existing Scheduler</span>
+            <span class="n">cluster</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_configuration</span><span class="p">[</span><span class="s2">&quot;address&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask.distributed</span> <span class="kn">import</span> <span class="n">LocalCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">LocalCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;yarn&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_yarn</span> <span class="kn">import</span> <span class="n">YarnCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">YarnCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;ssh&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask.distributed</span> <span class="kn">import</span> <span class="n">SSHCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">SSHCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;pbs&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_jobqueue</span> <span class="kn">import</span> <span class="n">PBSCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">PBSCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;moab&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_jobqueue</span> <span class="kn">import</span> <span class="n">MoabCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">MoabCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;sge&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_jobqueue</span> <span class="kn">import</span> <span class="n">SGECluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">SGECluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;lsf&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_jobqueue</span> <span class="kn">import</span> <span class="n">LSFCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">LSFCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;slurm&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_jobqueue</span> <span class="kn">import</span> <span class="n">SLURMCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">SLURMCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;oar&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_jobqueue</span> <span class="kn">import</span> <span class="n">OARCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">OARCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;kube&quot;</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dask_kubernetes</span> <span class="kn">import</span> <span class="n">KubeCluster</span>
+
+            <span class="n">cluster</span> <span class="o">=</span> <span class="n">KubeCluster</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">build_dict</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Must be providing one of the following (&#39;existing&#39;, &#39;local&#39;, &#39;yarn&#39;, &#39;ssh&#39;, &#39;pbs&#39;, &#39;moab&#39;, &#39;sge&#39;, &#39;lsf&#39;, &#39;slurm&#39;, &#39;oar&#39;, &#39;kube&#39;) not </span><span class="si">{</span><span class="n">cluster_type</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="k">with</span> <span class="n">dask</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">Client</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span> <span class="k">as</span> <span class="n">client</span><span class="p">:</span>
+            <span class="n">execution_futures</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">execution_futures_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="k">for</span> <span class="n">step_level</span> <span class="ow">in</span> <span class="n">step_levels</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">step_level</span><span class="p">:</span>
+                    <span class="c1"># We ensure correctness in sequencing by letting Dask schedule futures and</span>
+                    <span class="c1"># awaiting dependencies within each step.</span>
+                    <span class="n">dependencies</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">step_input</span> <span class="ow">in</span> <span class="n">step</span><span class="o">.</span><span class="n">step_inputs</span><span class="p">:</span>
+                        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">step_input</span><span class="o">.</span><span class="n">dependency_keys</span><span class="p">:</span>
+                            <span class="n">dependencies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">execution_futures_dict</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+
+                    <span class="n">run_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">pipeline_context</span><span class="o">.</span><span class="n">run_config</span><span class="p">,</span> <span class="n">execution</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;in_process&quot;</span><span class="p">:</span> <span class="p">{}})</span>
+                    <span class="n">recon_repo</span> <span class="o">=</span> <span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline</span><span class="o">.</span><span class="n">get_reconstructable_repository</span><span class="p">()</span>
+
+                    <span class="n">dask_task_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">)</span>
+
+                    <span class="n">recon_pipeline</span> <span class="o">=</span> <span class="n">recon_repo</span><span class="o">.</span><span class="n">get_reconstructable_pipeline</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">)</span>
+
+                    <span class="n">future</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span>
+                        <span class="n">query_on_dask_worker</span><span class="p">,</span>
+                        <span class="n">dependencies</span><span class="p">,</span>
+                        <span class="n">recon_pipeline</span><span class="p">,</span>
+                        <span class="n">pipeline_context</span><span class="o">.</span><span class="n">pipeline_run</span><span class="p">,</span>
+                        <span class="n">run_config</span><span class="p">,</span>
+                        <span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">],</span>
+                        <span class="n">pipeline_context</span><span class="o">.</span><span class="n">mode_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                        <span class="n">instance</span><span class="o">.</span><span class="n">get_ref</span><span class="p">(),</span>
+                        <span class="n">key</span><span class="o">=</span><span class="n">dask_task_name</span><span class="p">,</span>
+                        <span class="n">resources</span><span class="o">=</span><span class="n">get_dask_resource_requirements</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">tags</span><span class="p">),</span>
+                    <span class="p">)</span>
+
+                    <span class="n">execution_futures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">future</span><span class="p">)</span>
+                    <span class="n">execution_futures_dict</span><span class="p">[</span><span class="n">step</span><span class="o">.</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">future</span>
+
+            <span class="c1"># This tells Dask to awaits the step executions and retrieve their results to the</span>
+            <span class="c1"># master</span>
+            <span class="n">futures</span> <span class="o">=</span> <span class="n">dask</span><span class="o">.</span><span class="n">distributed</span><span class="o">.</span><span class="n">as_completed</span><span class="p">(</span><span class="n">execution_futures</span><span class="p">,</span> <span class="n">with_results</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="c1"># Allow interrupts while waiting for the results from Dask</span>
+            <span class="k">for</span> <span class="n">future</span><span class="p">,</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">iterate_with_context</span><span class="p">(</span><span class="n">raise_execution_interrupts</span><span class="p">,</span> <span class="n">futures</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">step_event</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+                    <span class="n">check</span><span class="o">.</span><span class="n">inst</span><span class="p">(</span><span class="n">step_event</span><span class="p">,</span> <span class="n">DagsterEvent</span><span class="p">)</span>
+                    <span class="k">yield</span> <span class="n">step_event</span>
+
+    <span class="k">def</span> <span class="nf">build_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns a dict we can use for kwargs passed to dask client instantiation.</span>
+
+<span class="sd">        Intended to be used like:</span>
+
+<span class="sd">        with dask.distributed.Client(**cfg.build_dict()) as client:</span>
+<span class="sd">            &lt;&lt; use client here &gt;&gt;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;yarn&quot;</span><span class="p">,</span> <span class="s2">&quot;pbs&quot;</span><span class="p">,</span> <span class="s2">&quot;moab&quot;</span><span class="p">,</span> <span class="s2">&quot;sge&quot;</span><span class="p">,</span> <span class="s2">&quot;lsf&quot;</span><span class="p">,</span> <span class="s2">&quot;slurm&quot;</span><span class="p">,</span> <span class="s2">&quot;oar&quot;</span><span class="p">,</span> <span class="s2">&quot;kube&quot;</span><span class="p">]:</span>
+            <span class="n">dask_cfg</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">pipeline_name</span><span class="p">}</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dask_cfg</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_configuration</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_configuration</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">dask_cfg</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+        <span class="c1"># if address is set, don&#39;t add LocalCluster args</span>
+        <span class="c1"># context: https://github.com/dask/distributed/issues/3313</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster_type</span> <span class="o">==</span> <span class="s2">&quot;local&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="s2">&quot;address&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dask_cfg</span><span class="p">):</span>
+            <span class="c1"># We set threads_per_worker because Dagster is not thread-safe. Even though</span>
+            <span class="c1"># environments=True by default, there is a clever piece of machinery</span>
+            <span class="c1"># (dask.distributed.deploy.local.nprocesses_nthreads) that automagically makes execution</span>
+            <span class="c1"># multithreaded by default when the number of available cores is greater than 4.</span>
+            <span class="c1"># See: https://github.com/dagster-io/dagster/issues/2181</span>
+            <span class="c1"># We may want to try to figure out a way to enforce this on remote Dask clusters against</span>
+            <span class="c1"># which users run Dagster workloads.</span>
+            <span class="n">dask_cfg</span><span class="p">[</span><span class="s2">&quot;threads_per_worker&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+        <span class="k">return</span> <span class="n">dask_cfg</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

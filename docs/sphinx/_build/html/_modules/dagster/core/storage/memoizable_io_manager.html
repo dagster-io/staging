@@ -1,0 +1,171 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.memoizable_io_manager &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.memoizable_io_manager</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">IOManager</span><span class="p">,</span> <span class="n">check</span><span class="p">,</span> <span class="n">io_manager</span>
+<span class="kn">from</span> <span class="nn">dagster.config</span> <span class="kn">import</span> <span class="n">Field</span>
+<span class="kn">from</span> <span class="nn">dagster.config.source</span> <span class="kn">import</span> <span class="n">StringSource</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">,</span> <span class="n">mkdir_p</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.backcompat</span> <span class="kn">import</span> <span class="n">experimental</span>
+
+
+<div class="viewcode-block" id="MemoizableIOManager"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.memoizable_io_manager.MemoizableIOManager">[docs]</a><span class="k">class</span> <span class="nc">MemoizableIOManager</span><span class="p">(</span><span class="n">IOManager</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Base class for IO manager enabled to work with memoized execution. Users should implement</span>
+<span class="sd">    the ``load_input`` and ``handle_output`` methods described in the ``IOManager`` API, and the</span>
+<span class="sd">    ``has_output`` method, which returns a boolean representing whether a data object can be found.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">has_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The user-defined method that returns whether data exists given the metadata.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            context (OutputContext): The context of the step performing this check.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool: True if there is data present that matches the provided context. False otherwise.</span>
+<span class="sd">        &quot;&quot;&quot;</span></div>
+
+
+<span class="k">class</span> <span class="nc">VersionedPickledObjectFilesystemIOManager</span><span class="p">(</span><span class="n">MemoizableIOManager</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;base_dir&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_mode</span> <span class="o">=</span> <span class="s2">&quot;wb&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">read_mode</span> <span class="o">=</span> <span class="s2">&quot;rb&quot;</span>
+
+    <span class="k">def</span> <span class="nf">_get_path</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="c1"># automatically construct filepath</span>
+        <span class="n">step_key</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">step_key</span><span class="p">,</span> <span class="s2">&quot;context.step_key&quot;</span><span class="p">)</span>
+        <span class="n">output_name</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;context.name&quot;</span><span class="p">)</span>
+        <span class="n">version</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">version</span><span class="p">,</span> <span class="s2">&quot;context.version&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">step_key</span><span class="p">,</span> <span class="n">output_name</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">handle_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Pickle the data with the associated version, and store the object to a file.</span>
+
+<span class="sd">        This method omits the AssetMaterialization event so assets generated by it won&#39;t be tracked</span>
+<span class="sd">        by the Asset Catalog.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+        <span class="c1"># Ensure path exists</span>
+        <span class="n">mkdir_p</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">write_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_obj</span><span class="p">:</span>
+            <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">write_obj</span><span class="p">,</span> <span class="n">PICKLE_PROTOCOL</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">load_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Unpickle the file and Load it to a data object.&quot;&quot;&quot;</span>
+
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">upstream_output</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_mode</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_obj</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">read_obj</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_output</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns true if data object exists with the associated version, False otherwise.&quot;&quot;&quot;</span>
+
+        <span class="n">filepath</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_path</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="versioned_filesystem_io_manager"><a class="viewcode-back" href="../../../../sections/api/apidocs/internals.html#dagster.core.storage.memoizable_io_manager.versioned_filesystem_io_manager">[docs]</a><span class="nd">@io_manager</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="n">Field</span><span class="p">(</span><span class="n">StringSource</span><span class="p">,</span> <span class="n">default_value</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span> <span class="n">is_required</span><span class="o">=</span><span class="kc">False</span><span class="p">)})</span>
+<span class="nd">@experimental</span>
+<span class="k">def</span> <span class="nf">versioned_filesystem_io_manager</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Filesystem IO manager that utilizes versioning of stored objects.</span>
+
+<span class="sd">    It allows users to specify a base directory where all the step outputs will be stored in. It</span>
+<span class="sd">    serializes and deserializes output values (assets) using pickling and automatically constructs</span>
+<span class="sd">    the filepaths for the assets using the provided directory, and the version for a provided step</span>
+<span class="sd">    output.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">VersionedPickledObjectFilesystemIOManager</span><span class="p">(</span><span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span><span class="p">[</span><span class="s2">&quot;base_dir&quot;</span><span class="p">])</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

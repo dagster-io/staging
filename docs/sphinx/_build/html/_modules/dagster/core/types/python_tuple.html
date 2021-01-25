@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.types.python_tuple &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.types.python_tuple</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.config.config_type</span> <span class="kn">import</span> <span class="n">Array</span><span class="p">,</span> <span class="n">ConfigAnyInstance</span>
+<span class="kn">from</span> <span class="nn">dagster.core.types.dagster_type</span> <span class="kn">import</span> <span class="n">DagsterTypeKind</span>
+
+<span class="kn">from</span> <span class="nn">.config_schema</span> <span class="kn">import</span> <span class="n">DagsterTypeLoader</span>
+<span class="kn">from</span> <span class="nn">.dagster_type</span> <span class="kn">import</span> <span class="n">DagsterType</span><span class="p">,</span> <span class="n">PythonObjectDagsterType</span><span class="p">,</span> <span class="n">resolve_dagster_type</span>
+
+<span class="n">PythonTuple</span> <span class="o">=</span> <span class="n">PythonObjectDagsterType</span><span class="p">(</span><span class="nb">tuple</span><span class="p">,</span> <span class="s2">&quot;PythonTuple&quot;</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Represents a python tuple&quot;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">TypedTupleDagsterTypeLoader</span><span class="p">(</span><span class="n">DagsterTypeLoader</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dagster_types</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_types</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span><span class="n">dagster_types</span><span class="p">,</span> <span class="s2">&quot;dagster_types&quot;</span><span class="p">,</span> <span class="n">of_type</span><span class="o">=</span><span class="n">DagsterType</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema_type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">Array</span><span class="p">(</span><span class="n">ConfigAnyInstance</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">construct_from_config_value</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">config_value</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_dagster_types</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">construct_from_config_value</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">config_value</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">_TypedPythonTuple</span><span class="p">(</span><span class="n">DagsterType</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dagster_types</span><span class="p">):</span>
+        <span class="n">all_have_input_configs</span> <span class="o">=</span> <span class="nb">all</span><span class="p">((</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">loader</span> <span class="k">for</span> <span class="n">dagster_type</span> <span class="ow">in</span> <span class="n">dagster_types</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span> <span class="o">=</span> <span class="n">dagster_types</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">_TypedPythonTuple</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">key</span><span class="o">=</span><span class="s2">&quot;TypedPythonTuple&quot;</span> <span class="o">+</span> <span class="s2">&quot;.&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">dagster_types</span><span class="p">)),</span>
+            <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">loader</span><span class="o">=</span><span class="p">(</span><span class="n">TypedTupleDagsterTypeLoader</span><span class="p">(</span><span class="n">dagster_types</span><span class="p">)</span> <span class="k">if</span> <span class="n">all_have_input_configs</span> <span class="k">else</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="n">type_check_fn</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type_check_method</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">type_check_method</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.definitions.events</span> <span class="kn">import</span> <span class="n">TypeCheck</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span>
+                <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Value should be a tuple, got a </span><span class="si">{value_type}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">value_type</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span>
+                <span class="n">success</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="n">description</span><span class="o">=</span><span class="p">(</span>
+                    <span class="s2">&quot;Tuple with key </span><span class="si">{key}</span><span class="s2"> requires </span><span class="si">{n}</span><span class="s2"> entries, received </span><span class="si">{m}</span><span class="s2"> &quot;</span> <span class="s2">&quot;values&quot;</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span><span class="p">),</span> <span class="n">m</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)),</span>
+            <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">item</span><span class="p">,</span> <span class="n">dagster_type</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span><span class="p">):</span>
+            <span class="n">item_check</span> <span class="o">=</span> <span class="n">dagster_type</span><span class="o">.</span><span class="n">type_check</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">item_check</span><span class="o">.</span><span class="n">success</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">item_check</span>
+
+        <span class="k">return</span> <span class="n">TypeCheck</span><span class="p">(</span><span class="n">success</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">display_name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="s2">&quot;Tuple[</span><span class="si">{}</span><span class="s2">]&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">inner_type</span><span class="o">.</span><span class="n">display_name</span> <span class="k">for</span> <span class="n">inner_type</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span><span class="p">])</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">inner_types</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">type_param_keys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">dt</span><span class="o">.</span><span class="n">key</span> <span class="k">for</span> <span class="n">dt</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">dagster_types</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">create_typed_tuple</span><span class="p">(</span><span class="o">*</span><span class="n">dagster_type_args</span><span class="p">):</span>
+    <span class="n">dagster_types</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">resolve_dagster_type</span><span class="p">,</span> <span class="n">dagster_type_args</span><span class="p">))</span>
+
+    <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+        <span class="ow">not</span> <span class="nb">any</span><span class="p">((</span><span class="n">dagster_type</span><span class="o">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DagsterTypeKind</span><span class="o">.</span><span class="n">NOTHING</span> <span class="k">for</span> <span class="n">dagster_type</span> <span class="ow">in</span> <span class="n">dagster_types</span><span class="p">)),</span>
+        <span class="s2">&quot;Cannot create a runtime tuple containing inner type Nothing. Use List for fan-in&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">_TypedPythonTuple</span><span class="p">(</span><span class="n">dagster_types</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">DagsterTupleApi</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tuple_types</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">not_none_param</span><span class="p">(</span><span class="n">tuple_types</span><span class="p">,</span> <span class="s2">&quot;tuple_types&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">tuple_types</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">create_typed_tuple</span><span class="p">(</span><span class="o">*</span><span class="n">tuple_types</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">create_typed_tuple</span><span class="p">(</span><span class="n">tuple_types</span><span class="p">)</span>
+
+
+<span class="n">Tuple</span> <span class="o">=</span> <span class="n">DagsterTupleApi</span><span class="p">()</span>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

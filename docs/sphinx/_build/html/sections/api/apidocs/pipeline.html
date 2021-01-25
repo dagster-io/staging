@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pipelines &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+    <link rel="next" title="Presets" href="presets.html" />
+    <link rel="prev" title="Partitions" href="partitions.html" />
+ 
+<link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="partitions.html" title="Previous document">Partitions</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="presets.html" title="Next document">Presets</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="pipelines">
+<h1>Pipelines<a class="headerlink" href="#pipelines" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="pipeline-definitions">
+<h2>Pipeline definitions<a class="headerlink" href="#pipeline-definitions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="dagster.pipeline">
+<code class="sig-prename descclassname">&#64;</code><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">pipeline</code><span class="sig-paren">(</span><em class="sig-param">name=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">mode_defs=None</em>, <em class="sig-param">preset_defs=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">hook_defs=None</em>, <em class="sig-param">input_defs=None</em>, <em class="sig-param">output_defs=None</em>, <em class="sig-param">config_schema=None</em>, <em class="sig-param">config_fn=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/decorators/pipeline.html#pipeline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a pipeline with the specified parameters from the decorated composition function.</p>
+<p>Using this decorator allows you to build up the dependency graph of the pipeline by writing a
+function that invokes solids and passes the output to other solids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline. Must be unique within any
+<a class="reference internal" href="repositories.html#dagster.RepositoryDefinition" title="dagster.RepositoryDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">RepositoryDefinition</span></code></a> containing the pipeline.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the pipeline.</p></li>
+<li><p><strong>mode_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><em>ModeDefinition</em></a><em>]</em><em>]</em>) – The set of modes in which this pipeline can
+operate. Modes are used to attach resources, custom loggers, custom system storage
+options, and custom executors to a pipeline. Modes can be used, e.g., to vary
+available resource and logging implementations between local test and production runs.</p></li>
+<li><p><strong>preset_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="presets.html#dagster.PresetDefinition" title="dagster.PresetDefinition"><em>PresetDefinition</em></a><em>]</em><em>]</em>) – A set of preset collections of configuration
+options that may be used to execute a pipeline. A preset consists of an environment
+dict, an optional subset of solids to execute, and a mode selection. Presets can be used
+to ship common combinations of options to pipeline end users in Python code, and can
+be selected by tools like Dagit.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary metadata for any execution run of the pipeline.
+Values that are not strings will be json encoded and must meet the criteria that
+<cite>json.loads(json.dumps(value)) == value</cite>.  These tag values may be overwritten by tag
+values provided at invocation time.</p></li>
+<li><p><strong>hook_defs</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><em>HookDefinition</em><em>]</em><em>]</em>) – A set of hook definitions applied to the
+pipeline. When a hook is applied to a pipeline, it will be attached to all solid
+instances within the pipeline.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@solid</span><span class="p">(</span><span class="n">output_defs</span><span class="o">=</span><span class="p">[</span><span class="n">OutputDefinition</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="s2">&quot;two&quot;</span><span class="p">),</span> <span class="n">OutputDefinition</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="s2">&quot;four&quot;</span><span class="p">)])</span>
+<span class="k">def</span> <span class="nf">emit_two_four</span><span class="p">(</span><span class="n">_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;two&quot;</span><span class="p">)</span>
+    <span class="k">yield</span> <span class="n">Output</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="s2">&quot;four&quot;</span><span class="p">)</span>
+
+
+<span class="nd">@lambda_solid</span>
+<span class="k">def</span> <span class="nf">add_one</span><span class="p">(</span><span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">num</span> <span class="o">+</span> <span class="mi">1</span>
+
+
+<span class="nd">@lambda_solid</span>
+<span class="k">def</span> <span class="nf">mult_two</span><span class="p">(</span><span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">num</span> <span class="o">*</span> <span class="mi">2</span>
+
+
+<span class="nd">@pipeline</span>
+<span class="k">def</span> <span class="nf">math_pipeline</span><span class="p">():</span>
+    <span class="n">two</span><span class="p">,</span> <span class="n">four</span> <span class="o">=</span> <span class="n">emit_two_four</span><span class="p">()</span>
+    <span class="n">add_one</span><span class="p">(</span><span class="n">two</span><span class="p">)</span>
+    <span class="n">mult_two</span><span class="p">(</span><span class="n">four</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.PipelineDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">PipelineDefinition</code><span class="sig-paren">(</span><em class="sig-param">solid_defs</em>, <em class="sig-param">name=None</em>, <em class="sig-param">description=None</em>, <em class="sig-param">dependencies=None</em>, <em class="sig-param">mode_defs=None</em>, <em class="sig-param">preset_defs=None</em>, <em class="sig-param">tags=None</em>, <em class="sig-param">hook_defs=None</em>, <em class="sig-param">input_mappings=None</em>, <em class="sig-param">output_mappings=None</em>, <em class="sig-param">config_mapping=None</em>, <em class="sig-param">positional_inputs=None</em>, <em class="sig-param">_parent_pipeline_def=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../_modules/dagster/core/definitions/pipeline.html#PipelineDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.PipelineDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Defines a Dagster pipeline.</p>
+<p>A pipeline is made up of</p>
+<ul class="simple">
+<li><p>Solids, each of which is a single functional unit of data computation.</p></li>
+<li><p>Dependencies, which determine how the values produced by solids as their outputs flow from
+one solid to another. This tells Dagster how to arrange solids, and potentially multiple
+aliased instances of solids, into a directed, acyclic graph (DAG) of compute.</p></li>
+<li><p>Modes, which can be used to attach resources, custom loggers, custom system storage
+options, and custom executors to a pipeline, and to switch between them.</p></li>
+<li><p>Presets, which can be used to ship common combinations of pipeline config options in Python
+code, and to switch between them.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>solid_defs</strong> (<em>List</em><em>[</em><a class="reference internal" href="solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition"><em>SolidDefinition</em></a><em>]</em>) – The set of solids used in this pipeline.</p></li>
+<li><p><strong>name</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the pipeline. Must be unique within any
+<a class="reference internal" href="repositories.html#dagster.RepositoryDefinition" title="dagster.RepositoryDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">RepositoryDefinition</span></code></a> containing the pipeline.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – A human-readable description of the pipeline.</p></li>
+<li><p><strong>dependencies</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="#dagster.SolidInvocation" title="dagster.SolidInvocation"><em>SolidInvocation</em></a><em>]</em><em>, </em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><a class="reference internal" href="#dagster.DependencyDefinition" title="dagster.DependencyDefinition"><em>DependencyDefinition</em></a><em>]</em><em>]</em><em>]</em>) – A structure that declares the dependencies of each solid’s inputs on the outputs of
+other solids in the pipeline. Keys of the top level dict are either the string names of
+solids in the pipeline or, in the case of aliased solids,
+<a class="reference internal" href="#dagster.SolidInvocation" title="dagster.SolidInvocation"><code class="xref py py-class docutils literal notranslate"><span class="pre">SolidInvocations</span></code></a>. Values of the top level dict are
+themselves dicts, which map input names belonging to the solid or aliased solid to
+<a class="reference internal" href="#dagster.DependencyDefinition" title="dagster.DependencyDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">DependencyDefinitions</span></code></a>.</p></li>
+<li><p><strong>mode_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="modes-resources.html#dagster.ModeDefinition" title="dagster.ModeDefinition"><em>ModeDefinition</em></a><em>]</em><em>]</em>) – The set of modes in which this pipeline can
+operate. Modes are used to attach resources, custom loggers, custom system storage
+options, and custom executors to a pipeline. Modes can be used, e.g., to vary available
+resource and logging implementations between local test and production runs.</p></li>
+<li><p><strong>preset_defs</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference internal" href="presets.html#dagster.PresetDefinition" title="dagster.PresetDefinition"><em>PresetDefinition</em></a><em>]</em><em>]</em>) – A set of preset collections of configuration
+options that may be used to execute a pipeline. A preset consists of an environment
+dict, an optional subset of solids to execute, and a mode selection. Presets can be used
+to ship common combinations of options to pipeline end users in Python code, and can
+be selected by tools like Dagit.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary metadata for any execution run of the pipeline.
+Values that are not strings will be json encoded and must meet the criteria that
+<cite>json.loads(json.dumps(value)) == value</cite>.  These tag values may be overwritten by tag
+values provided at invocation time.</p></li>
+<li><p><strong>hook_defs</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><em>HookDefinition</em><em>]</em><em>]</em>) – A set of hook definitions applied to the
+pipeline. When a hook is applied to a pipeline, it will be attached to all solid
+instances within the pipeline.</p></li>
+<li><p><strong>_parent_pipeline_def</strong> (<em>INTERNAL ONLY</em>) – Used for tracking pipelines created using solid subsets.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@lambda_solid</span>
+<span class="k">def</span> <span class="nf">return_one</span><span class="p">():</span>
+    <span class="k">return</span> <span class="mi">1</span>
+
+
+<span class="nd">@solid</span><span class="p">(</span><span class="n">input_defs</span><span class="o">=</span><span class="p">[</span><span class="n">InputDefinition</span><span class="p">(</span><span class="s1">&#39;num&#39;</span><span class="p">)],</span> <span class="n">required_resource_keys</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;op&#39;</span><span class="p">})</span>
+<span class="k">def</span> <span class="nf">apply_op</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">num</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">context</span><span class="o">.</span><span class="n">resources</span><span class="o">.</span><span class="n">op</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
+
+<span class="nd">@resource</span><span class="p">(</span><span class="n">config_schema</span><span class="o">=</span><span class="n">Int</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">adder_resource</span><span class="p">(</span><span class="n">init_context</span><span class="p">):</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">+</span> <span class="n">init_context</span><span class="o">.</span><span class="n">resource_config</span>
+
+
+<span class="n">add_mode</span> <span class="o">=</span> <span class="n">ModeDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;add_mode&#39;</span><span class="p">,</span>
+    <span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;op&#39;</span><span class="p">:</span> <span class="n">adder_resource</span><span class="p">},</span>
+    <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Mode that adds things&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="n">add_three_preset</span> <span class="o">=</span> <span class="n">PresetDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;add_three_preset&#39;</span><span class="p">,</span>
+    <span class="n">run_config</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;resources&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;op&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">}}},</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;add_mode&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<span class="n">pipeline_def</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+    <span class="n">name</span><span class="o">=</span><span class="s1">&#39;basic&#39;</span><span class="p">,</span>
+    <span class="n">solid_defs</span><span class="o">=</span><span class="p">[</span><span class="n">return_one</span><span class="p">,</span> <span class="n">apply_op</span><span class="p">],</span>
+    <span class="n">dependencies</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;apply_op&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;num&#39;</span><span class="p">:</span> <span class="n">DependencyDefinition</span><span class="p">(</span><span class="s1">&#39;return_one&#39;</span><span class="p">)}},</span>
+    <span class="n">mode_defs</span><span class="o">=</span><span class="p">[</span><span class="n">add_mode</span><span class="p">],</span>
+    <span class="n">preset_defs</span><span class="o">=</span><span class="p">[</span><span class="n">add_three_preset</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="dependencies-and-aliases">
+<h2>Dependencies and aliases<a class="headerlink" href="#dependencies-and-aliases" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="dagster.DependencyDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">DependencyDefinition</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/dependency.html#DependencyDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.DependencyDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents an edge in the DAG of solid instances forming a pipeline.</p>
+<p>This object is used at the leaves of a dictionary structure that represents the complete
+dependency structure of a pipeline whose keys represent the dependent solid and dependent
+input, so this object only contains information about the dependee.</p>
+<p>Concretely, if the input named ‘input’ of solid_b depends on the output named ‘result’ of
+solid_a, this structure will look as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dependency_structure</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;solid_b&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;input&#39;</span><span class="p">:</span> <span class="n">DependencyDefinition</span><span class="p">(</span><span class="s1">&#39;solid_a&#39;</span><span class="p">,</span> <span class="s1">&#39;result&#39;</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In general, users should prefer not to construct this class directly or use the
+<a class="reference internal" href="#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineDefinition</span></code></a> API that requires instances of this class. Instead, use the
+<a class="reference internal" href="#dagster.pipeline" title="dagster.pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;pipeline</span></code></a> API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pipeline</span>
+<span class="k">def</span> <span class="nf">pipeline</span><span class="p">():</span>
+    <span class="n">solid_b</span><span class="p">(</span><span class="n">solid_a</span><span class="p">())</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>solid</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the solid that is depended on, that is, from which the value
+passed between the two solids originates.</p></li>
+<li><p><strong>output</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the output that is depended on. (default: “result”)</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Human-readable description of this dependency.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.MultiDependencyDefinition">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">MultiDependencyDefinition</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/dependency.html#MultiDependencyDefinition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.MultiDependencyDefinition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents a fan-in edge in the DAG of solid instances forming a pipeline.</p>
+<p>This object is used only when an input of type <code class="docutils literal notranslate"><span class="pre">List[T]</span></code> is assembled by fanning-in multiple
+upstream outputs of type <code class="docutils literal notranslate"><span class="pre">T</span></code>.</p>
+<p>This object is used at the leaves of a dictionary structure that represents the complete
+dependency structure of a pipeline whose keys represent the dependent solid and dependent
+input, so this object only contains information about the dependee.</p>
+<p>Concretely, if the input named ‘input’ of solid_c depends on the outputs named ‘result’ of
+solid_a and solid_b, this structure will look as follows:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dependency_structure</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">&#39;solid_c&#39;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s1">&#39;input&#39;</span><span class="p">:</span> <span class="n">MultiDependencyDefinition</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="n">DependencyDefinition</span><span class="p">(</span><span class="s1">&#39;solid_a&#39;</span><span class="p">,</span> <span class="s1">&#39;result&#39;</span><span class="p">),</span>
+                <span class="n">DependencyDefinition</span><span class="p">(</span><span class="s1">&#39;solid_b&#39;</span><span class="p">,</span> <span class="s1">&#39;result&#39;</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>In general, users should prefer not to construct this class directly or use the
+<a class="reference internal" href="#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineDefinition</span></code></a> API that requires instances of this class. Instead, use the
+<a class="reference internal" href="#dagster.pipeline" title="dagster.pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;pipeline</span></code></a> API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pipeline</span>
+<span class="k">def</span> <span class="nf">pipeline</span><span class="p">():</span>
+    <span class="n">solid_c</span><span class="p">(</span><span class="n">solid_a</span><span class="p">(),</span> <span class="n">solid_b</span><span class="p">())</span>
+</pre></div>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>solid</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the solid that is depended on, that is, from which the value
+passed between the two solids originates.</p></li>
+<li><p><strong>output</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – The name of the output that is depended on. (default: “result”)</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Human-readable description of this dependency.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="dagster.SolidInvocation">
+<em class="property">class </em><code class="sig-prename descclassname">dagster.</code><code class="sig-name descname">SolidInvocation</code><a class="reference internal" href="../../../_modules/dagster/core/definitions/dependency.html#SolidInvocation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster.SolidInvocation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Identifies an instance of a solid in a pipeline dependency structure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Name of the solid of which this is an instance.</p></li>
+<li><p><strong>alias</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Name specific to this instance of the solid. Necessary when there are
+multiple instances of the same solid.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Optional tags values to extend or override those
+set on the solid definition.</p></li>
+<li><p><strong>hook_defs</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><em>HookDefinition</em><em>]</em><em>]</em>) – A set of hook definitions applied to the
+solid instance.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">pipeline</span> <span class="o">=</span> <span class="n">PipelineDefinition</span><span class="p">(</span>
+    <span class="n">solid_defs</span><span class="o">=</span><span class="p">[</span><span class="n">solid_1</span><span class="p">,</span> <span class="n">solid_2</span><span class="p">]</span>
+    <span class="n">dependencies</span><span class="o">=</span><span class="p">{</span>
+        <span class="n">SolidInvocation</span><span class="p">(</span><span class="s1">&#39;solid_1&#39;</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s1">&#39;other_name&#39;</span><span class="p">)</span> <span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;input_name&#39;</span> <span class="p">:</span> <span class="n">DependencyDefinition</span><span class="p">(</span><span class="s1">&#39;solid_1&#39;</span><span class="p">),</span>
+        <span class="p">},</span>
+        <span class="s1">&#39;solid_2&#39;</span> <span class="p">:</span> <span class="p">{</span>
+            <span class="s1">&#39;input_name&#39;</span><span class="p">:</span> <span class="n">DependencyDefinition</span><span class="p">(</span><span class="s1">&#39;other_name&#39;</span><span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>In general, users should prefer not to construct this class directly or use the
+<a class="reference internal" href="#dagster.PipelineDefinition" title="dagster.PipelineDefinition"><code class="xref py py-class docutils literal notranslate"><span class="pre">PipelineDefinition</span></code></a> API that requires instances of this class. Instead, use the
+<a class="reference internal" href="#dagster.pipeline" title="dagster.pipeline"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;pipeline</span></code></a> API:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pipeline</span>
+<span class="k">def</span> <span class="nf">pipeline</span><span class="p">():</span>
+    <span class="n">other_name</span> <span class="o">=</span> <span class="n">solid_1</span><span class="o">.</span><span class="n">alias</span><span class="p">(</span><span class="s1">&#39;other_name&#39;</span><span class="p">)</span>
+    <span class="n">solid_2</span><span class="p">(</span><span class="n">other_name</span><span class="p">(</span><span class="n">solid_1</span><span class="p">))</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="partitions.html" title="Previous document">Partitions</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="presets.html" title="Next document">Presets</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

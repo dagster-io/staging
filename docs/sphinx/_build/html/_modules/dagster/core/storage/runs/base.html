@@ -1,0 +1,351 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.storage.runs.base &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../../" src="../../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.storage.runs.base</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+
+
+<div class="viewcode-block" id="RunStorage"><a class="viewcode-back" href="../../../../../sections/api/apidocs/internals.html#dagster.core.storage.runs.RunStorage">[docs]</a><span class="k">class</span> <span class="nc">RunStorage</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Abstract base class for storing pipeline run history.</span>
+
+<span class="sd">    Note that run storages using SQL databases as backing stores should implement</span>
+<span class="sd">    :py:class:`~dagster.core.storage.runs.SqlRunStorage`.</span>
+
+<span class="sd">    Users should not directly instantiate concrete subclasses of this class; they are instantiated</span>
+<span class="sd">    by internal machinery when ``dagit`` and ``dagster-graphql`` load, based on the values in the</span>
+<span class="sd">    ``dagster.yaml`` file in ``$DAGSTER_HOME``. Configuration of concrete subclasses of this class</span>
+<span class="sd">    should be done by setting values in that file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_run</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a run to storage.</span>
+
+<span class="sd">        If a run already exists with the same ID, raise DagsterRunAlreadyExists</span>
+<span class="sd">        If the run&#39;s snapshot ID does not exist raise DagsterSnapshotDoesNotExist</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_run (PipelineRun): The run to add.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">handle_run_event</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">event</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update run storage in accordance to a pipeline run related DagsterEvent</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str)</span>
+<span class="sd">            event (DagsterEvent)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_runs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all the runs present in the storage that match the given filters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filters (Optional[PipelineRunsFilter]) -- The</span>
+<span class="sd">                :py:class:`~dagster.core.storage.pipeline_run.PipelineRunsFilter` by which to filter</span>
+<span class="sd">                runs</span>
+<span class="sd">            cursor (Optional[str]): Starting cursor (run_id) of range of runs</span>
+<span class="sd">            limit (Optional[int]): Number of results to get. Defaults to infinite.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[PipelineRun]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_runs_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of runs present in the storage that match the given filters.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filters (Optional[PipelineRunsFilter]) -- The</span>
+<span class="sd">                :py:class:`~dagster.core.storage.pipeline_run.PipelineRunFilter` by which to filter</span>
+<span class="sd">                runs</span>
+<span class="sd">            cursor (Optional[str]): Starting cursor (run_id) of range of runs</span>
+<span class="sd">            limit (Optional[int]): Number of results to get. Defaults to infinite.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            int: The number of runs that match the given filters.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_run_group</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the run group to which a given run belongs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): If the corresponding run is the descendant of some root run (i.e., there</span>
+<span class="sd">                is a root_run_id on the :py:class:`PipelineRun`), that root run and all of its</span>
+<span class="sd">                descendants are returned; otherwise, the group will consist only of the given run</span>
+<span class="sd">                (a run that does not descend from any root is its own root).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[Tuple[string, List[PipelineRun]]]: If there is a corresponding run group, tuple</span>
+<span class="sd">                whose first element is the root_run_id and whose second element is a list of all the</span>
+<span class="sd">                descendent runs. Otherwise `None`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_run_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filters</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cursor</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">limit</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all of the run groups present in the storage that include rows matching the</span>
+<span class="sd">        given filter.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            filter (Optional[PipelineRunsFilter]) -- The</span>
+<span class="sd">                :py:class:`~dagster.core.storage.pipeline_run.PipelineRunsFilter` by which to filter</span>
+<span class="sd">                runs</span>
+<span class="sd">            cursor (Optional[str]): Starting cursor (run_id) of range of runs</span>
+<span class="sd">            limit (Optional[int]): Number of results to get. Defaults to infinite.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Dict[Dict[Union[PipelineRun, int]]]: Specifically, a dict of the form</span>
+<span class="sd">                ``{&#39;pipeline_run_id&#39;: {&#39;runs&#39;: [PipelineRun, ...], &#39;count&#39;: int}, ...}``. The</span>
+<span class="sd">                instances of :py:class:`~dagster.core.pipeline_run.PipelineRun` returned in this</span>
+<span class="sd">                data structure correspond to all of the runs that would have been returned by</span>
+<span class="sd">                calling :py:meth:`get_run_groups` with the same arguments, plus their corresponding</span>
+<span class="sd">                root runs, if any. The keys of this structure are the run_ids of all of the root</span>
+<span class="sd">                runs (a run with no root is its own root). The integer counts are inclusive of all</span>
+<span class="sd">                of the root runs&#39; children, including those that would not have been returned by</span>
+<span class="sd">                calling :py:meth:`get_run_groups` with the same arguments, but exclusive of the root</span>
+<span class="sd">                run itself; i.e., if a run has no children, the count will be 0.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Note that we could have made the opposite decision here and filtered for root runs</span>
+        <span class="c1"># matching a given filter, etc., rather than for child runs; so that asking for the last 5</span>
+        <span class="c1"># run groups would give the last 5 roots and their descendants, rather than the last 5</span>
+        <span class="c1"># children and their roots. Consider the case where we have just been retrying runs</span>
+        <span class="c1"># belonging to a group created long ago; it makes sense to bump these to the top of the</span>
+        <span class="c1"># interface rather than burying them deeply paginated down. Note also that this query can</span>
+        <span class="c1"># return no more run groups than there are runs in an equivalent call to get_runs, and no</span>
+        <span class="c1"># more than 2x total instances of PipelineRun.</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_run_by_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a run by its id.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the run</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Optional[PipelineRun]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_run_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a list of tag keys and the values that have been associated with them.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[Tuple[string, Set[string]]]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_run_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">,</span> <span class="n">new_tags</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add additional tags for a pipeline run.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str)</span>
+<span class="sd">            new_tags (Dict[string, string])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">has_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if the storage contains a run.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            run_id (str): The id of the run</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">has_pipeline_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_snapshot_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check to see if storage contains a pipeline snapshot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_snapshot_id (str): The id of the run.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_pipeline_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_snapshot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add a pipeline snapshot to the run store.</span>
+
+<span class="sd">        Pipeline snapshots are content-addressable, meaning</span>
+<span class="sd">        that the ID for a snapshot is a hash based on the</span>
+<span class="sd">        body of the snapshot. This function returns</span>
+<span class="sd">        that snapshot ID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_snapshot (PipelineSnapshot)</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            str: The pipeline_snapshot_id</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_pipeline_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_snapshot_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fetch a snapshot by ID</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_snapshot_id (str)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PipelineSnapshot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">has_execution_plan_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">execution_plan_snapshot_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check to see if storage contains an execution plan snapshot.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            execution_plan_snapshot_id (str): The id of the execution plan.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_execution_plan_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">execution_plan_snapshot</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add an execution plan snapshot to the run store.</span>
+
+<span class="sd">        Execution plan snapshots are content-addressable, meaning</span>
+<span class="sd">        that the ID for a snapshot is a hash based on the</span>
+<span class="sd">        body of the snapshot. This function returns</span>
+<span class="sd">        that snapshot ID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            execution_plan_snapshot (ExecutionPlanSnapshot)</span>
+
+<span class="sd">        Return:</span>
+<span class="sd">            str: The execution_plan_snapshot_id</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_execution_plan_snapshot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">execution_plan_snapshot_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fetch a snapshot by ID</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            execution_plan_snapshot_id (str)</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ExecutionPlanSnapshot</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">wipe</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clears the run storage.&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">delete_run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">run_id</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove a run from storage&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">build_missing_indexes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">print_fn</span><span class="o">=</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span> <span class="n">force_rebuild_all</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Call this method to run any data migrations&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">dispose</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Explicit lifecycle management.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">optimize_for_dagit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statement_timeout</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Allows for optimizing database connection / use in the context of a long lived dagit process&quot;&quot;&quot;</span>
+
+    <span class="c1"># Daemon Heartbeat Storage</span>
+    <span class="c1">#</span>
+    <span class="c1"># Holds heartbeats from the Dagster Daemon so that other system components can alert when it&#39;s not</span>
+    <span class="c1"># alive.</span>
+    <span class="c1"># This is temporarily placed along with run storage to avoid adding a new instance concept. It</span>
+    <span class="c1"># should be split out once all metadata storages are configured together.</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">add_daemon_heartbeat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">daemon_heartbeat</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Called on a regular interval by the daemon&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">get_daemon_heartbeats</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Latest heartbeats of all daemon types&quot;&quot;&quot;</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">wipe_daemon_heartbeats</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Wipe all daemon heartbeats&quot;&quot;&quot;</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

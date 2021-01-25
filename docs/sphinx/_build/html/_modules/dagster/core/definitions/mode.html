@@ -1,0 +1,200 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.mode &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.mode</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+
+<span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.definitions.executor</span> <span class="kn">import</span> <span class="n">ExecutorDefinition</span><span class="p">,</span> <span class="n">default_executors</span>
+<span class="kn">from</span> <span class="nn">dagster.loggers</span> <span class="kn">import</span> <span class="n">default_loggers</span>
+<span class="kn">from</span> <span class="nn">dagster.utils.merger</span> <span class="kn">import</span> <span class="n">merge_dicts</span>
+
+<span class="kn">from</span> <span class="nn">.logger</span> <span class="kn">import</span> <span class="n">LoggerDefinition</span>
+<span class="kn">from</span> <span class="nn">.resource</span> <span class="kn">import</span> <span class="n">ResourceDefinition</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+<span class="n">DEFAULT_MODE_NAME</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span>
+
+
+<div class="viewcode-block" id="ModeDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/modes-resources.html#dagster.ModeDefinition">[docs]</a><span class="k">class</span> <span class="nc">ModeDefinition</span><span class="p">(</span>
+    <span class="n">namedtuple</span><span class="p">(</span>
+        <span class="s2">&quot;_ModeDefinition&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;name resource_defs loggers executor_defs description intermediate_storage_defs&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+<span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Define a mode in which a pipeline can operate.</span>
+
+<span class="sd">    A mode provides pipelines with a set of resource implementations, loggers, system storages,</span>
+<span class="sd">    and executors.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (Optional[str]): The name of the mode. Must be unique within the</span>
+<span class="sd">            :py:class:`PipelineDefinition` to which the mode is attached. (default: &quot;default&quot;).</span>
+<span class="sd">        resource_defs (Optional[Dict[str, ResourceDefinition]]): A dictionary of string resource</span>
+<span class="sd">            keys to their implementations. Individual solids may require resources to be present by</span>
+<span class="sd">            these keys.</span>
+<span class="sd">        logger_defs (Optional[Dict[str, LoggerDefinition]]): A dictionary of string logger</span>
+<span class="sd">            identifiers to their implementations.</span>
+<span class="sd">        executor_defs (Optional[List[ExecutorDefinition]]): The set of executors available when</span>
+<span class="sd">            executing in this mode. By default, this will be the &#39;in_process&#39; and &#39;multiprocess&#39;</span>
+<span class="sd">            executors (:py:data:`~dagster.default_executors`).</span>
+<span class="sd">        description (Optional[str]): A human-readable description of the mode.</span>
+<span class="sd">        intermediate_storage_defs (Optional[List[IntermediateStorageDefinition]]): The set of intermediate storage</span>
+<span class="sd">            options available when executing in this mode. By default, this will be the &#39;in_memory&#39;</span>
+<span class="sd">            and &#39;filesystem&#39; system storages.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">resource_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">logger_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">executor_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">intermediate_storage_defs</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="kn">from</span> <span class="nn">dagster.core.storage.system_storage</span> <span class="kn">import</span> <span class="n">default_intermediate_storage_defs</span>
+
+        <span class="kn">from</span> <span class="nn">.intermediate_storage</span> <span class="kn">import</span> <span class="n">IntermediateStorageDefinition</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+            <span class="n">resource_defs</span><span class="p">,</span> <span class="s2">&quot;resource_defs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="n">ResourceDefinition</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">resource_defs</span> <span class="ow">and</span> <span class="s2">&quot;io_manager&quot;</span> <span class="ow">in</span> <span class="n">resource_defs</span><span class="p">:</span>
+            <span class="n">resource_defs_with_defaults</span> <span class="o">=</span> <span class="n">resource_defs</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="kn">from</span> <span class="nn">dagster.core.storage.mem_io_manager</span> <span class="kn">import</span> <span class="n">mem_io_manager</span>
+
+            <span class="n">resource_defs_with_defaults</span> <span class="o">=</span> <span class="n">merge_dicts</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;io_manager&quot;</span><span class="p">:</span> <span class="n">mem_io_manager</span><span class="p">},</span> <span class="n">resource_defs</span> <span class="ow">or</span> <span class="p">{}</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">ModeDefinition</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span>
+            <span class="bp">cls</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">if</span> <span class="n">name</span> <span class="k">else</span> <span class="n">DEFAULT_MODE_NAME</span><span class="p">,</span>
+            <span class="n">resource_defs</span><span class="o">=</span><span class="n">resource_defs_with_defaults</span><span class="p">,</span>
+            <span class="n">loggers</span><span class="o">=</span><span class="p">(</span>
+                <span class="n">check</span><span class="o">.</span><span class="n">opt_dict_param</span><span class="p">(</span>
+                    <span class="n">logger_defs</span><span class="p">,</span> <span class="s2">&quot;logger_defs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">value_type</span><span class="o">=</span><span class="n">LoggerDefinition</span>
+                <span class="p">)</span>
+                <span class="ow">or</span> <span class="n">default_loggers</span><span class="p">()</span>
+            <span class="p">),</span>
+            <span class="n">intermediate_storage_defs</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span>
+                <span class="n">intermediate_storage_defs</span>
+                <span class="k">if</span> <span class="n">intermediate_storage_defs</span>
+                <span class="k">else</span> <span class="n">default_intermediate_storage_defs</span><span class="p">,</span>
+                <span class="s2">&quot;intermediate_storage_defs&quot;</span><span class="p">,</span>
+                <span class="n">of_type</span><span class="o">=</span><span class="n">IntermediateStorageDefinition</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">executor_defs</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">list_param</span><span class="p">(</span>
+                <span class="n">executor_defs</span> <span class="k">if</span> <span class="n">executor_defs</span> <span class="k">else</span> <span class="n">default_executors</span><span class="p">,</span>
+                <span class="s2">&quot;executor_defs&quot;</span><span class="p">,</span>
+                <span class="n">of_type</span><span class="o">=</span><span class="n">ExecutorDefinition</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">description</span><span class="o">=</span><span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">resource_key_set</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">frozenset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resource_defs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">get_intermediate_storage_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">intermediate_storage_def</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">intermediate_storage_defs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">intermediate_storage_def</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">name</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">intermediate_storage_def</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2"> storage definition not found&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_resources</span><span class="p">(</span><span class="n">resources</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">resources</span><span class="p">,</span> <span class="s2">&quot;resources&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">ModeDefinition</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">resource_defs</span><span class="o">=</span><span class="p">{</span>
+                <span class="n">resource_name</span><span class="p">:</span> <span class="n">ResourceDefinition</span><span class="o">.</span><span class="n">hardcoded_resource</span><span class="p">(</span><span class="n">resource</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">resource_name</span><span class="p">,</span> <span class="n">resource</span> <span class="ow">in</span> <span class="n">resources</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="p">},</span>
+        <span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

@@ -1,0 +1,181 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shell (dagster_shell) &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="Slack (dagster_slack)" href="dagster_slack.html" />
+    <link rel="prev" title="Pyspark (dagster_pyspark)" href="dagster_pyspark.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_pyspark.html" title="Previous document">Pyspark (dagster_pyspark)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_slack.html" title="Next document">Slack (dagster_slack)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <div class="section" id="shell-dagster-shell">
+<h1>Shell (dagster_shell)<a class="headerlink" href="#shell-dagster-shell" title="Permalink to this headline">¶</a></h1>
+<p>The Dagster shell library provides solid factories for executing inline shell scripts or script files.</p>
+<dl class="function">
+<dt id="dagster_shell.create_shell_command_solid">
+<code class="sig-prename descclassname">dagster_shell.</code><code class="sig-name descname">create_shell_command_solid</code><span class="sig-paren">(</span><em class="sig-param">shell_command</em>, <em class="sig-param">name</em>, <em class="sig-param">description=None</em>, <em class="sig-param">required_resource_keys=None</em>, <em class="sig-param">tags=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_shell/solids.html#create_shell_command_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_shell.create_shell_command_solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is a factory that constructs solids to execute a shell command.</p>
+<p>Note that you can only use <cite>shell_command_solid</cite> if you know the command you’d like to execute
+at pipeline construction time. If you’d like to construct shell commands dynamically during
+pipeline execution and pass them between solids, you should use <cite>shell_solid</cite> instead.</p>
+<p>Examples:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shell_command</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The shell command that the constructed solid will execute.</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The name of the constructed solid.</p></li>
+<li><p><strong>description</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em>) – Human-readable description of this solid.</p></li>
+<li><p><strong>required_resource_keys</strong> (<em>Optional</em><em>[</em><em>Set</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>]</em><em>]</em>) – Set of resource handles required by this solid.
+Setting this ensures that resource spin up for the required resources will occur before
+the shell command is executed.</p></li>
+<li><p><strong>tags</strong> (<em>Optional</em><em>[</em><em>Dict</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>Any</em><em>]</em><em>]</em>) – Arbitrary metadata for the solid. Frameworks may
+expect and require certain metadata to be attached to a solid. Users should generally
+not set metadata directly. Values that are not strings will be json encoded and must meet
+the criteria that <cite>json.loads(json.dumps(value)) == value</cite>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="../solids.html#dagster.Failure" title="dagster.Failure"><strong>Failure</strong></a> – Raised when the shell command returns a non-zero exit code.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Returns the constructed solid definition.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="../solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_shell.create_shell_script_solid">
+<code class="sig-prename descclassname">dagster_shell.</code><code class="sig-name descname">create_shell_script_solid</code><span class="sig-paren">(</span><em class="sig-param">shell_script_path</em>, <em class="sig-param">name='create_shell_script_solid'</em>, <em class="sig-param">input_defs=None</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_shell/solids.html#create_shell_script_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_shell.create_shell_script_solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is a factory which constructs a solid that will execute a shell command read
+from a script file.</p>
+<p>Any kwargs passed to this function will be passed along to the underlying <a class="reference internal" href="../solids.html#dagster.solid" title="dagster.solid"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;solid</span></code></a> decorator. However, note that overriding <code class="docutils literal notranslate"><span class="pre">config</span></code> or <code class="docutils literal notranslate"><span class="pre">output_defs</span></code> is not
+supported.</p>
+<p>You might consider using <a class="reference internal" href="../solids.html#dagster.composite_solid" title="dagster.composite_solid"><code class="xref py py-func docutils literal notranslate"><span class="pre">&#64;composite_solid</span></code></a> to wrap this solid
+in the cases where you’d like to configure the shell solid with different config fields.</p>
+<p>Examples:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>shell_script_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – The script file to execute.</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a><em>, </em><em>optional</em>) – The name of this solid. Defaults to “create_shell_script_solid”.</p></li>
+<li><p><strong>input_defs</strong> (<em>List</em><em>[</em><a class="reference internal" href="../solids.html#dagster.InputDefinition" title="dagster.InputDefinition"><em>InputDefinition</em></a><em>]</em><em>, </em><em>optional</em>) – input definitions for the solid. Defaults to
+a single Nothing input.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><a class="reference internal" href="../solids.html#dagster.Failure" title="dagster.Failure"><strong>Failure</strong></a> – Raised when the shell command returns a non-zero exit code.</p>
+</dd>
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Returns the constructed solid definition.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="../solids.html#dagster.SolidDefinition" title="dagster.SolidDefinition">SolidDefinition</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="function">
+<dt id="dagster_shell.shell_solid">
+<code class="sig-prename descclassname">dagster_shell.</code><code class="sig-name descname">shell_solid</code><span class="sig-paren">(</span><em class="sig-param">*args</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="../../../../_modules/dagster_shell/solids.html#shell_solid"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#dagster_shell.shell_solid" title="Permalink to this definition">¶</a></dt>
+<dd><p>This solid executes a shell command it receives as input.</p>
+<p>This solid is suitable for uses where the command to execute is generated dynamically by
+upstream solids. If you know the command to execute at pipeline construction time, consider
+<cite>shell_command_solid</cite> instead.</p>
+</dd></dl>
+
+</div>
+
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            &larr;
+            <a href="dagster_pyspark.html" title="Previous document">Pyspark (dagster_pyspark)</a>
+        </li>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+        <li>
+            <a href="dagster_slack.html" title="Next document">Slack (dagster_slack)</a>
+            &rarr;
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>

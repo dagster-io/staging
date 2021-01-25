@@ -1,0 +1,716 @@
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta charset="utf-8" />
+    <title>dagster.core.definitions.repository &#8212; Dagster</title>
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" type="text/css" href="../../../../_static/css/custom.css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+ 
+<link rel="stylesheet" href="../../../../_static/custom.css" type="text/css" />
+
+
+<meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+    <div class="documentwrapper">
+        <div class="bodywrapper">
+            <div class="related top">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+
+            
+
+            <div class="body" role="main">
+                
+  <h1>Source code for dagster.core.definitions.repository</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">dagster</span> <span class="kn">import</span> <span class="n">check</span>
+<span class="kn">from</span> <span class="nn">dagster.core.errors</span> <span class="kn">import</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">,</span> <span class="n">DagsterInvariantViolationError</span>
+<span class="kn">from</span> <span class="nn">dagster.utils</span> <span class="kn">import</span> <span class="n">merge_dicts</span>
+
+<span class="kn">from</span> <span class="nn">.job</span> <span class="kn">import</span> <span class="n">JobDefinition</span><span class="p">,</span> <span class="n">JobType</span>
+<span class="kn">from</span> <span class="nn">.partition</span> <span class="kn">import</span> <span class="n">PartitionScheduleDefinition</span><span class="p">,</span> <span class="n">PartitionSetDefinition</span>
+<span class="kn">from</span> <span class="nn">.pipeline</span> <span class="kn">import</span> <span class="n">PipelineDefinition</span>
+<span class="kn">from</span> <span class="nn">.schedule</span> <span class="kn">import</span> <span class="n">ScheduleDefinition</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">check_valid_name</span>
+
+<span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;pipelines&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;partition_sets&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;schedules&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;jobs&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+
+
+<span class="k">class</span> <span class="nc">_CacheingDefinitionIndex</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">definition_class</span><span class="p">,</span> <span class="n">definition_class_name</span><span class="p">,</span> <span class="n">definition_kind</span><span class="p">,</span> <span class="n">definitions</span><span class="p">):</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">definition</span> <span class="ow">in</span> <span class="n">definitions</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">definition_class</span><span class="p">)</span> <span class="ow">or</span> <span class="n">callable</span><span class="p">(</span><span class="n">definition</span><span class="p">),</span>
+                <span class="s2">&quot;Bad definition for </span><span class="si">{definition_kind}</span><span class="s2"> </span><span class="si">{key}</span><span class="s2">: must be </span><span class="si">{definition_class_name}</span><span class="s2"> or &quot;</span>
+                <span class="s2">&quot;callable, got </span><span class="si">{type_}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">definition_kind</span><span class="o">=</span><span class="n">definition_kind</span><span class="p">,</span>
+                    <span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                    <span class="n">definition_class_name</span><span class="o">=</span><span class="n">definition_class_name</span><span class="p">,</span>
+                    <span class="n">type_</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">definition</span><span class="p">),</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definition_class</span> <span class="o">=</span> <span class="n">definition_class</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definition_class_name</span> <span class="o">=</span> <span class="n">definition_class_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definition_kind</span> <span class="o">=</span> <span class="n">definition_kind</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definitions</span> <span class="o">=</span> <span class="n">definitions</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definition_cache</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definition_names</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_definitions</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">get_definition_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_names</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_names</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_definition_names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_definitions</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_names</span>
+
+    <span class="k">def</span> <span class="nf">has_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">definition_name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">definition_name</span><span class="p">,</span> <span class="s2">&quot;definition_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">definition_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_definition_names</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_all_definitions</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_definitions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_definitions</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_definitions</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="nb">sorted</span><span class="p">(</span>
+                <span class="nb">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_definition</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_definition_names</span><span class="p">()),</span>
+                <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">definition</span><span class="p">:</span> <span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_definitions</span>
+
+    <span class="k">def</span> <span class="nf">get_definition</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">definition_name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">definition_name</span><span class="p">,</span> <span class="s2">&quot;definition_name&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">definition_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_cache</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_cache</span><span class="p">[</span><span class="n">definition_name</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">definition_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definitions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DagsterInvariantViolationError</span><span class="p">(</span>
+                <span class="s2">&quot;Could not find </span><span class="si">{definition_kind}</span><span class="s2"> &#39;</span><span class="si">{definition_name}</span><span class="s2">&#39;. Found: &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{found_names}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">definition_kind</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_definition_kind</span><span class="p">,</span>
+                    <span class="n">definition_name</span><span class="o">=</span><span class="n">definition_name</span><span class="p">,</span>
+                    <span class="n">found_names</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                        <span class="p">[</span>
+                            <span class="s2">&quot;&#39;</span><span class="si">{found_name}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">found_name</span><span class="o">=</span><span class="n">found_name</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">found_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_definition_names</span><span class="p">()</span>
+                        <span class="p">]</span>
+                    <span class="p">),</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">definition_source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definitions</span><span class="p">[</span><span class="n">definition_name</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition_source</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_class</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_definition_cache</span><span class="p">[</span><span class="n">definition_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">definition_source</span>
+            <span class="k">return</span> <span class="n">definition_source</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">definition</span> <span class="o">=</span> <span class="n">definition_source</span><span class="p">()</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_definition_class</span><span class="p">),</span>
+                <span class="s2">&quot;Bad constructor for </span><span class="si">{definition_kind}</span><span class="s2"> </span><span class="si">{definition_name}</span><span class="s2">: must return &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{definition_class_name}</span><span class="s2">, got value of type </span><span class="si">{type_}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">definition_kind</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_definition_kind</span><span class="p">,</span>
+                    <span class="n">definition_name</span><span class="o">=</span><span class="n">definition_name</span><span class="p">,</span>
+                    <span class="n">definition_class_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_definition_class_name</span><span class="p">,</span>
+                    <span class="n">type_</span><span class="o">=</span><span class="nb">type</span><span class="p">(</span><span class="n">definition</span><span class="p">),</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+                <span class="n">definition</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">definition_name</span><span class="p">,</span>
+                <span class="s2">&quot;Bad constructor for </span><span class="si">{definition_kind}</span><span class="s2"> &#39;</span><span class="si">{definition_name}</span><span class="s2">&#39;: name in &quot;</span>
+                <span class="s2">&quot;</span><span class="si">{definition_class_name}</span><span class="s2"> does not match: got &#39;</span><span class="si">{definition_def_name}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">definition_kind</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_definition_kind</span><span class="p">,</span>
+                    <span class="n">definition_name</span><span class="o">=</span><span class="n">definition_name</span><span class="p">,</span>
+                    <span class="n">definition_class_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_definition_class_name</span><span class="p">,</span>
+                    <span class="n">definition_def_name</span><span class="o">=</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_definition_cache</span><span class="p">[</span><span class="n">definition_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">definition</span>
+            <span class="k">return</span> <span class="n">definition</span>
+
+
+<span class="k">class</span> <span class="nc">RepositoryData</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Contains definitions belonging to a repository.</span>
+
+<span class="sd">    Users should usually rely on the :py:func:`@repository &lt;repository&gt;` decorator to create new</span>
+<span class="sd">    repositories, which will in turn call the static constructors on this class. However, users may</span>
+<span class="sd">    subclass RepositoryData for fine-grained control over access to and lazy creation</span>
+<span class="sd">    of repository members.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipelines</span><span class="p">,</span> <span class="n">partition_sets</span><span class="p">,</span> <span class="n">schedules</span><span class="p">,</span> <span class="n">jobs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Constructs a new RepositoryData object.</span>
+
+<span class="sd">        You may pass pipeline, partition_set, and schedule definitions directly, or you may pass</span>
+<span class="sd">        callables with no arguments that will be invoked to lazily construct definitions when</span>
+<span class="sd">        accessed by name. This can be helpful for performance when there are many definitions in a</span>
+<span class="sd">        repository, or when constructing the definitions is costly.</span>
+
+<span class="sd">        Note that when lazily constructing a definition, the name of the definition must match its</span>
+<span class="sd">        key in its dictionary index, or a :py:class:`DagsterInvariantViolationError` will be thrown</span>
+<span class="sd">        at retrieval time.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipelines (Dict[str, Union[PipelineDefinition, Callable[[], PipelineDefinition]]]):</span>
+<span class="sd">                The pipeline definitions belonging to the repository.</span>
+<span class="sd">            partition_sets (Dict[str, Union[PartitionSetDefinition, Callable[[], PartitionSetDefinition]]]):</span>
+<span class="sd">                The partition sets belonging to the repository.</span>
+<span class="sd">            schedules (Dict[str, Union[ScheduleDefinition, Callable[[], ScheduleDefinition]]]):</span>
+<span class="sd">                The schedules belonging to the repository.</span>
+<span class="sd">            jobs (Dict[str, Union[JobDefinition, Callable[[], JobDefinition]]]):</span>
+<span class="sd">                The predefined jobs for a repository.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">pipelines</span><span class="p">,</span> <span class="s2">&quot;pipelines&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">partition_sets</span><span class="p">,</span> <span class="s2">&quot;partition_sets&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">schedules</span><span class="p">,</span> <span class="s2">&quot;schedules&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">jobs</span><span class="p">,</span> <span class="s2">&quot;jobs&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines</span> <span class="o">=</span> <span class="n">_CacheingDefinitionIndex</span><span class="p">(</span>
+            <span class="n">PipelineDefinition</span><span class="p">,</span> <span class="s2">&quot;PipelineDefinition&quot;</span><span class="p">,</span> <span class="s2">&quot;pipeline&quot;</span><span class="p">,</span> <span class="n">pipelines</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_schedules</span> <span class="o">=</span> <span class="n">_CacheingDefinitionIndex</span><span class="p">(</span>
+            <span class="n">ScheduleDefinition</span><span class="p">,</span> <span class="s2">&quot;ScheduleDefinition&quot;</span><span class="p">,</span> <span class="s2">&quot;schedule&quot;</span><span class="p">,</span> <span class="n">schedules</span>
+        <span class="p">)</span>
+        <span class="n">schedule_partition_sets</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">schedule</span><span class="o">.</span><span class="n">get_partition_set</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">schedule</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_schedules</span><span class="o">.</span><span class="n">get_all_definitions</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">schedule</span><span class="p">,</span> <span class="n">PartitionScheduleDefinition</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_partition_sets</span> <span class="o">=</span> <span class="n">_CacheingDefinitionIndex</span><span class="p">(</span>
+            <span class="n">PartitionSetDefinition</span><span class="p">,</span>
+            <span class="s2">&quot;PartitionSetDefinition&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;partition set&quot;</span><span class="p">,</span>
+            <span class="n">merge_dicts</span><span class="p">(</span>
+                <span class="p">{</span><span class="n">partition_set</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">partition_set</span> <span class="k">for</span> <span class="n">partition_set</span> <span class="ow">in</span> <span class="n">schedule_partition_sets</span><span class="p">},</span>
+                <span class="n">partition_sets</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span> <span class="o">=</span> <span class="n">_CacheingDefinitionIndex</span><span class="p">(</span><span class="n">JobDefinition</span><span class="p">,</span> <span class="s2">&quot;JobDefinition&quot;</span><span class="p">,</span> <span class="s2">&quot;job&quot;</span><span class="p">,</span> <span class="n">jobs</span><span class="p">,)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_pipelines</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solids</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            repository_definition (Dict[str, Dict[str, ...]]): A dict of the form:</span>
+
+<span class="sd">                {</span>
+<span class="sd">                    &#39;pipelines&#39;: Dict[str, Callable[[], PipelineDefinition]],</span>
+<span class="sd">                    &#39;partition_sets&#39;: Dict[str, Callable[[], PartitionSetDefinition]],</span>
+<span class="sd">                    &#39;schedules&#39;: Dict[str, Callable[[], ScheduleDefinition]]</span>
+<span class="sd">                }</span>
+
+<span class="sd">            This form is intended to allow definitions to be created lazily when accessed by name,</span>
+<span class="sd">            which can be helpful for performance when there are many definitions in a repository, or</span>
+<span class="sd">            when constructing the definitions is costly.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">dict_param</span><span class="p">(</span><span class="n">repository_definitions</span><span class="p">,</span> <span class="s2">&quot;repository_definitions&quot;</span><span class="p">,</span> <span class="n">key_type</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">invariant</span><span class="p">(</span>
+            <span class="nb">set</span><span class="p">(</span><span class="n">repository_definitions</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span><span class="p">),</span>
+            <span class="s2">&quot;Bad dict: must not contain keys other than {{</span><span class="si">{valid_keys}</span><span class="s2">}}: found </span><span class="si">{bad_keys}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="n">valid_keys</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span><span class="s2">&quot;&#39;</span><span class="si">{key}</span><span class="s2">&#39;&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="n">key</span><span class="p">)</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span><span class="p">]</span>
+                <span class="p">),</span>
+                <span class="n">bad_keys</span><span class="o">=</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                    <span class="p">[</span>
+                        <span class="s2">&quot;&#39;</span><span class="si">{key}</span><span class="s2">&#39;&quot;</span>
+                        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">repository_definitions</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span>
+                    <span class="p">]</span>
+                <span class="p">),</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">VALID_REPOSITORY_DATA_DICT_KEYS</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">repository_definitions</span><span class="p">:</span>
+                <span class="n">repository_definitions</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">return</span> <span class="n">RepositoryData</span><span class="p">(</span><span class="o">**</span><span class="n">repository_definitions</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_list</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">repository_definitions</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Static constructor.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            repository_definition (List[Union[PipelineDefinition, PartitionSetDefinition, ScheduleDefinition]]):</span>
+<span class="sd">                Use this constructor when you have no need to lazy load pipelines or other</span>
+<span class="sd">                definitions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pipelines</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">partition_sets</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">schedules</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">jobs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">definition</span> <span class="ow">in</span> <span class="n">repository_definitions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">PipelineDefinition</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">definition</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">pipelines</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="s2">&quot;Duplicate pipeline definition found for pipeline </span><span class="si">{pipeline_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">pipeline_name</span><span class="o">=</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">pipelines</span><span class="p">[</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">definition</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">PartitionSetDefinition</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">definition</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">partition_sets</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="s2">&quot;Duplicate partition set definition found for partition set &quot;</span>
+                        <span class="s2">&quot;</span><span class="si">{partition_set_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">partition_set_name</span><span class="o">=</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">partition_sets</span><span class="p">[</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">definition</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">JobDefinition</span><span class="p">):</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">ScheduleDefinition</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">definition</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">schedules</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                            <span class="s2">&quot;Duplicate schedule definition found for schedule </span><span class="si">{schedule_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                <span class="n">schedule_name</span><span class="o">=</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span>
+                            <span class="p">)</span>
+                        <span class="p">)</span>
+                    <span class="n">schedules</span><span class="p">[</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">definition</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">definition</span><span class="p">,</span> <span class="n">PartitionScheduleDefinition</span><span class="p">):</span>
+                        <span class="n">partition_set_def</span> <span class="o">=</span> <span class="n">definition</span><span class="o">.</span><span class="n">get_partition_set</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="p">(</span>
+                            <span class="n">partition_set_def</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">partition_sets</span>
+                            <span class="ow">and</span> <span class="n">partition_set_def</span> <span class="o">!=</span> <span class="n">partition_sets</span><span class="p">[</span><span class="n">partition_set_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+                        <span class="p">):</span>
+                            <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                                <span class="s2">&quot;Duplicate partition set definition found for partition set &quot;</span>
+                                <span class="s2">&quot;</span><span class="si">{partition_set_name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                                    <span class="n">partition_set_name</span><span class="o">=</span><span class="n">partition_set_def</span><span class="o">.</span><span class="n">name</span>
+                                <span class="p">)</span>
+                            <span class="p">)</span>
+                        <span class="n">partition_sets</span><span class="p">[</span><span class="n">partition_set_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">partition_set_def</span>
+                <span class="k">if</span> <span class="n">definition</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="s2">&quot;Duplicate job definition found for job </span><span class="si">{name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                    <span class="p">)</span>
+                <span class="n">jobs</span><span class="p">[</span><span class="n">definition</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">definition</span>
+
+        <span class="k">return</span> <span class="n">RepositoryData</span><span class="p">(</span>
+            <span class="n">pipelines</span><span class="o">=</span><span class="n">pipelines</span><span class="p">,</span> <span class="n">partition_sets</span><span class="o">=</span><span class="n">partition_sets</span><span class="p">,</span> <span class="n">schedules</span><span class="o">=</span><span class="n">schedules</span><span class="p">,</span> <span class="n">jobs</span><span class="o">=</span><span class="n">jobs</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the names of all pipelines in the repository.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines</span><span class="o">.</span><span class="n">get_definition_names</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">has_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if a pipeline with a given name is present in the repository.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_name (str): The name of the pipeline.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines</span><span class="o">.</span><span class="n">has_definition</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_all_pipelines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all pipelines in the repository as a list.</span>
+
+<span class="sd">        Note that this will construct any pipeline that has not yet been constructed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[PipelineDefinition]: All pipelines in the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_pipelines</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_pipelines</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_pipelines</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines</span><span class="o">.</span><span class="n">get_all_definitions</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">get_all_solid_defs</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_pipelines</span>
+
+    <span class="k">def</span> <span class="nf">get_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pipeline_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a pipeline by name.</span>
+
+<span class="sd">        If this pipeline has not yet been constructed, only this pipeline is constructed, and will</span>
+<span class="sd">        be cached for future calls.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            pipeline_name (str): Name of the pipeline to retrieve.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PipelineDefinition: The pipeline definition corresponding to the given name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">,</span> <span class="s2">&quot;pipeline_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pipelines</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(</span><span class="n">pipeline_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_partition_set_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the names of all partition sets in the repository.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partition_sets</span><span class="o">.</span><span class="n">get_definition_names</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">has_partition_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_set_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if a partition set with a given name is present in the repository.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            partition_set_name (str): The name of the partition set.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">partition_set_name</span><span class="p">,</span> <span class="s2">&quot;partition_set_name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partition_sets</span><span class="o">.</span><span class="n">has_definition</span><span class="p">(</span><span class="n">partition_set_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_all_partition_sets</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all partition sets in the repository as a list.</span>
+
+<span class="sd">        Note that this will construct any partition set that has not yet been constructed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[PartitionSetDefinition]: All partition sets in the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partition_sets</span><span class="o">.</span><span class="n">get_all_definitions</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_partition_set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">partition_set_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a partition set by name.</span>
+
+<span class="sd">        If this partition set has not yet been constructed, only this partition set is constructed,</span>
+<span class="sd">        and will be cached for future calls.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            partition_set_name (str): Name of the partition set to retrieve.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PartitionSetDefinition: The partition set definition corresponding to the given name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">partition_set_name</span><span class="p">,</span> <span class="s2">&quot;partition_set_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_partition_sets</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(</span><span class="n">partition_set_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_schedule_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the names of all schedules in the repository.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[str]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_schedules</span><span class="o">.</span><span class="n">get_definition_names</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_all_schedules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all schedules in the repository as a list.</span>
+
+<span class="sd">        Note that this will construct any schedule that has not yet been constructed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[ScheduleDefinition]: All pipelines in the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_schedules</span><span class="o">.</span><span class="n">get_all_definitions</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">schedule_name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a schedule by name.</span>
+
+<span class="sd">        if this schedule has not yet been constructed, only this schedule is constructed, and will</span>
+<span class="sd">        be cached for future calls.</span>
+
+<span class="sd">        args:</span>
+<span class="sd">            schedule_name (str): name of the schedule to retrieve.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            ScheduleDefinition: The schedule definition corresponding to the given name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">,</span> <span class="s2">&quot;schedule_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_schedules</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_schedule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">schedule_name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">,</span> <span class="s2">&quot;schedule_name&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_schedules</span><span class="o">.</span><span class="n">has_definition</span><span class="p">(</span><span class="n">schedule_name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_all_sensors</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="n">definition</span>
+            <span class="k">for</span> <span class="n">definition</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">get_all_definitions</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">definition</span><span class="o">.</span><span class="n">job_type</span> <span class="o">==</span> <span class="n">JobType</span><span class="o">.</span><span class="n">SENSOR</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">get_sensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_sensor</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">has_definition</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_all_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">get_all_definitions</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">get_definition</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_jobs</span><span class="o">.</span><span class="n">has_definition</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">get_all_solid_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_solid_defs</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">has_solid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solid_name</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">solid_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_construct_solid_defs</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">solid_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span>
+
+    <span class="k">def</span> <span class="nf">_construct_solid_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">solid_defs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">solid_to_pipeline</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="c1"># This looks like it should infinitely loop but the</span>
+        <span class="c1"># memoization of _all_pipelines and _all_solids short</span>
+        <span class="c1"># circuits that</span>
+        <span class="k">for</span> <span class="n">pipeline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_all_pipelines</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">solid_def</span> <span class="ow">in</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">all_solid_defs</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">solid_def</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">solid_defs</span><span class="p">:</span>
+                    <span class="n">solid_defs</span><span class="p">[</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">solid_def</span>
+                    <span class="n">solid_to_pipeline</span><span class="p">[</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">name</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">solid_defs</span><span class="p">[</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="ow">is</span> <span class="n">solid_def</span><span class="p">:</span>
+                    <span class="n">first_name</span><span class="p">,</span> <span class="n">second_name</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                        <span class="p">[</span><span class="n">solid_to_pipeline</span><span class="p">[</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">],</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
+                    <span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">DagsterInvalidDefinitionError</span><span class="p">(</span>
+                        <span class="p">(</span>
+                            <span class="s2">&quot;Duplicate solids found in repository with name &#39;</span><span class="si">{solid_def_name}</span><span class="s2">&#39;. &quot;</span>
+                            <span class="s2">&quot;Solid definition names must be unique within a repository. Solid is &quot;</span>
+                            <span class="s2">&quot;defined in pipeline &#39;</span><span class="si">{first_pipeline_name}</span><span class="s2">&#39; and in pipeline &quot;</span>
+                            <span class="s2">&quot;&#39;</span><span class="si">{second_pipeline_name}</span><span class="s2">&#39;.&quot;</span>
+                        <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">solid_def_name</span><span class="o">=</span><span class="n">solid_def</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                            <span class="n">first_pipeline_name</span><span class="o">=</span><span class="n">first_name</span><span class="p">,</span>
+                            <span class="n">second_pipeline_name</span><span class="o">=</span><span class="n">second_name</span><span class="p">,</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">solid_defs</span>
+
+    <span class="k">def</span> <span class="nf">solid_def_named</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the solid with the given name in the repository.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of the solid for which to retrieve the solid definition.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            SolidDefinition: The solid with the given name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_solid</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+            <span class="n">check</span><span class="o">.</span><span class="n">failed</span><span class="p">(</span><span class="s2">&quot;could not find solid_def for solid </span><span class="si">{name}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_solids</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="RepositoryDefinition"><a class="viewcode-back" href="../../../../sections/api/apidocs/repositories.html#dagster.RepositoryDefinition">[docs]</a><span class="k">class</span> <span class="nc">RepositoryDefinition</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;Define a repository that contains a collection of definitions.</span>
+
+<span class="sd">    Users should typically not create objects of this class directly. Instead, use the</span>
+<span class="sd">    :py:func:`@repository` decorator.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        name (str): The name of the repository.</span>
+<span class="sd">        repository_data (RepositoryData): Contains the definitions making up the repository.</span>
+<span class="sd">        description (Optional[str]): A string description of the repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">repository_data</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">check_valid_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_description</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">opt_str_param</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span> <span class="o">=</span> <span class="n">check</span><span class="o">.</span><span class="n">inst_param</span><span class="p">(</span><span class="n">repository_data</span><span class="p">,</span> <span class="s2">&quot;repository_data&quot;</span><span class="p">,</span> <span class="n">RepositoryData</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">description</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_description</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">pipeline_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;List[str]: Names of all pipelines in the repository&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_pipeline_names</span><span class="p">()</span>
+
+<div class="viewcode-block" id="RepositoryDefinition.has_pipeline"><a class="viewcode-back" href="../../../../sections/api/apidocs/repositories.html#dagster.RepositoryDefinition.has_pipeline">[docs]</a>    <span class="k">def</span> <span class="nf">has_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if a pipeline with a given name is present in the repository.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of the pipeline.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            bool</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">has_pipeline</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RepositoryDefinition.get_pipeline"><a class="viewcode-back" href="../../../../sections/api/apidocs/repositories.html#dagster.RepositoryDefinition.get_pipeline">[docs]</a>    <span class="k">def</span> <span class="nf">get_pipeline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get a pipeline by name.</span>
+
+<span class="sd">        If this pipeline is present in the lazily evaluated ``pipeline_dict`` passed to the</span>
+<span class="sd">        constructor, but has not yet been constructed, only this pipeline is constructed, and will</span>
+<span class="sd">        be cached for future calls.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): Name of the pipeline to retrieve.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            PipelineDefinition: The pipeline definition corresponding to the given name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_pipeline</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RepositoryDefinition.get_all_pipelines"><a class="viewcode-back" href="../../../../sections/api/apidocs/repositories.html#dagster.RepositoryDefinition.get_all_pipelines">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_pipelines</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return all pipelines in the repository as a list.</span>
+
+<span class="sd">        Note that this will construct any pipeline in the lazily evaluated ``pipeline_dict`` that</span>
+<span class="sd">        has not yet been constructed.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[PipelineDefinition]: All pipelines in the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_all_pipelines</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="RepositoryDefinition.get_all_solid_defs"><a class="viewcode-back" href="../../../../sections/api/apidocs/repositories.html#dagster.RepositoryDefinition.get_all_solid_defs">[docs]</a>    <span class="k">def</span> <span class="nf">get_all_solid_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get all the solid definitions in a repository.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[SolidDefinition]: All solid definitions in the repository.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_all_solid_defs</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="RepositoryDefinition.solid_def_named"><a class="viewcode-back" href="../../../../sections/api/apidocs/repositories.html#dagster.RepositoryDefinition.solid_def_named">[docs]</a>    <span class="k">def</span> <span class="nf">solid_def_named</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the solid with the given name in the repository.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            name (str): The name of the solid for which to retrieve the solid definition.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            SolidDefinition: The solid with the given name.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check</span><span class="o">.</span><span class="n">str_param</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">solid_def_named</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">partition_set_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_all_partition_sets</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_partition_set_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_partition_set</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schedule_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_all_schedules</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_schedule_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_schedule</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_schedule_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">has_schedule</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">sensor_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_all_sensors</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_sensor_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_sensor</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_sensor_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">has_sensor</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">job_defs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_all_jobs</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get_job_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">get_job</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">has_job_def</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_repository_data</span><span class="o">.</span><span class="n">has_job</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+</pre></div>
+
+            </div>
+            <div class="related bottom">
+                &nbsp;
+<nav id="rellinks">
+    <ul>
+        <li>
+            <a href="/" title="Home">Home</a>
+        </li>
+    </ul>
+</nav>
+            </div>
+            
+        </div>
+    </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><h3><a href="../../../../index.html">Dagster</a></h3>
+
+<div id="searchbox" style="display: none" role="search">
+  <h2 id="searchlabel">Search</h2>
+  <div class="searchformwrapper">
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+  </div>
+</div>
+<script type="text/javascript">
+  $("#searchbox").show(0);
+</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+
+
+  </body>
+</html>
