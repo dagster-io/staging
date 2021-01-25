@@ -1,0 +1,5647 @@
+{
+  "source": "script",
+  "version": "0.0",
+  "meta": {
+    "id": "appe5g8Rp23FNF0D0",
+    "name": "Admissions 2021 copy",
+    "activeCollaborators": [
+      {
+        "id": "usrflbsN4vAXatQqZ",
+        "email": "s@thupukari.com",
+        "name": "Sashank Thupukari",
+        "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+      }
+    ],
+    "tables": [
+      {
+        "id": "tbliTAkDfVNDksiQi",
+        "name": "Bot Runs",
+        "description": "You can start bot runs manually at: https://d1vprziuskkt42.cloudfront.net/",
+        "url": "https://airtable.com/tbliTAkDfVNDksiQi",
+        "views": [
+          {
+            "id": "viwpYBxRPIAqP67SR",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tbliTAkDfVNDksiQi/viwpYBxRPIAqP67SR"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldlXoj6oj4g0P3fv",
+            "name": "Run",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldJsBQuIEinCc1q4",
+            "name": "Notes",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldyZXvrZkKx7x9iv",
+            "name": "Created",
+            "type": "createdTime",
+            "isComputed": true,
+            "options": {
+              "result": {
+                "type": "dateTime",
+                "options": {
+                  "dateFormat": { "name": "local", "format": "l" },
+                  "timeFormat": { "name": "12hour", "format": "h:mma" },
+                  "timeZone": "client"
+                }
+              }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldYcyGW6sfiBbCNE",
+            "name": "Status",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selZYfBz6mk9X5xkN",
+                  "name": "success",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selkWsZ5Z7FQgv8DD",
+                  "name": "error",
+                  "color": "redLight2"
+                }
+              ]
+            },
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tblonMdLBuPJ8hQeA",
+        "name": "Applicants",
+        "description": "",
+        "url": "https://airtable.com/tblonMdLBuPJ8hQeA",
+        "views": [
+          {
+            "id": "viwh7VsW0m9mA0WAM",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwh7VsW0m9mA0WAM"
+          },
+          {
+            "id": "viwY3ma1ANDogqAuE",
+            "name": "Application Calibration",
+            "type": "grid",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwY3ma1ANDogqAuE"
+          },
+          {
+            "id": "viwF6E3VokLIo9aIO",
+            "name": "Interact Fellowship Application",
+            "type": "form",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwF6E3VokLIo9aIO"
+          },
+          {
+            "id": "viwfOJetDyNWtO2rn",
+            "name": "Bot view (DO NOT CHANGE)",
+            "type": "grid",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwfOJetDyNWtO2rn"
+          },
+          {
+            "id": "viwxLZjkhhQrPvWLl",
+            "name": "Top Written Apps - clustering",
+            "type": "grid",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwxLZjkhhQrPvWLl"
+          },
+          {
+            "id": "viwecVTsWGK1wcKuD",
+            "name": "jonas debug",
+            "type": "grid",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwecVTsWGK1wcKuD"
+          },
+          {
+            "id": "viwEae3NHaqzJ44eK",
+            "name": "Jonas - debug view",
+            "type": "grid",
+            "url": "https://airtable.com/tblonMdLBuPJ8hQeA/viwEae3NHaqzJ44eK"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldMUU2WxrSG4RKqX",
+            "name": "Name",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldFrz8BWb51omFvn"],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldFrz8BWb51omFvn",
+            "name": "Your name",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldjcnzybIpP1VV8j",
+            "name": "Birthdate",
+            "type": "date",
+            "isComputed": false,
+            "options": { "dateFormat": { "name": "local", "format": "l" } },
+            "description": ""
+          },
+          {
+            "id": "fldGMTqG9efsOrXbz",
+            "name": "Email",
+            "type": "email",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldESnnjhGqKmksss",
+            "name": "Phone",
+            "type": "phoneNumber",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldqQjW6Xwn0J97Og",
+            "name": "Location - City",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldXXgLyhhvrPp3Mm",
+            "name": "Location - Country",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selXKACyMDssNmqEj",
+                  "name": "Afghanistan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selSKhvUsutnsI8lH",
+                  "name": "Albania",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selOt1tll66IiqaWa",
+                  "name": "Algeria",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selfRS0N3XM5RTEwK",
+                  "name": "Andorra",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selYNLKKpz91PzQy3",
+                  "name": "Angola",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selNLpYNGUWdWNXoN",
+                  "name": "Antigua and Barbuda",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selh6u2V633YST8Jn",
+                  "name": "Argentina",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selbMAYd5HV5uOiNf",
+                  "name": "Armenia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selaBvc6rcb4tWq6Q",
+                  "name": "Australia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "sel3zlquraQC1LwQz",
+                  "name": "Austria",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "sellzJT5GsmtDyjbc",
+                  "name": "Azerbaijan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel5pEYeZIiKwNUck",
+                  "name": "Bahamas",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selh7I7SQge4Qj27j",
+                  "name": "Bahrain",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selziXlH1FrLJP30h",
+                  "name": "Bangladesh",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selj27JF6Ddob2ctp",
+                  "name": "Barbados",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selsILHBihkMumfdD",
+                  "name": "Belarus",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seliGfbnIpOSrs5Lg",
+                  "name": "Belgium",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selIDdSfaWUn6krbs",
+                  "name": "Belize",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selrWRTtxQsd465ZB",
+                  "name": "Benin",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selcfZ4y8lWOjPAjY",
+                  "name": "Bhutan",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selmdcEt1HFEI5fqc",
+                  "name": "Bolivia",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selGEg1EIB1BIosL4",
+                  "name": "Bosnia and Herzegovina",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selNgJATNQgXZqzrR",
+                  "name": "Botswana",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "sellLK35KYF65YMBJ",
+                  "name": "Brazil",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selXBwfCLZGPPj2Bj",
+                  "name": "Brunei",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selzncuc3x187DR9S",
+                  "name": "Bulgaria",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selLMYmheQKyHPz51",
+                  "name": "Burkina Faso",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selDYDmL7fvuYNvLK",
+                  "name": "Burundi",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selBtI2bpqUQNA24v",
+                  "name": "Côte d'Ivoire",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selAPRrvJSqB5lIkF",
+                  "name": "Cabo Verde",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selqCmml3SDt3R7ie",
+                  "name": "Cambodia",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selyn4WP3lNfclbEE",
+                  "name": "Cameroon",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selZy0M15O5eT1zNL",
+                  "name": "Canada",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selP9UeFdeac5b0s8",
+                  "name": "Central African Republic",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel4dOMRoNIPPPBY6",
+                  "name": "Chad",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selgSxfVlaXQJRRXN",
+                  "name": "Chile",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seluXQ1c979DGG0Ef",
+                  "name": "China",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selD2g2eCxh6ZLivy",
+                  "name": "Colombia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selkm3vqfCToVKKGT",
+                  "name": "Comoros",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selarT9O71szEa13o",
+                  "name": "Congo (Congo-Brazzaville)",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selb0mUlVvoqIHAlH",
+                  "name": "Costa Rica",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selQHj3RFe2f5eelC",
+                  "name": "Croatia",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seltGhCzP5SZ7LUyb",
+                  "name": "Cuba",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selWBAi6Ry6UL956W",
+                  "name": "Cyprus",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel8OsdTJBmLqaNwD",
+                  "name": "Czechia (Czech Republic)",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seli09lPS0TGJp16L",
+                  "name": "Democratic Republic of the Congo",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selTtKgZfJRH2hYkL",
+                  "name": "Denmark",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selr9u4wfPiGd3hR1",
+                  "name": "Djibouti",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seliQiWvyQbf6abHv",
+                  "name": "Dominica",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selVOjql4F8IWMeka",
+                  "name": "Dominican Republic",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "sel5yBjBb61hHPwB0",
+                  "name": "Ecuador",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seliAGYJzxj8RF8AK",
+                  "name": "Egypt",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selcBtCZg6anQ64vj",
+                  "name": "El Salvador",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selMAyPkMPySnHdPm",
+                  "name": "Equatorial Guinea",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel21t6xCgzCjUnnl",
+                  "name": "Eritrea",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel8AFPBdncDvVajD",
+                  "name": "Estonia",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selPNX3tzo5rFoLdr",
+                  "name": "Eswatini (fmr. \"Swaziland\")",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "seldROyaA7DmMRlOD",
+                  "name": "Ethiopia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selru7U37jvp9Xfj8",
+                  "name": "Fiji",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selJRzKIzry7wjyyg",
+                  "name": "Finland",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "seluk2PCbIlg3uzU2",
+                  "name": "France",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel051as1QmHXxdja",
+                  "name": "Gabon",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel5CjLviWZKDm3VK",
+                  "name": "Gambia",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selkg3WyT1BOGz6h7",
+                  "name": "Georgia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selJOv2Ukr5VufuNB",
+                  "name": "Germany",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seli6VlHh5jcVCCli",
+                  "name": "Ghana",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selJHUarg20wMKCqX",
+                  "name": "Greece",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selCv4jDcQ6ao0Gq1",
+                  "name": "Grenada",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selzZCShMMR35APfE",
+                  "name": "Guatemala",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selYjokTfsj4HDqJO",
+                  "name": "Guinea",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selfH4b092aLmPZHA",
+                  "name": "Guinea-Bissau",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selisNBT4wDct5IBR",
+                  "name": "Guyana",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel5oDcmRink5jwEI",
+                  "name": "Haiti",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selJwF4notRt4oIib",
+                  "name": "Holy See",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selzWz119HgZGZu1I",
+                  "name": "Honduras",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selAxYUCpmYywUiCM",
+                  "name": "Hungary",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selHiGfKYKj0ENhzW",
+                  "name": "Iceland",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selmelhpphaXBFhI0",
+                  "name": "India",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selEBZlR4FOnwBFl2",
+                  "name": "Indonesia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selmZhSkxHAeSE2Sr",
+                  "name": "Iran",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selo8vVccSba5ZOAT",
+                  "name": "Iraq",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selNUOganyinhF3uw",
+                  "name": "Ireland",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel8xVH4q3YP7a3Nk",
+                  "name": "Israel",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selW8wAk6kioCE2Cb",
+                  "name": "Italy",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selNJzH0VSEtltK3k",
+                  "name": "Jamaica",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selqQgxKKz4JskzLr",
+                  "name": "Japan",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selK82lVM5rh36UCp",
+                  "name": "Jordan",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel66GTrk6qKS901m",
+                  "name": "Kazakhstan",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seleGH0niGpfCSBzE",
+                  "name": "Kenya",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selqQo4huomvjzhxC",
+                  "name": "Kiribati",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selgRH1mYtK0CjACb",
+                  "name": "Kuwait",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seln2xFWu7WrHISpr",
+                  "name": "Kyrgyzstan",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selflR3F4J7UxjcCK",
+                  "name": "Laos",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selP2WP9HeLPC7HOO",
+                  "name": "Latvia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selPmDy3nfn9a2CD4",
+                  "name": "Lebanon",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seleBgNOJiFnfpq1Q",
+                  "name": "Lesotho",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selX368PZO7Bn9sgD",
+                  "name": "Liberia",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel1qntXYPfsxdnUA",
+                  "name": "Libya",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seldXO8S4MpA55fMJ",
+                  "name": "Liechtenstein",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selcIbtn9hPNsfxGj",
+                  "name": "Lithuania",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selnaw2LZJu8iMFqJ",
+                  "name": "Luxembourg",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selZPu0gTsuWLtmht",
+                  "name": "Madagascar",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selN8XvX3c2czEDsr",
+                  "name": "Malawi",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selhz75006JLq4Ba4",
+                  "name": "Malaysia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel9IvBYeFDq7dDvZ",
+                  "name": "Maldives",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel2UUWq1NELsGtbH",
+                  "name": "Mali",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selhy7JRBHOvBUEOV",
+                  "name": "Malta",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel3sl4e2cxdysfj8",
+                  "name": "Marshall Islands",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selGzddFHmOygZiEa",
+                  "name": "Mauritania",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selhE7vgqtX7JWTiw",
+                  "name": "Mauritius",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selEb1S0n5mZuivrM",
+                  "name": "Mexico",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel6opDa6kJZJiGmw",
+                  "name": "Micronesia",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selVnEsvUh0fAvj8L",
+                  "name": "Moldova",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selXGqTR9DvDcE0MG",
+                  "name": "Monaco",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selm2HHfKbRQRoKQ7",
+                  "name": "Mongolia",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selBaYyLfecP9UHKA",
+                  "name": "Montenegro",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selOIZlGgEvWOUBvA",
+                  "name": "Morocco",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selZoxrsS6s1BRPx0",
+                  "name": "Mozambique",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selbo488UXYTGam7i",
+                  "name": "Myanmar (formerly Burma)",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selWtWRz814JmP4kZ",
+                  "name": "Namibia",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selPCJiA7aM2E0SWO",
+                  "name": "Nauru",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selXZiYztx4OPR8yE",
+                  "name": "Nepal",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selZVzQd8awezcFvN",
+                  "name": "Netherlands",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selIwGQSZFEtCf3o8",
+                  "name": "New Zealand",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selCxGOqqxEqov9XX",
+                  "name": "Nicaragua",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selTDM1pqifJ5r0TY",
+                  "name": "Niger",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selz5fIxYS8ag2Uzi",
+                  "name": "Nigeria",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "seld0aPFfJjbNaXaF",
+                  "name": "North Korea",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selEuqigQLqUz1bCi",
+                  "name": "North Macedonia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selMyE1bQvgGmfs4L",
+                  "name": "Norway",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selW2livBujSKuCFo",
+                  "name": "Oman",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selvrBB3RNEKgLrVl",
+                  "name": "Pakistan",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selwjCjrPqnwXSwQV",
+                  "name": "Palau",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selTeBsgmPISdekxI",
+                  "name": "Palestine State",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selLdpt08o1da8Yyg",
+                  "name": "Panama",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel9X6iD6ftjukjva",
+                  "name": "Papua New Guinea",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seldB7or9kyBDXwn2",
+                  "name": "Paraguay",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selyWUw7KqqAfehM2",
+                  "name": "Peru",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selsauqx8OSRthy48",
+                  "name": "Philippines",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selw00JavjE3ffdmY",
+                  "name": "Poland",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selGRcNl5Vy68RuJg",
+                  "name": "Portugal",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selCdiFsZXsoxV925",
+                  "name": "Qatar",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seluFM7bQQLJ1mxlj",
+                  "name": "Romania",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selwhQ4Id0HXCgGnr",
+                  "name": "Russia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selK3R2jb1oBkzf2J",
+                  "name": "Rwanda",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selAVLjEkQNgQI6jA",
+                  "name": "Saint Kitts and Nevis",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selpfF1ASmSJ6fPst",
+                  "name": "Saint Lucia",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selLOI3YOkIg8pWGY",
+                  "name": "Saint Vincent and the Grenadines",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selrjmCZUrvJdiYQS",
+                  "name": "Samoa",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selKlqIHNQQqJWagn",
+                  "name": "San Marino",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selroNnbmzHlwJeKU",
+                  "name": "Sao Tome and Principe",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seldnAlSeJGrpDAa6",
+                  "name": "Saudi Arabia",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seluSoVDG71sw3zC7",
+                  "name": "Senegal",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selIOEIs9IyI6B0Cb",
+                  "name": "Serbia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selh16OirFDquyiro",
+                  "name": "Seychelles",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selCOkXdvo76MG8UE",
+                  "name": "Sierra Leone",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selBOHOi1suDe7d92",
+                  "name": "Singapore",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selIZ8Z2FYHdyPmGA",
+                  "name": "Slovakia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selrPiHy0oO2onIw4",
+                  "name": "Slovenia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selsAn9SxI0l74hHa",
+                  "name": "Solomon Islands",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selmUn0SOUE8CebdI",
+                  "name": "Somalia",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selRJOzGJutTWM2CF",
+                  "name": "South Africa",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seljAen6I6Ni9Uwoj",
+                  "name": "South Korea",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selUdMbZS6KTbp6SP",
+                  "name": "South Sudan",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selLlSBgZrXKEk4Z5",
+                  "name": "Spain",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selilIdvqWFg4vGf5",
+                  "name": "Sri Lanka",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selRVaLPUPCU7Iaoi",
+                  "name": "Sudan",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selyMME5i63S8LEMc",
+                  "name": "Suriname",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selyGNK1QmB3PlVZV",
+                  "name": "Sweden",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selC5b21rJzGPtrTI",
+                  "name": "Switzerland",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selxNK1SatJ1QvRgv",
+                  "name": "Syria",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selYphT3qD7o2WScD",
+                  "name": "Tajikistan",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selMfOXvWCx9M2G3K",
+                  "name": "Tanzania",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "seljL1iPq88w1R4en",
+                  "name": "Thailand",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selR3Ay2vhGzX9NVg",
+                  "name": "Timor-Leste",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selIuJIqKsqCkN4gz",
+                  "name": "Togo",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selDEOadEyfIrPMEF",
+                  "name": "Tonga",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selCPlMgXrKqgGCaI",
+                  "name": "Trinidad and Tobago",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selqAyP2ZXrs8XzQN",
+                  "name": "Tunisia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "sel9OVIrvOknUm3sJ",
+                  "name": "Turkey",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selH80f5KyJy8om4s",
+                  "name": "Turkmenistan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selI1AmoVU4XYBaxf",
+                  "name": "Tuvalu",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seluRRpRGSCmHGWFx",
+                  "name": "Uganda",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selMFqIsbx53urhtc",
+                  "name": "Ukraine",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selszf6xMAxxH2P4F",
+                  "name": "United Arab Emirates",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel8CKBkRQbke8NHK",
+                  "name": "United Kingdom",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selCkXUcuBvEKOf1K",
+                  "name": "United States of America",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selgG9qhftlUnLX3f",
+                  "name": "Uruguay",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selCiINrMOGLFlfxm",
+                  "name": "Uzbekistan",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selsJkGJktMftdrF6",
+                  "name": "Vanuatu",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selfQWm1ZxOh9LRpr",
+                  "name": "Venezuela",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel5KDa7jKr89YgXV",
+                  "name": "Vietnam",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selF2OvOsaUWm6fWL",
+                  "name": "Yemen",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selTiaPZsBKyr7Mqh",
+                  "name": "Zambia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel2w6pNi5Q83i8oH",
+                  "name": "Zimbabwe",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selX8v740p6736pOi",
+                  "name": "Other (Please specify in City/State fields)",
+                  "color": "orangeLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldpVOMQ7WQAE3PQl",
+            "name": "Location - State",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldNXrWA1eojWcDa3",
+            "name": "LinkedIn Profile",
+            "type": "url",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "flduCCh3fvat4KFL7",
+            "name": "Facebook Profile",
+            "type": "url",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld3KsRw1ZLisF99T",
+            "name": "Twitter Profile",
+            "type": "url",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld9ALMx4wtEB0ARQ",
+            "name": "Personal Website or Blog",
+            "type": "url",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldrMh5tnWj8bZ2CK",
+            "name": "What did you create in 2020 that you’re the most proud of? Do you have any major projects or initiatives in mind for 2021?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldDZ6LWex3JPB1os",
+            "name": "Tell us about three core interests you have. Why do you care about these things?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldKs1JWmaLLxjgbo",
+            "name": "Who (between 18 and 23) would you be the most excited to find out was in your Fellowship class? Why?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldRjoLiIE9KHnd9v",
+            "name": "Did someone refer you?",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldyxfNMcN5eEervj",
+            "name": "Community Referrals",
+            "type": "multipleLookupValues",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "recordLinkFieldId": "fldmKq0XnkyoizPIj",
+              "fieldIdInLinkedTable": "fldzhwDXgsXoMdcGn",
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldO9k5xSEC8qeVFM",
+            "name": "Race/Ethnicity",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selcw4vXoi335cWlA",
+                  "name": "Black or African American",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "seljmF2JaSEvsoCMQ",
+                  "name": "East Asian",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selJDxpWkfgJ80ToV",
+                  "name": "Hispanic or Latinx",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selypU4gYIzw377sQ",
+                  "name": "Indigenous or Native American",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selzvvQRdUbXYtrlG",
+                  "name": "Middle Eastern",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selw9u6iI3ByvVby0",
+                  "name": "South Asian",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selSfGfZ5FwtS535O",
+                  "name": "White/European",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selgpKHw7FcWDBAdN",
+                  "name": "Prefer not to say",
+                  "color": "pinkLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldcOYTEhIJg99B6k",
+            "name": "Gender",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                { "id": "selL6FSwUn7eeuf6h", "name": "Female" },
+                { "id": "selTNhv3dYG1k3omT", "name": "Male" },
+                { "id": "selIcIiBemojs5vQB", "name": "Non-binary" },
+                { "id": "selVH6CCwbakcbah6", "name": "Prefer not to say" }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldxTELYZVwD2eMDL",
+            "name": "Where did you go to school?",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldhN2ZgrRRJmHYyu",
+            "name": "Are you affiliated with any other organizations, communities, programs, or companies?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldB9MPFfZXoiZYn0",
+            "name": "reviews assigned",
+            "type": "count",
+            "isComputed": true,
+            "options": { "isValid": false, "recordLinkFieldId": null },
+            "description": ""
+          },
+          {
+            "id": "fld5155n42B962dRX",
+            "name": "location-summary",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fldqQjW6Xwn0J97Og",
+                "fldpVOMQ7WQAE3PQl",
+                "fldXXgLyhhvrPp3Mm"
+              ],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldRCXlq0s7JomXsx",
+            "name": "low quality?",
+            "type": "rollup",
+            "isComputed": true,
+            "options": {
+              "isValid": false,
+              "recordLinkFieldId": null,
+              "fieldIdInLinkedTable": "fld7YZvXAxIkBGcJ9",
+              "referencedFieldIds": [],
+              "result": null
+            },
+            "description": ""
+          },
+          {
+            "id": "fldt8xrWNsVseTA2R",
+            "name": "Reviewer-Selected Archetypes",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selP6Zih6phRs4zL8",
+                  "name": "Creative/visionary",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selbLLQUCsQW6vmOK",
+                  "name": "Networked Node",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel6PzGqEbSfbhysh",
+                  "name": "Social glue",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "seloOaCUAt7mqo8IE",
+                  "name": "Philosophical challenger",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selLbXhKt25WVpMg1",
+                  "name": "Technical tinkerer",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seltgMrNhgHnm9pZw",
+                  "name": "Introvert",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seloD9INOYuZaOAbV",
+                  "name": "Outsider",
+                  "color": "redLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fld9AKLdPqrPs2kLQ",
+            "name": "What has been the biggest change to your beliefs or values in the past two years, and what caused this change?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldOabWBn3MD0OUym",
+            "name": "What do people not find out about you until they've known you for a while?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldpHqgQiNLTfm7qR",
+            "name": "Why do you want to become an Interact Fellow?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldZr3nxrQTonu5kb",
+            "name": "Race/Gender (self-identification)",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldqvRriy1JQ1lNQB",
+            "name": "Which of the following would best describe you?",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "sel8wJ9w7OnVL33Nz",
+                  "name": "Founder",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel0hroY1L2SieOXi",
+                  "name": "Engineer",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel5qMp4lQkPhFHRw",
+                  "name": "Community Organizer",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selTrt6XRj77qwczf",
+                  "name": "Academic / Researcher",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selOaXWaIe2EvAdgl",
+                  "name": "Scientist",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selsGcawcOoA7BC2V",
+                  "name": "Artist",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selVh0xiSov4vm77U",
+                  "name": "Designer",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selo7bUAw9blWJWVi",
+                  "name": "Writer / Journalist",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selacKSHKvL9Vuq3i",
+                  "name": "Operations Manager",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "sel0fo9sJpL9cM4tO",
+                  "name": "Executive",
+                  "color": "blueLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldf0YOiD5OWfHczz",
+            "name": "Applied previously?",
+            "type": "multipleLookupValues",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "recordLinkFieldId": "fldF61YR9BOWr8Lyq",
+              "fieldIdInLinkedTable": "fld90PtesDCY3ABXG",
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fld9d8lzFhYbxzPp1",
+            "name": "Timestamp",
+            "type": "createdTime",
+            "isComputed": true,
+            "options": {
+              "result": {
+                "type": "dateTime",
+                "options": {
+                  "dateFormat": { "name": "local", "format": "l" },
+                  "timeFormat": { "name": "12hour", "format": "h:mma" },
+                  "timeZone": "client"
+                }
+              }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldpGeMFmefnWQ0iL",
+            "name": "Hometown - Country",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selXKACyMDssNmqEj",
+                  "name": "Afghanistan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selSKhvUsutnsI8lH",
+                  "name": "Albania",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selOt1tll66IiqaWa",
+                  "name": "Algeria",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selfRS0N3XM5RTEwK",
+                  "name": "Andorra",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selYNLKKpz91PzQy3",
+                  "name": "Angola",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selNLpYNGUWdWNXoN",
+                  "name": "Antigua and Barbuda",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selh6u2V633YST8Jn",
+                  "name": "Argentina",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selbMAYd5HV5uOiNf",
+                  "name": "Armenia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selaBvc6rcb4tWq6Q",
+                  "name": "Australia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "sel3zlquraQC1LwQz",
+                  "name": "Austria",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "sellzJT5GsmtDyjbc",
+                  "name": "Azerbaijan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel5pEYeZIiKwNUck",
+                  "name": "Bahamas",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selh7I7SQge4Qj27j",
+                  "name": "Bahrain",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selziXlH1FrLJP30h",
+                  "name": "Bangladesh",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selj27JF6Ddob2ctp",
+                  "name": "Barbados",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selsILHBihkMumfdD",
+                  "name": "Belarus",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seliGfbnIpOSrs5Lg",
+                  "name": "Belgium",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selIDdSfaWUn6krbs",
+                  "name": "Belize",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selrWRTtxQsd465ZB",
+                  "name": "Benin",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selcfZ4y8lWOjPAjY",
+                  "name": "Bhutan",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selmdcEt1HFEI5fqc",
+                  "name": "Bolivia",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selGEg1EIB1BIosL4",
+                  "name": "Bosnia and Herzegovina",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selNgJATNQgXZqzrR",
+                  "name": "Botswana",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "sellLK35KYF65YMBJ",
+                  "name": "Brazil",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selXBwfCLZGPPj2Bj",
+                  "name": "Brunei",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selzncuc3x187DR9S",
+                  "name": "Bulgaria",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selLMYmheQKyHPz51",
+                  "name": "Burkina Faso",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selDYDmL7fvuYNvLK",
+                  "name": "Burundi",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selBtI2bpqUQNA24v",
+                  "name": "Côte d'Ivoire",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selAPRrvJSqB5lIkF",
+                  "name": "Cabo Verde",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selqCmml3SDt3R7ie",
+                  "name": "Cambodia",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selyn4WP3lNfclbEE",
+                  "name": "Cameroon",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selZy0M15O5eT1zNL",
+                  "name": "Canada",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selP9UeFdeac5b0s8",
+                  "name": "Central African Republic",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel4dOMRoNIPPPBY6",
+                  "name": "Chad",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selgSxfVlaXQJRRXN",
+                  "name": "Chile",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seluXQ1c979DGG0Ef",
+                  "name": "China",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selD2g2eCxh6ZLivy",
+                  "name": "Colombia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selkm3vqfCToVKKGT",
+                  "name": "Comoros",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selarT9O71szEa13o",
+                  "name": "Congo (Congo-Brazzaville)",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selb0mUlVvoqIHAlH",
+                  "name": "Costa Rica",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selQHj3RFe2f5eelC",
+                  "name": "Croatia",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seltGhCzP5SZ7LUyb",
+                  "name": "Cuba",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selWBAi6Ry6UL956W",
+                  "name": "Cyprus",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel8OsdTJBmLqaNwD",
+                  "name": "Czechia (Czech Republic)",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seli09lPS0TGJp16L",
+                  "name": "Democratic Republic of the Congo",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selTtKgZfJRH2hYkL",
+                  "name": "Denmark",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selr9u4wfPiGd3hR1",
+                  "name": "Djibouti",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seliQiWvyQbf6abHv",
+                  "name": "Dominica",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selVOjql4F8IWMeka",
+                  "name": "Dominican Republic",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "sel5yBjBb61hHPwB0",
+                  "name": "Ecuador",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seliAGYJzxj8RF8AK",
+                  "name": "Egypt",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selcBtCZg6anQ64vj",
+                  "name": "El Salvador",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selMAyPkMPySnHdPm",
+                  "name": "Equatorial Guinea",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel21t6xCgzCjUnnl",
+                  "name": "Eritrea",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel8AFPBdncDvVajD",
+                  "name": "Estonia",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selPNX3tzo5rFoLdr",
+                  "name": "Eswatini (fmr. \"Swaziland\")",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "seldROyaA7DmMRlOD",
+                  "name": "Ethiopia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selru7U37jvp9Xfj8",
+                  "name": "Fiji",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selJRzKIzry7wjyyg",
+                  "name": "Finland",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "seluk2PCbIlg3uzU2",
+                  "name": "France",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel051as1QmHXxdja",
+                  "name": "Gabon",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel5CjLviWZKDm3VK",
+                  "name": "Gambia",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selkg3WyT1BOGz6h7",
+                  "name": "Georgia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selJOv2Ukr5VufuNB",
+                  "name": "Germany",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seli6VlHh5jcVCCli",
+                  "name": "Ghana",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selJHUarg20wMKCqX",
+                  "name": "Greece",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selCv4jDcQ6ao0Gq1",
+                  "name": "Grenada",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selzZCShMMR35APfE",
+                  "name": "Guatemala",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selYjokTfsj4HDqJO",
+                  "name": "Guinea",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selfH4b092aLmPZHA",
+                  "name": "Guinea-Bissau",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selisNBT4wDct5IBR",
+                  "name": "Guyana",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel5oDcmRink5jwEI",
+                  "name": "Haiti",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selJwF4notRt4oIib",
+                  "name": "Holy See",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selzWz119HgZGZu1I",
+                  "name": "Honduras",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selAxYUCpmYywUiCM",
+                  "name": "Hungary",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selHiGfKYKj0ENhzW",
+                  "name": "Iceland",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selmelhpphaXBFhI0",
+                  "name": "India",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selEBZlR4FOnwBFl2",
+                  "name": "Indonesia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selmZhSkxHAeSE2Sr",
+                  "name": "Iran",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selo8vVccSba5ZOAT",
+                  "name": "Iraq",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selNUOganyinhF3uw",
+                  "name": "Ireland",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel8xVH4q3YP7a3Nk",
+                  "name": "Israel",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selW8wAk6kioCE2Cb",
+                  "name": "Italy",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selNJzH0VSEtltK3k",
+                  "name": "Jamaica",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selqQgxKKz4JskzLr",
+                  "name": "Japan",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selK82lVM5rh36UCp",
+                  "name": "Jordan",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel66GTrk6qKS901m",
+                  "name": "Kazakhstan",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seleGH0niGpfCSBzE",
+                  "name": "Kenya",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selqQo4huomvjzhxC",
+                  "name": "Kiribati",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selgRH1mYtK0CjACb",
+                  "name": "Kuwait",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seln2xFWu7WrHISpr",
+                  "name": "Kyrgyzstan",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selflR3F4J7UxjcCK",
+                  "name": "Laos",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selP2WP9HeLPC7HOO",
+                  "name": "Latvia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selPmDy3nfn9a2CD4",
+                  "name": "Lebanon",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seleBgNOJiFnfpq1Q",
+                  "name": "Lesotho",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selX368PZO7Bn9sgD",
+                  "name": "Liberia",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel1qntXYPfsxdnUA",
+                  "name": "Libya",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seldXO8S4MpA55fMJ",
+                  "name": "Liechtenstein",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selcIbtn9hPNsfxGj",
+                  "name": "Lithuania",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selnaw2LZJu8iMFqJ",
+                  "name": "Luxembourg",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selZPu0gTsuWLtmht",
+                  "name": "Madagascar",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selN8XvX3c2czEDsr",
+                  "name": "Malawi",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selhz75006JLq4Ba4",
+                  "name": "Malaysia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel9IvBYeFDq7dDvZ",
+                  "name": "Maldives",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel2UUWq1NELsGtbH",
+                  "name": "Mali",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selhy7JRBHOvBUEOV",
+                  "name": "Malta",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel3sl4e2cxdysfj8",
+                  "name": "Marshall Islands",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selGzddFHmOygZiEa",
+                  "name": "Mauritania",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selhE7vgqtX7JWTiw",
+                  "name": "Mauritius",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selEb1S0n5mZuivrM",
+                  "name": "Mexico",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel6opDa6kJZJiGmw",
+                  "name": "Micronesia",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selVnEsvUh0fAvj8L",
+                  "name": "Moldova",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selXGqTR9DvDcE0MG",
+                  "name": "Monaco",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selm2HHfKbRQRoKQ7",
+                  "name": "Mongolia",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selBaYyLfecP9UHKA",
+                  "name": "Montenegro",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selOIZlGgEvWOUBvA",
+                  "name": "Morocco",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selZoxrsS6s1BRPx0",
+                  "name": "Mozambique",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selbo488UXYTGam7i",
+                  "name": "Myanmar (formerly Burma)",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selWtWRz814JmP4kZ",
+                  "name": "Namibia",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selPCJiA7aM2E0SWO",
+                  "name": "Nauru",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selXZiYztx4OPR8yE",
+                  "name": "Nepal",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selZVzQd8awezcFvN",
+                  "name": "Netherlands",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selIwGQSZFEtCf3o8",
+                  "name": "New Zealand",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selCxGOqqxEqov9XX",
+                  "name": "Nicaragua",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selTDM1pqifJ5r0TY",
+                  "name": "Niger",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selz5fIxYS8ag2Uzi",
+                  "name": "Nigeria",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "seld0aPFfJjbNaXaF",
+                  "name": "North Korea",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selEuqigQLqUz1bCi",
+                  "name": "North Macedonia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selMyE1bQvgGmfs4L",
+                  "name": "Norway",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selW2livBujSKuCFo",
+                  "name": "Oman",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selvrBB3RNEKgLrVl",
+                  "name": "Pakistan",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selwjCjrPqnwXSwQV",
+                  "name": "Palau",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selTeBsgmPISdekxI",
+                  "name": "Palestine State",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selLdpt08o1da8Yyg",
+                  "name": "Panama",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel9X6iD6ftjukjva",
+                  "name": "Papua New Guinea",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seldB7or9kyBDXwn2",
+                  "name": "Paraguay",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selyWUw7KqqAfehM2",
+                  "name": "Peru",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selsauqx8OSRthy48",
+                  "name": "Philippines",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selw00JavjE3ffdmY",
+                  "name": "Poland",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selGRcNl5Vy68RuJg",
+                  "name": "Portugal",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selCdiFsZXsoxV925",
+                  "name": "Qatar",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seluFM7bQQLJ1mxlj",
+                  "name": "Romania",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selwhQ4Id0HXCgGnr",
+                  "name": "Russia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selK3R2jb1oBkzf2J",
+                  "name": "Rwanda",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selAVLjEkQNgQI6jA",
+                  "name": "Saint Kitts and Nevis",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selpfF1ASmSJ6fPst",
+                  "name": "Saint Lucia",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selLOI3YOkIg8pWGY",
+                  "name": "Saint Vincent and the Grenadines",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selrjmCZUrvJdiYQS",
+                  "name": "Samoa",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selKlqIHNQQqJWagn",
+                  "name": "San Marino",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selroNnbmzHlwJeKU",
+                  "name": "Sao Tome and Principe",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seldnAlSeJGrpDAa6",
+                  "name": "Saudi Arabia",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seluSoVDG71sw3zC7",
+                  "name": "Senegal",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selIOEIs9IyI6B0Cb",
+                  "name": "Serbia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selh16OirFDquyiro",
+                  "name": "Seychelles",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selCOkXdvo76MG8UE",
+                  "name": "Sierra Leone",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selBOHOi1suDe7d92",
+                  "name": "Singapore",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selIZ8Z2FYHdyPmGA",
+                  "name": "Slovakia",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selrPiHy0oO2onIw4",
+                  "name": "Slovenia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selsAn9SxI0l74hHa",
+                  "name": "Solomon Islands",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selmUn0SOUE8CebdI",
+                  "name": "Somalia",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selRJOzGJutTWM2CF",
+                  "name": "South Africa",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seljAen6I6Ni9Uwoj",
+                  "name": "South Korea",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selUdMbZS6KTbp6SP",
+                  "name": "South Sudan",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selLlSBgZrXKEk4Z5",
+                  "name": "Spain",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selilIdvqWFg4vGf5",
+                  "name": "Sri Lanka",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selRVaLPUPCU7Iaoi",
+                  "name": "Sudan",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selyMME5i63S8LEMc",
+                  "name": "Suriname",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selyGNK1QmB3PlVZV",
+                  "name": "Sweden",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selC5b21rJzGPtrTI",
+                  "name": "Switzerland",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selxNK1SatJ1QvRgv",
+                  "name": "Syria",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selYphT3qD7o2WScD",
+                  "name": "Tajikistan",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selMfOXvWCx9M2G3K",
+                  "name": "Tanzania",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "seljL1iPq88w1R4en",
+                  "name": "Thailand",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selR3Ay2vhGzX9NVg",
+                  "name": "Timor-Leste",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selIuJIqKsqCkN4gz",
+                  "name": "Togo",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selDEOadEyfIrPMEF",
+                  "name": "Tonga",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selCPlMgXrKqgGCaI",
+                  "name": "Trinidad and Tobago",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selqAyP2ZXrs8XzQN",
+                  "name": "Tunisia",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "sel9OVIrvOknUm3sJ",
+                  "name": "Turkey",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selH80f5KyJy8om4s",
+                  "name": "Turkmenistan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selI1AmoVU4XYBaxf",
+                  "name": "Tuvalu",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seluRRpRGSCmHGWFx",
+                  "name": "Uganda",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selMFqIsbx53urhtc",
+                  "name": "Ukraine",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selszf6xMAxxH2P4F",
+                  "name": "United Arab Emirates",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel8CKBkRQbke8NHK",
+                  "name": "United Kingdom",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selCkXUcuBvEKOf1K",
+                  "name": "United States of America",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selgG9qhftlUnLX3f",
+                  "name": "Uruguay",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selCiINrMOGLFlfxm",
+                  "name": "Uzbekistan",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selsJkGJktMftdrF6",
+                  "name": "Vanuatu",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selfQWm1ZxOh9LRpr",
+                  "name": "Venezuela",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel5KDa7jKr89YgXV",
+                  "name": "Vietnam",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selF2OvOsaUWm6fWL",
+                  "name": "Yemen",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selTiaPZsBKyr7Mqh",
+                  "name": "Zambia",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel2w6pNi5Q83i8oH",
+                  "name": "Zimbabwe",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selX8v740p6736pOi",
+                  "name": "Other (Please specify in City/State fields)",
+                  "color": "orangeLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldragPOb4nfXgHIp",
+            "name": "Hometown - City",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldrAVjTYDz8E4YVY",
+            "name": "Hometown - State",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldPiobTfo6bkVDSq",
+            "name": "reviews completed",
+            "type": "rollup",
+            "isComputed": true,
+            "options": {
+              "isValid": false,
+              "recordLinkFieldId": null,
+              "fieldIdInLinkedTable": "fld2cE5ri28kvR2a2",
+              "referencedFieldIds": [],
+              "result": null
+            },
+            "description": ""
+          },
+          {
+            "id": "fldcJ0uumAUzucJnJ",
+            "name": "X-referrals",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tbloq2dUdedWRq9zV",
+              "isReversed": true,
+              "inverseLinkFieldId": "fldYcNhQdMVhOfoir"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldg4ArdMmeaKr7zd",
+            "name": "X-referred by",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tbloq2dUdedWRq9zV",
+              "isReversed": true,
+              "inverseLinkFieldId": "fldclEull6cUzWjCC"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldHYR6NTMFn07NGM",
+            "name": "Number of times X-referred",
+            "type": "count",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "recordLinkFieldId": "fldg4ArdMmeaKr7zd"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldQGG6uA01h4appf",
+            "name": "Number of Community Referrals",
+            "type": "count",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "recordLinkFieldId": "fldmKq0XnkyoizPIj"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldyV1Hfo7YBL6v8e",
+            "name": "Affiliations (cleaned up)",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "sel2G5E6hBRKfDHUq",
+                  "name": "Pioneer.app",
+                  "color": "grayLight1"
+                },
+                {
+                  "id": "selelwFaEuRZi0xKU",
+                  "name": "Google",
+                  "color": "redLight1"
+                },
+                {
+                  "id": "selVu04yiCis2cncC",
+                  "name": "Y Combinator",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "selVSI7T7vqWq8Z2S",
+                  "name": "Facebook",
+                  "color": "redBright"
+                },
+                {
+                  "id": "selu3LtSmRByc2fPi",
+                  "name": "Kleiner Perkins Fellows",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selWqO9zE82GLOO5N",
+                  "name": "Rough Draft Ventures",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "selCJfrnSAdMxIBUZ",
+                  "name": "MIT LaunchX",
+                  "color": "cyanLight1"
+                },
+                {
+                  "id": "selpn6zNjqcZhgNPB",
+                  "name": "TED",
+                  "color": "orangeBright"
+                },
+                {
+                  "id": "selO6TuU3qkh39ZcP",
+                  "name": "Three Dot Dash",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "sel2AeSc7ayHWx1mq",
+                  "name": "Quercus",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "selBQGauN5Bd2EdYv",
+                  "name": "Contrary Capital",
+                  "color": "cyanBright"
+                },
+                {
+                  "id": "selbL6qrDeGXXShH8",
+                  "name": "Thiel Fellowship",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selk5CIQmAz5dohYd",
+                  "name": "Forbes 30U30",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selSJ1wTdA9lg0y3R",
+                  "name": "Truman Scholarship",
+                  "color": "redDark1"
+                },
+                {
+                  "id": "seljlMPqnJFrs0PlC",
+                  "name": "Rhodes Scholarship",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selfVaTlG1OZ9uPIh",
+                  "name": "Fulbright",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selOoAe0lCogRuXwu",
+                  "name": "Kairos Society",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel6768lwc8CbpswO",
+                  "name": "1517 Fund",
+                  "color": "pinkLight1"
+                },
+                {
+                  "id": "selmvf9yiwRpCMvNq",
+                  "name": "Effective Altruism",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "sel8NTN5LdmZbIPVh",
+                  "name": "Entrepreneur First",
+                  "color": "blueDark1"
+                },
+                {
+                  "id": "sely1IrA1241zGIa9",
+                  "name": "CODE2040",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selfFDnbxCXtGRmMQ",
+                  "name": "Twilio",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selg1LLz4n11xz3kF",
+                  "name": "UChicago",
+                  "color": "blueDark1"
+                },
+                {
+                  "id": "selWY7mhvz1AN7NPx",
+                  "name": "Apple",
+                  "color": "tealDark1"
+                },
+                {
+                  "id": "selVtqDo4ge0DqPwB",
+                  "name": "Beek",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selTrWCLPjJUyREd1",
+                  "name": "Silicon Valley Bank",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "sel42peJRFSv6JXTx",
+                  "name": "350.org",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selDhoOAo67WstSoD",
+                  "name": "Impact Labs",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "selgI7bw55gG4P5dP",
+                  "name": "One Salon",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "self2ZIlgM2ect3OV",
+                  "name": "Flinn Scholarship",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selhcdr1VfsXSFy86",
+                  "name": "igniteSTEM",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selHaEFqKxKTn5iBm",
+                  "name": "RSI Scholarship",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "seli6GMSyA07Bqlfa",
+                  "name": "Accel Scholars",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selZTGUShpiuiYbWd",
+                  "name": "Sequoia Capital",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selPcvG1vL2Qfr5Ht",
+                  "name": "Lightspeed Ventures",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selUH2tipHGZmn9xk",
+                  "name": "WHO",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "sel6Ntl1BjmNrj3mw",
+                  "name": "Zoom",
+                  "color": "orangeDark1"
+                },
+                {
+                  "id": "sela79lyIZJs3WKTa",
+                  "name": "Uber",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "selX5jYpwH2jHXsVN",
+                  "name": "Boston Consulting Group (BCG)",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "selyCuj2ebJZ2Yacj",
+                  "name": "DARPA",
+                  "color": "redBright"
+                },
+                {
+                  "id": "sel2T8pRW1UTAxQP2",
+                  "name": "SpaceX",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "seloGYVhwIuJaaOxW",
+                  "name": "Bridgewater",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "selFbMFmyR5w83EwF",
+                  "name": "True Ventures",
+                  "color": "greenLight1"
+                },
+                {
+                  "id": "sela6wbzWya3RUHbv",
+                  "name": "Intuit",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selRwhhUow1phcLMs",
+                  "name": "8VC Fellowship",
+                  "color": "purpleDark1"
+                },
+                {
+                  "id": "selRdO7JPz0SlTSEB",
+                  "name": "Pesto",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "selsA4BMWoTy5bGSD",
+                  "name": "Microsoft",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel4rnlS2TfjRLQ0C",
+                  "name": "Diller family Foundation",
+                  "color": "grayDark1"
+                },
+                {
+                  "id": "selorO6TnIxt4MKtq",
+                  "name": "We Are Family foundation",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selIN9WCILLOeZXug",
+                  "name": "Ground Up Ventures",
+                  "color": "greenDark1"
+                },
+                {
+                  "id": "selpDsTeDe4EBEgD5",
+                  "name": "Twitter",
+                  "color": "grayBright"
+                },
+                {
+                  "id": "selQGzOL9QAq3OKQZ",
+                  "name": "Bessemer Venture Partners",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "selZBzFfvhFWZ8KNJ",
+                  "name": "NVIDIA",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selpdfxNMa8ZhCe96",
+                  "name": "Schwarzman Scholars",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selmzlEPIL9izF11p",
+                  "name": "On Deck",
+                  "color": "redLight1"
+                },
+                {
+                  "id": "selnIDUdCrJROiXn7",
+                  "name": "Dorm Room Fund",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "seldqFrMXCDDUKwyC",
+                  "name": "South Park Commons",
+                  "color": "cyanLight1"
+                },
+                {
+                  "id": "selq47zg5FuG4U7fw",
+                  "name": "Patch",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selgTZwj8xZ7NKIsk",
+                  "name": "Hack Lodge",
+                  "color": "cyanLight1"
+                },
+                {
+                  "id": "selOP8olI1qGZqfQG",
+                  "name": "Spark",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selglOIdvwMseDEg7",
+                  "name": "a16z",
+                  "color": "orangeDark1"
+                },
+                {
+                  "id": "selxEB0mONbRbfwAA",
+                  "name": "Emergent Ventures",
+                  "color": "purpleDark1"
+                },
+                {
+                  "id": "selkARkVOPelTsKub",
+                  "name": "StartX",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selrhIUWbnHsAxuh3",
+                  "name": "Violet Society",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seljDTqXR6Jl5n1LB",
+                  "name": "National Center for Women & Information Technology (NCWIT)",
+                  "color": "redBright"
+                },
+                {
+                  "id": "seluM1vWBFW27xrxT",
+                  "name": "Global Shapers",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "selto5PcOkfYHHoJw",
+                  "name": "Fortis Society",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selxOi7okXdOvK4c3",
+                  "name": "The Knowledge Society",
+                  "color": "redLight1"
+                },
+                {
+                  "id": "selVb2PvANxYu04J0",
+                  "name": "Robinhood",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selYCJUHsciKlL6Uw",
+                  "name": "Snap",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "sel34HFMNJ9dmj5LS",
+                  "name": "Forward Partners Founders",
+                  "color": "yellowBright"
+                },
+                {
+                  "id": "selCY1v2ZPovm86xG",
+                  "name": "Tech Hub",
+                  "color": "greenLight1"
+                },
+                {
+                  "id": "selvSzDKTL9lz0sDs",
+                  "name": "Topos",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "selqcCCx0BU8nCxGi",
+                  "name": "Neo",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selEIE0qbF5smwdsr",
+                  "name": "Epicurrence",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "sel5BNogOgtaN7dip",
+                  "name": "ACM",
+                  "color": "greenLight1"
+                },
+                {
+                  "id": "selDRmU1GshYgyjJM",
+                  "name": "Black Women in Computing",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selM67rzzsD2LW3pP",
+                  "name": "AnitaB.org",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selPzEJmtM8Esan7m",
+                  "name": "Systers",
+                  "color": "redLight1"
+                },
+                {
+                  "id": "selc8eYBTaIOWbhYx",
+                  "name": "NextBillion.org",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seltVnEbxJlf41XvY",
+                  "name": "Google Code",
+                  "color": "redBright"
+                },
+                {
+                  "id": "selfsH4I7M6ZKyAuT",
+                  "name": "Bowery Capital Fellowship",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selDzEhNE9St9knJ9",
+                  "name": "MISK Fellowship",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selSBhMAvjXJ6YuFx",
+                  "name": "National Society of Black Engineers",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selRiyUXhNE0IZPce",
+                  "name": "Management Leaders for Tomorrow",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel3f3jxI4OR72Mlz",
+                  "name": "The Naughton Foundation",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selWwMsayBE9UcP0G",
+                  "name": "Segment",
+                  "color": "grayDark1"
+                },
+                {
+                  "id": "selRmwe9TKei14sHM",
+                  "name": "Metta",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "selsNAzCb0BWt2Kw5",
+                  "name": "McKinsey",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selIfwEVYdOgxZalF",
+                  "name": "JP Morgan",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "sele2PhByV2tqSx2n",
+                  "name": "Palantir",
+                  "color": "grayBright"
+                },
+                {
+                  "id": "selGlpKR6fk5QOTb5",
+                  "name": "Women in Computer Science",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selbEBEhLBqze4iSu",
+                  "name": "Girl Up",
+                  "color": "blueDark1"
+                },
+                {
+                  "id": "sel7CeFQybhTcBnTu",
+                  "name": "DoorDash",
+                  "color": "orangeBright"
+                },
+                {
+                  "id": "selk3Wlq0tnmDzfd8",
+                  "name": "Solana",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "sel1eeUIOrOhCxZHa",
+                  "name": "Stairway",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selsfndJV03LUuz9k",
+                  "name": "The Prince's Trust",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selv1hHqE4XzA9eGr",
+                  "name": "Girl Effect",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selAlznhGnSJQhxIM",
+                  "name": "J-PAL",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selBFIhcy88qxhxaY",
+                  "name": "She++",
+                  "color": "cyanBright"
+                },
+                {
+                  "id": "selCIdosQK7ToBHiu",
+                  "name": "Solomon Center for Health Law & Policy",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selyBlHgXRdsAQvAi",
+                  "name": "Coca-Cola Scholars",
+                  "color": "tealDark1"
+                },
+                {
+                  "id": "selJa0ZWjkYsLNWuA",
+                  "name": "Fast Forward Accelerator",
+                  "color": "grayLight1"
+                },
+                {
+                  "id": "seldUx7t8VZR7cXnr",
+                  "name": "Lincoln Network",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selnZuXxyhHm8Kenc",
+                  "name": "Subtle Asian Dating",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selEAqP3RuGcVbDpU",
+                  "name": "Rewriting the Code",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selXE8T0t1KTCVmpO",
+                  "name": "Asian American Journalists Association",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selUyzJegkufxNJzt",
+                  "name": "Investigative Reporters and Editors",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "seliWRTVWPqceakPZ",
+                  "name": "Culdesac",
+                  "color": "pinkLight1"
+                },
+                {
+                  "id": "selQIpfbeyBkNYU31",
+                  "name": "Haig Solakian Scholar",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selbyF4Cw6JKAKpho",
+                  "name": "Luys Presidential Scholar",
+                  "color": "yellowDark1"
+                },
+                {
+                  "id": "selQyE7zleYBB0d91",
+                  "name": "Synopsis Presidential Scholar",
+                  "color": "redDark1"
+                },
+                {
+                  "id": "seljSmuODYKuO3CIm",
+                  "name": "Hertz Fellowship",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "selfPoJEpM8NDqRtm",
+                  "name": "Baghdasarian Scholar",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "selvDHvuijSk6G1s4",
+                  "name": "All Tech Is Human",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selM2u0eLtAogvgMT",
+                  "name": "Girls Who Code",
+                  "color": "yellowLight1"
+                },
+                {
+                  "id": "selmlNY53e3wfYgq1",
+                  "name": "Kode with Klossy",
+                  "color": "redDark1"
+                },
+                {
+                  "id": "selq6L6iuDInNbNV3",
+                  "name": "Techstars",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selUQzjp5zx8pNhYB",
+                  "name": "FOR.ai",
+                  "color": "purpleDark1"
+                },
+                {
+                  "id": "selyT3cPQYe5fWX80",
+                  "name": "Vector Institute for AI",
+                  "color": "grayBright"
+                },
+                {
+                  "id": "selqlMg1rNroNtbQ3",
+                  "name": "Slack",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "sel1rxlEmVR3G3XAc",
+                  "name": "Girl Scouts",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "selBt2Oj0y2rqWE7r",
+                  "name": "Technology Innovation Fellow",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selOC0JztB48Drung",
+                  "name": "Harvard Technology Review",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selyoWwSwJumXIcAx",
+                  "name": "Slant'd",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selBcCV5lHS304IOz",
+                  "name": "Startup Shell",
+                  "color": "yellowLight1"
+                },
+                {
+                  "id": "seljX47WMztx70WWN",
+                  "name": "National Institutes of Health",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selBMwpRTudmfWfta",
+                  "name": "National Cancer Institute",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "sel84zN6Ik3s3UZOI",
+                  "name": "Hack Club",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "selqJ4GEaeJYumYbo",
+                  "name": "Bluebonnet Data",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "selqEX6yEF2ZlVItT",
+                  "name": "Tianxia Fellowship",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seleSxF0iSRQOvEe8",
+                  "name": "Built by Girls",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "sel2C9Nz67cg29jla",
+                  "name": "Fifty Years VC",
+                  "color": "redLight1"
+                },
+                {
+                  "id": "selG1p9sH2iqUZLC7",
+                  "name": "Shrug Capital",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "selITsTe31zQg6Um4",
+                  "name": "Ignite NI",
+                  "color": "tealDark1"
+                },
+                {
+                  "id": "sel2Un91i58LoKE46",
+                  "name": "United Nations",
+                  "color": "grayLight1"
+                },
+                {
+                  "id": "selrLvtCuaLRsFoO8",
+                  "name": "Shopify",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel49yz9a76Bbcfno",
+                  "name": "Commonwealth Fusion Systems",
+                  "color": "purpleDark1"
+                },
+                {
+                  "id": "selnEJytrQjvDDvJw",
+                  "name": "Alsop Louie Partners",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "seldEIkYE7PeWUt9h",
+                  "name": "Mensa",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selrMxyY5GYkbsnPG",
+                  "name": "Innovation Hub",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selclvUfCJm0N99Dr",
+                  "name": "The Dingle Creativity",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selPSVcrXr18xVQ2Q",
+                  "name": "NEXT 36 Canadian Entrepreneurs",
+                  "color": "blueDark1"
+                },
+                {
+                  "id": "sel6erusEgpF5VpdN",
+                  "name": "League of Innovators",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selPJZYTMKvIQSMm8",
+                  "name": "Stanford ASES",
+                  "color": "grayDark1"
+                },
+                {
+                  "id": "seldjLVNFTE3bHqY6",
+                  "name": "Cambrial Capital",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selxrsFXoOt7PaPwD",
+                  "name": "DeepMind",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selxBvn3P1kKsmPvr",
+                  "name": "hackNY",
+                  "color": "pinkLight1"
+                },
+                {
+                  "id": "seloaSwUQBLlFq0wJ",
+                  "name": "Stripe",
+                  "color": "greenLight1"
+                },
+                {
+                  "id": "selZn3DncQLnKq4hM",
+                  "name": "Upsolve",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selCmrKYaKnFvDAbX",
+                  "name": "Carbon 3D",
+                  "color": "greenLight1"
+                },
+                {
+                  "id": "selc7GTHmyW6HNova",
+                  "name": "Coding It Forward",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "selrgHqQVhKWnmucn",
+                  "name": "Founders Factory",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sell3OsV2HN9QqbTa",
+                  "name": "CS+Social Good",
+                  "color": "redBright"
+                },
+                {
+                  "id": "selzGou14vy9lGftJ",
+                  "name": "Alix Ventures",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "selV2BkBGGGcDQQCW",
+                  "name": "Change Healthcare",
+                  "color": "grayDark1"
+                },
+                {
+                  "id": "selO2UG6FYpgfFaou",
+                  "name": "HumaneTech",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selWD9DcZ7RGNMIpR",
+                  "name": "Kubernetes",
+                  "color": "orangeBright"
+                },
+                {
+                  "id": "selcg1RVvCcqwyxkc",
+                  "name": "Beautiful Stories Studios",
+                  "color": "greenDark1"
+                },
+                {
+                  "id": "selxjVa0vChva4L1H",
+                  "name": "Alt Ed",
+                  "color": "greenBright"
+                },
+                {
+                  "id": "selTA67lT0xC7C08A",
+                  "name": "HackYale",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selgx2wQGXmkDZgMx",
+                  "name": "CareerFear",
+                  "color": "grayBright"
+                },
+                {
+                  "id": "selyhqeoZVSVwSPn4",
+                  "name": "NewtonX",
+                  "color": "tealDark1"
+                },
+                {
+                  "id": "seljFOOENLk8YwJoG",
+                  "name": "Techx",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selqaZdzz9IDPNaTL",
+                  "name": "MILA",
+                  "color": "greenBright"
+                },
+                {
+                  "id": "selMeniwC6VPNRULA",
+                  "name": "Lunchclub",
+                  "color": "blueDark1"
+                },
+                {
+                  "id": "selXpMKXlqjQ6SbaE",
+                  "name": "imagiLabs",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "sel1szyCkG0LIQ8ih",
+                  "name": "Nature Japan",
+                  "color": "blueDark1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fld95UqEUe6LBVY9b",
+            "name": "Universities (cleaned)",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "seleroBWbP7uDUkY5",
+                  "name": "Harvard",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "selpjytdDn8xL5j3j",
+                  "name": "MIT",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selYW0pnXxZQTpHf6",
+                  "name": "Harvey Mudd College",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selOrorI5PU3Rg5mZ",
+                  "name": "UC Berkeley",
+                  "color": "grayBright"
+                },
+                {
+                  "id": "selIXj4oVMMTZIEEi",
+                  "name": "Stanford University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selNzvzUdmcXXdS0u",
+                  "name": "University of Illinois, Urbana-Champaign",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selTNMko1hXoEUOR3",
+                  "name": "Brown University",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selg5xcOtwzNGPgrt",
+                  "name": "University of Oxford",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selQNV72CxjgONw0u",
+                  "name": "University College Cork",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selXDhByC2L81hbci",
+                  "name": "Georgia Institute of Technology",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel9SHhNhhLY0lyrw",
+                  "name": "Carnegie Mellon University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel1SlV3F9hEO3cAQ",
+                  "name": "Northwestern University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel1Qd6kcFkJ1vxBy",
+                  "name": "University of Pennsylvania",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selzVSQVkJjZ8If3C",
+                  "name": "University of Rochester",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel3u27QAOY5RCsy0",
+                  "name": "University of Waterloo",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selk3Y8tUT4x0kJLM",
+                  "name": "Wilfrid Laurier University",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "selEF44EB2mhAHa0d",
+                  "name": "Trinity University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selWdCHO9KUU1dvJp",
+                  "name": "University of Toronto",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selHso6qvN7UWcH0D",
+                  "name": "University of Sydney",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selWsat1H3QuLTopB",
+                  "name": "Cambridge University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selQCYLJ7ODv0Of8R",
+                  "name": "Florida International University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel4CAlBRIpszM4Bg",
+                  "name": "University College London",
+                  "color": "orangeDark1"
+                },
+                {
+                  "id": "selZiM7Q4YpFpG2l7",
+                  "name": "Smith College BA",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selMTaNYELIEKGqNb",
+                  "name": "McGill",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "seljDVfvLUpxtx6jv",
+                  "name": "Duke",
+                  "color": "orangeBright"
+                },
+                {
+                  "id": "sel8HbeNk8x3IeEII",
+                  "name": "Cornell",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sellBUAB9y6OEDc6E",
+                  "name": "Columbia University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selOaxytptQIyxCgM",
+                  "name": "McMaster",
+                  "color": "cyanBright"
+                },
+                {
+                  "id": "selDakkOOjQC3UNJC",
+                  "name": "Diablo Valley College",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selhQSytMzi6iYxTi",
+                  "name": "Ashesi University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selalBXt3cK25nASA",
+                  "name": "Trinity College Dublin",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selWhY3umcvAkRtMv",
+                  "name": "NYU",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selV96bwVfJU3FV2D",
+                  "name": "Technical University of Munich",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selquuKmJa25k4vXz",
+                  "name": "Kalinga Institute of Industrial Technology",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selUeFOlruvzTUgoF",
+                  "name": "Caltech",
+                  "color": "yellowLight1"
+                },
+                {
+                  "id": "seljjfWZFMswiSdS0",
+                  "name": "University of Manchester",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selVS0RMdvKYCITmq",
+                  "name": "Hong Kong University of Science and Technology",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selqku6bbTxI6PNTr",
+                  "name": "University of Maryland",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selJLZQZfn6kVTYYb",
+                  "name": "University of Michigan",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seljxmJTkCfXdtoZH",
+                  "name": "Tufts",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selcOmoqN14F9e0UM",
+                  "name": "Yale",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selM9A4edUL4kLyAU",
+                  "name": "University of West Florida",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seljeUC4jvyhvECeo",
+                  "name": "University of Calabar",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selO0m5yNoshdtPZZ",
+                  "name": "University of Southampton",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selpugjwb57E1SMll",
+                  "name": "Johns Hopkins University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel87QFybnqdULfeg",
+                  "name": "University of Chicago",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selE3V8qhK6B7tQVs",
+                  "name": "Washington State",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selThD71RkvGDMuvX",
+                  "name": "University of Warwick",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selrDgVZCgwWZrhAJ",
+                  "name": "Minerva Schools",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selVoPleqizpZBNni",
+                  "name": "Dartmouth",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "sel3bMb2SOwMRjeqd",
+                  "name": "University of Washington",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selk8sZ1Vx1Gc0bNw",
+                  "name": "Arizona State",
+                  "color": "grayLight1"
+                },
+                {
+                  "id": "selECIIFD6nBWMXMC",
+                  "name": "Princeton",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selVYoTvbXctwlqDj",
+                  "name": "Rice University",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selJ5I28SsgijYGmu",
+                  "name": "Notre Dame",
+                  "color": "cyanLight1"
+                },
+                {
+                  "id": "seljeX3dJioVcSP7F",
+                  "name": "Rutgers University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selhz0O19ETp36Nmm",
+                  "name": "Instituto Tecnológico de Monterrey",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selSxZiAgXGaEclfz",
+                  "name": "Tsinghua University",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "selSBw1ilcnPqqUzN",
+                  "name": "King's College London",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selemNBkvYoSXSjw9",
+                  "name": "Baruch College",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selX02MkL9crQmY3X",
+                  "name": "Drexel University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selXIwL1LBL3AdS6P",
+                  "name": "Washington University in St. Louis",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selGhNK1V6oyIcuEo",
+                  "name": "University of Southern California",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selRv3RoAJtectWjS",
+                  "name": "UCLA",
+                  "color": "purpleBright"
+                },
+                {
+                  "id": "selYSqPRI28uO2h39",
+                  "name": "USC",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "sel5OJG9TSNGf34qi",
+                  "name": "Budapest University",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "seljPLEdjTcJqQGXt",
+                  "name": "University of Bath",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selqCTa1DivC2flbR",
+                  "name": "Curtis Institute of Music",
+                  "color": "grayDark1"
+                },
+                {
+                  "id": "seldEAalJNShv2QP4",
+                  "name": "Dublin City University",
+                  "color": "yellowLight1"
+                },
+                {
+                  "id": "selvjWVZKo5zF0EkF",
+                  "name": "George Washington University",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "seluzRR6ITzlvAcgo",
+                  "name": "University of Florida",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selgbTRAqYQgoV1gN",
+                  "name": "Southern Methodist University",
+                  "color": "pinkBright"
+                },
+                {
+                  "id": "selkyMfkueGRrv26T",
+                  "name": "Kerala Technological University",
+                  "color": "greenBright"
+                },
+                {
+                  "id": "sely2wW4NTJRvKJl4",
+                  "name": "Washington and Lee University",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "selXj3fVsH4EXhbkt",
+                  "name": "Imperial College London",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "seltoDM25GHlk3YCG",
+                  "name": "St Xavier's College",
+                  "color": "tealDark1"
+                },
+                {
+                  "id": "sel3lEN1uJgimV5p2",
+                  "name": "Bennington College",
+                  "color": "cyanDark1"
+                },
+                {
+                  "id": "selywLUB0y3svfrkh",
+                  "name": "City University of Hong Kong",
+                  "color": "greenBright"
+                },
+                {
+                  "id": "seluTZzqz4DN5QFVe",
+                  "name": "University of Edinburgh",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "selWHRFgcqBleDV6e",
+                  "name": "Covenant University",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selqrm2aw0BdsIvIk",
+                  "name": "Boston University",
+                  "color": "greenDark1"
+                },
+                {
+                  "id": "seljGRE0rPfeTLgPC",
+                  "name": "Purdue University",
+                  "color": "orangeBright"
+                },
+                {
+                  "id": "sel3RGBPcaxUx6zrY",
+                  "name": "Carleton College",
+                  "color": "greenLight1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldn5YCPEzkFPYT01",
+            "name": "Reason For Flagging",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "sellCUoXyQ7bfKWsD",
+                  "name": "Many x-referrals",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selWetsfkYzvgBInD",
+                  "name": "Trustworthy referral",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selDgJzCa9syX1I0c",
+                  "name": "High z-score",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selmpx4ny74OqlTvS",
+                  "name": "Reject b/c backchannel",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selgBIEq6qrBwhR5d",
+                  "name": "Typo/error",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "seleg7DpCJD0IirPT",
+                  "name": "Wildcard/experimental",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "seldvhEfqrQM6gJSK",
+                  "name": "Spiky",
+                  "color": "redLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fld1wXZyavh3UgkGJ",
+            "name": "Age",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldjcnzybIpP1VV8j"],
+              "result": { "type": "number", "options": { "precision": 1 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fld7ToXa9JbyGArUn",
+            "name": "Race/Gender Summary",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fldO9k5xSEC8qeVFM",
+                "fldZr3nxrQTonu5kb",
+                "fldcOYTEhIJg99B6k"
+              ],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldhiuQW7Jyji67iU",
+            "name": "Hometown-summary",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fldragPOb4nfXgHIp",
+                "fldrAVjTYDz8E4YVY",
+                "fldpGeMFmefnWQ0iL"
+              ],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldBRjy2MpJOaJjr3",
+            "name": "Personality Tags",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selwt3aZgKnZ0V3Tq",
+                  "name": "Outsider",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selktvD209hoxVmDv",
+                  "name": "Networked node",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selOFxUikVobG1DOJ",
+                  "name": "Philosophical challenger",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selcwIwmWIDSLJYUL",
+                  "name": "Social glue",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selKx2JxPO1QqpC6e",
+                  "name": "Technical tinkerer",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selDU09lZu8HM2tBG",
+                  "name": "Introvert",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "sel5qGkOwbujmD9ya",
+                  "name": "Interact would change their life",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "seltIPg04kRHsv3eV",
+                  "name": "Already very impressive",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selQpojIX4fM0D8Hi",
+                  "name": "High potential",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selVZ6g0tLdfSeBun",
+                  "name": "Creative/artist",
+                  "color": "grayLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "flddJW0GqX1mf1YRn",
+            "name": "Submitted After Deadline?",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fld9d8lzFhYbxzPp1"],
+              "result": { "type": "number", "options": { "precision": 0 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldXQsCfQZAjQAgB0",
+            "name": "Activities",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selTc4RHLnN4w5xOZ",
+                  "name": "Founder",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selN1SzpYQOZacvX8",
+                  "name": "Venture Capital",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selfU1R2bU9QRRNf4",
+                  "name": "Science",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selzfSWhkfdOLS6Nc",
+                  "name": "Climate",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selNF5jdjlj9hvkAw",
+                  "name": "Big Tech Company",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel5GmwZ7XeUY18ha",
+                  "name": "Hardware/Builder",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "sel0PUtnna77BdDvk",
+                  "name": "Artist",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selUUcyCD5f6MeOVM",
+                  "name": "Engineer",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "selYgWKdgZ2AGzzJU",
+                  "name": "Designer",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "seliurCPoJYKJjkQJ",
+                  "name": "AI Research",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selGr1HX6PDIEnRaF",
+                  "name": "Policy/Law",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "sel9AmmMCRheNTM4m",
+                  "name": "Just Impressive Do-er",
+                  "color": "cyanLight1"
+                },
+                {
+                  "id": "selkjgONCdVQNx8DL",
+                  "name": "AR/VR",
+                  "color": "tealLight1"
+                },
+                {
+                  "id": "selEAdnED5J4ikPng",
+                  "name": "Medicine",
+                  "color": "greenLight1"
+                },
+                {
+                  "id": "selT8Je0zln5ushFa",
+                  "name": "Journalism",
+                  "color": "yellowLight1"
+                },
+                {
+                  "id": "sellenJx1r4rvik8E",
+                  "name": "Crypto/Blockchain",
+                  "color": "orangeLight1"
+                },
+                {
+                  "id": "selwVAEb6DnyGECSA",
+                  "name": "Education",
+                  "color": "redLight1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldCHkAqpkYEm3Q7F",
+            "name": "Personality",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selD4jCqGVXpXUlx7",
+                  "name": "Networked node",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "sel0VStZNCEHJeFs7",
+                  "name": "Outsider",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel9xNkC7kW32EqdO",
+                  "name": "Philosophical challenger",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selCnbzxeVE6uGvCo",
+                  "name": "Interact will change their life",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selIt5nVIkC8fIW54",
+                  "name": "Already very impressive",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel1TSFeHXcflL0oB",
+                  "name": "Social glue",
+                  "color": "pinkLight1"
+                },
+                {
+                  "id": "selocXEqAfN6dQp57",
+                  "name": "Technical tinkerer",
+                  "color": "orangeDark1"
+                },
+                {
+                  "id": "selkqKJrXlymkVNw3",
+                  "name": "Creative",
+                  "color": "purpleLight1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldbDvy7XC2DOsHDK",
+            "name": "Which reviewer's top-15? copy",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selpFZET4hEOsBvRm",
+                  "name": "Tom McCarthy",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selg2KRyYKxKqp2Eh",
+                  "name": "Anna Mitchell",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "seld8Q6dAPkkUeH6H",
+                  "name": "Emma Bluemke",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selGAWLG9dsPNoT83",
+                  "name": "Matthew Jordan",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "sel1TLw7IijoCT8jD",
+                  "name": "Alona King",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "sel9C690aZrkqCiJY",
+                  "name": "Marie Schneegans",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selD5QOR5RTQn3eSL",
+                  "name": "Mackenzie Burnett",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel7S8Lmy94lb5YGL",
+                  "name": "Ana Santasheva",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "seliNNzi6o5JUiLWo",
+                  "name": "Sashank Thupukari",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "selzcg95aTDdOQD1M",
+                  "name": "Cyrus Tabrizi",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selAU7xvgiKLlqS4q",
+                  "name": "Zhichun Li",
+                  "color": "blueLight1"
+                },
+                {
+                  "id": "selpIPOPn4xSnOo3R",
+                  "name": "Joanne Peng",
+                  "color": "cyanLight1"
+                },
+                {
+                  "id": "seltV4xCmg7CRuRvt",
+                  "name": "Andrés Cuervo",
+                  "color": "tealLight1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldhzUEE3lysktR4D",
+            "name": "What prompted you to apply to Interact?",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selk4KdS1LN8Kvqsy",
+                  "name": "Twitter",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "seloZMCOSVb0xVAKM",
+                  "name": "Encouraged by a friend in Interact",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selbRlchvtk6820U3",
+                  "name": "Encouraged by a friend outside Interact",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selD8YBaW1W8YYldx",
+                  "name": "An organization I belong to",
+                  "color": "tealLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldmKq0XnkyoizPIj",
+            "name": "Referrals",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblKsFEHOROo1jhoe",
+              "isReversed": false,
+              "inverseLinkFieldId": "fldqAgCT9ZLUAJW6u"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldF61YR9BOWr8Lyq",
+            "name": "Matched Applications from prior year",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblAsjMf4EmuXkoKa",
+              "isReversed": false,
+              "inverseLinkFieldId": "fldDzj6yr4Zr28dME"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldxLkP8vg5dyYG3Z",
+            "name": "Written App Reviews",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblfmLJrHP3AJ1NHq",
+              "isReversed": false,
+              "inverseLinkFieldId": "fldSKkSqNfHZTzCB1"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldSnNCArLTQIktnp",
+            "name": "Calibration",
+            "type": "checkbox",
+            "isComputed": false,
+            "options": { "icon": "check", "color": "greenBright" },
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tblfmLJrHP3AJ1NHq",
+        "name": "Written App Reviews",
+        "description": "",
+        "url": "https://airtable.com/tblfmLJrHP3AJ1NHq",
+        "views": [
+          {
+            "id": "viw96A919oB9AUUoC",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viw96A919oB9AUUoC"
+          },
+          {
+            "id": "viw1cKQ5h2nnHMzBm",
+            "name": "Afika",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viw1cKQ5h2nnHMzBm"
+          },
+          {
+            "id": "viwdOIZX0uuHMFxsp",
+            "name": "Amritha",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwdOIZX0uuHMFxsp"
+          },
+          {
+            "id": "viwImxOSG0aW2vdMI",
+            "name": "Anastasia",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwImxOSG0aW2vdMI"
+          },
+          {
+            "id": "viwox1nZYMUK5LP4G",
+            "name": "Emily",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwox1nZYMUK5LP4G"
+          },
+          {
+            "id": "viw0CJkTrr9IKrSi7",
+            "name": "Hannah",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viw0CJkTrr9IKrSi7"
+          },
+          {
+            "id": "viws4CpqqP6wXufMM",
+            "name": "Humphrey",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viws4CpqqP6wXufMM"
+          },
+          {
+            "id": "viwBOhYkH5MgFjKHZ",
+            "name": "Juliana",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwBOhYkH5MgFjKHZ"
+          },
+          {
+            "id": "viw2osV6cVCgciey8",
+            "name": "Luke",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viw2osV6cVCgciey8"
+          },
+          {
+            "id": "viwuI0ZbrMqc1Kyv4",
+            "name": "Mackenzie",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwuI0ZbrMqc1Kyv4"
+          },
+          {
+            "id": "viwzpV7bMM6Be98bB",
+            "name": "Michael",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwzpV7bMM6Be98bB"
+          },
+          {
+            "id": "viwQ7tbuYhosuH2fB",
+            "name": "Sashank",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwQ7tbuYhosuH2fB"
+          },
+          {
+            "id": "viwJyganRhIw3yUeS",
+            "name": "Sebastien",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viwJyganRhIw3yUeS"
+          },
+          {
+            "id": "viw68kQWldEyxcfif",
+            "name": "Bot view (DO NOT CHANGE)",
+            "type": "grid",
+            "url": "https://airtable.com/tblfmLJrHP3AJ1NHq/viw68kQWldEyxcfif"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldsJU1XHeo1H1UIC",
+            "name": "name",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["flduIaTt0h1AYpt2l", "fldTG8dSHI9YBXWYA"],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldSKkSqNfHZTzCB1",
+            "name": "application",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblonMdLBuPJ8hQeA",
+              "isReversed": false,
+              "inverseLinkFieldId": "fldxLkP8vg5dyYG3Z"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldTG8dSHI9YBXWYA",
+            "name": "Reviewer",
+            "type": "singleCollaborator",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "usrflbsN4vAXatQqZ",
+                  "email": "s@thupukari.com",
+                  "permissionLevel": "create",
+                  "name": "Sashank Thupukari",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+                },
+                {
+                  "id": "usrETwFt2sMa45xbt",
+                  "email": "dan.r.schlosser@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Dan Schlosser",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+                },
+                {
+                  "id": "usrGGzQWFUzT9dnDD",
+                  "email": "hannah.r.kerner@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Hannah Kerner",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_3.png"
+                },
+                {
+                  "id": "usrT8wIZOyzFT5Nyo",
+                  "email": "matthewjordan@live.ca",
+                  "permissionLevel": "none",
+                  "name": "Matthew Jordan",
+                  "profilePicUrl": "https://dl.airtable.com/.profilePics/01b5ccd247f12f16632704c8a74a2f07/cdd1c384"
+                },
+                {
+                  "id": "usrUedDcClnwZYcJF",
+                  "email": "amrithanjayanti@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Amritha Jayanti",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_4.png"
+                },
+                {
+                  "id": "usrVSXlqufBedDuP7",
+                  "email": "pries.emily@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Emily Pries",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_10.png"
+                },
+                {
+                  "id": "usrXH6Z4VMarkqh18",
+                  "email": "lrichardharries@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Luke Harries",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_1.png"
+                },
+                {
+                  "id": "usrjFf4wAtmzXcGCx",
+                  "email": "mfburnett@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Mackenzie Burnett",
+                  "profilePicUrl": "https://dl.airtable.com/.profilePics/17c01cd9654554ba6c073313b538c085/fd20b93b"
+                },
+                {
+                  "id": "usrkIpd7G9X6TOEev",
+                  "email": "afika.a.nyati@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Afika Nyati",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+                },
+                {
+                  "id": "usrqCQKDMaquiU6GP",
+                  "email": "maakilian@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Michael Akilian",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_10.png"
+                },
+                {
+                  "id": "usrsBrA5hM0ewf0R2",
+                  "email": "anastasia.santasheva@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Anastasia S",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_2.png"
+                },
+                {
+                  "id": "usrtwGE15NVG6yOwM",
+                  "email": "obuobhum@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Humphrey Obuobi",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_6.png"
+                },
+                {
+                  "id": "usrvWInzgEvmUYAlf",
+                  "email": "seb@stien.io",
+                  "permissionLevel": "none",
+                  "name": "Sebastien Zany",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_3.png"
+                },
+                {
+                  "id": "invwcNkpTzEUUCPRG",
+                  "email": "jules.nazare@gmail.com",
+                  "permissionLevel": "none"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldiPn0JkNuvO2M2v",
+            "name": "Mission",
+            "type": "rating",
+            "isComputed": false,
+            "options": { "icon": "star", "max": 5, "color": "yellowBright" },
+            "description": ""
+          },
+          {
+            "id": "fld2deA7TBtapzDSB",
+            "name": "Notes: Why this score? Clarifications needed. Interview questions.",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "flduIaTt0h1AYpt2l",
+            "name": "applicant name",
+            "type": "multipleLookupValues",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "recordLinkFieldId": "fldSKkSqNfHZTzCB1",
+              "fieldIdInLinkedTable": "fldMUU2WxrSG4RKqX",
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fld7YZvXAxIkBGcJ9",
+            "name": "Incomplete/low-quality application",
+            "type": "checkbox",
+            "isComputed": false,
+            "options": { "icon": "check", "color": "greenBright" },
+            "description": ""
+          },
+          {
+            "id": "flddczHGOMeU5ptve",
+            "name": "Personality archetype",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "sely4VniRFK98vfo2",
+                  "name": "Social glue",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selks12jsryNaWsFA",
+                  "name": "Outsider",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "sel9vU93G7D2f7Flb",
+                  "name": "Networked Node",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "seliij4prYo0O9cbN",
+                  "name": "Introvert ",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selSlWn5dmrwJJFYl",
+                  "name": "Philosophical challenger",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selU70JAw7NCJB7f5",
+                  "name": "Creative/visionary",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selJFSKcBoUk29zUr",
+                  "name": "Technical tinkerer",
+                  "color": "yellowDark1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fld8EyDN8h1fvrAl9",
+            "name": "Individuality",
+            "type": "rating",
+            "isComputed": false,
+            "options": { "icon": "star", "max": 5, "color": "yellowBright" },
+            "description": ""
+          },
+          {
+            "id": "fld1n6llEtwaIWREl",
+            "name": "Integrity",
+            "type": "rating",
+            "isComputed": false,
+            "options": { "icon": "star", "max": 5, "color": "yellowBright" },
+            "description": ""
+          },
+          {
+            "id": "fldBKvQivh0rmt2uZ",
+            "name": "Mastery",
+            "type": "rating",
+            "isComputed": false,
+            "options": { "icon": "star", "max": 5, "color": "yellowBright" },
+            "description": ""
+          },
+          {
+            "id": "fldtSbcAGY5kaf5eF",
+            "name": "Interest/field",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "sel5Fk6NbMgtaD8Sd",
+                  "name": "Art/design",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selrB3zNCkvPhlJyf",
+                  "name": "AI/Comp sci",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selr5zYe0hnlBzbmX",
+                  "name": "Blockchain/crypto",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selVNdWUHmbS0I3Zk",
+                  "name": "VR/AR",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selV9JSIe1hGY2cYH",
+                  "name": "Scientist",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selQLkuw8YgRHR4ll",
+                  "name": "Mechanical engineering",
+                  "color": "pinkLight1"
+                },
+                {
+                  "id": "sel4ACavwSL3CkNFt",
+                  "name": "Biotech",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "selpeQFk5FLAsgddX",
+                  "name": "Engineer",
+                  "color": "redDark1"
+                },
+                {
+                  "id": "selvYsKCgFtU3W8AQ",
+                  "name": "Research",
+                  "color": "grayDark1"
+                },
+                {
+                  "id": "sel7weFJo7NQj9zwM",
+                  "name": "Machine Learning ",
+                  "color": "tealBright"
+                },
+                {
+                  "id": "sel2RxjDGFlE3WCzQ",
+                  "name": "Gaming",
+                  "color": "blueBright"
+                },
+                {
+                  "id": "selefSJUVbG2VJcad",
+                  "name": "Healthcare",
+                  "color": "pinkLight2"
+                },
+                {
+                  "id": "sel8YPrdxqVndkAQG",
+                  "name": "Business",
+                  "color": "purpleLight1"
+                },
+                {
+                  "id": "selgPUm23Mw2kXHfF",
+                  "name": "Education",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "sellJRUuIdcLGWggq",
+                  "name": "Venture Capital",
+                  "color": "purpleDark1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldJrlp8qyhMBTIW7",
+            "name": "What would you look for next year?",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld2cE5ri28kvR2a2",
+            "name": "Reviews completed",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fld7YZvXAxIkBGcJ9",
+                "fld8EyDN8h1fvrAl9",
+                "fld1n6llEtwaIWREl",
+                "fldBKvQivh0rmt2uZ",
+                "fldtSbcAGY5kaf5eF",
+                "flddczHGOMeU5ptve",
+                "fldJrlp8qyhMBTIW7",
+                "fld2deA7TBtapzDSB"
+              ],
+              "result": { "type": "number", "options": { "precision": 0 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldH989bRxtEFiKr5",
+            "name": "Overall score",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fldiPn0JkNuvO2M2v",
+                "fld8EyDN8h1fvrAl9",
+                "fld1n6llEtwaIWREl",
+                "fldBKvQivh0rmt2uZ"
+              ],
+              "result": { "type": "number", "options": { "precision": 2 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldGC29ejOKgUEfxN",
+            "name": "Z-Score",
+            "type": "number",
+            "isComputed": false,
+            "options": { "precision": 3 },
+            "description": ""
+          },
+          {
+            "id": "fld7d4U7UjV0dMgPK",
+            "name": "_spiky_proxy",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fld8EyDN8h1fvrAl9",
+                "fld1n6llEtwaIWREl",
+                "fldiPn0JkNuvO2M2v",
+                "fldBKvQivh0rmt2uZ"
+              ],
+              "result": { "type": "number", "options": { "precision": 0 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldmVfOEC0ZrZz1tN",
+            "name": "Interview Round",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld5H7qrmW1ozFZdl",
+            "name": "applicant rankings",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldQuidyAPtpVEd9G",
+            "name": "Should apply next year?",
+            "type": "checkbox",
+            "isComputed": false,
+            "options": { "icon": "check", "color": "greenBright" },
+            "description": ""
+          },
+          {
+            "id": "fldnWNZTSxrRPI1sa",
+            "name": "Calculation",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldTG8dSHI9YBXWYA"],
+              "result": { "type": "number", "options": { "precision": 0 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldyXeUCuRzOeoqCO",
+            "name": "Test",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldTG8dSHI9YBXWYA"],
+              "result": { "type": "number", "options": { "precision": 0 } }
+            },
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tblKsFEHOROo1jhoe",
+        "name": "Referrals",
+        "description": "",
+        "url": "https://airtable.com/tblKsFEHOROo1jhoe",
+        "views": [
+          {
+            "id": "viwKJ1aOW2moZ6ZlI",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tblKsFEHOROo1jhoe/viwKJ1aOW2moZ6ZlI"
+          },
+          {
+            "id": "viwKsHbluI2osIQKr",
+            "name": "jonas - debug",
+            "type": "grid",
+            "url": "https://airtable.com/tblKsFEHOROo1jhoe/viwKsHbluI2osIQKr"
+          },
+          {
+            "id": "viwbhDqzVcQts6kUT",
+            "name": "Interact Fellowship Referrals",
+            "type": "form",
+            "url": "https://airtable.com/tblKsFEHOROo1jhoe/viwbhDqzVcQts6kUT"
+          },
+          {
+            "id": "viwkgPh48I6CrIMYl",
+            "name": "Bot view (DO NOT CHANGE)",
+            "type": "grid",
+            "url": "https://airtable.com/tblKsFEHOROo1jhoe/viwkgPh48I6CrIMYl"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldvxB4XgLk6JCVJ3",
+            "name": "Name",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldgAFBru5Qw0Xpud", "fldQVDzuWkY2kP924"],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldgAFBru5Qw0Xpud",
+            "name": "Your Name",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldRVDZtIhohGhqZX",
+            "name": "Your Email",
+            "type": "email",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldQVDzuWkY2kP924",
+            "name": "Name of the person you are referring",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld18yG7RIlXd7HQf",
+            "name": "Their email",
+            "type": "email",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld94Rz1u3oY1n6Gd",
+            "name": "How strongly do you recommend this person?",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "sel6zvdk8bKWUlt6S",
+                  "name": "Neutral: they might be good, but I don't know",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selG6xFBzudOyKvdw",
+                  "name": "Has potential: worth looking into further",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selTi9atRDlnS32zX",
+                  "name": "Strong recommendation: I know they'd be a great fit",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selKTFk2dAOlsy6w8",
+                  "name": "100%: They have my highest possible recommendation",
+                  "color": "greenLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldSThO0DQkJd3aOD",
+            "name": "Why makes this person a good fit for Interact?",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldqAgCT9ZLUAJW6u",
+            "name": "applicant",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblonMdLBuPJ8hQeA",
+              "isReversed": true,
+              "inverseLinkFieldId": "fldmKq0XnkyoizPIj"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldzhwDXgsXoMdcGn",
+            "name": "Referral summary",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": [
+                "fldvxB4XgLk6JCVJ3",
+                "fld94Rz1u3oY1n6Gd",
+                "fldSThO0DQkJd3aOD"
+              ],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldE95rlpZMwCnAQs",
+            "name": "Their Facebook, LinkedIn, or other social media",
+            "type": "url",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldRvj272CRQGmHEC",
+            "name": "Your first Interact year",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldigi3Xu3lUEnxXL",
+            "name": "What is this person exceptional at?",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "flda1uOUnM62dWXeW",
+            "name": "Matched applicant",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldqAgCT9ZLUAJW6u"],
+              "result": { "type": "number", "options": { "precision": 0 } }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldx4MmYZchv15eot",
+            "name": "Applicants copy",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldPLrLep9YwKaumK",
+            "name": "Field 18",
+            "type": "createdTime",
+            "isComputed": true,
+            "options": {
+              "result": {
+                "type": "dateTime",
+                "options": {
+                  "dateFormat": { "name": "local", "format": "l" },
+                  "timeFormat": { "name": "12hour", "format": "h:mma" },
+                  "timeZone": "client"
+                }
+              }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldL2mwUZqJwUnoNO",
+            "name": "First Name",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldQVDzuWkY2kP924"],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tblAeiSe696ZUh701",
+        "name": "Reviewers",
+        "description": "Every time we run the admissions bot, only reviewers with an associated airtable account and the \"Assign new applications\" checkbox checked will be assigned new reviews.",
+        "url": "https://airtable.com/tblAeiSe696ZUh701",
+        "views": [
+          {
+            "id": "viw25Oj06265ozh3m",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tblAeiSe696ZUh701/viw25Oj06265ozh3m"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldZeCVCW8E4HpBei",
+            "name": "Name",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldZ5dhCZANAFN3Ux"],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldZ5dhCZANAFN3Ux",
+            "name": "airtable account",
+            "type": "singleCollaborator",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "usrflbsN4vAXatQqZ",
+                  "email": "s@thupukari.com",
+                  "permissionLevel": "create",
+                  "name": "Sashank Thupukari",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+                },
+                {
+                  "id": "usrETwFt2sMa45xbt",
+                  "email": "dan.r.schlosser@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Dan Schlosser",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+                },
+                {
+                  "id": "usrGGzQWFUzT9dnDD",
+                  "email": "hannah.r.kerner@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Hannah Kerner",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_3.png"
+                },
+                {
+                  "id": "usrT8wIZOyzFT5Nyo",
+                  "email": "matthewjordan@live.ca",
+                  "permissionLevel": "none",
+                  "name": "Matthew Jordan",
+                  "profilePicUrl": "https://dl.airtable.com/.profilePics/01b5ccd247f12f16632704c8a74a2f07/cdd1c384"
+                },
+                {
+                  "id": "usrUedDcClnwZYcJF",
+                  "email": "amrithanjayanti@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Amritha Jayanti",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_4.png"
+                },
+                {
+                  "id": "usrVSXlqufBedDuP7",
+                  "email": "pries.emily@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Emily Pries",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_10.png"
+                },
+                {
+                  "id": "usrXH6Z4VMarkqh18",
+                  "email": "lrichardharries@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Luke Harries",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_1.png"
+                },
+                {
+                  "id": "usrjFf4wAtmzXcGCx",
+                  "email": "mfburnett@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Mackenzie Burnett",
+                  "profilePicUrl": "https://dl.airtable.com/.profilePics/17c01cd9654554ba6c073313b538c085/fd20b93b"
+                },
+                {
+                  "id": "usrkIpd7G9X6TOEev",
+                  "email": "afika.a.nyati@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Afika Nyati",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_9.png"
+                },
+                {
+                  "id": "usrqCQKDMaquiU6GP",
+                  "email": "maakilian@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Michael Akilian",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_10.png"
+                },
+                {
+                  "id": "usrsBrA5hM0ewf0R2",
+                  "email": "anastasia.santasheva@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Anastasia S",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_2.png"
+                },
+                {
+                  "id": "usrtwGE15NVG6yOwM",
+                  "email": "obuobhum@gmail.com",
+                  "permissionLevel": "none",
+                  "name": "Humphrey Obuobi",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_6.png"
+                },
+                {
+                  "id": "usrvWInzgEvmUYAlf",
+                  "email": "seb@stien.io",
+                  "permissionLevel": "none",
+                  "name": "Sebastien Zany",
+                  "profilePicUrl": "https://static.airtable.com/images/userIcons/user_icon_3.png"
+                },
+                {
+                  "id": "invwcNkpTzEUUCPRG",
+                  "email": "jules.nazare@gmail.com",
+                  "permissionLevel": "none"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldUhZsBjEPqHWFpV",
+            "name": "real name",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld34hdFWbVoelGqD",
+            "name": "email",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldfzyWWaPPntrpHA",
+            "name": "Notes",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldYlX2rapapSlANj",
+            "name": "Assign new applications?",
+            "type": "checkbox",
+            "isComputed": false,
+            "options": { "icon": "check", "color": "greenBright" },
+            "description": ""
+          },
+          {
+            "id": "fldBLupzT2FTz9VZY",
+            "name": "top applicants",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tblAsjMf4EmuXkoKa",
+        "name": "Applicants from Previous Years",
+        "description": "",
+        "url": "https://airtable.com/tblAsjMf4EmuXkoKa",
+        "views": [
+          {
+            "id": "viwOzV2Cwq2gQ4DfT",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tblAsjMf4EmuXkoKa/viwOzV2Cwq2gQ4DfT"
+          },
+          {
+            "id": "viwhKhoLk8ZymXys1",
+            "name": "Bot view (DO NOT CHANGE)",
+            "type": "grid",
+            "url": "https://airtable.com/tblAsjMf4EmuXkoKa/viwhKhoLk8ZymXys1"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fld8LGTeSseoeA0oX",
+            "name": "Name",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld90PtesDCY3ABXG",
+            "name": "Previous Application Results",
+            "type": "multipleSelects",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "seldCHk0kCOo83KBX",
+                  "name": "2020: rejected-written",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selLSkAFGpcknJKqY",
+                  "name": "2020: rejected-interview",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selWc7EprTOfXgFw1",
+                  "name": "2018: rejected-video",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "selggo72MeqOFCO7i",
+                  "name": "2018: rejected-written",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selhKGsPuJzrn7NkR",
+                  "name": "2017: rejected",
+                  "color": "orangeLight2"
+                },
+                {
+                  "id": "selOqrOhDHET9cw8J",
+                  "name": "2018: accepted",
+                  "color": "purpleLight2"
+                },
+                {
+                  "id": "sely3PRYDHTpwpd4X",
+                  "name": "2019: accepted but declined",
+                  "color": "grayLight2"
+                },
+                {
+                  "id": "selGM4eDbeMGutcK2",
+                  "name": "2019: rejected-written",
+                  "color": "purpleLight1"
+                },
+                {
+                  "id": "sel3TLO7CGFwnNXSO",
+                  "name": "2019: rejected-video",
+                  "color": "pinkDark1"
+                },
+                {
+                  "id": "selTiSYomChJE8vBK",
+                  "name": "2019: rejected-interview",
+                  "color": "yellowDark1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldDzj6yr4Zr28dME",
+            "name": "Applicants",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblonMdLBuPJ8hQeA",
+              "isReversed": true,
+              "inverseLinkFieldId": "fldF61YR9BOWr8Lyq"
+            },
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tbloq2dUdedWRq9zV",
+        "name": "X-referrals",
+        "description": "cleaned-up version of applicants' referrals",
+        "url": "https://airtable.com/tbloq2dUdedWRq9zV",
+        "views": [
+          {
+            "id": "viwyGPQJKcPhqqs3W",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tbloq2dUdedWRq9zV/viwyGPQJKcPhqqs3W"
+          },
+          {
+            "id": "viwGu5g9VVdFoo4zt",
+            "name": "jonas-debug",
+            "type": "grid",
+            "url": "https://airtable.com/tbloq2dUdedWRq9zV/viwGu5g9VVdFoo4zt"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldY4QfIRtnP0I1fI",
+            "name": "Applicant name",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": true,
+              "referencedFieldIds": ["fldRIhxLnzpGnT60s", "fldQEoTHYStMJCqcY"],
+              "result": { "type": "singleLineText" }
+            },
+            "description": ""
+          },
+          {
+            "id": "fldQEoTHYStMJCqcY",
+            "name": "X-referral name",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldSndDKJqJ9h8bp4",
+            "name": "email",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldQfzTyVQoisA7KU",
+            "name": "entry status",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "selxFqLig9jqe2KCB",
+                  "name": "SINGLE_ENTRY",
+                  "color": "blueLight2"
+                },
+                {
+                  "id": "selEYus3gANakbxuH",
+                  "name": "NORMALIZED_NEWLINE",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selsUpmiRkJljZeOs",
+                  "name": "SEPARATED_FROM_COMMA",
+                  "color": "tealLight2"
+                },
+                {
+                  "id": "sel0F1UPIuouVvdsN",
+                  "name": "SEPARATED_FROM_COMMA_WITH_CONFLICT_FIXED",
+                  "color": "greenLight2"
+                },
+                {
+                  "id": "selayucJMrdfG4eA8",
+                  "name": "EMAIL_MATCH",
+                  "color": "cyanLight2"
+                },
+                {
+                  "id": "selKEXI11D8LSuE0Y",
+                  "name": "NEW_2020-02-09",
+                  "color": "blueLight2"
+                }
+              ]
+            },
+            "description": ""
+          },
+          {
+            "id": "fldRIhxLnzpGnT60s",
+            "name": "applicant record",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld5R8KgvTGj8A1kD",
+            "name": "X-referred applicant",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": "if they applied"
+          },
+          {
+            "id": "fldkihR0BPjsth8M8",
+            "name": "Referral text",
+            "type": "multipleLookupValues",
+            "isComputed": true,
+            "options": {
+              "isValid": false,
+              "recordLinkFieldId": "fldRIhxLnzpGnT60s",
+              "fieldIdInLinkedTable": null,
+              "result": null
+            },
+            "description": ""
+          },
+          {
+            "id": "fldrjdV83UaBl0PTM",
+            "name": "Referree in Final?",
+            "type": "multipleLookupValues",
+            "isComputed": true,
+            "options": {
+              "isValid": false,
+              "recordLinkFieldId": "fld5R8KgvTGj8A1kD",
+              "fieldIdInLinkedTable": null,
+              "result": null
+            },
+            "description": ""
+          },
+          {
+            "id": "fldaYld0EHMAH4WNq",
+            "name": "Referrer in Final?",
+            "type": "multipleLookupValues",
+            "isComputed": true,
+            "options": {
+              "isValid": false,
+              "recordLinkFieldId": "fldRIhxLnzpGnT60s",
+              "fieldIdInLinkedTable": null,
+              "result": null
+            },
+            "description": ""
+          },
+          {
+            "id": "fldJdhdJHLKQ9C9Qn",
+            "name": "Mutual",
+            "type": "formula",
+            "isComputed": true,
+            "options": {
+              "isValid": false,
+              "referencedFieldIds": [],
+              "result": null
+            },
+            "description": ""
+          },
+          {
+            "id": "fldYcNhQdMVhOfoir",
+            "name": "Applicants copy",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblonMdLBuPJ8hQeA",
+              "isReversed": false,
+              "inverseLinkFieldId": "fldcJ0uumAUzucJnJ"
+            },
+            "description": ""
+          },
+          {
+            "id": "fldclEull6cUzWjCC",
+            "name": "Applicants copy",
+            "type": "multipleRecordLinks",
+            "isComputed": false,
+            "options": {
+              "linkedTableId": "tblonMdLBuPJ8hQeA",
+              "isReversed": false,
+              "inverseLinkFieldId": "fldg4ArdMmeaKr7zd"
+            },
+            "description": ""
+          }
+        ]
+      },
+      {
+        "id": "tblonwli094qaqUn2",
+        "name": "Table 8",
+        "description": "",
+        "url": "https://airtable.com/tblonwli094qaqUn2",
+        "views": [
+          {
+            "id": "viwlVlsxXyW8BKP2V",
+            "name": "Grid view",
+            "type": "grid",
+            "url": "https://airtable.com/tblonwli094qaqUn2/viwlVlsxXyW8BKP2V"
+          }
+        ],
+        "fields": [
+          {
+            "id": "fldKeMP5ffLUSFGq3",
+            "name": "Name",
+            "type": "singleLineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fldW29cjFD36aoASg",
+            "name": "Notes",
+            "type": "multilineText",
+            "isComputed": false,
+            "options": null,
+            "description": ""
+          },
+          {
+            "id": "fld2w5bUGjwkJBMIP",
+            "name": "Attachments",
+            "type": "multipleAttachments",
+            "isComputed": false,
+            "options": { "isReversed": false },
+            "description": ""
+          },
+          {
+            "id": "fldFh7ZdDPnEFRt0b",
+            "name": "Status",
+            "type": "singleSelect",
+            "isComputed": false,
+            "options": {
+              "choices": [
+                {
+                  "id": "seldu9GyEgXR53VHD",
+                  "name": "Todo",
+                  "color": "redLight2"
+                },
+                {
+                  "id": "sel58a9d0RogrLYHf",
+                  "name": "In progress",
+                  "color": "yellowLight2"
+                },
+                {
+                  "id": "selN9IoMWPeU3BR9N",
+                  "name": "Done",
+                  "color": "greenLight2"
+                }
+              ]
+            },
+            "description": ""
+          }
+        ]
+      }
+    ]
+  }
+}
