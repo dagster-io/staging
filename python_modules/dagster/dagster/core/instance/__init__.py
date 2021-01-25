@@ -15,6 +15,7 @@ import yaml
 from dagster import check
 from dagster.core.definitions.events import AssetKey
 from dagster.core.definitions.pipeline import PipelineDefinition, PipelineSubsetDefinition
+from dagster.core.definitions.pipeline_base import InMemoryPipeline
 from dagster.core.errors import (
     DagsterInvariantViolationError,
     DagsterNoStepsToExecuteException,
@@ -642,7 +643,6 @@ class DagsterInstance:
         parent_run_id=None,
         solid_selection=None,
     ):
-        from dagster.core.execution.api import create_execution_plan
         from dagster.core.execution.plan.plan import ExecutionPlan
         from dagster.core.snap import snapshot_from_execution_plan
 
@@ -674,10 +674,16 @@ class DagsterInstance:
                     solids_to_execute=solids_to_execute
                 )
 
-        full_execution_plan = execution_plan or create_execution_plan(
-            pipeline_def,
-            run_config=run_config,
-            mode=mode,
+        environment_config = EnvironmentConfig.build(pipeline_def, run_config, mode)
+        if execution_plan:
+            full_execution_plan = execution_plan
+        else:
+            full_execution_plan = ExecutionPlan.build(
+                InMemoryPipeline(pipeline_def), environment_config
+            )
+
+        check.invariant(
+            len(full_execution_plan.step_keys_to_execute) == len(full_execution_plan.steps)
         )
 
         if is_memoized_run(tags):
@@ -690,7 +696,10 @@ class DagsterInstance:
                 )
 
             subsetted_execution_plan = resolve_memoized_execution_plan(
-                full_execution_plan, run_config, self
+                full_execution_plan,
+                run_config,
+                self,
+                environment_config,
             )  # TODO: tighter integration with existing step_keys_to_execute functionality
             step_keys_to_execute = subsetted_execution_plan.step_keys_to_execute
             if not step_keys_to_execute:
@@ -700,7 +709,7 @@ class DagsterInstance:
                 )
         else:
             subsetted_execution_plan = (
-                full_execution_plan.build_subset_plan(step_keys_to_execute)
+                full_execution_plan.build_subset_plan(step_keys_to_execute, environment_config)
                 if step_keys_to_execute
                 else full_execution_plan
             )
